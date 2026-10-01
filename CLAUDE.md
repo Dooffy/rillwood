@@ -88,7 +88,7 @@ Repo layout:
   dev/        local dev tooling: dev/jellyfin = pinned Jellyfin servers + test media generator
   docs/       project docs: architecture, decisions, test plans, release process
   .github/    CI workflow + scripts
-  .claude/    shared Claude Code skills (/task-init, /submit-code, /create-pull-request, /merge-pr)
+  .claude/    shared Claude Code skills (/task-init, /submit-code, /create-pull-request, /merge-pr, /update-modules)
   CLAUDE.md   this file
   LICENSE
   README.md
@@ -207,7 +207,8 @@ Tokens arrive only in `headers`; native side never logs or persists them.
 - Vendored MPL-2.0 files: keep their headers, record commit in `modules/mpv/UPSTREAM.md`. Check none are marked "Incompatible With Secondary Licenses".
 - **Player binaries:** Prebuilt MPVKit binaries are typically GPL builds - rebuild **without** `enable-gpl` / `make gpl`, no `--enable-nonfree`, no libx264; dynamic frameworks. Verify Android libmpv `.so` build flags. Publish build scripts + source tarballs per release. The GPL build is OK for local spikes only, never shipped.
 - **Never add GPL-only third-party libs to the iOS build** (e.g. `expo-mpv` npm is GPL-3.0-only).
-- To add: `CONTRIBUTING.md` (DCO sign-off, contributions under GPL-3.0-or-later + exception), `THIRD_PARTY_NOTICES.md`, `TRADEMARKS.md` (forks welcome, rename + re-icon), in-app licenses screen (`react-native-legal` + manual native entries, FFmpeg LGPL credit line).
+- `THIRD_PARTY_NOTICES.md` (repo root) lists vendored source + native binaries - update it with every vendored component or binary change. Check for upstream / binary updates with `/update-modules` before every release.
+- To add: `CONTRIBUTING.md` (DCO sign-off, contributions under GPL-3.0-or-later + exception), `TRADEMARKS.md` (forks welcome, rename + re-icon), in-app licenses screen (`react-native-legal` + manual native entries, FFmpeg LGPL credit line).
 - CI: `npm run licenses` fails on any GPL/AGPL-only production dependency (LGPL and `X OR GPL` dual licences allowed). Native binaries (MPVKit, libmpv) aren't npm deps - verify them by hand (§11).
 - Repo must be **public** before any build reaches external testers (exception requires public Corresponding Source).
 
@@ -229,7 +230,7 @@ Tokens arrive only in `headers`; native side never logs or persists them.
 ### M0 - Setup + player spike
 - [x] Remove `app/.gitkeep`, then `create-expo-app app` (default@sdk-58) at repo root; `npx expo install expo-dev-client expo-file-system expo-sqlite expo-secure-store expo-image expo-crypto expo-build-properties`; `npx expo install --fix`
 - [x] `expo-build-properties`: Android minSdk 26 (iOS 16.4 is already the SDK 58 minimum)
-- [ ] Vendor the mpv Expo module → `modules/mpv` + `UPSTREAM.md`
+- [x] Vendor the mpv Expo module → `modules/mpv` + `UPSTREAM.md` (embedded view only; MPVKit pod via `modules/mpv/app.plugin.js`)
 - [ ] `npx expo prebuild`, dev build on physical iPhone
 - [x] Local Jellyfin in Docker (`dev/jellyfin`: 12.1 + 10.11) with generated test library
 - [ ] Test screen: HTTP stream with auth header + local file in Documents
@@ -296,6 +297,7 @@ Tokens arrive only in `headers`; native side never logs or persists them.
 - [ ] Settings: accounts, playback defaults, downloads, cache clear, licenses screen
 - [ ] Perf (FlashList if FlatList stutters, image sizes, cold start <2s), accessibility pass
 - [ ] Icon, splash, screenshots, privacy policy ("connects to your own server")
+- [ ] `/update-modules`: vendored modules, native binaries + Expo packages current, no blockers
 - [ ] Make repo public; LGPL player binaries verified
 - [ ] Bump versions (`autoIncrement` in eas.json), `eas build -p ios --local` → Transporter; `-p android --local` → Play Console (first `.aab` manual)
 - [ ] TestFlight + Play internal, 3-5 testers; App Review notes with demo server + account
@@ -357,7 +359,7 @@ eas build -p android --profile production --local --output app.aab  # → Play C
 |---|---|
 | Name checks for Rillwood | App Store/Play search in target markets, trademark search (TMview / USPTO) classes 9 + 41/42, domain (`rillwood.app`), native-speaker sanity check in target markets. Before first store upload |
 | Trademark | File after checks pass |
-| LGPL MPVKit build (iOS) + libmpv (Android) license verification | Before first public store build |
+| LGPL MPVKit build (iOS) + libmpv (Android) rebuild | Both current binaries are GPL builds (checked 2026-10-01, see `app/modules/mpv/UPSTREAM.md`) - rebuild LGPL before first public store build |
 | Test media | Synthetic matrix: `dev/jellyfin/make-test-media.sh` -> `$RILLWOOD_MEDIA`. Still needed by hand in `real/`: DV P8 clip, PGS subtitles, large 4K remux |
 | Package versions | Let `npx expo install --fix` decide; don't hand-pin. Exception: `@react-native/jest-preset` pinned to `0.88.0-rc.3` (expo install picks 0.87) - re-pin to the `react-native` version on every RN bump |
 | Branch protection | Needs a public repo or GitHub Pro. Once available: require PR + all CI status checks (Lint, Typecheck, Format, Unit tests, Expo doctor, Bundle, Licences, Commit format + DCO) on `main` |
