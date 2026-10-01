@@ -16,9 +16,22 @@ permissions:
 
 jobs:
   app:
-    name: App checks
+    # One independent runner per check type - each shows as its own status on the PR.
+    name: ${{ matrix.check.name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
+          - { name: Lint, run: npm run lint }
+          - { name: Typecheck, run: npm run typecheck }
+          - { name: Format, run: npm run format:check }
+          - { name: Unit tests, run: npm test -- --ci --coverage }
+          # Not via `npm run`: expo-doctor's nested `npm explain` calls fail inside npm scripts
+          - { name: Expo doctor, run: npx --no-install expo-doctor }
+          - { name: Bundle (iOS + Android), run: npm run bundle:check }
+          - { name: Licences, run: npm run licenses }
     defaults:
       run:
         working-directory: app
@@ -30,21 +43,8 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
       - run: npm ci
-      - name: Lint
-        run: npm run lint
-      - name: Typecheck
-        run: npm run typecheck
-      - name: Format
-        run: npm run format:check
-      - name: Unit tests
-        run: npm test -- --ci --coverage
-      - name: Expo doctor
-        # Not via `npm run`: expo-doctor's nested `npm explain` calls fail inside npm scripts
-        run: npx --no-install expo-doctor
-      - name: Bundle (iOS + Android)
-        run: npm run bundle:check
-      - name: Licences (no GPL/AGPL-only)
-        run: npm run licenses
+      - name: ${{ matrix.check.name }}
+        run: ${{ matrix.check.run }}
 
   commits:
     name: Commit format + DCO

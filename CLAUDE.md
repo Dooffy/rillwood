@@ -50,7 +50,7 @@ Platforms: **iOS first**, Android phones in the same release.
 | Network status | Fail-fast fetch (8s) + `/System/Info/Public` probe on foreground | |
 | Server target | **Jellyfin 12.0 base**, 10.11.x supported | Warn below 10.10.7. Dev server: Docker |
 | Tests | `jest-expo` + `@testing-library/react-native` (dev deps in `app/`), `*.test.ts(x)` next to the code; screen tests in `src/__tests__/` (never put tests in `src/app/` - expo-router treats files there as routes) | Unit tests for pure logic, regression test per bug fix, render tests for non-trivial components. Mock fetch / storage / native modules. Native code: manual device test plans in `docs/` |
-| CI | GitHub Actions, GitHub-hosted `ubuntu-latest`, `.github/workflows/ci.yml`. Runs on every branch push + PRs to `main` | App job: lint, typecheck, format, unit tests + coverage, expo-doctor, iOS + Android JS bundle, licence check. Commits job: `[PREFIX]` format, blank line, DCO, no AI attribution |
+| CI | GitHub Actions, GitHub-hosted `ubuntu-latest`, `.github/workflows/ci.yml`. Runs on every branch push + PRs to `main` | One independent runner per check (matrix, `fail-fast: false`): Lint, Typecheck, Format, Unit tests (+ coverage), Expo doctor, Bundle (iOS + Android), Licences. Plus Commit format + DCO: `[PREFIX]` format, blank line, DCO, no AI attribution |
 | Builds | `eas build --local` (or prebuild + Xcode/Gradle), manual upload (Transporter / Play Console) | See §9 Xcode 27 note |
 | License | **GPL-3.0-or-later + App Store additional permission** (§7) | DCO, no CLA |
 
@@ -359,5 +359,5 @@ eas build -p android --profile production --local --output app.aab  # → Play C
 | LGPL MPVKit build (iOS) + libmpv (Android) license verification | Before first public store build |
 | Test media | Synthetic matrix via ffmpeg script + real clips (DV P8, PGS, 4K remux) outside repo. To be agreed |
 | Package versions | Let `npx expo install --fix` decide; don't hand-pin. Exception: `@react-native/jest-preset` pinned to `0.88.0-rc.3` (expo install picks 0.87) - re-pin to the `react-native` version on every RN bump |
-| Branch protection | Needs a public repo or GitHub Pro. Once available: require PR + `App checks` + `Commit format + DCO` status checks on `main` |
+| Branch protection | Needs a public repo or GitHub Pro. Once available: require PR + all CI status checks (Lint, Typecheck, Format, Unit tests, Expo doctor, Bundle, Licences, Commit format + DCO) on `main` |
 | `app/.npmrc` `legacy-peer-deps=true` | Needed while SDK 58 ships react-native 0.88.0-rc.x (npm rejects RCs in peer ranges). Remove once SDK 58 is stable |

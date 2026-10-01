@@ -26,7 +26,7 @@ gh pr view <n> --json number,title,state,isDraft,baseRefName,headRefName,author,
 
 ## Step 2 - Ready to merge?
 
-- **Checks** - every entry in `statusCheckRollup` is `SUCCESS` - at least `App checks` and `Commit format + DCO` from CI. Failing / pending → stop.
+- **Checks** - every entry in `statusCheckRollup` is `SUCCESS` - all CI checks: Lint, Typecheck, Format, Unit tests, Expo doctor, Bundle (iOS + Android), Licences, Commit format + DCO. Failing / pending → stop.
 - **Review** - `reviewDecision` is `APPROVED`, or the repo has no required reviewers (solo maintainer: confirm a self-review was done). Unresolved review threads → stop and list them.
 - **Up to date** - `mergeStateStatus` `BEHIND` / `DIRTY` → stop: rebase the head branch on `origin/main` locally (`TZ=UTC git rebase ...`), re-run checks, `git push --force-with-lease` **to the head branch only** (ask first), then re-run this skill.
 
