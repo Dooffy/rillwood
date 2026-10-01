@@ -209,7 +209,7 @@ Wait for the answer. Then stage only project files (no `git add -A`):
 
 ```bash
 git add -u
-git ls-files --others --exclude-standard | xargs -r git add
+git ls-files -z --others --exclude-standard | xargs -0 -r git add
 git status --short
 ```
 

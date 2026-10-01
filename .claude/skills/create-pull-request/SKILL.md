@@ -68,6 +68,8 @@ Already pushed and up to date → skip. Never plain force push.
 
 ## Step 5 - Draft the PR
 
+**Task description** - read `git config branch.<branch>.description` (set by `/task-init`); use it to frame the Summary.
+
 **Title** - single commit: its subject. Several commits: dominant prefix + one summary (`[FEAT] Library grid with sort and filter`).
 
 **Body**:
