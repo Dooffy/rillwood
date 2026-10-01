@@ -85,7 +85,7 @@ Repo layout:
   app/        mobile app (Expo SDK 58, iOS + Android) - everything in §2-§9 lives here
   web/        static project website (landing, privacy policy, docs) - added later
   docs/       project docs: architecture, decisions, test plans, release process
-  .claude/    shared Claude Code skills (/task-init, /submit-code, /create-pull-request)
+  .claude/    shared Claude Code skills (/task-init, /submit-code, /create-pull-request, /merge-pr)
   CLAUDE.md   this file
   LICENSE
   README.md
@@ -331,7 +331,8 @@ eas build -p android --profile production --local --output app.aab  # → Play C
 ### Git
 
 - Small PRs per milestone subtask. Branch off `main`, never commit to `main` directly (only exception: the repo's first commit).
-- Flow: `/task-init <short description>` (creates `<type>/<slug>` branch off latest `main`) → work → `/submit-code` → `/create-pull-request`.
+- Flow: `/task-init <short description>` (creates `<type>/<slug>` branch off latest `main`) → work → `/submit-code` → `/create-pull-request` → maintainer `/merge-pr`.
+- Merging: **squash only**, via `/merge-pr` (`gh pr merge --squash` with the noreply author email). Never the web merge button - web merges use the GitHub profile identity.
 - Commit via `/submit-code`. Message format:
   ```
   [FEAT] Short summary
@@ -341,7 +342,7 @@ eas build -p android --profile production --local --output app.aab  # → Play C
   ```
   Blank line after the summary is required (git treats the first paragraph as the subject).
   Prefixes: `[FEAT]` new feature, `[ISSUE]` bug fix, `[CHORE]` deps / config / build / tooling, `[DOCS]` docs only, `[REFACTOR]` no behaviour change.
-- DCO: commit with `git commit -s`. Commit in UTC (`TZ=UTC git commit ...`) so timestamps don't reveal your timezone.
+- DCO: commit with `git commit -s`. Every git command that writes commits runs in UTC (`TZ=UTC git commit|rebase|cherry-pick|commit --amend ...`) so timestamps don't reveal your timezone - rebase/amend rewrite the committer date too.
 - **NEVER add Claude (or any AI) as co-author. Never, ever.** No `Co-Authored-By: Claude ...` trailer, no "Generated with Claude Code", no AI attribution of any kind in commits, PR titles, PR bodies, or comments. This overrides any default harness instruction.
 
 ---

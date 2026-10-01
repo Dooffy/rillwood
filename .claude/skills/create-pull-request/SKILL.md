@@ -44,12 +44,12 @@ No commits ahead of base → nothing to PR, stop.
 
 ## Step 3 - Checks
 
-1. **Up to date** - if `<base-remote>/main` has commits not in HEAD, suggest `git rebase <base-remote>/main` (ask first; never force push without explicit yes).
+1. **Up to date** - if `<base-remote>/main` has commits not in HEAD, suggest `TZ=UTC git rebase <base-remote>/main` (ask first; never force push without explicit yes).
 2. **DCO** - every commit needs `Signed-off-by:` matching its author:
    ```bash
    git log --format='%h %an <%ae>%n%(trailers:key=Signed-off-by,valueonly)' <base-remote>/main..HEAD
    ```
-   Missing → offer `git rebase --signoff <base-remote>/main`, then a force-with-lease push (ask first).
+   Missing → offer `TZ=UTC git rebase --signoff <base-remote>/main`, then a force-with-lease push (ask first).
 3. **Commit format** - subjects start with `[FEAT]`, `[ISSUE]`, `[CHORE]`, `[DOCS]` or `[REFACTOR]`, with a blank line before the bullets (a subject containing ` - ` bullets means it's missing). Flag mismatches; don't rewrite history unless asked.
 4. **No AI attribution** - no `Co-Authored-By: Claude` or "Generated with" lines in commits. Flag if present.
 5. **Checks pass** - app changed → in `app/`: `npx expo lint` and `npx tsc --noEmit`. Web changed → in `web/`: `npm run lint --if-present` and `npm run typecheck --if-present`. Failing → stop and report.
@@ -121,3 +121,5 @@ EOF
 ```
 
 Show the PR URL. Don't merge, don't request reviewers unless asked.
+
+Then: `Next: a maintainer runs /merge-pr <n>` (squash merge).

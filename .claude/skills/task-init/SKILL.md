@@ -73,4 +73,4 @@ Do **not** push and do **not** set an upstream - `/submit-code` pushes with `-u`
 > **Task started** on `<branch>` (from `origin/main` @ `<short sha>`)
 > - Description: <description>
 > - Milestone: <M# - task> (or "none matched")
-> - Next: make changes → `/submit-code` → `/create-pull-request`
+> - Next: make changes → `/submit-code` → `/create-pull-request` → `/merge-pr` (maintainer)
