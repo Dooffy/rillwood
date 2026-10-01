@@ -298,6 +298,11 @@ Tokens arrive only in `headers`; native side never logs or persists them.
 - [ ] Perf (FlashList if FlatList stutters, image sizes, cold start <2s), accessibility pass
 - [ ] Icon, splash, screenshots, privacy policy ("connects to your own server")
 - [ ] `/update-modules`: vendored modules, native binaries + Expo packages current, no blockers
+- [ ] CI native + playback checks (skill to create later):
+  - Android native build + vendored Kotlin unit tests on `ubuntu-latest`, path-filtered to `app/modules/**` + native config
+  - Android emulator playback self-test (needs the player self-test screen; approve `reactivecircus/android-emulator-runner`); generated media + Jellyfin Docker service
+  - iOS native build + simulator self-test on a macOS runner (needs §2 CI decision change; nightly while private, per-PR once public; check runner Xcode version)
+  - Simulator / emulator decode is software only - HDR, DV, 4K stay manual (`docs/test-plans/mpv.md`)
 - [ ] Make repo public; LGPL player binaries verified
 - [ ] Bump versions (`autoIncrement` in eas.json), `eas build -p ios --local` → Transporter; `-p android --local` → Play Console (first `.aab` manual)
 - [ ] TestFlight + Play internal, 3-5 testers; App Review notes with demo server + account
