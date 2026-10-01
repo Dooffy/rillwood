@@ -35,7 +35,7 @@ Platforms: **iOS first**, Android phones in the same release.
 | Framework | Expo SDK 58, RN 0.88, New Arch, CNG, `expo-dev-client` | SDK 58 is in beta (npm `next`, RN 0.88 RC) as of Oct 2026 - move to stable as soon as it ships. No Expo Go (native player). Scene lifecycle is built in on SDK 58 (no `enableSceneSupport` needed). Min iOS 16.4 is the SDK 58 default |
 | Navigation | expo-router | File routes, native stack + tabs. Sheets via `presentation: "formSheet"` |
 | Platform deps | `expo-router` peers + template basics: `react-native-screens`, `react-native-safe-area-context`, `react-native-gesture-handler`, `react-native-reanimated`, `react-native-worklets`, `expo-symbols`, `@expo/ui`, `expo-font`, `expo-linking`, `expo-constants`, `react-dom`, `react-native-web`, `expo-splash-screen`, `expo-status-bar`, `expo-system-ui` | Required by the router / SDK - don't remove. Don't build UI on `@expo/ui` or web-only APIs without approval |
-| Dev tooling | `typescript`, `@types/react`, `eslint` + `eslint-config-expo` (`npx expo lint`) | |
+| Dev tooling | `typescript`, `@types/react`, `eslint` + `eslint-config-expo`, `prettier`, `jest` + `@jest/globals` + `jest-expo` + `@react-native/jest-preset` + `@testing-library/react-native`, `expo-doctor`, `license-checker-rseidelsohn` | Tests import `describe` / `it` / `expect` from `@jest/globals` (no global test types in app code). `@react-native/jest-preset` must match the `react-native` version exactly. CI tools are pinned dev deps, never `npx --yes` |
 | UI | **No design system.** `StyleSheet.create` + tokens in `src/theme.ts` | No Gluestack, NativeWind, Tailwind or other UI kit. Hand-build the few primitives. Force dark (`userInterfaceStyle: "dark"`) |
 | API | Plain `fetch` wrapper, hand-written types | **No `@jellyfin/sdk`, no axios** |
 | State | React only: `useState`/`useReducer`, Context (session), `useSyncExternalStore` (downloads) | **No Zustand, Redux, TanStack Query, MMKV** |
@@ -49,7 +49,8 @@ Platforms: **iOS first**, Android phones in the same release.
 | Offload cleanup | Runs on app launch + foreground (`AppState` active) | No expo-background-task in MVP |
 | Network status | Fail-fast fetch (8s) + `/System/Info/Public` probe on foreground | |
 | Server target | **Jellyfin 12.0 base**, 10.11.x supported | Warn below 10.10.7. Dev server: Docker |
-| Tests | `jest-expo` + `@testing-library/react-native` (dev deps in `app/`), `*.test.ts(x)` next to the code | Unit tests for pure logic, regression test per bug fix, render tests for non-trivial components. Mock fetch / storage / native modules. Native code: manual device test plans in `docs/` |
+| Tests | `jest-expo` + `@testing-library/react-native` (dev deps in `app/`), `*.test.ts(x)` next to the code; screen tests in `src/__tests__/` (never put tests in `src/app/` - expo-router treats files there as routes) | Unit tests for pure logic, regression test per bug fix, render tests for non-trivial components. Mock fetch / storage / native modules. Native code: manual device test plans in `docs/` |
+| CI | GitHub Actions, GitHub-hosted `ubuntu-latest`, `.github/workflows/ci.yml`. Runs on every branch push + PRs to `main` | One independent runner per check (matrix, `fail-fast: false`): Lint, Typecheck, Format, Unit tests (+ coverage), Expo doctor, Bundle (iOS + Android), Licences. Plus Commit format + DCO: `[PREFIX]` format, blank line, DCO, no AI attribution |
 | Builds | `eas build --local` (or prebuild + Xcode/Gradle), manual upload (Transporter / Play Console) | See §9 Xcode 27 note |
 | License | **GPL-3.0-or-later + App Store additional permission** (§7) | DCO, no CLA |
 
@@ -85,6 +86,7 @@ Repo layout:
   app/        mobile app (Expo SDK 58, iOS + Android) - everything in §2-§9 lives here
   web/        static project website (landing, privacy policy, docs) - added later
   docs/       project docs: architecture, decisions, test plans, release process
+  .github/    CI workflow + scripts
   .claude/    shared Claude Code skills (/task-init, /submit-code, /create-pull-request, /merge-pr)
   CLAUDE.md   this file
   LICENSE
@@ -205,7 +207,7 @@ Tokens arrive only in `headers`; native side never logs or persists them.
 - **Player binaries:** Prebuilt MPVKit binaries are typically GPL builds - rebuild **without** `enable-gpl` / `make gpl`, no `--enable-nonfree`, no libx264; dynamic frameworks. Verify Android libmpv `.so` build flags. Publish build scripts + source tarballs per release. The GPL build is OK for local spikes only, never shipped.
 - **Never add GPL-only third-party libs to the iOS build** (e.g. `expo-mpv` npm is GPL-3.0-only).
 - To add: `CONTRIBUTING.md` (DCO sign-off, contributions under GPL-3.0-or-later + exception), `THIRD_PARTY_NOTICES.md`, `TRADEMARKS.md` (forks welcome, rename + re-icon), in-app licenses screen (`react-native-legal` + manual native entries, FFmpeg LGPL credit line).
-- CI: license scan with denylist `GPL-*`/`AGPL-*` for iOS native deps.
+- CI: `npm run licenses` fails on any GPL/AGPL-only production dependency (LGPL and `X OR GPL` dual licences allowed). Native binaries (MPVKit, libmpv) aren't npm deps - verify them by hand (§11).
 - Repo must be **public** before any build reaches external testers (exception requires public Corresponding Source).
 
 ---
@@ -243,7 +245,8 @@ Tokens arrive only in `headers`; native side never logs or persists them.
 - [ ] `useFetch` (cache key `accountId|path`, TTL, abort, `invalidate`)
 - [ ] Components: PosterCard, LandscapeCard, Row, ProgressBar, DownloadRing
 - [ ] TS strict, ESLint/Prettier, SPDX headers, CONTRIBUTING (DCO)
-- [ ] Test setup: `jest-expo` + RNTL, `npm test`, first unit tests for `api.ts`
+- [x] Test setup: `jest-expo` + RNTL, `npm test`, CI on every branch + `main`
+- [ ] First unit tests for `api.ts`
 
 ### M2 - Auth + accounts
 - [ ] Server screen (normalise URL, validate, version warning)
@@ -325,7 +328,7 @@ eas build -p android --profile production --local --output app.aab  # → Play C
 - Relative file paths only; resolve against `Paths.document` at runtime.
 - Every tappable card is `Pressable` (future TV focus).
 - Hyphens, not em dashes, in UI copy and docs.
-- Run `npm test`, `npx expo lint` and `npx tsc --noEmit` in `app/` before calling a task done. New logic ships with tests; bug fixes ship with a regression test.
+- Run `npm run check` in `app/` (lint, typecheck, format, tests) before calling a task done; CI also runs doctor, bundle and licence checks. New logic ships with tests; bug fixes ship with a regression test.
 - Docs ship with the code: keep `CLAUDE.md` and `docs/` current in the same commit (`/submit-code` checks this).
 
 ### Git
@@ -355,5 +358,6 @@ eas build -p android --profile production --local --output app.aab  # → Play C
 | Trademark | File after checks pass |
 | LGPL MPVKit build (iOS) + libmpv (Android) license verification | Before first public store build |
 | Test media | Synthetic matrix via ffmpeg script + real clips (DV P8, PGS, 4K remux) outside repo. To be agreed |
-| Package versions | Let `npx expo install --fix` decide; don't hand-pin |
+| Package versions | Let `npx expo install --fix` decide; don't hand-pin. Exception: `@react-native/jest-preset` pinned to `0.88.0-rc.3` (expo install picks 0.87) - re-pin to the `react-native` version on every RN bump |
+| Branch protection | Needs a public repo or GitHub Pro. Once available: require PR + all CI status checks (Lint, Typecheck, Format, Unit tests, Expo doctor, Bundle, Licences, Commit format + DCO) on `main` |
 | `app/.npmrc` `legacy-peer-deps=true` | Needed while SDK 58 ships react-native 0.88.0-rc.x (npm rejects RCs in peer ranges). Remove once SDK 58 is stable |

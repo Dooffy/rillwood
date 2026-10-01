@@ -52,7 +52,7 @@ No commits ahead of base → nothing to PR, stop.
    Missing → offer `TZ=UTC git rebase --signoff <base-remote>/main`, then a force-with-lease push (ask first).
 3. **Commit format** - subjects start with `[FEAT]`, `[ISSUE]`, `[CHORE]`, `[DOCS]` or `[REFACTOR]`, with a blank line before the bullets (a subject containing ` - ` bullets means it's missing). Flag mismatches; don't rewrite history unless asked.
 4. **No AI attribution** - no `Co-Authored-By: Claude` or "Generated with" lines in commits. Flag if present.
-5. **Checks pass** - app changed → in `app/`: `npx expo lint` and `npx tsc --noEmit`. Web changed → in `web/`: `npm run lint --if-present` and `npm run typecheck --if-present`. Failing → stop and report.
+5. **Checks pass** - app changed → in `app/`: `npm run check`. CI (`.github/workflows/ci.yml`) re-runs everything on push. Web changed → in `web/`: `npm run lint --if-present` and `npm run typecheck --if-present`. Failing → stop and report.
 
 ---
 

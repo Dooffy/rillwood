@@ -1,0 +1,76 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    # One independent runner per check type - each shows as its own status on the PR.
+    name: ${{ matrix.check.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
+          - { name: Lint, run: npm run lint }
+          - { name: Typecheck, run: npm run typecheck }
+          - { name: Format, run: npm run format:check }
+          - { name: Unit tests, run: npm test -- --ci --coverage }
+          # Not via `npm run`: expo-doctor's nested `npm explain` calls fail inside npm scripts
+          - { name: Expo doctor, run: npx --no-install expo-doctor }
+          - { name: Bundle (iOS + Android), run: npm run bundle:check }
+          - { name: Licences, run: npm run licenses }
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - name: ${{ matrix.check.name }}
+        run: ${{ matrix.check.run }}
+
+  commits:
+    name: Commit format + DCO
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Check commits
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          BEFORE: ${{ github.event.before }}
+          REF: ${{ github.ref }}
+        run: |
+          # PR: all PR commits. Push: every commit the push added; a new branch (or a force-push
+          # whose old tip is gone) falls back to everything not on main.
+          if [ "$EVENT" = pull_request ]; then
+            range="$PR_BASE..$PR_HEAD"
+          elif [ -n "$BEFORE" ] && [ "$BEFORE" != 0000000000000000000000000000000000000000 ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            range="$BEFORE..HEAD"
+          elif [ "$REF" = refs/heads/main ]; then
+            range="HEAD~1..HEAD"
+          else
+            range="origin/main..HEAD"
+          fi
+          .github/scripts/check-commits.sh "$range"
