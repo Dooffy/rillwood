@@ -43,8 +43,8 @@ Style: Default,Arial,64,&H0000FFFF,&H00000000,1,3,2,60
 
 [Events]
 Format: Layer, Start, End, Style, Text
-Dialogue: 0,0:00:01.00,0:00:10.00,Default,Ukrainian styled subtitle (ASS)
-Dialogue: 0,0:00:12.00,0:00:25.00,Default,{\an8}Top-aligned ASS line
+Dialogue: 0,0:00:01.00,0:00:10.00,Default,Українські субтитри (ASS) - ґ є і ї
+Dialogue: 0,0:00:12.00,0:00:25.00,Default,{\an8}Рядок угорі (ASS)
 ASS
 
 movie() { # movie <title> <ffmpeg args...>  -> movies/<title> (2026)/<title> (2026).mkv
@@ -87,6 +87,22 @@ movie "Multi Audio Multi Subs" "${SRC[@]}" "${TONE[@]}" "${TONE2[@]}" -i "$TMP/e
   -metadata:s:a:0 language=eng -metadata:s:a:0 title="English 440Hz" \
   -metadata:s:a:1 language=ukr -metadata:s:a:1 title="Ukrainian 880Hz" \
   -metadata:s:s:0 language=eng -metadata:s:s:1 language=ukr -disposition:s:0 default
+
+# One SRT per script: CJK, Hangul, RTL (font fallback + bidi)
+srt() { # srt <file> <text>
+  printf '1\n00:00:01,000 --> 00:00:25,000\n%s\n' "$2" >"$TMP/$1"
+}
+srt ja.srt "日本語の字幕 - ひらがな カタカナ"
+srt zh.srt "中文字幕 测试"
+srt ko.srt "한국어 자막"
+srt ar.srt "ترجمة عربية"
+srt he.srt "כתוביות בעברית"
+movie "Multi Script Subs" "${SRC[@]}" "${TONE[@]}" \
+  -i "$TMP/ja.srt" -i "$TMP/zh.srt" -i "$TMP/ko.srt" -i "$TMP/ar.srt" -i "$TMP/he.srt" \
+  -map 0:v -map 1:a -map 2:s -map 3:s -map 4:s -map 5:s -map 6:s \
+  -c:v libx264 -preset veryfast -crf 23 -c:a aac -b:a 160k -c:s srt \
+  -metadata:s:s:0 language=jpn -metadata:s:s:1 language=zho -metadata:s:s:2 language=kor \
+  -metadata:s:s:3 language=ara -metadata:s:s:4 language=heb
 
 movie "4K HEVC 10bit" -f lavfi -i "testsrc2=size=3840x2160:rate=24:duration=$SECS" "${TONE[@]}" \
   -map 0:v -map 1:a -c:v libx265 -preset ultrafast -crf 28 -pix_fmt yuv420p10le -tag:v hvc1 -x265-params log-level=error -c:a aac -b:a 160k
