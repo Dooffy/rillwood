@@ -32,8 +32,10 @@ Platforms: **iOS first**, Android phones in the same release.
 | Area | Decision | Notes |
 |---|---|---|
 | Identity | Name **Rillwood**, bundle id / package `app.rillwood.client`, scheme `rillwood` | |
-| Framework | Expo SDK 58, RN 0.88, New Arch, CNG, `expo-dev-client` | SDK 58 is in beta (npm `next`, RN 0.88 RC) as of Oct 2026 - move to stable as soon as it ships. No Expo Go (native player). `ios.enableSceneSupport` (we build with Xcode 27) |
+| Framework | Expo SDK 58, RN 0.88, New Arch, CNG, `expo-dev-client` | SDK 58 is in beta (npm `next`, RN 0.88 RC) as of Oct 2026 - move to stable as soon as it ships. No Expo Go (native player). Scene lifecycle is built in on SDK 58 (no `enableSceneSupport` needed). Min iOS 16.4 is the SDK 58 default |
 | Navigation | expo-router | File routes, native stack + tabs. Sheets via `presentation: "formSheet"` |
+| Platform deps | `expo-router` peers + template basics: `react-native-screens`, `react-native-safe-area-context`, `react-native-gesture-handler`, `react-native-reanimated`, `react-native-worklets`, `expo-symbols`, `@expo/ui`, `expo-font`, `expo-linking`, `expo-constants`, `react-dom`, `react-native-web`, `expo-splash-screen`, `expo-status-bar`, `expo-system-ui` | Required by the router / SDK - don't remove. Don't build UI on `@expo/ui` or web-only APIs without approval |
+| Dev tooling | `typescript`, `@types/react`, `eslint` + `eslint-config-expo` (`npx expo lint`) | |
 | UI | **No design system.** `StyleSheet.create` + tokens in `src/theme.ts` | No Gluestack, NativeWind, Tailwind or other UI kit. Hand-build the few primitives. Force dark (`userInterfaceStyle: "dark"`) |
 | API | Plain `fetch` wrapper, hand-written types | **No `@jellyfin/sdk`, no axios** |
 | State | React only: `useState`/`useReducer`, Context (session), `useSyncExternalStore` (downloads) | **No Zustand, Redux, TanStack Query, MMKV** |
@@ -83,7 +85,7 @@ Repo layout:
   app/        mobile app (Expo SDK 58, iOS + Android) - everything in §2-§9 lives here
   web/        static project website (landing, privacy policy, docs) - added later
   docs/       project docs: architecture, decisions, test plans, release process
-  .claude/    shared Claude Code skills (/submit-code, /create-pull-request)
+  .claude/    shared Claude Code skills (/task-init, /submit-code, /create-pull-request)
   CLAUDE.md   this file
   LICENSE
   README.md
@@ -222,8 +224,8 @@ Tokens arrive only in `headers`; native side never logs or persists them.
 | M7 | Hardening + release | TestFlight + Play internal track |
 
 ### M0 - Setup + player spike
-- [ ] Remove `app/.gitkeep`, then `create-expo-app app` (default@sdk-58) at repo root; `npx expo install expo-dev-client expo-file-system expo-sqlite expo-secure-store expo-image expo-crypto expo-build-properties`; `npx expo install --fix`
-- [ ] `expo-build-properties`: iOS deploymentTarget 16.4, Android minSdk 26
+- [x] Remove `app/.gitkeep`, then `create-expo-app app` (default@sdk-58) at repo root; `npx expo install expo-dev-client expo-file-system expo-sqlite expo-secure-store expo-image expo-crypto expo-build-properties`; `npx expo install --fix`
+- [x] `expo-build-properties`: Android minSdk 26 (iOS 16.4 is already the SDK 58 minimum)
 - [ ] Vendor the mpv Expo module → `modules/mpv` + `UPSTREAM.md`
 - [ ] `npx expo prebuild`, dev build on physical iPhone
 - [ ] Docker Jellyfin 12.0 with test media library
@@ -262,6 +264,7 @@ Tokens arrive only in `headers`; native side never logs or persists them.
 ### M4 - Playback
 - [ ] PlaybackInfo → media source → static URL
 - [ ] Player UI: landscape, ±10s, scrubber with chapters, auto-hide, gestures
+- [ ] Orientation: `app.json` `orientation` → `default`, lock non-player screens to portrait (needs `expo-screen-orientation` - approve in §2)
 - [ ] Tracks sheet (audio, subs incl. external, speed, sub size/offset)
 - [ ] Resume prompt (>1 min, <95%)
 - [ ] Reporting start/progress/stop with PlaySessionId
@@ -328,6 +331,7 @@ eas build -p android --profile production --local --output app.aab  # → Play C
 ### Git
 
 - Small PRs per milestone subtask. Branch off `main`, never commit to `main` directly (only exception: the repo's first commit).
+- Flow: `/task-init <short description>` (creates `<type>/<slug>` branch off latest `main`) → work → `/submit-code` → `/create-pull-request`.
 - Commit via `/submit-code`. Message format:
   ```
   [FEAT] Short summary
@@ -351,3 +355,4 @@ eas build -p android --profile production --local --output app.aab  # → Play C
 | LGPL MPVKit build (iOS) + libmpv (Android) license verification | Before first public store build |
 | Test media | Synthetic matrix via ffmpeg script + real clips (DV P8, PGS, 4K remux) outside repo. To be agreed |
 | Package versions | Let `npx expo install --fix` decide; don't hand-pin |
+| `app/.npmrc` `legacy-peer-deps=true` | Needed while SDK 58 ships react-native 0.88.0-rc.x (npm rejects RCs in peer ranges). Remove once SDK 58 is stable |
