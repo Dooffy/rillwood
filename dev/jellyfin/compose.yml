@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Local Jellyfin servers for development. See README.md.
+#   docker compose up -d                       # 12.1 (base) on :8096
+#   docker compose --profile compat up -d      # + 10.11 (compat) on :8097
+# Media comes from $RILLWOOD_MEDIA (default ~/rillwood-media), mounted read-only.
+# Ports bind to localhost only. For phone testing on a TRUSTED network: RILLWOOD_BIND=0.0.0.0 docker compose up -d
+# (dev logins are public - never expose this on shared Wi-Fi).
+
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:12.1.20260915-010956
+    container_name: rillwood-jellyfin-12
+    ports:
+      - '${RILLWOOD_BIND:-127.0.0.1}:8096:8096'
+    volumes:
+      - ./data/12/config:/config
+      - ./data/12/cache:/cache
+      - ${RILLWOOD_MEDIA:-${HOME}/rillwood-media}:/media:ro
+    restart: unless-stopped
+
+  jellyfin-compat:
+    image: jellyfin/jellyfin:10.11.11
+    container_name: rillwood-jellyfin-10-11
+    profiles: [compat]
+    ports:
+      - '${RILLWOOD_BIND:-127.0.0.1}:8097:8096'
+    volumes:
+      - ./data/10.11/config:/config
+      - ./data/10.11/cache:/cache
+      - ${RILLWOOD_MEDIA:-${HOME}/rillwood-media}:/media:ro
+    restart: unless-stopped
