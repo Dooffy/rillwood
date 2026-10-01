@@ -48,7 +48,7 @@ Platforms: **iOS first**, Android phones in the same release.
 | Player | libmpv via a vendored MPL-2.0 Expo module in `modules/mpv` (headers kept) behind own `PlayerEngine` interface | Fallback: `expo-libvlc-player`. See §7 - must ship **LGPL** mpv/FFmpeg builds |
 | Offload cleanup | Runs on app launch + foreground (`AppState` active) | No expo-background-task in MVP |
 | Network status | Fail-fast fetch (8s) + `/System/Info/Public` probe on foreground | |
-| Server target | **Jellyfin 12.0 base**, 10.11.x supported | Warn below 10.10.7. Dev server: Docker |
+| Server target | **Jellyfin 12.1 base**, 12.0 + 10.11.x supported | Warn below 10.10.7. Dev servers: `dev/jellyfin` (Docker, pinned 12.1 + 10.11), dev-only users `admin`/`test`. `?api_key=` returns 401 on 12.x - header auth only |
 | Tests | `jest-expo` + `@testing-library/react-native` (dev deps in `app/`), `*.test.ts(x)` next to the code; screen tests in `src/__tests__/` (never put tests in `src/app/` - expo-router treats files there as routes) | Unit tests for pure logic, regression test per bug fix, render tests for non-trivial components. Mock fetch / storage / native modules. Native code: manual device test plans in `docs/` |
 | CI | GitHub Actions, GitHub-hosted `ubuntu-latest`, `.github/workflows/ci.yml`. Runs on every branch push + PRs to `main` | One independent runner per check (matrix, `fail-fast: false`): Lint, Typecheck, Format, Unit tests (+ coverage), Expo doctor, Bundle (iOS + Android), Licences. Plus Commit format + DCO: `[PREFIX]` format, blank line, DCO, no AI attribution |
 | Builds | `eas build --local` (or prebuild + Xcode/Gradle), manual upload (Transporter / Play Console) | See §9 Xcode 27 note |
@@ -85,6 +85,7 @@ Repo layout:
 /
   app/        mobile app (Expo SDK 58, iOS + Android) - everything in §2-§9 lives here
   web/        static project website (landing, privacy policy, docs) - added later
+  dev/        local dev tooling: dev/jellyfin = pinned Jellyfin servers + test media generator
   docs/       project docs: architecture, decisions, test plans, release process
   .github/    CI workflow + scripts
   .claude/    shared Claude Code skills (/task-init, /submit-code, /create-pull-request, /merge-pr)
@@ -134,7 +135,7 @@ Authorization: MediaBrowser Client="Rillwood", Device="iPhone", DeviceId="<per-a
 | Validate / probe | `GET /System/Info/Public` |
 | Public users | `GET /Users/Public` |
 | Login | `POST /Users/AuthenticateByName` `{Username, Pw}` |
-| Quick Connect | `POST /QuickConnect/Initiate` (POST only in 12.0) → poll `GET /QuickConnect/Connect?secret=` → `POST /Users/AuthenticateWithQuickConnect` |
+| Quick Connect | `POST /QuickConnect/Initiate` (POST only since 12.0) → poll `GET /QuickConnect/Connect?secret=` → `POST /Users/AuthenticateWithQuickConnect` |
 | Logout | `POST /Sessions/Logout` |
 | Libraries | `GET /UserViews?userId=` |
 | Home rows | `GET /UserItems/Resume`, `GET /Shows/NextUp`, `GET /Items/Latest?parentId=` |
@@ -230,7 +231,7 @@ Tokens arrive only in `headers`; native side never logs or persists them.
 - [x] `expo-build-properties`: Android minSdk 26 (iOS 16.4 is already the SDK 58 minimum)
 - [ ] Vendor the mpv Expo module → `modules/mpv` + `UPSTREAM.md`
 - [ ] `npx expo prebuild`, dev build on physical iPhone
-- [ ] Docker Jellyfin 12.0 with test media library
+- [x] Local Jellyfin in Docker (`dev/jellyfin`: 12.1 + 10.11) with generated test library
 - [ ] Test screen: HTTP stream with auth header + local file in Documents
 - [ ] Matrix (10 files): H.264, HEVC 10-bit, HDR10, DV P8, AV1 | AAC, AC3, DTS, TrueHD | SRT, ASS, PGS
 - [ ] Seek, audio/sub switch, background/foreground, 4K memory
@@ -254,7 +255,7 @@ Tokens arrive only in `headers`; native side never logs or persists them.
 - [ ] SessionContext: accounts in kv-store, tokens in secure-store `tok_<accountId>`
 - [ ] Account switcher sheet, add/remove/sign out
 - [ ] Global 401 → signed-out state, keep downloads
-- [ ] Test vs Docker Jellyfin 12.0 (base) + 10.11
+- [ ] Test vs `dev/jellyfin` 12.1 (base) + 10.11
 
 ### M3 - Browse
 - [ ] Home rows + Up Next hero
@@ -357,7 +358,7 @@ eas build -p android --profile production --local --output app.aab  # → Play C
 | Name checks for Rillwood | App Store/Play search in target markets, trademark search (TMview / USPTO) classes 9 + 41/42, domain (`rillwood.app`), native-speaker sanity check in target markets. Before first store upload |
 | Trademark | File after checks pass |
 | LGPL MPVKit build (iOS) + libmpv (Android) license verification | Before first public store build |
-| Test media | Synthetic matrix via ffmpeg script + real clips (DV P8, PGS, 4K remux) outside repo. To be agreed |
+| Test media | Synthetic matrix: `dev/jellyfin/make-test-media.sh` -> `$RILLWOOD_MEDIA`. Still needed by hand in `real/`: DV P8 clip, PGS subtitles, large 4K remux |
 | Package versions | Let `npx expo install --fix` decide; don't hand-pin. Exception: `@react-native/jest-preset` pinned to `0.88.0-rc.3` (expo install picks 0.87) - re-pin to the `react-native` version on every RN bump |
 | Branch protection | Needs a public repo or GitHub Pro. Once available: require PR + all CI status checks (Lint, Typecheck, Format, Unit tests, Expo doctor, Bundle, Licences, Commit format + DCO) on `main` |
 | `app/.npmrc` `legacy-peer-deps=true` | Needed while SDK 58 ships react-native 0.88.0-rc.x (npm rejects RCs in peer ranges). Remove once SDK 58 is stable |
