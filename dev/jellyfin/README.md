@@ -25,7 +25,7 @@ Set `RILLWOOD_MEDIA` to use another folder (default `~/rillwood-media`). It's mo
 
 | Folder | Library | Contents |
 |---|---|---|
-| `movies/` | Movies | Generated: H.264 / HEVC 10-bit / HDR10 / AV1 / 4K HEVC; AAC, AC3, E-AC3, DTS, TrueHD; SRT + ASS; multi-audio + multi-subs |
+| `movies/` | Movies | Generated: H.264 / HEVC 10-bit / HDR10 / AV1 / 4K HEVC; AAC, AC3, E-AC3, DTS, TrueHD; SRT + ASS; multi-audio + multi-subs; Japanese, Chinese, Korean, Arabic, Hebrew subs |
 | `shows/` | Shows | Generated: `Test Show` S01E01-03, 2 min each (resume, Next Up, autoplay next) |
 | `real/` | Real | **Add by hand** - can't be generated: Dolby Vision Profile 8 clip, a Blu-ray rip with **PGS** subtitles, a large 4K remux |
 

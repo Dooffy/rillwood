@@ -129,6 +129,7 @@ Keep non-route code out of `src/app/`. `app/` and `web/` are independent project
 Authorization: MediaBrowser Client="Rillwood", Device="iPhone", DeviceId="<per-account id>", Version="0.1.0", Token="<token>"
 ```
 - DeviceId: `hash(installId + userId)` per account (shared DeviceId clobbers sessions). Install id via `expo-crypto.randomUUID()` in kv-store.
+- mpv sources: send `Authorization: MediaBrowser Token="<token>"` only. mpv joins headers into a comma-separated list, so the full header splits and Jellyfin returns 400 (`docs/test-plans/mpv.md` I1).
 
 | Feature | Endpoint |
 |---|---|
@@ -231,9 +232,9 @@ Tokens arrive only in `headers`; native side never logs or persists them.
 - [x] Remove `app/.gitkeep`, then `create-expo-app app` (default@sdk-58) at repo root; `npx expo install expo-dev-client expo-file-system expo-sqlite expo-secure-store expo-image expo-crypto expo-build-properties`; `npx expo install --fix`
 - [x] `expo-build-properties`: Android minSdk 26 (iOS 16.4 is already the SDK 58 minimum)
 - [x] Vendor the mpv Expo module → `modules/mpv` + `UPSTREAM.md` (embedded view only; MPVKit pod via `modules/mpv/app.plugin.js`)
-- [ ] `npx expo prebuild`, dev build on physical iPhone
+- [x] `npx expo prebuild`, dev build on physical iPhone
 - [x] Local Jellyfin in Docker (`dev/jellyfin`: 12.1 + 10.11) with generated test library
-- [ ] Test screen: HTTP stream with auth header + local file in Documents
+- [x] Test screen: HTTP stream with auth header + local file in Documents
 - [ ] Matrix (10 files): H.264, HEVC 10-bit, HDR10, DV P8, AV1 | AAC, AC3, DTS, TrueHD | SRT, ASS, PGS
 - [ ] Seek, audio/sub switch, background/foreground, 4K memory
 - [ ] Android dev build smoke test
