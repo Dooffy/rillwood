@@ -6,5 +6,5 @@ Project documentation. Overview and working rules live in [`CLAUDE.md`](../CLAUD
 |---|---|
 | `architecture.md` | How the app fits together (added with M1) |
 | `decisions/` | Decision records for changes to locked decisions |
-| `test-plans/` | Manual device test plans for native modules |
+| `test-plans/` | Manual device test plans for native modules: [`mpv.md`](test-plans/mpv.md) |
 | `release.md` | Build and release process (added with M7) |

@@ -4,3 +4,9 @@ ios
 android
 dist
 package-lock.json
+# vendored upstream code - keep diffable against upstream
+modules/mpv/ios
+modules/mpv/android
+modules/mpv/src
+modules/mpv/index.ts
+modules/mpv/expo-module.config.json

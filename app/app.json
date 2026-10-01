@@ -45,7 +45,8 @@
       ],
       "expo-font",
       "expo-image",
-      "expo-status-bar"
+      "expo-status-bar",
+      "./modules/mpv/app.plugin.js"
     ],
     "experiments": {
       "typedRoutes": true,
