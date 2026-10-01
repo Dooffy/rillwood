@@ -77,14 +77,15 @@ For each changed project that has a `package.json`:
 
 ```bash
 # app/
-cd app && npm test --if-present -- --watchAll=false && npx expo lint && npx tsc --noEmit
+cd app && npm run check            # lint, typecheck, format, tests
+cd app && npx --no-install expo-doctor && npm run bundle:check && npm run licenses   # if deps/config changed (CI runs them too)
 # web/
 cd web && npm test --if-present && npm run lint --if-present && npm run typecheck --if-present
 ```
 
 On failure:
 1. Read the output. Fix the source; fix the test only if the test is wrong.
-2. Lint: try `npx expo lint --fix` (app) first; stage only files already in the change set.
+2. Lint / format: try `npx expo lint --fix` and `npm run format` (app) first; stage only files already in the change set.
 3. Typecheck: narrowest fix. No `any`, no `@ts-ignore` (a `.d.ts` shim with a comment is OK for missing third-party types).
 4. Re-run until clean. If you can't find the fix, explain and stop.
 
