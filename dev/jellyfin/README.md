@@ -17,7 +17,7 @@ node setup.mjs                   # wizard, users, libraries; safe to re-run
 node setup.mjs --server http://localhost:8097   # compat server, if started
 ```
 
-Open http://localhost:8096 to check. **Dev-only** logins: `admin` / `admin`, `test` / `test`. Never reuse them on a real server.
+Open http://localhost:8096 to check. **Dev-only** logins: `admin` / `admin-rillwood`, `test` / `test-rillwood`. Never reuse them on a real server.
 
 ## Media
 
@@ -31,7 +31,7 @@ Set `RILLWOOD_MEDIA` to use another folder (default `~/rillwood-media`). It's mo
 
 ## Phone access
 
-By default the servers listen on **localhost only** (simulator and browser work). The dev logins are public (`admin`/`admin`), so only open them to the LAN on a **trusted** network (home, not cafe/coworking):
+By default the servers listen on **localhost only** (simulator and browser work). The dev logins are public (in this README), so only open them to the LAN on a **trusted** network (home, not cafe/coworking):
 
 ```bash
 RILLWOOD_BIND=0.0.0.0 docker compose up -d   # LAN access while you test on the phone
@@ -45,7 +45,7 @@ iOS asks for **Local Network** permission the first time the app connects - allo
 
 ```bash
 docker compose down              # stop (state kept in data/)
-rm -rf data && docker compose up -d && node setup.mjs   # fresh server
+rm -rf data && mkdir -p data/12/config data/12/cache && docker compose up -d && node setup.mjs   # fresh server
 ```
 
 Version bumps: change the pinned image tags in `compose.yml` and note it in `CLAUDE.md` §2.

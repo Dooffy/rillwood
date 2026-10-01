@@ -12,8 +12,8 @@ if (!/^https?:\/\/[^/]+$/.test(server)) {
   process.exit(1);
 }
 
-const ADMIN = { Name: 'admin', Password: 'admin' };
-const TEST = { Name: 'test', Password: 'test' };
+const ADMIN = { Name: 'admin', Password: 'admin-rillwood' };
+const TEST = { Name: 'test', Password: 'test-rillwood' };
 const LIBRARIES = [
   { name: 'Movies', collectionType: 'movies', path: '/media/movies' },
   { name: 'Shows', collectionType: 'tvshows', path: '/media/shows' },
@@ -58,7 +58,7 @@ if (!info.StartupWizardCompleted) {
   // LAN clients (phone) still work; this only blocks access from outside the LAN.
   await call('POST', '/Startup/RemoteAccess', { body: { EnableRemoteAccess: false } });
   await call('POST', '/Startup/Complete');
-  console.log('Startup wizard completed (admin/admin)');
+  console.log('Startup wizard completed (admin / admin-rillwood)');
 }
 
 const { AccessToken: token } = await call('POST', '/Users/AuthenticateByName', {
@@ -68,7 +68,7 @@ const { AccessToken: token } = await call('POST', '/Users/AuthenticateByName', {
 const users = await call('GET', '/Users', { token });
 if (!users.some((u) => u.Name === TEST.Name)) {
   await call('POST', '/Users/New', { token, body: TEST });
-  console.log('Created user test/test');
+  console.log('Created user test / test-rillwood');
 }
 
 const folders = await call('GET', '/Library/VirtualFolders', { token });
@@ -83,5 +83,5 @@ for (const lib of LIBRARIES) {
 }
 
 await call('POST', '/Library/Refresh', { token });
-console.log('Library scan started. Done - users: admin/admin, test/test');
+console.log('Library scan started. Done - users: admin / admin-rillwood, test / test-rillwood');
 await call('POST', '/Sessions/Logout', { token });

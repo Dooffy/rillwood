@@ -4,7 +4,7 @@
 #   docker compose --profile compat up -d      # + 10.11 (compat) on :8097
 # Media comes from $RILLWOOD_MEDIA (default ~/rillwood-media), mounted read-only.
 # Ports bind to localhost only. For phone testing on a TRUSTED network: RILLWOOD_BIND=0.0.0.0 docker compose up -d
-# (dev logins are admin/admin - never expose this on shared Wi-Fi).
+# (dev logins are public - never expose this on shared Wi-Fi).
 
 services:
   jellyfin:
