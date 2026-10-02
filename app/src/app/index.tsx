@@ -1,17 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { StyleSheet, Text, View } from 'react-native';
+import { Redirect } from 'expo-router';
 
-import { colors, type } from '@/theme';
-
+// Auth gating (signed out → /server) lands with the session in M2.
 export default function Index() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Rillwood</Text>
-    </View>
-  );
+  return <Redirect href="/home" />;
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  title: { ...type.largeTitle, color: colors.text },
-});

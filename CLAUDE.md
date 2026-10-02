@@ -37,7 +37,7 @@ Platforms: **iOS first**, Android phones in the same release.
 | Navigation | expo-router | File routes, native stack + tabs. Sheets via `presentation: "formSheet"` |
 | Platform deps | `expo-router` peers + template basics: `react-native-screens`, `react-native-safe-area-context`, `react-native-gesture-handler`, `react-native-reanimated`, `react-native-worklets`, `expo-symbols`, `@expo/ui`, `expo-font`, `expo-linking`, `expo-constants`, `react-dom`, `react-native-web`, `expo-splash-screen`, `expo-status-bar`, `expo-system-ui` | Required by the router / SDK - don't remove. Don't build UI on `@expo/ui` or web-only APIs without approval |
 | Dev tooling | `typescript`, `@types/react`, `eslint` + `eslint-config-expo`, `prettier`, `jest` + `@jest/globals` + `jest-expo` + `@react-native/jest-preset` + `@testing-library/react-native`, `expo-doctor`, `license-checker-rseidelsohn` | Tests import `describe` / `it` / `expect` from `@jest/globals` (no global test types in app code). `@react-native/jest-preset` must match the `react-native` version exactly. CI tools are pinned dev deps, never `npx --yes` |
-| UI | **No design system.** `StyleSheet.create` + tokens in `src/theme.ts` | No Gluestack, NativeWind, Tailwind or other UI kit. Hand-build the few primitives. Force dark (`userInterfaceStyle: "dark"`) |
+| UI | **No design system.** `StyleSheet.create` + tokens in `src/theme.ts` | No Gluestack, NativeWind, Tailwind or other UI kit. Hand-build the few primitives. Appearance setting **System (default) / Dark / Light** (`userInterfaceStyle: "automatic"`, stored + native override in `src/settings.ts`). Palette resolved once in the root layout and passed down via `ColorsContext` - read it with `useColors()`, never static colours in `StyleSheet.create`. Player forces the dark palette (own provider + light status bar) |
 | API | Plain `fetch` wrapper, hand-written types | **No `@jellyfin/sdk`, no axios** |
 | State | React only: `useState`/`useReducer`, Context (session), `useSyncExternalStore` (downloads) | **No Zustand, Redux, TanStack Query, MMKV** |
 | Persistence | `expo-sqlite/kv-store` (accounts, downloads index, settings, sync queue) | Sync reads on boot |
@@ -50,7 +50,7 @@ Platforms: **iOS first**, Android phones in the same release.
 | Offload cleanup | Runs on app launch + foreground (`AppState` active) | No expo-background-task in MVP |
 | Network status | Fail-fast fetch (8s) + `/System/Info/Public` probe on foreground | |
 | Server target | **Jellyfin 12.1 base**, 12.0 + 10.11.x supported | Warn below 10.10.7. **Header auth only** (no `?api_key=` / `?ApiKey=`). Dev servers: `dev/jellyfin` (Docker, pinned 12.1 + 10.11). API rules: `docs/context/api.md` |
-| Tests | `jest-expo` + `@testing-library/react-native` (dev deps in `app/`), `*.test.ts(x)` next to the code; screen tests in `src/__tests__/` (never put tests in `src/app/` - expo-router treats files there as routes) | Unit tests for pure logic, regression test per bug fix, render tests for non-trivial components. Mock fetch / storage / native modules. Native code: manual device test plans in `docs/test-plans/` |
+| Tests | `jest-expo` + `@testing-library/react-native` (dev deps in `app/`), `*.test.ts(x)` next to the code; screen tests in `src/__tests__/` (never put tests in `src/app/` - expo-router treats files there as routes) | Unit tests for pure logic, regression test per bug fix, render tests for non-trivial components. Mock fetch / storage / native modules - shared mocks (kv-store, expo-symbols, safe-area) in `app/jest.setup.ts`. Native code: manual device test plans in `docs/test-plans/` |
 | CI | GitHub Actions, GitHub-hosted `ubuntu-latest`, `.github/workflows/ci.yml`. Runs on every branch push + PRs to `main` | One independent runner per check (matrix, `fail-fast: false`): Lint, Typecheck, Format, Unit tests (+ coverage), Expo doctor, Bundle (iOS + Android), Licences. Plus Commit format + DCO: `[PREFIX]` format, blank line, DCO, no AI attribution |
 | Builds | `eas build --local` (or prebuild + Xcode/Gradle), manual upload (Transporter / Play Console) | See §9 Xcode 27 note |
 | License | **GPL-3.0-or-later + App Store additional permission** (§7) | DCO, no CLA |
@@ -59,20 +59,22 @@ Platforms: **iOS first**, Android phones in the same release.
 
 ## 3. Design
 
-Dark, minimal, native-feeling. Content first, chrome out of the way.
+Dark-first, minimal, native-feeling. Content first, chrome out of the way. Light palette follows the iOS system light colours.
 
-All values live in `src/theme.ts`. Never hardcode colours, radii or font sizes in screens.
+All values live in `src/theme.ts`. Never hardcode colours, radii or font sizes in screens. Read colours with `useColors()` (active palette).
 
-| Token | Value |
-|---|---|
-| Background | `#000000` |
-| Surface / elevated | `#1C1C1E` / `#2C2C2E` / `#3A3A3C` |
-| Separator | `#38383A` |
-| Text primary / secondary | `#FFFFFF` / `#98989F` |
-| Inactive icon | `#8E8E93` |
-| Accent | White (primary buttons white bg, black text). Tweak options: `#0A84FF`, `#30D158`, `#FF9F0A` - flip button text to white when non-white accent |
-| Font | System (SF on iOS) - leave `fontFamily` unset |
-| Radii | Cards 8-14, buttons 12, pills full |
+| Token | Dark | Light |
+|---|---|---|
+| Background | `#000000` | `#FFFFFF` |
+| Surface / elevated | `#1C1C1E` / `#2C2C2E` / `#3A3A3C` | `#F2F2F7` / `#E5E5EA` / `#D1D1D6` |
+| Separator | `#38383A` | `#C6C6C8` |
+| Text primary / secondary | `#FFFFFF` / `#98989F` | `#000000` / `#6C6C70` |
+| Inactive icon | `#8E8E93` | `#8E8E93` |
+| Accent | White (primary buttons white bg, black text) | Black (black bg, white text) |
+| Font | System (SF on iOS) - leave `fontFamily` unset | same |
+| Radii | Cards 8-14; buttons, icon buttons, segmented controls and pills full (capsule / circle, Apple TV style) | same |
+
+Accent tweak options: `#0A84FF`, `#30D158`, `#FF9F0A` - flip button text to white when non-white accent.
 
 Rules: large titles 34/700, section headers 20/700 with chevron, 16:9 landscape cards for resume, 2:3 posters, white progress bars, download ring built from plain views (grey track + white arc; stop square = downloading, arrow = paused), min 44pt touch targets, tab bar: Home / Library / Search / Downloads.
 
@@ -112,9 +114,11 @@ src/session.tsx          SessionContext (accounts, active, token)
 src/useFetch.ts          in-memory cache, abort, invalidate()
 src/downloads.ts         store, queue, reconcile, cleanup, storage
 src/sync.ts              offline progress queue replay
+src/settings.ts          user settings in kv-store (appearance; downloads + offload later)
 src/player/Player.tsx    PlayerEngine interface + re-export of active engine
 src/player/mpv.tsx       mpv adapter
-src/components/          Button, Text, Toast, Spinner, PosterCard, LandscapeCard, Row, ProgressBar, DownloadRing
+src/components/          Button, IconButton, Text, Toast, Spinner, Screen, List, Segmented, PosterCard, LandscapeCard, Row, ProgressBar, DownloadRing
+src/dev/                 dev-only previews, rendered behind `__DEV__` (never in release)
 modules/mpv/             vendored native module (+ UPSTREAM.md: upstream repo + commit)
 modules/downloads/       own native background downloader (iOS + Android)
 ```

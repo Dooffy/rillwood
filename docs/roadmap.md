@@ -20,8 +20,9 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 
 ## M1 - Foundation
 
-- [ ] Router layout per `CLAUDE.md` §4; `src/theme.ts` (tokens `CLAUDE.md` §3); hand-built Button, Text, Toast, Spinner
-- [ ] Navigation: tappable items are `Pressable` + `router.push` (or `Link asChild` around `Pressable`), no bare Text `Link`; RNTL test per screen: `fireEvent.press` → mocked `router.push` called with the route. Don't test `__DEV__`-guarded routes in release builds (`docs/research/expo-router-rn088.md`)
+- [x] Router layout per `CLAUDE.md` §4; `src/theme.ts` (tokens `CLAUDE.md` §3); hand-built Button, Text, Toast, Spinner
+- [x] Navigation: tappable items are `Pressable` + `router.push` (or `Link asChild` around `Pressable`), no bare Text `Link`; RNTL test per screen: `fireEvent.press` → mocked `router.push` called with the route. Don't test `__DEV__`-guarded routes in release builds (`docs/research/expo-router-rn088.md`)
+- [x] Appearance setting (System / Dark / Light) in Settings, light palette, `useColors()` (`CLAUDE.md` §2, §3)
 - [ ] `api.ts` (header, 8s timeout, `ApiError`, offline flag), DeviceId - rules in `docs/context/api.md`
 - [ ] `useFetch` (cache key `accountId|path`, TTL, abort, `invalidate`)
 - [ ] Components: PosterCard, LandscapeCard, Row, ProgressBar, DownloadRing
@@ -97,7 +98,7 @@ Design + sources: `docs/research/background-downloads.md`.
 
 - [ ] Settings: accounts, playback defaults, downloads, cache clear, licenses screen
 - [ ] Perf (FlashList if FlatList stutters, image sizes, cold start <2s), accessibility pass
-- [ ] Icon, splash, screenshots, privacy policy ("connects to your own server")
+- [ ] Icon, splash (light + dark variant - splash is black only today), screenshots, privacy policy ("connects to your own server")
 - [ ] `/update-modules`: vendored modules, native binaries + Expo packages current, no blockers
 - [ ] CI native + playback checks (skill to create later):
   - Android native build + vendored Kotlin unit tests on `ubuntu-latest`, path-filtered to `app/modules/**` + native config
