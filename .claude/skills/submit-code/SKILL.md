@@ -35,13 +35,13 @@ Classify: **app** (`app/`), **native** (`app/modules/`, `app/ios/`, `app/android
 
 ## Step 2 - CLAUDE.md compliance
 
-`CLAUDE.md` is the source of truth. Read it fully (don't rely on memory), then check the diff against it:
+`CLAUDE.md` is the source of truth. Read it fully (don't rely on memory), plus every `docs/context/*.md` doc the diff touches (read-first table in root §4), then check the diff against them:
 
 - **§2 Locked decisions** - no banned libs (UI kits, state libs, `@jellyfin/sdk`, axios, third-party downloader...), no new dependency outside the table. New dep → `[MUST]`, needs maintainer approval in an issue.
 - **§3 Design** - tokens from `app/src/theme.ts`, rules (sizes, ratios, touch targets).
 - **§4 Folder structure** - files in the right place; no non-route code in `src/app/`.
-- **§5 API** - auth header only, endpoints as listed, ticks conversion correct.
-- **§6 Contracts** - `PlayerEngine`, downloader module and downloads store shapes unchanged unless the change is intentional (then Step 9 updates §6).
+- **API** (`docs/context/api.md`) - auth header only, endpoints as listed, ticks conversion correct.
+- **Contracts** (`docs/context/player.md`, `docs/context/downloads.md`, `docs/context/sync.md`) - `PlayerEngine`, downloader module, downloads store and sync shapes unchanged unless the change is intentional (then Step 9 updates that context doc).
 - **§7 Licensing** - SPDX headers, vendored headers, no GPL/AGPL native deps.
 - **§10 Conventions** - KISS, relative paths, `Pressable`, no `console.*`, hyphens not em dashes, commit/PR rules.
 
@@ -59,7 +59,7 @@ For every changed or new source file in `app/src/`, check a test covers the chan
 
 | Change | Test |
 |---|---|
-| Pure logic (`api.ts` header/URL/DTO mapping, `downloads.ts` queue/backoff/reconcile/cleanup, `sync.ts` replay, ticks/time helpers, URL normalisation) | Unit test of the new/changed behaviour, incl. edge cases (401/404, offline, empty) |
+| Pure logic (`api.ts` header/URL/DTO mapping, `downloads.ts` queue/reconcile/cleanup, `sync.ts` replay, ticks/time helpers, URL normalisation) | Unit test of the new/changed behaviour, incl. edge cases (401/404, offline, empty) |
 | `[ISSUE]` bug fix | Regression test that fails without the fix |
 | Non-trivial component / hook | Render test: loading, empty, error, success |
 | Screen wiring only, styles, copy | Not required |
@@ -158,16 +158,16 @@ Docs ship in the same commit as the code. Check each and update what the change 
 |---|---|
 | `CLAUDE.md` §2 | A decision changed or a dependency was approved/added |
 | `CLAUDE.md` §4 | Files/folders added, moved or removed |
-| `CLAUDE.md` §5 / §6 | Endpoint used, contract or store shape changed |
-| `CLAUDE.md` §8 | Milestone subtask finished → tick its `- [ ]` box; new subtask discovered → add it |
-| `CLAUDE.md` §11 | Open item resolved (remove) or new one found (add) |
-| `docs/` | Architecture, flow or decision changed (`docs/architecture.md`, `docs/decisions/`), native module behaviour changed (`docs/test-plans/<module>.md` manual device test plan), build/release steps changed (`docs/release.md`). Create the file if it doesn't exist and the change warrants it; link new files from `docs/README.md` |
+| `docs/context/*.md` | Endpoint used, contract, store shape or feature rule changed. New feature area → add a context doc and a row in the root §4 read-first table |
+| `docs/roadmap.md` | Milestone subtask finished → tick its `- [ ]` box; new subtask discovered → add it. Update the "Current" line in root §8 when a milestone closes |
+| `docs/open-items.md` | Open item resolved (remove) or new one found (add); decision taken → move it into root §2 or the context doc |
+| `docs/` | Architecture, flow or decision changed (`docs/decisions/`), native module behaviour changed (`docs/test-plans/<module>.md` manual device test plan), build/release steps changed (`docs/release.md`). Create the file if it doesn't exist and the change warrants it; link new files from `docs/README.md` |
 | `README.md` | User-facing setup, build or feature list changed (once README has content) |
 | `app/modules/*/UPSTREAM.md` | Vendored code updated |
 | `THIRD_PARTY_NOTICES.md` | Dependency or vendored code added/removed (once the file exists) |
 | Code comments / JSDoc | Public function or contract behaviour changed |
 
-Keep `CLAUDE.md` generic (no personal names, no other client names), terse, hyphens not em dashes. Don't rewrite unrelated sections. List what was updated: `Docs updated: <file> - <section>`. Nothing stale → `Docs up to date.`
+Keep `CLAUDE.md` and docs generic (no personal names, no other client names, no licence grey-area conclusions - our own tests and research only), terse, hyphens not em dashes. Don't rewrite unrelated sections. List what was updated: `Docs updated: <file> - <section>`. Nothing stale → `Docs up to date.`
 
 ---
 

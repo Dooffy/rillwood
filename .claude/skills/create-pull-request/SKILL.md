@@ -79,7 +79,7 @@ Already pushed and up to date → skip. Never plain force push.
 - what changed and why (one bullet per meaningful change)
 
 ## Milestone
-M<n> - <subtask> (from CLAUDE.md §8), or "n/a"
+M<n> - <subtask> (from `docs/roadmap.md`), or "n/a"
 
 Closes #<issue> (omit if none)
 
