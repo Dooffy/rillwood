@@ -107,7 +107,13 @@ movie "Multi Script Subs" "${SRC[@]}" "${TONE[@]}" \
 movie "4K HEVC 10bit" -f lavfi -i "testsrc2=size=3840x2160:rate=24:duration=$SECS" "${TONE[@]}" \
   -map 0:v -map 1:a -c:v libx265 -preset ultrafast -crf 28 -pix_fmt yuv420p10le -tag:v hvc1 -x265-params log-level=error -c:a aac -b:a 160k
 
-# Show: 3 x 2-minute episodes for resume (>1 min), Next Up and autoplay-next
+# Resume: 7 minutes, small. Jellyfin keeps resume points only for items >= 300 s (MinResumeDurationSeconds);
+# at 420 s the server thresholds land on 21 s (5 %) and 378 s (90 %)
+movie "Resume Test" -f lavfi -i "testsrc2=size=320x180:rate=24:duration=420" \
+  -f lavfi -i "sine=frequency=440:sample_rate=48000:duration=420" \
+  -map 0:v -map 1:a -c:v libx264 -preset veryfast -b:v 200k -pix_fmt yuv420p -c:a aac -b:a 64k
+
+# Show: 3 x 2-minute episodes for Next Up and autoplay-next (too short for server resume points, see Resume Test)
 SHOW="$SHOWS/Test Show (2026)/Season 01"
 mkdir -p "$SHOW"
 for ep in 1 2 3; do

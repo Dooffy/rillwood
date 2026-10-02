@@ -1,6 +1,6 @@
 # Rillwood
 
-Open-source Jellyfin client for iOS and Android. This file is the project overview and the working rules for contributors and AI coding agents. Read it fully before writing code.
+Open-source Jellyfin client for iOS and Android. This file is the project overview and the working rules for contributors and AI coding agents. Read it fully before writing code. Feature rules and contracts live in `docs/context/` - **read the matching doc before working on a feature** (table in §4). Checklists and open items live in `docs/`.
 
 Writing style for code, docs and PRs: terse, tables/bullets, hyphens not em dashes, KISS.
 
@@ -19,6 +19,7 @@ Rillwood is a new, open-source mobile client for Jellyfin servers. Goals: browse
 | Library: Movies / TV grid, sort, unwatched filter, search | Trickplay, intro skip |
 | Movie + series detail (seasons, episodes) | Download quality presets / transcoded downloads |
 | Playback via libmpv: direct play everything, resume, tracks, progress reporting | Live TV, music, books, admin |
+| | LGPL player builds (iOS dynamic MPVKit, Android optional) - §7, §11 |
 | Background downloads (movie / episode / season), pause/resume, survive app kill | Remote-access relay (separate project) |
 | Offline mode + progress sync on reconnect | |
 | Auto-offload downloads (default: 7 days after watched) | |
@@ -40,16 +41,16 @@ Platforms: **iOS first**, Android phones in the same release.
 | API | Plain `fetch` wrapper, hand-written types | **No `@jellyfin/sdk`, no axios** |
 | State | React only: `useState`/`useReducer`, Context (session), `useSyncExternalStore` (downloads) | **No Zustand, Redux, TanStack Query, MMKV** |
 | Persistence | `expo-sqlite/kv-store` (accounts, downloads index, settings, sync queue) | Sync reads on boot |
-| Secrets | `expo-secure-store` (token per account) | Never put tokens in URLs or files |
+| Secrets | `expo-secure-store` (token per account) | Never put tokens in URLs or files. Only exception: the native downloader keeps a copy in OS-protected storage so downloads resume after process death (`docs/context/downloads.md`) |
 | Files | `expo-file-system` new API (`File`, `Directory`, `Paths`) | Store **relative** paths only (iOS container path changes) |
 | Images | `expo-image`, `cachePolicy="disk"` | Offline posters |
-| Downloads | **Own Expo module** `modules/downloads` (Swift + Kotlin, Expo Modules API) | No third-party downloader. iOS: background `URLSession`. Android: WorkManager foreground worker + HTTP Range resume. expo-file-system can't reattach after app kill |
-| Download network | User setting: **Wi-Fi only (default) / Any network** | Enforced natively by `modules/downloads` (iOS `allowsCellularAccess`, Android `NetworkType.UNMETERED` / `CONNECTED`). No NetInfo |
-| Player | libmpv via a vendored MPL-2.0 Expo module in `modules/mpv` (headers kept) behind own `PlayerEngine` interface | Fallback: `expo-libvlc-player`. See §7 - must ship **LGPL** mpv/FFmpeg builds |
+| Downloads | **Own Expo module** `modules/downloads` (Swift + Kotlin, Expo Modules API). Native owns the queue, concurrency (max 2) and resume | No third-party downloader, no system `DownloadManager`. iOS: background `URLSession`; Android 14+: UIDT job, 8-13: WorkManager + `dataSync` FGS. Design: `docs/context/downloads.md` |
+| Download network | User setting: **Wi-Fi only (default) / Any network** | Enforced natively by `modules/downloads`. No NetInfo |
+| Player | libmpv via a vendored MPL-2.0 Expo module in `modules/mpv` (headers kept) behind own `PlayerEngine` interface (`docs/context/player.md`) | Fallback: `expo-libvlc-player` - under review (`docs/open-items.md`). See §7 - current mpv/FFmpeg builds are GPL, LGPL rebuild post-MVP |
 | Offload cleanup | Runs on app launch + foreground (`AppState` active) | No expo-background-task in MVP |
 | Network status | Fail-fast fetch (8s) + `/System/Info/Public` probe on foreground | |
-| Server target | **Jellyfin 12.1 base**, 12.0 + 10.11.x supported | Warn below 10.10.7. Dev servers: `dev/jellyfin` (Docker, pinned 12.1 + 10.11), dev-only users `admin` / `admin-rillwood`, `test` / `test-rillwood`. `?api_key=` returns 401 on 12.x - header auth only |
-| Tests | `jest-expo` + `@testing-library/react-native` (dev deps in `app/`), `*.test.ts(x)` next to the code; screen tests in `src/__tests__/` (never put tests in `src/app/` - expo-router treats files there as routes) | Unit tests for pure logic, regression test per bug fix, render tests for non-trivial components. Mock fetch / storage / native modules. Native code: manual device test plans in `docs/` |
+| Server target | **Jellyfin 12.1 base**, 12.0 + 10.11.x supported | Warn below 10.10.7. **Header auth only** (no `?api_key=` / `?ApiKey=`). Dev servers: `dev/jellyfin` (Docker, pinned 12.1 + 10.11). API rules: `docs/context/api.md` |
+| Tests | `jest-expo` + `@testing-library/react-native` (dev deps in `app/`), `*.test.ts(x)` next to the code; screen tests in `src/__tests__/` (never put tests in `src/app/` - expo-router treats files there as routes) | Unit tests for pure logic, regression test per bug fix, render tests for non-trivial components. Mock fetch / storage / native modules. Native code: manual device test plans in `docs/test-plans/` |
 | CI | GitHub Actions, GitHub-hosted `ubuntu-latest`, `.github/workflows/ci.yml`. Runs on every branch push + PRs to `main` | One independent runner per check (matrix, `fail-fast: false`): Lint, Typecheck, Format, Unit tests (+ coverage), Expo doctor, Bundle (iOS + Android), Licences. Plus Commit format + DCO: `[PREFIX]` format, blank line, DCO, no AI attribution |
 | Builds | `eas build --local` (or prebuild + Xcode/Gradle), manual upload (Transporter / Play Console) | See §9 Xcode 27 note |
 | License | **GPL-3.0-or-later + App Store additional permission** (§7) | DCO, no CLA |
@@ -118,86 +119,36 @@ modules/mpv/             vendored native module (+ UPSTREAM.md: upstream repo + 
 modules/downloads/       own native background downloader (iOS + Android)
 ```
 
+**Read first** - feature context, loaded on demand (repo-root paths):
+
+| Working on | Read |
+|---|---|
+| `api.ts`, `session.tsx`, `useFetch.ts`, auth / accounts, any server call | `docs/context/api.md` - endpoints, auth header, DeviceId, 401/403, tokens |
+| `src/player/`, player screen | `docs/context/player.md` - `PlayerEngine` contract, resume, reporting, engine issues |
+| `modules/mpv/`, player binaries | `docs/context/mpv.md` - binaries, NDK pin, mpv options, logs |
+| `downloads.ts`, `modules/downloads/`, Downloads screen | `docs/context/downloads.md` - native contract, HTTP resume rules, store, offload |
+| `sync.ts`, offline progress | `docs/context/sync.md` - offline sync flow |
+| `dev/jellyfin/`, test media | `docs/context/dev-server.md` |
+| Picking / ticking milestone work | `docs/roadmap.md` (§8) |
+| Planning, decisions, releases | `docs/open-items.md` (§11) |
+
 Keep non-route code out of `src/app/`. `app/` and `web/` are independent projects (own `package.json`, no shared workspace) until there is a real need to share code.
 
 ---
 
-## 5. Jellyfin API (≈12 endpoints)
+## 5. Jellyfin API
 
-**Auth header on every request** (Jellyfin 12 rejects `X-Emby-Token` and `?api_key=`):
-```
-Authorization: MediaBrowser Client="Rillwood", Device="iPhone", DeviceId="<per-account id>", Version="0.1.0", Token="<token>"
-```
-- DeviceId: `hash(installId + userId)` per account (shared DeviceId clobbers sessions). Install id via `expo-crypto.randomUUID()` in kv-store.
-- mpv sources: send `Authorization: MediaBrowser Token="<token>"` only. mpv joins headers into a comma-separated list, so the full header splits and Jellyfin returns 400 (`docs/test-plans/mpv.md` I1).
-
-| Feature | Endpoint |
-|---|---|
-| Validate / probe | `GET /System/Info/Public` |
-| Public users | `GET /Users/Public` |
-| Login | `POST /Users/AuthenticateByName` `{Username, Pw}` |
-| Quick Connect | `POST /QuickConnect/Initiate` (POST only since 12.0) → poll `GET /QuickConnect/Connect?secret=` → `POST /Users/AuthenticateWithQuickConnect` |
-| Logout | `POST /Sessions/Logout` |
-| Libraries | `GET /UserViews?userId=` |
-| Home rows | `GET /UserItems/Resume`, `GET /Shows/NextUp`, `GET /Items/Latest?parentId=` |
-| Grid | `GET /Items?userId&parentId&includeItemTypes=Movie,Series&recursive=true&sortBy=&startIndex=&limit=50&fields=Overview,PrimaryImageAspectRatio` |
-| Search | `GET /Items?searchTerm=&includeItemTypes=Movie,Series,Episode&recursive=true` |
-| Detail | `GET /Items/{id}?userId=` |
-| Seasons / episodes | `GET /Shows/{id}/Seasons`, `GET /Shows/{id}/Episodes?seasonId=` |
-| Playback info | `POST /Items/{id}/PlaybackInfo` (DeviceProfile: direct play everything) |
-| Stream | `GET /Videos/{id}/stream?static=true&mediaSourceId=` (auth header) |
-| External subs | `GET /Videos/{id}/{msId}/Subtitles/{index}/Stream.{srt/ass/vtt}` |
-| Reporting | `POST /Sessions/Playing`, `/Sessions/Playing/Progress` (10s + pause/seek), `/Sessions/Playing/Stopped` |
-| Download | `GET /Items/{id}/Download` (original file; Range + Last-Modified supported, no ETag) |
-| Played | `POST` / `DELETE /UserPlayedItems/{id}` |
-| Images | `GET /Items/{id}/Images/{type}?fillWidth=&quality=90&tag=` |
-
-Ticks: 10,000,000 per second.
+`docs/context/api.md` - endpoints, auth header, DeviceId, error semantics. Per-version test results: `docs/research/jellyfin-api.md`.
 
 ---
 
 ## 6. Key module contracts
 
-**PlayerEngine** (screens never import mpv directly):
-```ts
-export type Track = { id: number; lang?: string; title?: string; codec?: string };
-export type PlayerProps = {
-  source: { uri: string; headers?: Record<string, string> };
-  startSeconds?: number; audioTrack?: number; subtitleTrack?: number; // -1 = off
-  paused?: boolean;
-  externalSubs?: { uri: string; lang?: string; title?: string }[];
-  onLoad?(e: { duration: number; audio: Track[]; subs: Track[] }): void;
-  onProgress?(e: { position: number; duration: number }): void;
-  onEnd?(): void; onError?(msg: string): void;
-};
-export type PlayerRef = { seek(s: number): void; play(): void; pause(): void };
-```
-Keep playback position in a ref, not state.
-
-**Downloader module** (`modules/downloads`, only `src/downloads.ts` imports it):
-```ts
-export type Task = { id: string; bytes: number; total: number; state: 'running' | 'paused' | 'done' | 'error' };
-export function start(o: { id: string; url: string; headers: Record<string, string>; dest: string /* relative to Paths.document */; cellular: boolean }): void;
-export function pause(id: string): void;   // iOS: keeps resume data; Android: keeps .part file
-export function resume(id: string): void;
-export function cancel(id: string): void;  // deletes partial data
-export function getActiveTasks(): Promise<Task[]>;
-// events: progress { id, bytes, total } (native-throttled ~500ms), done { id }, error { id, status?, message }
-```
-Tokens arrive only in `headers`; native side never logs or persists them.
-
-**Downloads store** (`src/downloads.ts`):
-- Index in kv-store key `dl`; item: `{ id: "account:item:source", accountId, itemId, title, seriesId?, path (relative), status: queued|downloading|paused|done|error, bytes, total, downloadedAt?, watchedAt?, lastPlayedAt?, pinned, positionTicks?, dirtyProgress? }`.
-- Hooks: `useDownload(id)`, `useDownloadList()` via `useSyncExternalStore`; per-item subscriptions; progress throttled to 500ms; persist to kv-store only on structural changes.
-- Queue: max 2 active, network per user setting (Wi-Fi only default), retry backoff `min(2^n * 30s, 30min)` up to 5, 401 → `paused(auth)`, 404 → failed.
-- Pre-flight: `Paths.availableDiskSpace - size > max(2GB, 5%)`.
-- Also save per download: item JSON snapshot, poster/backdrop, external subtitle files.
-- `reconcile()` on launch + foreground: `getActiveTasks()` → rebind; missing task + complete file → finalize; missing task + no file → re-queue; orphan native tasks → stop.
-- iOS: force-quit cancels transfers (expected) → resume on next launch.
-- `cleanup()`: delete when `now > expires_at`, skip pinned / currently playing / active; weekly orphan sweep.
-- Offload policy setting: Off / After watched (default) / After download; delay 0/7/14/30 days (default 7). Watched = local ≥90% or server `UserData.Played`.
-
-**Sync** (`src/sync.ts`): offline progress → `dirtyProgress` → on reconnect replay `Sessions/Playing/Stopped` + `UserPlayedItems`; replay local before pulling server UserData.
+| Contract | Where |
+|---|---|
+| `PlayerEngine` | `docs/context/player.md` |
+| Downloader module + downloads store | `docs/context/downloads.md` |
+| Offline sync | `docs/context/sync.md` |
 
 ---
 
@@ -206,8 +157,8 @@ Tokens arrive only in `headers`; native side never logs or persists them.
 - `LICENSE` = GPL-3.0 text + App Store additional permission (section 7). Don't edit it.
 - Own files header: `// SPDX-License-Identifier: GPL-3.0-or-later`
 - Vendored MPL-2.0 files: keep their headers, record commit in `modules/mpv/UPSTREAM.md`. Check none are marked "Incompatible With Secondary Licenses".
-- **Player binaries:** Prebuilt MPVKit binaries are typically GPL builds - rebuild **without** `enable-gpl` / `make gpl`, no `--enable-nonfree`, no libx264; dynamic frameworks. Verify Android libmpv `.so` build flags. Publish build scripts + source tarballs per release. The GPL build is OK for local spikes only, never shipped.
-- **Never add GPL-only third-party libs to the iOS build** (e.g. `expo-mpv` npm is GPL-3.0-only).
+- **Player binaries:** the MVP uses the current prebuilt GPL builds (MPVKit fork on iOS, `dev.jdtech.mpv:libmpv` on Android; flags in `modules/mpv/UPSTREAM.md`). Post-MVP: rebuild **without** `enable-gpl` / `make gpl`, no `--enable-nonfree`, no libx264 / libsmbclient; dynamic framework on iOS (§11). Record exact binary provenance and publish build scripts / source per release.
+- **Never add other GPL-only third-party libs to the iOS build** (e.g. `expo-mpv` npm is GPL-3.0-only) - the MPVKit exception above is the only one.
 - `THIRD_PARTY_NOTICES.md` (repo root) lists vendored source + native binaries - update it with every vendored component or binary change. Check for upstream / binary updates with `/update-modules` before every release.
 - To add: `CONTRIBUTING.md` (DCO sign-off, contributions under GPL-3.0-or-later + exception), `TRADEMARKS.md` (forks welcome, rename + re-icon), in-app licenses screen (`react-native-legal` + manual native entries, FFmpeg LGPL credit line).
 - CI: `npm run licenses` fails on any GPL/AGPL-only production dependency (LGPL and `X OR GPL` dual licences allowed). Native binaries (MPVKit, libmpv) aren't npm deps - verify them by hand (§11).
@@ -228,86 +179,7 @@ Tokens arrive only in `headers`; native side never logs or persists them.
 | M6 | Offline + offload + sync | Flight mode browse/play, auto-delete, progress syncs |
 | M7 | Hardening + release | TestFlight + Play internal track |
 
-### M0 - Setup + player spike
-- [x] Remove `app/.gitkeep`, then `create-expo-app app` (default@sdk-58) at repo root; `npx expo install expo-dev-client expo-file-system expo-sqlite expo-secure-store expo-image expo-crypto expo-build-properties`; `npx expo install --fix`
-- [x] `expo-build-properties`: Android minSdk 26 (iOS 16.4 is already the SDK 58 minimum)
-- [x] Vendor the mpv Expo module → `modules/mpv` + `UPSTREAM.md` (embedded view only; MPVKit pod via `modules/mpv/app.plugin.js`)
-- [x] `npx expo prebuild`, dev build on physical iPhone
-- [x] Local Jellyfin in Docker (`dev/jellyfin`: 12.1 + 10.11) with generated test library
-- [x] Test screen: HTTP stream with auth header + local file in Documents
-- [ ] Matrix (10 files): H.264, HEVC 10-bit, HDR10, DV P8, AV1 | AAC, AC3, DTS, TrueHD | SRT, ASS, PGS
-- [ ] Seek, audio/sub switch, background/foreground, 4K memory
-- [ ] Android dev build smoke test
-- [ ] iOS local release archive on Xcode 27 with Expo SDK 58
-- [ ] Start LGPL MPVKit rebuild investigation (non-blocking for spike)
-- [ ] **Gate:** >2 blockers after the full test matrix → swap to `expo-libvlc-player` behind same interface
-
-### M1 - Foundation
-- [ ] Router layout per §4; `src/theme.ts` (tokens §3); hand-built Button, Text, Toast, Spinner
-- [ ] `api.ts` (header, 8s timeout, `ApiError`, offline flag), DeviceId
-- [ ] `useFetch` (cache key `accountId|path`, TTL, abort, `invalidate`)
-- [ ] Components: PosterCard, LandscapeCard, Row, ProgressBar, DownloadRing
-- [ ] TS strict, ESLint/Prettier, SPDX headers, CONTRIBUTING (DCO)
-- [x] Test setup: `jest-expo` + RNTL, `npm test`, CI on every branch + `main`
-- [ ] First unit tests for `api.ts`
-
-### M2 - Auth + accounts
-- [ ] Server screen (normalise URL, validate, version warning)
-- [ ] Password login, Quick Connect (show code, poll)
-- [ ] SessionContext: accounts in kv-store, tokens in secure-store `tok_<accountId>`
-- [ ] Account switcher sheet, add/remove/sign out
-- [ ] Global 401 → signed-out state, keep downloads
-- [ ] Test vs `dev/jellyfin` 12.1 (base) + 10.11
-
-### M3 - Browse
-- [ ] Home rows + Up Next hero
-- [ ] Library grid (paging 50, sort, unwatched), Movies/TV segmented
-- [ ] Movie detail (backdrop scrim, chips, Resume/Play, version/audio/sub rows, cast)
-- [ ] Series detail (season picker, episodes with progress + download state)
-- [ ] Search (debounced)
-- [ ] Mark watched / favourite; skeleton, empty, error states
-
-### M4 - Playback
-- [ ] PlaybackInfo → media source → static URL
-- [ ] Player UI: landscape, ±10s, scrubber with chapters, auto-hide, gestures
-- [ ] Orientation: `app.json` `orientation` → `default`, lock non-player screens to portrait (needs `expo-screen-orientation` - approve in §2)
-- [ ] Tracks sheet (audio, subs incl. external, speed, sub size/offset)
-- [ ] Resume prompt (>1 min, <95%)
-- [ ] Reporting start/progress/stop with PlaySessionId
-- [ ] Autoplay next + up-next overlay (last 30s); remember audio/sub language per user
-
-### M5 - Downloads
-- [ ] `modules/downloads` scaffold (`npx create-expo-module --local downloads`), JS contract per §6
-- [ ] iOS: background `URLSession` (fixed id), auth header per request, progress events, move file in `didFinishDownloadingTo`, pause = cancel with resume data (persisted), reattach via `getAllTasks`, `handleEventsForBackgroundURLSession` via `AppDelegateSubscriber`, `allowsCellularAccess`
-- [ ] Android: WorkManager `CoroutineWorker` + `setForeground` (dataSync notification with progress), HTTP Range resume to `.part` file, network constraint per setting, unique work per download id; module manifest declares FOREGROUND_SERVICE, FOREGROUND_SERVICE_DATA_SYNC, POST_NOTIFICATIONS and the `SystemForegroundService` `dataSync` type
-- [ ] Notification permission prompt before first enqueue (Android 13+)
-- [ ] Store + hooks + queue + pre-flight + snapshot/images/subs
-- [ ] Network setting: Wi-Fi only / Any network
-- [ ] Season download (ordered enqueue)
-- [ ] Reconcile on launch/foreground
-- [ ] Downloads screen: storage bar (`Paths.availableDiskSpace`), in progress, ready, delete
-- [ ] Tests: force-quit, OS kill, airplane mode, 20GB file, token revoked, low disk
-
-### M6 - Offline + offload + sync
-- [ ] Offline detection + offline UI (Downloads tab primary, detail from snapshots, `file://` playback)
-- [ ] Progress queue + replay; watched sync for downloaded items
-- [ ] Offload settings + `cleanup()` + Keep pin + "Removes in N days" label + freed-GB toast
-- [ ] Weekly orphan sweep
-
-### M7 - Hardening + release
-- [ ] Settings: accounts, playback defaults, downloads, cache clear, licenses screen
-- [ ] Perf (FlashList if FlatList stutters, image sizes, cold start <2s), accessibility pass
-- [ ] Icon, splash, screenshots, privacy policy ("connects to your own server")
-- [ ] `/update-modules`: vendored modules, native binaries + Expo packages current, no blockers
-- [ ] CI native + playback checks (skill to create later):
-  - Android native build + vendored Kotlin unit tests on `ubuntu-latest`, path-filtered to `app/modules/**` + native config
-  - Android emulator playback self-test (needs the player self-test screen; approve `reactivecircus/android-emulator-runner`); generated media + Jellyfin Docker service
-  - iOS native build + simulator self-test on a macOS runner (needs §2 CI decision change; nightly while private, per-PR once public; check runner Xcode version)
-  - Simulator / emulator decode is software only - HDR, DV, 4K stay manual (`docs/test-plans/mpv.md`)
-- [ ] Make repo public; LGPL player binaries verified
-- [ ] Bump versions (`autoIncrement` in eas.json), `eas build -p ios --local` → Transporter; `-p android --local` → Play Console (first `.aab` manual)
-- [ ] TestFlight + Play internal, 3-5 testers; App Review notes with demo server + account
-- [ ] Tag release; publish mpv/FFmpeg source tarballs
+**Current: M0** (device run + gate open) → **M1**. Checklists: [`docs/roadmap.md`](docs/roadmap.md).
 
 ---
 
@@ -322,7 +194,7 @@ eas build -p android --profile production --local --output app.aab  # → Play C
 ```
 - Accounts: Apple Developer, Play Console.
 - Signing: EAS-managed credentials (fetched via `EXPO_TOKEN`) or `credentialsSource: "local"`. Keep Android upload keystore backed up.
-- **Xcode 27:** `expo-modules-jsi`'s `build-xcframework.sh` has been known to break **archive** builds on Xcode 27. Verify a local archive on Expo SDK 58 in M0. Fallback: Xcode 26.6 side by side.
+- **Xcode 27:** `expo-modules-jsi`'s `build-xcframework.sh` has been known to break **archive** builds on Xcode 27. Verified OK on Xcode 27.0 (27A266a) + SDK 58 (2026-10-01): SDK 58 ships Expo modules precompiled, so the script doesn't run. Re-check on Xcode / SDK bumps. Fallback: Xcode 26.6 side by side.
 - Later CI: public GitHub repo + free standard runners running `eas build --local`.
 - OTA: EAS Update free (1K MAU) → self-hosted when needed. Native changes (mpv) always need a rebuild.
 
@@ -338,7 +210,7 @@ eas build -p android --profile production --local --output app.aab  # → Play C
 - Every tappable card is `Pressable` (future TV focus).
 - Hyphens, not em dashes, in UI copy and docs.
 - Run `npm run check` in `app/` (lint, typecheck, format, tests) before calling a task done; CI also runs doctor, bundle and licence checks. New logic ships with tests; bug fixes ship with a regression test.
-- Docs ship with the code: keep `CLAUDE.md` and `docs/` current in the same commit (`/submit-code` checks this).
+- Docs ship with the code: keep `CLAUDE.md`, `docs/context/` and `docs/` current in the same commit (`/submit-code` checks this). Hard rules that apply everywhere stay in this file; feature details go in `docs/context/<feature>.md`.
 
 ### Git
 
@@ -361,12 +233,4 @@ eas build -p android --profile production --local --output app.aab  # → Play C
 
 ## 11. Open items
 
-| Item | Status |
-|---|---|
-| Name checks for Rillwood | App Store/Play search in target markets, trademark search (TMview / USPTO) classes 9 + 41/42, domain (`rillwood.app`), native-speaker sanity check in target markets. Before first store upload |
-| Trademark | File after checks pass |
-| LGPL MPVKit build (iOS) + libmpv (Android) rebuild | Both current binaries are GPL builds (checked 2026-10-01, see `app/modules/mpv/UPSTREAM.md`) - rebuild LGPL before first public store build |
-| Test media | Synthetic matrix: `dev/jellyfin/make-test-media.sh` -> `$RILLWOOD_MEDIA`. Still needed by hand in `real/`: DV P8 clip, PGS subtitles, large 4K remux |
-| Package versions | Let `npx expo install --fix` decide; don't hand-pin. Exception: `@react-native/jest-preset` pinned to `0.88.0-rc.3` (expo install picks 0.87) - re-pin to the `react-native` version on every RN bump |
-| Branch protection | Needs a public repo or GitHub Pro. Once available: require PR + all CI status checks (Lint, Typecheck, Format, Unit tests, Expo doctor, Bundle, Licences, Commit format + DCO) on `main` |
-| `app/.npmrc` `legacy-peer-deps=true` | Needed while SDK 58 ships react-native 0.88.0-rc.x (npm rejects RCs in peer ranges). Remove once SDK 58 is stable |
+[`docs/open-items.md`](docs/open-items.md) - open items, re-checks and "Decision needed" rows.

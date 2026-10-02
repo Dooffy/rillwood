@@ -51,7 +51,7 @@ git rev-parse --verify --quiet "refs/heads/<branch>" ; git ls-remote --exit-code
 
 Taken → append `-2` (or ask).
 
-Also look in `CLAUDE.md` §8 for an unticked milestone task that matches the description; note it (e.g. `M3 - Library grid`) for the summary.
+Also look in `docs/roadmap.md` for an unticked milestone task that matches the description; note it (e.g. `M3 - Library grid`) for the summary.
 
 Show the proposed name and type in one line and continue unless the user objects - don't ask a multi-question form.
 

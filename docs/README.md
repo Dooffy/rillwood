@@ -1,10 +1,12 @@
 # Docs
 
-Project documentation. Overview and working rules live in [`CLAUDE.md`](../CLAUDE.md).
+Project documentation. Overview and working rules live in [`CLAUDE.md`](../CLAUDE.md); feature rules and contracts in `context/` (read-first table in root §4).
 
-| Path | Contents |
-|---|---|
-| `architecture.md` | How the app fits together (added with M1) |
-| `decisions/` | Decision records for changes to locked decisions |
-| `test-plans/` | Manual device test plans for native modules: [`mpv.md`](test-plans/mpv.md) |
-| `release.md` | Build and release process (added with M7) |
+| Path            | Contents                                                                                                                                                                                                                                                                                                   |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `roadmap.md`    | Milestone checklists M0-M7 (summary in root `CLAUDE.md` §8)                                                                                                                                                                                                                                                |
+| `open-items.md` | Open items, re-checks, decisions needed                                                                                                                                                                                                                                                                    |
+| `decisions/`    | Decision records for changes to locked decisions                                                                                                                                                                                                                                                           |
+| `research/`     | Background research: [`jellyfin-api.md`](research/jellyfin-api.md), [`background-downloads.md`](research/background-downloads.md), [`expo-router-rn088.md`](research/expo-router-rn088.md), [`store-requirements.md`](research/store-requirements.md), [`real-test-media.md`](research/real-test-media.md) |
+| `test-plans/`   | Manual device test plans for native modules: [`mpv.md`](test-plans/mpv.md)                                                                                                                                                                                                                                 |
+| `release.md`    | Build and release process (added with M7)                                                                                                                                                                                                                                                                  |

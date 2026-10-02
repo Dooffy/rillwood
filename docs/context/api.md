@@ -1,0 +1,46 @@
+# API, auth + session
+
+Read before working on `src/api.ts` (fetch client, endpoints, DTO types), `src/useFetch.ts` or `src/session.tsx` (accounts, tokens), or any server call. Rules here extend root `CLAUDE.md` §2 / §10. Per-version test results, curl examples: [`docs/research/jellyfin-api.md`](../research/jellyfin-api.md).
+
+## Rules
+
+- Plain `fetch` wrapper, hand-written DTO types, no `any` (root §2, §10). 8s fail-fast timeout, `ApiError`, offline flag; `/System/Info/Public` probe on foreground.
+- Server target: **Jellyfin 12.1 base**, 12.0 + 10.11.x supported, warn below 10.10.7.
+- **Auth header only.** 12.x rejects `X-Emby-Token`, `?api_key=` and the `Emby` scheme (10.11 still accepts them). `?ApiKey=` still works on both but is banned - no tokens in URLs.
+  ```
+  Authorization: MediaBrowser Client="Rillwood", Device="iPhone", DeviceId="<per-account id>", Version="0.1.0", Token="<token>"
+  ```
+- DeviceId: `hash(installId + userId)` per account (shared DeviceId clobbers sessions). Install id via `expo-crypto.randomUUID()` in kv-store.
+- mpv sources: send `Authorization: MediaBrowser Token="<token>"` only. mpv joins headers into a comma-separated list, so the full header splits and Jellyfin returns 400 (`docs/test-plans/mpv.md` I1).
+- Login and Quick Connect send the same header without `Token` (400 without `Device` / `DeviceId`).
+- Same account + same DeviceId re-login revokes the older token (re-adding an account replaces it). 10.11 merges sessions of different users on one DeviceId.
+- 401 = bad / missing / revoked token on every authed endpoint (both versions) → global signed-out state, keep downloads. 403 = `userId` of another user. `userId` query params are optional (taken from the token).
+- Served **without auth** on 10.11 + 12.1 (I10): `/Videos/{id}/stream` (static and non-static), `/Items/{id}/Images/*`, subtitle streams. Detect revoked tokens from API 401s, not playback. `/Items/{id}/Download` does enforce auth.
+- Session: accounts in kv-store, tokens in `expo-secure-store` `tok_<accountId>`. Switch accounts without restart.
+- `useFetch`: cache key `accountId|path`, TTL, abort, `invalidate()`.
+
+## Endpoints (≈12)
+
+| Feature            | Endpoint                                                                                                                                                                                                                                              |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Validate / probe   | `GET /System/Info/Public`                                                                                                                                                                                                                             |
+| Public users       | `GET /Users/Public` - empty when users are hidden (common); always allow manual username                                                                                                                                                              |
+| Login              | `POST /Users/AuthenticateByName` `{Username, Pw}`                                                                                                                                                                                                     |
+| Quick Connect      | `GET /QuickConnect/Enabled` → `POST /QuickConnect/Initiate` (GET is 405 on 12.x) → poll `GET /QuickConnect/Connect?secret=` → `POST /Users/AuthenticateWithQuickConnect {Secret}`. Tests approve headlessly with `POST /QuickConnect/Authorize?code=` |
+| Logout             | `POST /Sessions/Logout`                                                                                                                                                                                                                               |
+| Libraries          | `GET /UserViews?userId=`                                                                                                                                                                                                                              |
+| Home rows          | `GET /UserItems/Resume?mediaTypes=Video` (12.1 adds Season / Series rows otherwise), `GET /Shows/NextUp`, `GET /Items/Latest?parentId=` (**bare array**; TV returns Series on 12.1, Episode on 10.11)                                                 |
+| Grid               | `GET /Items?userId&parentId&includeItemTypes=Movie,Series&recursive=true&sortBy=&sortOrder=&filters=IsUnplayed&startIndex=&limit=50&fields=Overview,PrimaryImageAspectRatio` (unknown `sortBy` is silently ignored)                                   |
+| Search             | `GET /Items?searchTerm=&includeItemTypes=Movie,Series,Episode&recursive=true`                                                                                                                                                                         |
+| Detail             | `GET /Items/{id}?userId=` - never with an empty / zero id (returns the root folder)                                                                                                                                                                   |
+| Seasons / episodes | `GET /Shows/{id}/Seasons`, `GET /Shows/{id}/Episodes?seasonId=`                                                                                                                                                                                       |
+| Playback info      | `POST /Items/{id}/PlaybackInfo` with DeviceProfile `MaxStreamingBitrate` (400 Mbps) + `DirectPlayProfiles:[{Type:"Video"}]` + subtitle profiles **Embed and External**. Check `SupportsDirectPlay` (false comes with no error code)                   |
+| Stream             | `GET /Videos/{id}/stream?static=true&mediaSourceId=` (auth header)                                                                                                                                                                                    |
+| External subs      | `GET /Videos/{id}/{msId}/Subtitles/{index}/Stream.{srt/ass/vtt}` - build it in the client, never use the server `DeliveryUrl` (contains `ApiKey=<token>`)                                                                                             |
+| Reporting          | `POST /Sessions/Playing`, `/Sessions/Playing/Progress` (10s + pause/seek), `/Sessions/Playing/Stopped`                                                                                                                                                |
+| Download           | `GET /Items/{id}/Download` (original file; Range + `If-Range: <Last-Modified>` supported, no ETag, **HEAD is 405**)                                                                                                                                   |
+| Played             | `POST /UserPlayedItems/{id}?datePlayed=` / `DELETE`                                                                                                                                                                                                   |
+| User data          | `GET` / `POST /UserItems/{id}/UserData` `{PlaybackPositionTicks, LastPlayedDate, Played}` - offline sync (`docs/context/sync.md`)                                                                                                                     |
+| Images             | `GET /Items/{id}/Images/{type}?fillWidth=&quality=90&tag=` (`tag=` gives 1-year cache headers; 404 when the type is missing - fallback UI)                                                                                                            |
+
+Ticks: 10,000,000 per second. Server resume rules (defaults, both versions): position < 5% → 0, ≥ 90% → Played, items < 300s get no resume point.

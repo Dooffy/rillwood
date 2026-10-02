@@ -44,3 +44,6 @@ yarn-error.*
 # test coverage
 coverage/
 .bundle-check/
+
+# Gradle output of local Expo modules
+modules/*/android/build/

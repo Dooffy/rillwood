@@ -74,7 +74,7 @@ For every binary in the `UPSTREAM.md` binaries table (and pinned native deps of 
 | libmpv (Android, Maven) | `curl -s https://repo1.maven.org/maven2/dev/jdtech/mpv/libmpv/maven-metadata.xml` | POM licence, upstream build script flags |
 | Pinned pods / Gradle deps | CocoaPods trunk / Maven Central metadata | Licence of the new version |
 
-Release rule (CLAUDE.md §7): a GPL player binary is a **release blocker**, whatever its version. Report it as `BLOCKER` in Step 4 even when no update exists.
+Licence rule (CLAUDE.md §7): the MVP uses the current GPL player binaries; the LGPL rebuild is post-MVP (`docs/open-items.md`). Report each binary's licence and flags in Step 4. Report as `BLOCKER`: a new GPL-only library or `--enable-nonfree` feature that wasn't there before, or anything that breaks the §7 rules.
 
 ---
 
@@ -84,7 +84,7 @@ Release rule (CLAUDE.md §7): a GPL player binary is a **release blocker**, what
 cd app && npx expo install --check
 ```
 
-- Let `npx expo install --fix` decide versions - don't hand-pin (CLAUDE.md §11). Exception: `@react-native/jest-preset` must equal the `react-native` version.
+- Let `npx expo install --fix` decide versions - don't hand-pin (`docs/open-items.md`). Exception: `@react-native/jest-preset` must equal the `react-native` version.
 - Note if Expo SDK 58 stable has shipped (CLAUDE.md §2) - moving off `next` is a separate task, not part of this run.
 
 Report one table, then stop if `--check`:
