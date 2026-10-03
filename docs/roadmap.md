@@ -41,7 +41,7 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [x] Global 401 → signed-out state, keep downloads
 - [x] Onboarding rework: Welcome (library wall) → Add server → Sign in as numbered steps with explanations, example addresses and "Where do I find it?"
 - [x] Rework Add server from Settings / Accounts: same help as onboarding (examples, where to find it) without the welcome steps; final logo = the two-wave `LogoMark`, used for the app icon (iOS, Android adaptive + monochrome) and splash
-- [ ] Test vs `dev/jellyfin` 12.1 (base) + 10.11 (auth flows passed live on 12.1, 2026-10-03; 10.11 + on-device run open); iOS warm deep links emit `url` events (expo/expo#50230)
+- [ ] Test vs `dev/jellyfin` 12.1 (base) + 10.11 (auth flows passed live on 12.1 + 10.11, 2026-10-03; in-app run on 10.11 + on-device run open); iOS warm deep links emit `url` events (expo/expo#50230)
 
 ## M3 - Browse
 
@@ -102,7 +102,7 @@ Design + sources: `docs/research/background-downloads.md`.
 - [ ] Settings: accounts, playback defaults, downloads, cache clear, licenses screen
 - [ ] Perf (FlashList if FlatList stutters, image sizes, cold start <2s), accessibility pass
 - [ ] iPad layout for every screen (`supportsTablet` is off today): adaptive grids, readable-width forms and pages, landscape, split view / Stage Manager sizes
-- [ ] Splash light + dark variant (black only today; icon + splash mark done in M2 - re-render with `app/scripts/render-icons.py`), screenshots, privacy policy ("connects to your own server")
+- [ ] Splash light + dark variant (black only today; icon + splash mark done in M2), screenshots, privacy policy ("connects to your own server")
 - [ ] `/update-modules`: vendored modules, native binaries + Expo packages current, no blockers
 - [ ] CI native + playback checks (skill to create later):
   - Android native build + vendored Kotlin unit tests on `ubuntu-latest`, path-filtered to `app/modules/**` + native config
