@@ -72,14 +72,14 @@ All values live in `src/theme.ts`. Never hardcode colours, radii or font sizes i
 | Inactive icon | `#8E8E93` | `#8E8E93` |
 | Danger (errors, destructive) | `#FF453A` | `#FF3B30` |
 | Success (status dot: active account) | `#30D158` | `#34C759` |
-| On artwork (progress over images, watched check scrim, bottom fade) | fill `#FFFFFF`, track `rgba(255,255,255,0.35)`, scrim `rgba(0,0,0,0.55)`, fade = black 0 → 0.75 gradient (`backgroundImage`) | same (`onArtwork`) |
+| On artwork (progress / watched status over images, bottom fade) | fill `#FFFFFF`, track `rgba(255,255,255,0.35)`, fade = black 0 → 0.75 gradient (`backgroundImage`) | same (`onArtwork`) |
 | Accent | White (primary buttons white bg, black text) | Black (black bg, white text) |
 | Font | System (SF on iOS) - leave `fontFamily` unset | same |
 | Radii | Cards 8-14, large cards (profile) 20; buttons, icon buttons, segmented controls and pills full (capsule / circle, Apple TV style) | same |
 
 Accent tweak options: `#0A84FF`, `#30D158`, `#FF9F0A` - flip button text to white when non-white accent.
 
-Rules: large titles 34/700, section headers 20/700 with chevron, 16:9 landscape cards for resume, 2:3 posters, white progress bars (over artwork: bottom fade + time left after the bar, `[=====   ] 9m`), download ring built from plain views (grey track + white arc; stop square = downloading, arrow = paused), min 44pt touch targets, tab bar: Home / Library / Search / Downloads.
+Rules: large titles 34/700, section headers 20/700 with chevron, 16:9 landscape cards for resume, 2:3 posters, white progress bars (over artwork: bottom fade + time left after the bar, `[=====   ] 9m`; watched items show `✓ Watched` in the same spot), download ring built from plain views (grey track + white arc; stop square = downloading, arrow = paused), min 44pt touch targets, tab bar: Home / Library / Search / Downloads.
 
 ---
 

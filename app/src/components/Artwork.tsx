@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Shared image box for PosterCard / LandscapeCard: cached image, placeholder when missing or failed (Jellyfin
-// returns 404 for a missing image type), watched check, and progress bar over a bottom fade so it reads on bright art.
+// returns 404 for a missing image type), and a status over a bottom fade so it reads on bright art: "✓ Watched" or
+// the progress bar with time left.
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
@@ -30,6 +31,7 @@ export function Artwork({ image, aspectRatio, progress, remainingSeconds, played
   const [failed, setFailed] = useState<string>();
   const showImage = image !== undefined && failed !== image;
   const remaining = remainingSeconds === undefined ? undefined : formatRemaining(remainingSeconds);
+  const inProgress = isInProgress(progress, played);
 
   return (
     <View style={[styles.box, { aspectRatio, backgroundColor: c.surface }]}>
@@ -49,22 +51,34 @@ export function Artwork({ image, aspectRatio, progress, remainingSeconds, played
           <SymbolView name={{ ios: 'film', android: 'movie' }} tintColor={c.iconInactive} size={28} />
         </View>
       )}
-      {played && (
-        <View testID="artwork-played" style={styles.check}>
-          <SymbolView name={{ ios: 'checkmark', android: 'check' }} tintColor={onArtwork.fill} size={12} />
-        </View>
-      )}
-      {isInProgress(progress, played) && (
+      {(played || inProgress) && (
         <>
           <View testID="artwork-fade" style={styles.fade} />
-          <View style={styles.progress}>
-            <View style={styles.bar}>
-              <ProgressBar progress={progress} overArtwork />
-            </View>
-            {remaining !== undefined && (
-              <Text variant="caption" style={styles.remaining} numberOfLines={1}>
-                {remaining}
-              </Text>
+          {/* One status spot over the fade: "✓ Watched", or the bar with time left. */}
+          <View style={styles.status}>
+            {played ? (
+              <View testID="artwork-played" style={styles.watched}>
+                <SymbolView
+                  name={{ ios: 'checkmark', android: 'check' }}
+                  tintColor={onArtwork.fill}
+                  size={12}
+                  weight="bold"
+                />
+                <Text variant="caption" style={styles.statusText}>
+                  Watched
+                </Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.bar}>
+                  <ProgressBar progress={progress ?? 0} overArtwork />
+                </View>
+                {remaining !== undefined && (
+                  <Text variant="caption" style={styles.statusText} numberOfLines={1}>
+                    {remaining}
+                  </Text>
+                )}
+              </>
             )}
           </View>
         </>
@@ -76,19 +90,8 @@ export function Artwork({ image, aspectRatio, progress, remainingSeconds, played
 const styles = StyleSheet.create({
   box: { width: '100%', borderRadius: radii.card, overflow: 'hidden' },
   center: { alignItems: 'center', justifyContent: 'center' },
-  check: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    width: 22,
-    height: 22,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: onArtwork.scrim,
-  },
   fade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '45%', backgroundImage: onArtwork.fade },
-  progress: {
+  status: {
     position: 'absolute',
     left: spacing.sm + 2,
     right: spacing.sm + 2,
@@ -98,5 +101,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   bar: { flex: 1 },
-  remaining: { color: onArtwork.fill, fontWeight: type.label.fontWeight, fontVariant: ['tabular-nums'] },
+  watched: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  statusText: { color: onArtwork.fill, fontWeight: type.label.fontWeight, fontVariant: ['tabular-nums'] },
 });

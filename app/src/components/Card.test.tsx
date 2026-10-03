@@ -42,9 +42,10 @@ describe('PosterCard', () => {
     expect(screen.getByTestId('artwork-placeholder')).toBeOnTheScreen();
   });
 
-  it('marks a watched item and hides its progress', async () => {
+  it('shows "Watched" over the fade instead of progress', async () => {
     await render(<PosterCard title="Dune" played progress={0.5} onPress={() => {}} />);
-    expect(screen.getByTestId('artwork-played')).toBeOnTheScreen();
+    expect(screen.getByTestId('artwork-played')).toHaveTextContent('Watched');
+    expect(screen.getByTestId('artwork-fade')).toBeOnTheScreen();
     expect(screen.queryByRole('progressbar')).toBeNull();
   });
 

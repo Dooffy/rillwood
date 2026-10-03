@@ -124,7 +124,7 @@ export function PrimitivesPreview() {
         />
         <LandscapeCard
           title="Big Buck Bunny"
-          subtitle="Watched"
+          subtitle="2008"
           image={ART.bunnyStill}
           played
           onPress={() => toast('Card pressed')}

@@ -59,7 +59,6 @@ export function useScheme(): Scheme {
 export const onArtwork = {
   fill: '#FFFFFF',
   track: 'rgba(255, 255, 255, 0.35)',
-  scrim: 'rgba(0, 0, 0, 0.55)',
   /** Bottom fade under the progress bar so it reads on bright art (Apple TV style). */
   fade: 'linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.35) 45%, rgba(0, 0, 0, 0.75) 100%)',
 } as const;
