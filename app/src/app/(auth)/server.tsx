@@ -31,6 +31,12 @@ export default function Server() {
     [],
   );
 
+  /** Typing or picking an example clears the last error. */
+  const editAddress = (text: string) => {
+    setAddress(text);
+    setError(undefined);
+  };
+
   async function connect() {
     if (busy.current) return;
     const candidates = serverUrlCandidates(address);
@@ -64,7 +70,7 @@ export default function Server() {
         label="Server address"
         placeholder="https://jellyfin.example.com"
         value={address}
-        onChangeText={setAddress}
+        onChangeText={editAddress}
         error={error}
         keyboardType="url"
         textContentType="URL"
@@ -74,12 +80,7 @@ export default function Server() {
         onSubmitEditing={connect}
         editable={!loading}
       />
-      <AddressExamples
-        onPick={(example) => {
-          setAddress(example);
-          setError(undefined);
-        }}
-      />
+      <AddressExamples onPick={editAddress} />
       <WhereToFindServer />
       <Button title="Continue" onPress={connect} loading={loading} disabled={address.trim() === ''} />
     </Page>

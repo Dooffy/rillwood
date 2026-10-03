@@ -71,6 +71,7 @@ All values live in `src/theme.ts`. Never hardcode colours, radii or font sizes i
 | Text primary / secondary | `#FFFFFF` / `#98989F` | `#000000` / `#6C6C70` |
 | Inactive icon | `#8E8E93` | `#8E8E93` |
 | Danger (errors, destructive) | `#FF453A` | `#FF3B30` |
+| Success (status dot: active account) | `#30D158` | `#34C759` |
 | Accent | White (primary buttons white bg, black text) | Black (black bg, white text) |
 | Font | System (SF on iOS) - leave `fontFamily` unset | same |
 | Radii | Cards 8-14, large cards (profile) 20; buttons, icon buttons, segmented controls and pills full (capsule / circle, Apple TV style) | same |
