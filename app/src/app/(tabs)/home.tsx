@@ -7,7 +7,7 @@ import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { PrimitivesPreview } from '@/dev/PrimitivesPreview';
 import { useSession } from '@/session';
-import { minTouch, spacing } from '@/theme';
+import { minTouch, pressedOpacity, spacing } from '@/theme';
 
 export default function Home() {
   const { active } = useSession();
@@ -37,5 +37,5 @@ export default function Home() {
 const styles = StyleSheet.create({
   content: { gap: spacing.lg },
   profile: { width: minTouch, height: minTouch, alignItems: 'center', justifyContent: 'center' },
-  pressed: { opacity: 0.5 },
+  pressed: { opacity: pressedOpacity },
 });

@@ -43,7 +43,7 @@ Platforms: **iOS first**, Android phones in the same release. iPad layout before
 | Persistence | `expo-sqlite/kv-store` (accounts, downloads index, settings, sync queue) | Sync reads on boot |
 | Secrets | `expo-secure-store` (token per account) | Never put tokens in URLs or files. Only exception: the native downloader keeps a copy in OS-protected storage so downloads resume after process death (`docs/context/downloads.md`) |
 | Files | `expo-file-system` new API (`File`, `Directory`, `Paths`) | Store **relative** paths only (iOS container path changes) |
-| Images | `expo-image`, `cachePolicy="disk"` | Offline posters |
+| Images | `expo-image`, `cachePolicy="memory-disk"` | Disk keeps posters offline, memory avoids re-decoding on scroll |
 | Downloads | **Own Expo module** `modules/downloads` (Swift + Kotlin, Expo Modules API). Native owns the queue, concurrency (max 2) and resume | No third-party downloader, no system `DownloadManager`. iOS: background `URLSession`; Android 14+: UIDT job, 8-13: WorkManager + `dataSync` FGS. Design: `docs/context/downloads.md` |
 | Download network | User setting: **Wi-Fi only (default) / Any network** | Enforced natively by `modules/downloads`. No NetInfo |
 | Player | libmpv via a vendored MPL-2.0 Expo module in `modules/mpv` (headers kept) behind own `PlayerEngine` interface (`docs/context/player.md`) | Fallback: `expo-libvlc-player` - under review (`docs/open-items.md`). See §7 - current mpv/FFmpeg builds are GPL, LGPL rebuild post-MVP |
@@ -72,13 +72,14 @@ All values live in `src/theme.ts`. Never hardcode colours, radii or font sizes i
 | Inactive icon | `#8E8E93` | `#8E8E93` |
 | Danger (errors, destructive) | `#FF453A` | `#FF3B30` |
 | Success (status dot: active account) | `#30D158` | `#34C759` |
+| On artwork (progress / watched status over images, bottom fade) | fill `#FFFFFF`, track `rgba(255,255,255,0.35)`, fade = black 0 → 0.75 gradient (`backgroundImage`) | same (`onArtwork`) |
 | Accent | White (primary buttons white bg, black text) | Black (black bg, white text) |
 | Font | System (SF on iOS) - leave `fontFamily` unset | same |
 | Radii | Cards 8-14, large cards (profile) 20; buttons, icon buttons, segmented controls and pills full (capsule / circle, Apple TV style) | same |
 
 Accent tweak options: `#0A84FF`, `#30D158`, `#FF9F0A` - flip button text to white when non-white accent.
 
-Rules: large titles 34/700, section headers 20/700 with chevron, 16:9 landscape cards for resume, 2:3 posters, white progress bars, download ring built from plain views (grey track + white arc; stop square = downloading, arrow = paused), min 44pt touch targets, tab bar: Home / Library / Search / Downloads.
+Rules: large titles 34/700, section headers 20/700 with chevron, 16:9 landscape cards for resume, 2:3 posters, white progress bars (over artwork: bottom fade + time left after the bar, `[=====   ] 9m`; watched items show `✓ Watched` in the same spot), download ring built from plain views (grey track + white arc; stop square = downloading, arrow = paused), min 44pt touch targets, tab bar: Home / Library / Search / Downloads.
 
 ---
 
@@ -111,6 +112,7 @@ src/app/                 expo-router
   player.tsx
   settings.tsx
 src/theme.ts             design tokens
+src/format.ts            display formatting (time left)
 src/api.ts               fetch client + endpoints + DTO types
 src/session.ts           session store: accounts (kv-store), tokens (secure-store), active account, 401 sign-out
 src/auth.ts              auth flows for the (auth) screens: probe, sign in, Quick Connect
@@ -122,7 +124,7 @@ src/sync.ts              offline progress queue replay
 src/settings.ts          user settings in kv-store (appearance; downloads + offload later)
 src/player/Player.tsx    PlayerEngine interface + re-export of active engine
 src/player/mpv.tsx       mpv adapter
-src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List, StepPills, ServerHelp, LogoMark, Segmented, PosterCard, LandscapeCard, Row, ProgressBar, DownloadRing
+src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List, StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard), Artwork, Row, ProgressBar, DownloadRing
 src/dev/                 dev-only previews, rendered behind `__DEV__` (never in release)
 modules/mpv/             vendored native module (+ UPSTREAM.md: upstream repo + commit)
 modules/downloads/       own native background downloader (iOS + Android)
