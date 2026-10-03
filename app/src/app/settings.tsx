@@ -8,7 +8,7 @@ import { Chevron, ListRow, ListSection } from '@/components/List';
 import { Page } from '@/components/Page';
 import { Segmented } from '@/components/Segmented';
 import { Text } from '@/components/Text';
-import { signedOutHome } from '@/navigation';
+import { ONBOARDING } from '@/navigation';
 import { useSession } from '@/session';
 import { APPEARANCE_OPTIONS, setAppearance, useAppearance } from '@/settings';
 import { minTouch, radii, spacing, useColors } from '@/theme';
@@ -24,7 +24,12 @@ export default function Settings() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={active ? `${active.userName}, ${active.server.name}` : 'Sign in'}
-        onPress={() => router.push(active ? '/account' : signedOutHome(accounts))}
+        // Signed out: saved accounts, else Add server as onboarding (Welcome has no header to come back from).
+        onPress={() =>
+          router.push(
+            active ? '/account' : accounts.length > 0 ? '/accounts' : { pathname: '/server', params: ONBOARDING },
+          )
+        }
         style={({ pressed }) => [styles.profile, { backgroundColor: pressed ? c.elevated : c.surface }]}
       >
         <Avatar name={active?.userName} />

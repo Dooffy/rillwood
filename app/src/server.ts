@@ -22,6 +22,9 @@ export function serverUrlCandidates(input: string): string[] {
 
 export const MIN_SERVER_VERSION = '10.10.7';
 
+/** First-run steps shown on Add server and Sign in when coming from Welcome. */
+export const ONBOARDING_STEPS = ['Server', 'Sign in'] as const;
+
 // major.minor.patch → one comparable number (each part < 1000).
 const versionNumber = (v: string) => {
   const m = /^(\d+)\.(\d+)\.(\d+)/.exec(v);

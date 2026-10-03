@@ -39,7 +39,8 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [x] Session store: accounts in kv-store, tokens in secure-store `tok_<accountId>`
 - [x] Account switcher sheet, add/remove/sign out
 - [x] Global 401 → signed-out state, keep downloads
-- [ ] Onboarding rework: first-run Add server is welcoming and guides the user to start (logo, what Rillwood is, what a server address looks like, where to find it); keep the plain form when adding from Accounts
+- [x] Onboarding rework: Welcome (library wall) → Add server → Sign in as numbered steps with explanations, example addresses and "Where do I find it?"; plain form when adding from Accounts
+- [ ] Rework Add server from Settings / Accounts: same help as onboarding (examples, where to find it) without the welcome steps; settle the final logo (the two-wave `LogoMark` is the candidate) and use it for the app icon
 - [ ] Test vs `dev/jellyfin` 12.1 (base) + 10.11 (auth flows passed live on 12.1, 2026-10-03; 10.11 + on-device run open); iOS warm deep links emit `url` events (expo/expo#50230)
 
 ## M3 - Browse

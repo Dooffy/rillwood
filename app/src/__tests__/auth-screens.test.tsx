@@ -9,6 +9,7 @@ import Accounts from '@/app/(auth)/accounts';
 import Login from '@/app/(auth)/login';
 import QuickConnect from '@/app/(auth)/quick-connect';
 import Server from '@/app/(auth)/server';
+import Welcome from '@/app/(auth)/welcome';
 import * as auth from '@/auth';
 import {
   addAccount,
@@ -65,6 +66,63 @@ beforeEach(() => {
   rememberServer(other);
 });
 
+describe('Welcome', () => {
+  it('explains Rillwood and starts onboarding at Add server', async () => {
+    await render(<Welcome />);
+    expect(screen.getByRole('header')).toHaveTextContent(/Your library/);
+    expect(screen.getByText(/Works with Jellyfin 10\.10\.7 and newer/)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Get started' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/server', params: { onboarding: '1' } });
+  });
+});
+
+describe('Onboarding steps', () => {
+  it('shows step 1 with an explanation, tappable examples and where to find the address', async () => {
+    useLocalSearchParams.mockReturnValue({ onboarding: '1' });
+    mocked.probeServer.mockResolvedValue(server);
+    await render(<Server />);
+    expect(screen.getByLabelText('Step 1 of 2: Server')).toBeOnTheScreen();
+    expect(screen.getByText(/plays your own Jellyfin library/)).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Where do I find it?' })).toBeOnTheScreen();
+    expect(screen.getByText(/Dashboard - Networking/)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Use example 192.168.1.10:8096' }));
+    expect(screen.getByLabelText('Server address')).toHaveDisplayValue('192.168.1.10:8096');
+    await fireEvent.changeText(screen.getByLabelText('Server address'), 'jf.example.com');
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/login', params: { url: server.url, onboarding: '1' } });
+  });
+
+  it('shows step 2 on Sign in and keeps onboarding for Quick Connect', async () => {
+    useLocalSearchParams.mockReturnValue({ url: server.url, onboarding: '1' });
+    mocked.quickConnectEnabled.mockResolvedValue(true);
+    await render(<Login />);
+    expect(screen.getByLabelText('Step 2 of 2: Sign in')).toBeOnTheScreen();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Use Quick Connect' }));
+    expect(screen.getByText(/or use Quick Connect/)).toBeOnTheScreen();
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/quick-connect',
+      params: { url: server.url, onboarding: '1' },
+    });
+  });
+
+  // Regression: the intro pointed to Quick Connect on servers that have it turned off.
+  it('does not mention Quick Connect when the server has it off', async () => {
+    useLocalSearchParams.mockReturnValue({ url: server.url, onboarding: '1' });
+    mocked.quickConnectEnabled.mockResolvedValue(false);
+    await render(<Login />);
+    expect(screen.getByText('Sign in with your Jellyfin username and password.')).toBeOnTheScreen();
+    expect(screen.queryByText(/Quick Connect/)).toBeNull();
+  });
+
+  it('keeps the plain form when adding a server from Accounts', async () => {
+    useLocalSearchParams.mockReturnValue({});
+    await render(<Server />);
+    expect(screen.queryByLabelText(/Step 1 of 2/)).toBeNull();
+    expect(screen.queryByText('Where do I find it?')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Use example/ })).toBeNull();
+  });
+});
+
 describe('Add server', () => {
   it('rejects an invalid address without probing', async () => {
     await render(<Server />);
@@ -115,6 +173,17 @@ describe('Add server', () => {
     expect(mocked.probeServer).toHaveBeenCalledTimes(1);
   });
 
+  it('locks the whole form while connecting', async () => {
+    useLocalSearchParams.mockReturnValue({ onboarding: '1' });
+    mocked.probeServer.mockReturnValue(new Promise(() => {}));
+    await render(<Server />);
+    await fireEvent.changeText(screen.getByLabelText('Server address'), 'jf.example.com');
+    await submitInOneFrame('Server address', 1);
+    expect(screen.getByLabelText('Server address')).toHaveProp('editable', false);
+    await fireEvent.press(screen.getByRole('button', { name: 'Use example 192.168.1.10:8096' }));
+    expect(screen.getByLabelText('Server address')).toHaveDisplayValue('jf.example.com');
+  });
+
   it('disables Continue until an address is entered', async () => {
     await render(<Server />);
     expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
@@ -154,6 +223,17 @@ describe('Sign in', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(message);
     expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it('locks the whole form while signing in', async () => {
+    mocked.signIn.mockReturnValue(new Promise(() => {}));
+    await render(<Login />);
+    await fireEvent.changeText(screen.getByLabelText('Username'), 'anna');
+    await submitInOneFrame('Password', 1);
+    expect(screen.getByLabelText('Username')).toHaveProp('editable', false);
+    expect(screen.getByLabelText('Password')).toHaveProp('editable', false);
+    await fireEvent.press(screen.getByRole('button', { name: 'Show password' }));
+    expect(screen.getByLabelText('Password')).toHaveProp('secureTextEntry', true);
   });
 
   it('prefills the username when signing an account back in', async () => {

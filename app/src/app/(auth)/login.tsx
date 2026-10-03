@@ -6,16 +6,18 @@ import { StyleSheet, View, type TextInputInstance } from 'react-native';
 import { authErrorMessage, quickConnectEnabled, signIn, useServerParam } from '@/auth';
 import { Button } from '@/components/Button';
 import { Page } from '@/components/Page';
+import { StepPills } from '@/components/StepPills';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
-import { isOutdatedServer, MIN_SERVER_VERSION } from '@/server';
-import { resetTo } from '@/navigation';
+import { isOutdatedServer, MIN_SERVER_VERSION, ONBOARDING_STEPS } from '@/server';
+import { ONBOARDING, resetTo, useOnboarding } from '@/navigation';
 import { spacing } from '@/theme';
 
 export default function Login() {
   const server = useServerParam();
   // Prefilled when signing a signed-out account back in.
   const params = useLocalSearchParams<{ userName?: string }>();
+  const onboarding = useOnboarding();
   const [userName, setUserName] = useState(params.userName ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>();
@@ -54,7 +56,17 @@ export default function Login() {
   };
 
   return (
-    <Page form>
+    <Page form busy={loading}>
+      {onboarding && (
+        <>
+          <StepPills steps={ONBOARDING_STEPS} current={1} />
+          <Text secondary>
+            {quickConnect
+              ? 'Sign in with your Jellyfin username and password, or use Quick Connect to approve this phone from a device where you are already signed in.'
+              : 'Sign in with your Jellyfin username and password.'}
+          </Text>
+        </>
+      )}
       <View style={styles.server}>
         <Text variant="label">{server.name}</Text>
         <Text variant="caption" secondary>
@@ -98,7 +110,12 @@ export default function Login() {
           title="Use Quick Connect"
           variant="secondary"
           disabled={loading}
-          onPress={() => router.push({ pathname: '/quick-connect', params: { url: server.url } })}
+          onPress={() =>
+            router.push({
+              pathname: '/quick-connect',
+              params: { url: server.url, ...(onboarding && ONBOARDING) },
+            })
+          }
         />
       )}
     </Page>

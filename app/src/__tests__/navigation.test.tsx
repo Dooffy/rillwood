@@ -27,7 +27,12 @@ describe('navigation', () => {
 
   it.each([
     ['Home', <Home key="home" />, 'Settings', '/settings'],
-    ['Settings (signed out)', <Settings key="settings" />, 'Sign in', '/server'],
+    [
+      'Settings (signed out)',
+      <Settings key="settings" />,
+      'Sign in',
+      { pathname: '/server', params: { onboarding: '1' } },
+    ],
     ['Accounts', <Accounts key="accounts" />, 'Add server', '/server'],
   ])('%s pushes its route', async (_name, ui, button, route) => {
     await renderScreen(ui);

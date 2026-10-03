@@ -21,13 +21,20 @@ export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function 
 ) {
   const c = useColors();
   const [hidden, setHidden] = useState(true);
+  const locked = input.editable === false;
 
   return (
     <View style={styles.container}>
       <Text variant="label" secondary>
         {label}
       </Text>
-      <View style={[styles.box, { backgroundColor: c.surface, borderColor: error ? c.danger : c.surface }]}>
+      <View
+        style={[
+          styles.box,
+          { backgroundColor: c.surface, borderColor: error ? c.danger : c.surface },
+          locked && styles.locked,
+        ]}
+      >
         <TextInput
           ref={ref}
           accessibilityLabel={label}
@@ -42,6 +49,7 @@ export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function 
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={hidden ? 'Show password' : 'Hide password'}
+            disabled={locked}
             onPress={() => setHidden((h) => !h)}
             style={styles.toggle}
           >
@@ -72,5 +80,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth * 2,
   },
   input: { flex: 1, ...type.body, paddingHorizontal: spacing.md, paddingVertical: spacing.sm + spacing.xs },
+  locked: { opacity: 0.5 },
   toggle: { width: minTouch, height: minTouch, alignItems: 'center', justifyContent: 'center' },
 });

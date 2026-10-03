@@ -3,12 +3,13 @@ import { describe, expect, it } from '@jest/globals';
 import { renderRouter, screen } from 'expo-router/testing-library';
 
 describe('router shell', () => {
-  it('opens Add server on launch when signed out', async () => {
+  it('opens Welcome on a fresh install', async () => {
     const result = await renderRouter('./src/app', { initialUrl: '/' });
-    expect(result.getPathname()).toBe('/server');
+    expect(result.getPathname()).toBe('/welcome');
+    expect(screen.getByRole('button', { name: 'Get started' })).toBeOnTheScreen();
   });
 
-  it.each(['/library', '/search', '/downloads', '/server', '/accounts', '/account', '/settings'])(
+  it.each(['/library', '/search', '/downloads', '/welcome', '/server', '/accounts', '/account', '/settings'])(
     'resolves %s',
     async (path) => {
       const result = await renderRouter('./src/app', { initialUrl: path });

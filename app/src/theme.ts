@@ -48,6 +48,11 @@ export function useColors(): Colors {
   return useContext(ColorsContext);
 }
 
+/** Active scheme, for per-scheme assets (`assets[useScheme()]`). */
+export function useScheme(): Scheme {
+  return useColors() === palettes.light ? 'light' : 'dark';
+}
+
 export const radii = {
   card: 12,
   cardLarge: 20,

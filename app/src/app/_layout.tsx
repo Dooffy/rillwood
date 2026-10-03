@@ -47,6 +47,8 @@ export default function RootLayout() {
           }}
         >
           <Stack.Screen name="(tabs)" />
+          {/* Header hidden, but the title labels the back button on Add server (else iOS shows the route path). */}
+          <Stack.Screen name="(auth)/welcome" options={{ title: 'Welcome' }} />
           <Stack.Screen name="(auth)/server" options={pages.server} />
           <Stack.Screen name="(auth)/login" options={pages.login} />
           <Stack.Screen name="(auth)/quick-connect" options={pages.quickConnect} />
