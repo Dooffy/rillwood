@@ -189,6 +189,62 @@ export type QuickConnectResult = {
   Authenticated: boolean;
 };
 
+export type ImageType = 'Primary' | 'Backdrop' | 'Thumb' | 'Logo';
+
+/** Per-user state of an item. Ticks: 10,000,000 per second. */
+export type UserItemDataDto = {
+  PlaybackPositionTicks: number;
+  Played: boolean;
+  PlayCount?: number;
+  IsFavorite?: boolean;
+  /** Series / seasons. */
+  PlayedPercentage?: number;
+  UnplayedItemCount?: number;
+  LastPlayedDate?: string;
+};
+
+/** Library item or view (`/UserViews`). */
+export type BaseItemDto = {
+  Id: string;
+  Name: string;
+  /** `Movie`, `Series`, `Season`, `Episode`, `CollectionFolder`, ... */
+  Type: string;
+  ServerId?: string;
+  IsFolder?: boolean;
+  MediaType?: string;
+  /** Views only: `movies`, `tvshows`, `music`, ... */
+  CollectionType?: string;
+  RunTimeTicks?: number;
+  ProductionYear?: number;
+  PremiereDate?: string;
+  /** Episode number; season number for seasons. */
+  IndexNumber?: number;
+  /** Season number of an episode. */
+  ParentIndexNumber?: number;
+  SeriesId?: string;
+  SeriesName?: string;
+  SeasonId?: string;
+  SeasonName?: string;
+  SeriesPrimaryImageTag?: string;
+  ImageTags?: Partial<Record<ImageType, string>>;
+  BackdropImageTags?: string[];
+  ParentBackdropItemId?: string;
+  ParentBackdropImageTags?: string[];
+  ParentThumbItemId?: string;
+  ParentThumbImageTag?: string;
+  UserData?: UserItemDataDto;
+};
+
+/** Paged list. `/Items/Latest` is the exception: a bare array. */
+export type ItemsResult = {
+  Items: BaseItemDto[];
+  TotalRecordCount: number;
+  StartIndex?: number;
+};
+
+/** A GET as data, for `useFetch(path, { query })` or `request`. */
+export type Endpoint = { path: string; query?: Query };
+
 // Endpoints - auth.
 
 export function getPublicSystemInfo(conn: ServerConnection, signal?: AbortSignal) {
