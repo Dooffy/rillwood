@@ -58,12 +58,13 @@ describe('useSignedOutRedirect', () => {
     expect(router.replace).toHaveBeenCalledWith('/welcome');
   });
 
-  it('goes to the saved accounts when signed-out accounts remain', async () => {
+  // Regression: with saved signed-out accounts, signing out landed on Accounts instead of the Welcome start.
+  it('goes to Welcome even when signed-out accounts remain', async () => {
     signedIn(anna);
     const { rerender } = await renderHook(() => useSignedOutRedirect());
     signedIn(null, [{ ...anna, signedOut: true }]);
     await rerender({});
-    expect(router.replace).toHaveBeenCalledWith('/accounts');
+    expect(router.replace).toHaveBeenCalledWith('/welcome');
   });
 
   it('does nothing when already signed out', async () => {

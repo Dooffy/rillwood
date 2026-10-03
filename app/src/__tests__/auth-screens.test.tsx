@@ -76,6 +76,22 @@ describe('Welcome', () => {
   });
 });
 
+describe('Welcome with saved accounts', () => {
+  it('has no saved-account option on a fresh install', async () => {
+    await render(<Welcome />);
+    expect(screen.queryByRole('button', { name: 'Use a saved account' })).toBeNull();
+  });
+
+  // Regression: added-but-signed-out users got no way back to their accounts from the Welcome start.
+  it('offers the saved accounts when some exist, signed out included', async () => {
+    await seed([server, 'anna']);
+    await act(() => signOut('srv.anna'));
+    await render(<Welcome />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Use a saved account' }));
+    expect(router.push).toHaveBeenCalledWith('/accounts');
+  });
+});
+
 describe('Onboarding steps', () => {
   it('shows step 1 with an explanation, tappable examples and where to find the address', async () => {
     useLocalSearchParams.mockReturnValue({ onboarding: '1' });

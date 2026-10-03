@@ -9,6 +9,7 @@ import { LogoMark } from '@/components/LogoMark';
 import { Text } from '@/components/Text';
 import { MIN_SERVER_VERSION } from '@/server';
 import { ONBOARDING } from '@/navigation';
+import { useSession } from '@/session';
 import { spacing, useColors, useScheme } from '@/theme';
 
 // Tilted poster-shaped tiles in the palette's surface greys, fading into the background (no server yet, so no real
@@ -18,9 +19,13 @@ const wall = {
   light: require('../../../assets/images/welcome-wall-light.svg'),
 };
 
-/** First run (no accounts yet): what Rillwood is, then Get started → Add server in onboarding mode. */
+/**
+ * Signed-out start: what Rillwood is, Get started → Add server in onboarding mode. With saved (signed-out) accounts,
+ * "Use a saved account" opens Accounts to sign one back in.
+ */
 export default function Welcome() {
   const c = useColors();
+  const { accounts } = useSession();
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
       <Image
@@ -37,6 +42,9 @@ export default function Welcome() {
         </Text>
         <Text secondary>Connect Rillwood to your Jellyfin server to browse, play and download everything you own.</Text>
         <Button title="Get started" onPress={() => router.push({ pathname: '/server', params: ONBOARDING })} />
+        {accounts.length > 0 && (
+          <Button title="Use a saved account" variant="secondary" onPress={() => router.push('/accounts')} />
+        )}
         <Text variant="caption" secondary style={styles.center}>
           Works with Jellyfin {MIN_SERVER_VERSION} and newer
         </Text>
