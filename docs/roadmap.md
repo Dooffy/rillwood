@@ -41,7 +41,7 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [x] Global 401 → signed-out state, keep downloads
 - [x] Onboarding rework: Welcome (library wall) → Add server → Sign in as numbered steps with explanations, example addresses and "Where do I find it?"
 - [x] Rework Add server from Settings / Accounts: same help as onboarding (examples, where to find it) without the welcome steps; final logo = the two-wave `LogoMark`, used for the app icon (iOS, Android adaptive + monochrome) and splash
-- [ ] Test vs `dev/jellyfin` 12.1 (base) + 10.11 (auth flows passed live on 12.1 + 10.11, 2026-10-03; in-app run on 10.11 + on-device run open); iOS warm deep links emit `url` events (expo/expo#50230)
+- [x] Test vs `dev/jellyfin` 12.1 (base) + 10.11 (2026-10-03: scripted auth flows on both; simulator on 10.11; iPhone over LAN on both - password, Quick Connect, switch, sign out); iOS warm deep links emit `url` events (expo/expo#50230) - passed on iPhone
 
 ## M3 - Browse
 
