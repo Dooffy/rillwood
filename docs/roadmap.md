@@ -24,7 +24,7 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [x] Navigation: tappable items are `Pressable` + `router.push` (or `Link asChild` around `Pressable`), no bare Text `Link`; RNTL test per screen: `fireEvent.press` → mocked `router.push` called with the route. Don't test `__DEV__`-guarded routes in release builds (`docs/research/expo-router-rn088.md`)
 - [x] Appearance setting (System / Dark / Light) in Settings, light palette, `useColors()` (`CLAUDE.md` §2, §3)
 - [x] `api.ts` (header, 8s timeout, `ApiError`, offline flag), DeviceId - rules in `docs/context/api.md` (auth endpoints; browse / playback endpoints land with M3 / M4)
-- [ ] `useFetch` (cache key `accountId|path`, TTL, abort, `invalidate`)
+- [x] `useFetch` (cache key `accountId|path`, TTL, abort, `invalidate`)
 - [ ] Components: PosterCard, LandscapeCard, Row, ProgressBar, DownloadRing
 - [ ] TS strict, ESLint/Prettier, SPDX headers, CONTRIBUTING (DCO)
 - [x] Test setup: `jest-expo` + RNTL, `npm test`, CI on every branch + `main`

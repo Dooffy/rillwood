@@ -81,7 +81,7 @@ export function onUnauthorized(listener: UnauthorizedListener): () => void {
   return () => unauthorizedListeners.delete(listener);
 }
 
-type Query = Record<string, string | number | boolean | undefined>;
+export type Query = Record<string, string | number | boolean | undefined>;
 
 export type RequestOptions = {
   method?: 'GET' | 'POST';
