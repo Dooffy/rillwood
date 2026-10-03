@@ -101,7 +101,8 @@ Design + sources: `docs/research/background-downloads.md`.
 
 - [ ] Settings: accounts, playback defaults, downloads, cache clear, licenses screen
 - [ ] Perf (FlashList if FlatList stutters, image sizes, cold start <2s), accessibility pass
-- [ ] Splash light + dark variant (black only today; icon + splash mark done in M2), screenshots, privacy policy ("connects to your own server")
+- [ ] iPad layout for every screen (`supportsTablet` is off today): adaptive grids, readable-width forms and pages, landscape, split view / Stage Manager sizes
+- [ ] Splash light + dark variant (black only today; icon + splash mark done in M2 - re-render with `app/scripts/render-icons.py`), screenshots, privacy policy ("connects to your own server")
 - [ ] `/update-modules`: vendored modules, native binaries + Expo packages current, no blockers
 - [ ] CI native + playback checks (skill to create later):
   - Android native build + vendored Kotlin unit tests on `ubuntu-latest`, path-filtered to `app/modules/**` + native config
@@ -116,3 +117,11 @@ Design + sources: `docs/research/background-downloads.md`.
 - [ ] Release checks: Xcode privacy report on the archive, AAB 16 KB page alignment, release permissions list, no spike / test screens
 - [ ] TestFlight + Play internal, 3-5 testers
 - [ ] Tag release; publish mpv/FFmpeg source tarballs
+
+## Post-release
+
+- [ ] Localization: extract UI strings, locale-aware dates / sizes / durations, first extra languages, RTL check
+
+## Ideas
+
+- [ ] Research Apple TV (tvOS) + Google TV / Android TV apps: focus navigation (every card is already `Pressable`), RN TV support, player on TV, store requirements

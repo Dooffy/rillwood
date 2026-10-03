@@ -14,17 +14,17 @@ Rillwood is a new, open-source mobile client for Jellyfin servers. Goals: browse
 
 | In MVP | Out (post-MVP) |
 |---|---|
-| Add server, login (password + Quick Connect), multiple accounts/servers, switch | tvOS / Android TV (focus engine) |
+| Add server, login (password + Quick Connect), multiple accounts/servers, switch | tvOS / Android TV (focus engine) - research in `docs/roadmap.md` Ideas |
 | Home: Up Next hero, Continue Watching, Next Up, Recently Added | PiP, AirPlay, Chromecast, SyncPlay |
 | Library: Movies / TV grid, sort, unwatched filter, search | Trickplay, intro skip |
 | Movie + series detail (seasons, episodes) | Download quality presets / transcoded downloads |
 | Playback via libmpv: direct play everything, resume, tracks, progress reporting | Live TV, music, books, admin |
 | | LGPL player builds (iOS dynamic MPVKit, Android optional) - §7, §11 |
 | Background downloads (movie / episode / season), pause/resume, survive app kill | Remote-access relay (separate project) |
-| Offline mode + progress sync on reconnect | |
+| Offline mode + progress sync on reconnect | Localization (English only in MVP) |
 | Auto-offload downloads (default: 7 days after watched) | |
 
-Platforms: **iOS first**, Android phones in the same release.
+Platforms: **iOS first**, Android phones in the same release. iPad layout before release (M7).
 
 ---
 
