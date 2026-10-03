@@ -23,12 +23,12 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [x] Router layout per `CLAUDE.md` §4; `src/theme.ts` (tokens `CLAUDE.md` §3); hand-built Button, Text, Toast, Spinner
 - [x] Navigation: tappable items are `Pressable` + `router.push` (or `Link asChild` around `Pressable`), no bare Text `Link`; RNTL test per screen: `fireEvent.press` → mocked `router.push` called with the route. Don't test `__DEV__`-guarded routes in release builds (`docs/research/expo-router-rn088.md`)
 - [x] Appearance setting (System / Dark / Light) in Settings, light palette, `useColors()` (`CLAUDE.md` §2, §3)
-- [ ] `api.ts` (header, 8s timeout, `ApiError`, offline flag), DeviceId - rules in `docs/context/api.md`
+- [x] `api.ts` (header, 8s timeout, `ApiError`, offline flag), DeviceId - rules in `docs/context/api.md` (auth endpoints; browse / playback endpoints land with M3 / M4)
 - [ ] `useFetch` (cache key `accountId|path`, TTL, abort, `invalidate`)
 - [ ] Components: PosterCard, LandscapeCard, Row, ProgressBar, DownloadRing
 - [ ] TS strict, ESLint/Prettier, SPDX headers, CONTRIBUTING (DCO)
 - [x] Test setup: `jest-expo` + RNTL, `npm test`, CI on every branch + `main`
-- [ ] First unit tests for `api.ts`
+- [x] First unit tests for `api.ts`
 - [ ] Release config hardening (found in M0, `docs/research/store-requirements.md`): Android `usesCleartextTraffic: true` via `expo-build-properties` (I12 - release blocks `http://` servers) + `blockedPermissions` (`SYSTEM_ALERT_WINDOW`, `READ`/`WRITE_EXTERNAL_STORAGE`); iOS own `NSLocalNetworkUsageDescription` (dev launcher strips its default in release), `ios.privacyManifests` (UserDefaults CA92.1, FileTimestamp C617.1, SystemBootTime 35F9.1, DiskSpace E174.1 + 85F4.1 - MPVKit is static, no manifest), ATS per `docs/open-items.md` decision. Re-run release playback on the emulator after (`docs/test-plans/mpv.md`)
 
 ## M2 - Auth + accounts
@@ -39,6 +39,7 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [ ] SessionContext: accounts in kv-store, tokens in secure-store `tok_<accountId>`
 - [ ] Account switcher sheet, add/remove/sign out
 - [ ] Global 401 → signed-out state, keep downloads
+- [ ] Onboarding rework: first-run Add server is welcoming and guides the user to start (logo, what Rillwood is, what a server address looks like, where to find it); keep the plain form when adding from Accounts
 - [ ] Test vs `dev/jellyfin` 12.1 (base) + 10.11; iOS warm deep links emit `url` events (expo/expo#50230)
 
 ## M3 - Browse

@@ -5,6 +5,7 @@ Read before working on `src/api.ts` (fetch client, endpoints, DTO types), `src/u
 ## Rules
 
 - Plain `fetch` wrapper, hand-written DTO types, no `any` (root §2, §10). 8s fail-fast timeout, `ApiError`, offline flag; `/System/Info/Public` probe on foreground.
+- `src/api.ts`: `request(conn, path, {method, query, body, signal, probe})`. `ServerConnection = {baseUrl}` for public endpoints (no auth header); `Connection` adds `deviceId`, then `token` + `accountId` once signed in. Errors are always `ApiError`: `network` (unreachable or no answer in 8s - sets the offline flag), `http` + `status`, `aborted` (caller cancelled - ignore), `parse`. Any server answer clears the offline flag; `probe` requests (address checks) never touch it. Error messages carry method + path only, never the query or token. A 401 on a call with an `accountId` fires `onUnauthorized(accountId)`; failed sign-ins don't. `findServer` probes all address candidates in parallel, returns the first in order (https before http) that answers with `Id` + `Version`, and cancels the rest.
 - Server target: **Jellyfin 12.1 base**, 12.0 + 10.11.x supported, warn below 10.10.7 (`isOutdatedServer` in `src/server.ts`, shown on Sign in).
 - Server address (`serverUrlCandidates` in `src/server.ts`): trim, lowercase scheme + host, keep port and reverse-proxy sub-path, drop `/web/...`, query, hash and trailing `/`. No scheme → probe `https://` then `http://`. Reject `user:pass@`, other schemes, bad ports.
 - Launch: signed in → Home, signed out → Add server (`src/app/index.tsx`). Losing the active account (last one removed; later the global 401) → `useSignedOutRedirect` in the root layout clears the stack to Add server. Sign in / Quick Connect success clears the stack to Home (`resetTo`).
@@ -14,10 +15,10 @@ Read before working on `src/api.ts` (fetch client, endpoints, DTO types), `src/u
   ```
   Authorization: MediaBrowser Client="Rillwood", Device="iPhone", DeviceId="<per-account id>", Version="0.1.0", Token="<token>"
   ```
-- DeviceId: `hash(installId + userId)` per account (shared DeviceId clobbers sessions). Install id via `expo-crypto.randomUUID()` in kv-store.
+- DeviceId: `expo-crypto.randomUUID()` minted for every sign-in (password or Quick Connect) and stored with the account, never shared between accounts (shared DeviceId clobbers sessions). It can't depend on the user id - sign-in already sends it. After sign-in, an existing account with the same `ServerId` + `User.Id` is replaced: `logout` its old token, keep one record.
 - mpv sources: send `Authorization: MediaBrowser Token="<token>"` only. mpv joins headers into a comma-separated list, so the full header splits and Jellyfin returns 400 (`docs/test-plans/mpv.md` I1).
 - Login and Quick Connect send the same header without `Token` (400 without `Device` / `DeviceId`).
-- Same account + same DeviceId re-login revokes the older token (re-adding an account replaces it). 10.11 merges sessions of different users on one DeviceId.
+- Server behaviour: same account + same DeviceId re-login revokes the older token; 10.11 merges sessions of different users on one DeviceId. The app never reuses a DeviceId, so it revokes a replaced token with an explicit `logout`.
 - 401 = bad / missing / revoked token on every authed endpoint (both versions) → global signed-out state, keep downloads. 403 = `userId` of another user. `userId` query params are optional (taken from the token).
 - Served **without auth** on 10.11 + 12.1 (I10): `/Videos/{id}/stream` (static and non-static), `/Items/{id}/Images/*`, subtitle streams. Detect revoked tokens from API 401s, not playback. `/Items/{id}/Download` does enforce auth.
 - Session: accounts in kv-store, tokens in `expo-secure-store` `tok_<accountId>`. Switch accounts without restart.
