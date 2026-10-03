@@ -56,6 +56,6 @@ export default function Welcome() {
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end', overflow: 'hidden' },
   wall: { position: 'absolute', top: 0, left: 0, right: 0, aspectRatio: 390 / 560 },
-  content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, gap: spacing.md },
+  content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg * 2, gap: spacing.md },
   center: { textAlign: 'center' },
 });
