@@ -4,13 +4,13 @@ import { StyleSheet, View } from 'react-native';
 
 import { useColors, useScheme } from '@/theme';
 
-// Two-wave mark, one SVG per palette (stroke colours = text / textSecondary of that palette).
+// Pebble screen mark, one SVG per palette (pebble = text, play button = surface of that palette).
 const marks = {
   dark: require('../../assets/images/logo-mark-dark.svg'),
   light: require('../../assets/images/logo-mark-light.svg'),
 };
 
-/** Rillwood mark: two waves on a rounded surface tile. Decorative - pair it with the app name. */
+/** Rillwood mark: a river pebble with a play button, on a rounded surface tile. Decorative - pair it with the app name. */
 export function LogoMark({ size = 72 }: { size?: number }) {
   const c = useColors();
   return (

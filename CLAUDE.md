@@ -188,7 +188,7 @@ Keep non-route code out of `src/app/`. `app/` and `web/` are independent project
 | M6 | Offline + offload + sync | Flight mode browse/play, auto-delete, progress syncs |
 | M7 | Hardening + release | TestFlight + Play internal track |
 
-**Current: M0** (device run + gate open) → **M1**. Checklists: [`docs/roadmap.md`](docs/roadmap.md).
+**Current: M1** leftovers (`useFetch`, cards, release hardening) → **M3**. M2 done; M0 test matrix, Android run and gate still open. Checklists: [`docs/roadmap.md`](docs/roadmap.md).
 
 ---
 
