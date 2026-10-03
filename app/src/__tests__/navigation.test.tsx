@@ -4,7 +4,6 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import type { ReactElement } from 'react';
 
 import Accounts from '@/app/(auth)/accounts';
-import Login from '@/app/(auth)/login';
 import Home from '@/app/(tabs)/home';
 import Player from '@/app/player';
 import Settings from '@/app/settings';
@@ -28,9 +27,8 @@ describe('navigation', () => {
 
   it.each([
     ['Home', <Home key="home" />, 'Settings', '/settings'],
-    ['Settings', <Settings key="settings" />, 'Accounts', '/accounts'],
+    ['Settings (signed out)', <Settings key="settings" />, 'Sign in', '/server'],
     ['Accounts', <Accounts key="accounts" />, 'Add server', '/server'],
-    ['Login', <Login key="login" />, 'Use Quick Connect', '/quick-connect'],
   ])('%s pushes its route', async (_name, ui, button, route) => {
     await renderScreen(ui);
     await fireEvent.press(screen.getByRole('button', { name: button }));

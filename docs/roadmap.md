@@ -33,6 +33,7 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 
 ## M2 - Auth + accounts
 
+- [x] Auth screens UI on stubs (`src/auth.ts`): TextField, Add server, Sign in, Quick Connect, Accounts, Account (profile card in Settings), signed-out redirect
 - [ ] Server screen (normalise URL, validate, version warning)
 - [ ] Password login, Quick Connect (show code, poll; hide when `/QuickConnect/Enabled` is false)
 - [ ] SessionContext: accounts in kv-store, tokens in secure-store `tok_<accountId>`

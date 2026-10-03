@@ -7,7 +7,7 @@ import { spacing } from '@/theme';
 
 import { Text } from './Text';
 
-/** Screen with its own large title (tabs, auth). Stack screens with a native header use a plain View. */
+/** Screen with its own large title (tabs). Stack screens with a native header use `Page`. */
 export function Screen({ title, right, children }: { title: string; right?: ReactNode; children?: ReactNode }) {
   return (
     <SafeAreaView edges={['top']} style={styles.container}>

@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { Redirect } from 'expo-router';
 
-// Auth gating (signed out → /server) lands with the session in M2.
+import { useAccounts } from '@/auth';
+
+/** Launch: signed in → Home, signed out → Add server. */
 export default function Index() {
-  return <Redirect href="/home" />;
+  const { active } = useAccounts();
+  return <Redirect href={active ? '/home' : '/server'} />;
 }

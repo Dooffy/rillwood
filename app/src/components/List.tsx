@@ -29,6 +29,12 @@ export function ListSection({ title, children }: { title?: string; children: Rea
   );
 }
 
+/** Disclosure chevron for tappable rows and cards. */
+export function Chevron() {
+  const c = useColors();
+  return <SymbolView name={{ ios: 'chevron.right', android: 'chevron_right' }} tintColor={c.iconInactive} size={14} />;
+}
+
 export type ListRowProps = {
   label: string;
   value?: string;
@@ -42,9 +48,7 @@ export function ListRow({ label, value, onPress }: ListRowProps) {
     <>
       <Text style={styles.label}>{label}</Text>
       {value !== undefined && <Text secondary>{value}</Text>}
-      {onPress && (
-        <SymbolView name={{ ios: 'chevron.right', android: 'chevron_right' }} tintColor={c.iconInactive} size={14} />
-      )}
+      {onPress && <Chevron />}
     </>
   );
 
