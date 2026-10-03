@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View, type TextInputInstance } from 'react-native';
 
-import { quickConnectEnabled, signIn } from '@/auth';
+import { authErrorMessage, quickConnectEnabled, signIn, useServerParam } from '@/auth';
 import { Button } from '@/components/Button';
 import { Page } from '@/components/Page';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { isOutdatedServer, MIN_SERVER_VERSION } from '@/server';
-import { resetTo, useServerParams } from '@/navigation';
+import { resetTo } from '@/navigation';
 import { spacing } from '@/theme';
 
 export default function Login() {
-  const server = useServerParams();
-  const [userName, setUserName] = useState('');
+  const server = useServerParam();
+  // Prefilled when signing a signed-out account back in.
+  const params = useLocalSearchParams<{ userName?: string }>();
+  const [userName, setUserName] = useState(params.userName ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
@@ -27,13 +29,11 @@ export default function Login() {
 
   useEffect(() => {
     if (!server) return;
-    let active = true;
-    quickConnectEnabled(server)
-      .then((enabled) => active && setQuickConnect(enabled))
+    const controller = new AbortController();
+    quickConnectEnabled(server, controller.signal)
+      .then(setQuickConnect)
       .catch(() => {});
-    return () => {
-      active = false;
-    };
+    return () => controller.abort();
   }, [server]);
 
   if (!server) return <Redirect href="/server" />;
@@ -46,9 +46,9 @@ export default function Login() {
     try {
       await signIn(server, name, password);
       resetTo('/home');
-    } catch {
+    } catch (e) {
       busy.current = false;
-      setError("Couldn't sign in. Check your username and password.");
+      setError(authErrorMessage(e, 'signIn'));
       setLoading(false);
     }
   };
@@ -98,7 +98,7 @@ export default function Login() {
           title="Use Quick Connect"
           variant="secondary"
           disabled={loading}
-          onPress={() => router.push({ pathname: '/quick-connect', params: server })}
+          onPress={() => router.push({ pathname: '/quick-connect', params: { url: server.url } })}
         />
       )}
     </Page>

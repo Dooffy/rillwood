@@ -39,7 +39,7 @@ Platforms: **iOS first**, Android phones in the same release.
 | Dev tooling | `typescript`, `@types/react`, `eslint` + `eslint-config-expo`, `prettier`, `jest` + `@jest/globals` + `jest-expo` + `@react-native/jest-preset` + `@testing-library/react-native`, `expo-doctor`, `license-checker-rseidelsohn` | Tests import `describe` / `it` / `expect` from `@jest/globals` (no global test types in app code). `@react-native/jest-preset` must match the `react-native` version exactly. CI tools are pinned dev deps, never `npx --yes` |
 | UI | **No design system.** `StyleSheet.create` + tokens in `src/theme.ts` | No Gluestack, NativeWind, Tailwind or other UI kit. Hand-build the few primitives. Appearance setting **System (default) / Dark / Light** (`userInterfaceStyle: "automatic"`, stored + native override in `src/settings.ts`). Palette resolved once in the root layout and passed down via `ColorsContext` - read it with `useColors()`, never static colours in `StyleSheet.create`. Player forces the dark palette (own provider + light status bar) |
 | API | Plain `fetch` wrapper, hand-written types | **No `@jellyfin/sdk`, no axios** |
-| State | React only: `useState`/`useReducer`, Context (session), `useSyncExternalStore` (downloads) | **No Zustand, Redux, TanStack Query, MMKV** |
+| State | React only: `useState`/`useReducer`, Context (theme), `useSyncExternalStore` stores (session, settings, downloads) | **No Zustand, Redux, TanStack Query, MMKV** |
 | Persistence | `expo-sqlite/kv-store` (accounts, downloads index, settings, sync queue) | Sync reads on boot |
 | Secrets | `expo-secure-store` (token per account) | Never put tokens in URLs or files. Only exception: the native downloader keeps a copy in OS-protected storage so downloads resume after process death (`docs/context/downloads.md`) |
 | Files | `expo-file-system` new API (`File`, `Directory`, `Paths`) | Store **relative** paths only (iOS container path changes) |
@@ -111,8 +111,8 @@ src/app/                 expo-router
   settings.tsx
 src/theme.ts             design tokens
 src/api.ts               fetch client + endpoints + DTO types
-src/session.tsx          SessionContext (accounts, active, token)
-src/auth.ts              auth calls for the (auth) screens - UI-only stubs until M2 wiring
+src/session.ts           session store: accounts (kv-store), tokens (secure-store), active account, 401 sign-out
+src/auth.ts              auth flows for the (auth) screens: probe, sign in, Quick Connect
 src/server.ts            server address → probe URLs, min version check (pure)
 src/navigation.ts        resetTo (clear stack), signed-out redirect
 src/useFetch.ts          in-memory cache, abort, invalidate()
@@ -131,7 +131,7 @@ modules/downloads/       own native background downloader (iOS + Android)
 
 | Working on | Read |
 |---|---|
-| `api.ts`, `session.tsx`, `useFetch.ts`, auth / accounts, any server call | `docs/context/api.md` - endpoints, auth header, DeviceId, 401/403, tokens |
+| `api.ts`, `session.ts`, `auth.ts`, `useFetch.ts`, auth / accounts, any server call | `docs/context/api.md` - endpoints, auth header, DeviceId, 401/403, tokens |
 | `src/player/`, player screen | `docs/context/player.md` - `PlayerEngine` contract, resume, reporting, engine issues |
 | `modules/mpv/`, player binaries | `docs/context/mpv.md` - binaries, NDK pin, mpv options, logs |
 | `downloads.ts`, `modules/downloads/`, Downloads screen | `docs/context/downloads.md` - native contract, HTTP resume rules, store, offload |

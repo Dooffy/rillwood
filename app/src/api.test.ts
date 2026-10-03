@@ -217,7 +217,7 @@ describe('onUnauthorized', () => {
 
   it('fires with the account id on 401 for a signed-in call', async () => {
     await expect(request(conn, '/UserViews')).rejects.toMatchObject({ status: 401 });
-    expect(listener).toHaveBeenCalledWith('acc-1');
+    expect(listener).toHaveBeenCalledWith('acc-1', 'tok-secret');
   });
 
   it('does not fire for a failed sign in (no account yet)', async () => {

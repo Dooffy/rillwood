@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { Redirect } from 'expo-router';
 
-import { useAccounts } from '@/auth';
+import { signedOutHome } from '@/navigation';
+import { useSession } from '@/session';
 
-/** Launch: signed in → Home, signed out → Add server. */
+/** Launch: signed in → Home; signed out → saved accounts, or Add server on a fresh install. */
 export default function Index() {
-  const { active } = useAccounts();
-  return <Redirect href={active ? '/home' : '/server'} />;
+  const { accounts, active } = useSession();
+  return <Redirect href={active ? '/home' : signedOutHome(accounts)} />;
 }

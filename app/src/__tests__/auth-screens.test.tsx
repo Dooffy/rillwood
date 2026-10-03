@@ -3,12 +3,21 @@ import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
+import { ApiError } from '@/api';
 import Account from '@/app/(auth)/account';
 import Accounts from '@/app/(auth)/accounts';
 import Login from '@/app/(auth)/login';
 import QuickConnect from '@/app/(auth)/quick-connect';
 import Server from '@/app/(auth)/server';
 import * as auth from '@/auth';
+import {
+  addAccount,
+  getSession,
+  rememberServer,
+  removeAccount,
+  signOut,
+  type Server as JellyfinServer,
+} from '@/session';
 
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), back: jest.fn(), replace: jest.fn(), canDismiss: jest.fn(), dismissAll: jest.fn() },
@@ -16,24 +25,29 @@ jest.mock('expo-router', () => ({
   Redirect: jest.fn(() => null),
 }));
 
-// Network stubs mocked; the in-memory accounts store stays real.
+// Network calls mocked; the session store (kv-store + secure-store mocks) stays real.
 jest.mock('@/auth', () => ({
   ...jest.requireActual<typeof import('@/auth')>('@/auth'),
   probeServer: jest.fn(),
   signIn: jest.fn(),
   quickConnectEnabled: jest.fn(),
-  initiateQuickConnect: jest.fn(),
-  checkQuickConnect: jest.fn(),
-  finishQuickConnect: jest.fn(),
+  quickConnect: jest.fn(),
+}));
+jest.mock('@/api', () => ({
+  ...jest.requireActual<typeof import('@/api')>('@/api'),
+  logout: jest.fn(() => Promise.resolve()),
 }));
 
-const { router, useLocalSearchParams } = jest.requireMock<{
+const { router, useLocalSearchParams, Redirect } = jest.requireMock<{
   router: { push: jest.Mock; back: jest.Mock; replace: jest.Mock; canDismiss: jest.Mock; dismissAll: jest.Mock };
   useLocalSearchParams: jest.Mock;
+  Redirect: jest.Mock;
 }>('expo-router');
 const mocked = jest.mocked(auth);
 
-const server: auth.Server = { url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' };
+const server: JellyfinServer = { id: 'srv', url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' };
+const other: JellyfinServer = { id: 'cab', url: 'http://10.0.0.2:8096', name: 'Cabin', version: '10.11.11' };
+const alert = jest.spyOn(Alert, 'alert');
 
 /** Fires the field's submit `times` in one frame without waiting for the (pending) handler. */
 async function submitInOneFrame(label: string, times = 2) {
@@ -45,7 +59,10 @@ async function submitInOneFrame(label: string, times = 2) {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  useLocalSearchParams.mockReturnValue(server);
+  useLocalSearchParams.mockReturnValue({ url: server.url });
+  // Servers the user "probed" - Sign in only trusts these (or saved accounts' servers).
+  rememberServer(server);
+  rememberServer(other);
 });
 
 describe('Add server', () => {
@@ -57,27 +74,30 @@ describe('Add server', () => {
     expect(mocked.probeServer).not.toHaveBeenCalled();
   });
 
-  it('probes the candidates and opens Sign in with the server', async () => {
+  it('probes the candidates and opens Sign in with only the address', async () => {
     mocked.probeServer.mockResolvedValue(server);
     await render(<Server />);
     await fireEvent.changeText(screen.getByLabelText('Server address'), 'jf.example.com');
     await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
     expect(mocked.probeServer).toHaveBeenCalledWith(['https://jf.example.com', 'http://jf.example.com']);
-    expect(router.push).toHaveBeenCalledWith({ pathname: '/login', params: server });
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/login', params: { url: server.url } });
   });
 
-  it('shows an error when no server answers', async () => {
-    mocked.probeServer.mockRejectedValue(new Error('offline'));
+  it.each([
+    [new ApiError('network'), /Couldn't reach the server/],
+    [new ApiError('parse'), /doesn't look like a Jellyfin server/],
+  ])('shows why the probe failed (%s)', async (error, message) => {
+    mocked.probeServer.mockRejectedValue(error);
     await render(<Server />);
     await fireEvent.changeText(screen.getByLabelText('Server address'), 'jf.example.com');
     await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Couldn't reach/);
+    expect(await screen.findByRole('alert')).toHaveTextContent(message);
     expect(router.push).not.toHaveBeenCalled();
   });
 
   // Regression: a probe finishing after the user left still pushed Sign in.
   it('does not navigate when left during the probe', async () => {
-    let resolve!: (s: auth.Server) => void;
+    let resolve!: (s: JellyfinServer) => void;
     mocked.probeServer.mockReturnValue(new Promise((r) => (resolve = r)));
     await render(<Server />);
     await fireEvent.changeText(screen.getByLabelText('Server address'), 'jf.example.com');
@@ -102,8 +122,11 @@ describe('Add server', () => {
 });
 
 describe('Sign in', () => {
-  it('signs in and returns to Home', async () => {
+  beforeEach(() => {
     mocked.quickConnectEnabled.mockResolvedValue(false);
+  });
+
+  it('signs in and returns to Home', async () => {
     mocked.signIn.mockResolvedValue();
     await render(<Login />);
     await fireEvent.changeText(screen.getByLabelText('Username'), ' anna ');
@@ -114,7 +137,6 @@ describe('Sign in', () => {
   });
 
   it('signs in once for a double submit', async () => {
-    mocked.quickConnectEnabled.mockResolvedValue(false);
     mocked.signIn.mockReturnValue(new Promise(() => {}));
     await render(<Login />);
     await fireEvent.changeText(screen.getByLabelText('Username'), 'anna');
@@ -122,39 +144,52 @@ describe('Sign in', () => {
     expect(mocked.signIn).toHaveBeenCalledTimes(1);
   });
 
-  it('shows an error when sign in fails', async () => {
-    mocked.quickConnectEnabled.mockResolvedValue(false);
-    mocked.signIn.mockRejectedValue(new Error('401'));
+  it.each([
+    [new ApiError('http', 401), /Wrong username or password/],
+    [new ApiError('network'), /Couldn't reach the server/],
+  ])('shows why sign in failed (%s)', async (error, message) => {
+    mocked.signIn.mockRejectedValue(error);
     await render(<Login />);
     await fireEvent.changeText(screen.getByLabelText('Username'), 'anna');
     await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Couldn't sign in/);
+    expect(await screen.findByRole('alert')).toHaveTextContent(message);
     expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it('prefills the username when signing an account back in', async () => {
+    useLocalSearchParams.mockReturnValue({ url: server.url, userName: 'anna' });
+    await render(<Login />);
+    expect(screen.getByLabelText('Username')).toHaveDisplayValue('anna');
+  });
+
+  // Deep links can carry any url; only servers the user probed or has an account on are trusted.
+  it('goes back to Add server for an unknown address', async () => {
+    useLocalSearchParams.mockReturnValue({ url: 'https://evil.example' });
+    await render(<Login />);
+    expect(Redirect).toHaveBeenCalledWith({ href: '/server' }, undefined);
+    expect(mocked.quickConnectEnabled).not.toHaveBeenCalled();
   });
 
   it('shows Quick Connect only when the server enables it', async () => {
     mocked.quickConnectEnabled.mockResolvedValue(true);
     await render(<Login />);
     await fireEvent.press(await screen.findByRole('button', { name: 'Use Quick Connect' }));
-    expect(router.push).toHaveBeenCalledWith({ pathname: '/quick-connect', params: server });
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/quick-connect', params: { url: server.url } });
   });
 
   it('hides Quick Connect when the server disables it', async () => {
-    mocked.quickConnectEnabled.mockResolvedValue(false);
     await render(<Login />);
-    expect(mocked.quickConnectEnabled).toHaveBeenCalledWith(server);
+    expect(mocked.quickConnectEnabled).toHaveBeenCalledWith(server, expect.any(AbortSignal));
     expect(screen.queryByRole('button', { name: 'Use Quick Connect' })).toBeNull();
   });
 
   it('warns below the minimum server version', async () => {
-    mocked.quickConnectEnabled.mockResolvedValue(false);
-    useLocalSearchParams.mockReturnValue({ ...server, version: '10.9.11' });
+    rememberServer({ ...server, version: '10.9.11' });
     await render(<Login />);
     expect(screen.getByText(/runs Jellyfin 10\.9\.11/)).toBeOnTheScreen();
   });
 
   it('shows the server name and address', async () => {
-    mocked.quickConnectEnabled.mockResolvedValue(false);
     await render(<Login />);
     expect(screen.getByText('Home server')).toBeOnTheScreen();
     expect(screen.getByText('https://jf.example.com')).toBeOnTheScreen();
@@ -163,86 +198,72 @@ describe('Sign in', () => {
 });
 
 describe('Quick Connect', () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-  });
-  afterEach(() => {
-    jest.useRealTimers();
-  });
+  /** Controls the mocked flow: show a code, then finish or fail. */
+  function flow() {
+    let finish!: () => void;
+    let fail!: (e: unknown) => void;
+    let signal!: AbortSignal;
+    mocked.quickConnect.mockImplementation((_s, options) => {
+      signal = options.signal;
+      options.onCode('123456');
+      return new Promise<void>((resolve, reject) => {
+        finish = resolve;
+        fail = reject;
+      });
+    });
+    return {
+      finish: () => act(async () => finish()),
+      fail: (e: unknown) => act(async () => fail(e)),
+      signal: () => signal,
+    };
+  }
 
-  it('shows the code, polls until approved, then returns to Home', async () => {
-    mocked.initiateQuickConnect.mockResolvedValue({ code: '123456', secret: 's' });
-    mocked.checkQuickConnect.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
-    mocked.finishQuickConnect.mockResolvedValue();
+  it('shows the code and returns to Home once approved', async () => {
+    const qc = flow();
     await render(<QuickConnect />);
-    expect(await screen.findByText('123456')).toBeOnTheScreen();
+    expect(screen.getByText('123456')).toBeOnTheScreen();
     expect(screen.getByText('Waiting for approval')).toBeOnTheScreen();
-
-    await act(() => jest.advanceTimersByTimeAsync(auth.QUICK_CONNECT_POLL_MS));
-    expect(mocked.checkQuickConnect).toHaveBeenCalledTimes(1);
-    expect(router.replace).not.toHaveBeenCalled();
-
-    await act(() => jest.advanceTimersByTimeAsync(auth.QUICK_CONNECT_POLL_MS));
-    expect(mocked.checkQuickConnect).toHaveBeenCalledTimes(2);
-    expect(mocked.finishQuickConnect).toHaveBeenCalledWith(server, 's', expect.any(AbortSignal));
+    expect(mocked.quickConnect).toHaveBeenCalledWith(
+      server,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    await qc.finish();
     expect(router.replace).toHaveBeenCalledWith('/home');
   });
 
-  it('stops polling when closed', async () => {
-    mocked.initiateQuickConnect.mockResolvedValue({ code: '123456', secret: 's' });
-    await render(<QuickConnect />);
-    await screen.findByText('123456');
-    await screen.unmount();
-    await act(() => jest.advanceTimersByTimeAsync(auth.QUICK_CONNECT_POLL_MS * 3));
-    expect(mocked.checkQuickConnect).not.toHaveBeenCalled();
-  });
-
-  it('shows an error and retries', async () => {
-    mocked.initiateQuickConnect.mockRejectedValueOnce(new Error('disabled'));
-    mocked.initiateQuickConnect.mockResolvedValueOnce({ code: '654321', secret: 's' });
-    await render(<QuickConnect />);
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Quick Connect failed/);
-    await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByText('654321')).toBeOnTheScreen();
-  });
-
   // Regression: closing during the final exchange still signed the user in.
-  it('aborts the final exchange when closed', async () => {
-    mocked.initiateQuickConnect.mockResolvedValue({ code: '123456', secret: 's' });
-    mocked.checkQuickConnect.mockResolvedValue(true);
-    let finishSignal: AbortSignal | undefined;
-    mocked.finishQuickConnect.mockImplementation((_s, _secret, signal) => {
-      finishSignal = signal;
-      return new Promise(() => {});
-    });
+  it('aborts the flow when closed', async () => {
+    const qc = flow();
     await render(<QuickConnect />);
-    await screen.findByText('123456');
-    await act(() => jest.advanceTimersByTimeAsync(auth.QUICK_CONNECT_POLL_MS));
-    expect(finishSignal?.aborted).toBe(false);
+    expect(qc.signal().aborted).toBe(false);
     await screen.unmount();
-    expect(finishSignal?.aborted).toBe(true);
+    expect(qc.signal().aborted).toBe(true);
     expect(router.replace).not.toHaveBeenCalled();
   });
 
+  it('shows an error and retries', async () => {
+    const qc = flow();
+    await render(<QuickConnect />);
+    await qc.fail(new ApiError('http', 401));
+    expect(screen.getByRole('alert')).toHaveTextContent(/turned off/);
+    await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
+    expect(mocked.quickConnect).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('123456')).toBeOnTheScreen();
+  });
+
   it('Cancel goes back', async () => {
-    mocked.initiateQuickConnect.mockResolvedValue({ code: '123456', secret: 's' });
+    flow();
     await render(<QuickConnect />);
     await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
     expect(router.back).toHaveBeenCalledTimes(1);
   });
 });
 
-// Account screens run on the real in-memory store, seeded through the real (stubbed) signIn.
-const actual = jest.requireActual<typeof import('@/auth')>('@/auth');
-const other: auth.Server = { url: 'http://10.0.0.2:8096', name: 'Cabin', version: '10.11.11' };
-const alert = jest.spyOn(Alert, 'alert');
-
-async function seed(...users: [auth.Server, string][]) {
-  jest.useFakeTimers();
-  const done = Promise.all(users.map(([s, u]) => actual.signIn(s, u, '')));
-  await jest.runAllTimersAsync();
-  await done;
-  jest.useRealTimers();
+// Account screens run on the real session store.
+async function seed(...users: [JellyfinServer, string][]) {
+  for (const [s, u] of users) {
+    await act(() => addAccount(s, { User: { Id: u, Name: u }, AccessToken: `tok-${u}`, ServerId: s.id }, `dev-${u}`));
+  }
 }
 
 function alertButtons() {
@@ -254,7 +275,7 @@ function pressAlertButton(text: string) {
 }
 
 afterEach(async () => {
-  await act(() => actual.getAccounts().accounts.forEach((a) => actual.removeAccount(a.id)));
+  await act(() => getSession().accounts.forEach((a) => removeAccount(a.id)));
 });
 
 describe('Accounts', () => {
@@ -278,6 +299,32 @@ describe('Accounts', () => {
     expect(screen.getAllByText('Active')).toHaveLength(1);
   });
 
+  // Regression: switching from the signed-out Accounts screen (stack root) stayed there with no way into the app.
+  it('goes Home after switching while signed out', async () => {
+    await act(() => signOut('cab.anna'));
+    await render(<Accounts />);
+    await fireEvent.press(screen.getByRole('button', { name: 'ben' }));
+    await pressAlertButton('Switch to this account');
+    expect(getSession().active?.id).toBe('srv.ben');
+    expect(router.replace).toHaveBeenCalledWith('/home');
+  });
+
+  it('stays on Accounts when switching while signed in', async () => {
+    await render(<Accounts />);
+    await fireEvent.press(screen.getByRole('button', { name: 'ben' }));
+    await pressAlertButton('Switch to this account');
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it('signs a signed-out account back in with its server and username', async () => {
+    await act(() => signOut('srv.ben'));
+    await render(<Accounts />);
+    expect(within(screen.getByRole('button', { name: 'ben' })).getByText('Signed out')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'ben' }));
+    await pressAlertButton('Sign in');
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/login', params: { url: server.url, userName: 'ben' } });
+  });
+
   it('removes an account', async () => {
     await render(<Accounts />);
     await fireEvent.press(screen.getByRole('button', { name: 'ben' }));
@@ -289,7 +336,7 @@ describe('Accounts', () => {
     await render(<Accounts />);
     const [, cabinAddUser] = screen.getAllByRole('button', { name: 'Add user' });
     await fireEvent.press(cabinAddUser);
-    expect(router.push).toHaveBeenCalledWith({ pathname: '/login', params: other });
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/login', params: { url: other.url } });
   });
 
   it('opens Add server', async () => {
@@ -316,7 +363,15 @@ describe('Account', () => {
     expect(router.push).toHaveBeenCalledWith('/accounts');
   });
 
-  it('removes the account after confirming and goes back when others remain', async () => {
+  it('signs out and keeps the account', async () => {
+    await seed([server, 'anna']);
+    await render(<Account />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
+    expect(getSession().active).toBeNull();
+    expect(getSession().accounts[0].signedOut).toBe(true);
+  });
+
+  it('removes the account after confirming and goes back when another is signed in', async () => {
     await seed([other, 'ben'], [server, 'anna']);
     await render(<Account />);
     await fireEvent.press(screen.getByRole('button', { name: 'Remove account' }));
@@ -326,8 +381,9 @@ describe('Account', () => {
     expect(screen.getByText('ben')).toBeOnTheScreen();
   });
 
-  it('leaves navigation to the signed-out redirect when removing the last account', async () => {
-    await seed([server, 'anna']);
+  it('leaves navigation to the signed-out redirect when no other account is signed in', async () => {
+    await seed([other, 'ben'], [server, 'anna']);
+    await act(() => signOut('cab.ben'));
     await render(<Account />);
     await fireEvent.press(screen.getByRole('button', { name: 'Remove account' }));
     await pressAlertButton('Remove');

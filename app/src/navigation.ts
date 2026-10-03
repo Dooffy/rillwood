@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Navigation helpers shared by screens and the root layout.
-import { router, useLocalSearchParams, type Href } from 'expo-router';
-import { useEffect, useMemo, useRef } from 'react';
+import { router, type Href } from 'expo-router';
+import { useEffect, useRef } from 'react';
 
-import { useAccounts, type Server } from '@/auth';
+import { useSession, type Account } from '@/session';
 
 /** Clear the stack and show `href` as its only screen (no back). Used after sign in / sign out. */
 export function resetTo(href: Href) {
@@ -11,24 +11,23 @@ export function resetTo(href: Href) {
   router.replace(href);
 }
 
-/** Losing the active account (last one removed, later: 401) sends the user to Add server. */
+/** Where a signed-out user starts: their saved accounts, or Add server on a fresh install. */
+export function signedOutHome(accounts: Account[]): Href {
+  return accounts.length > 0 ? '/accounts' : '/server';
+}
+
+/** Losing the active account (signed out, removed, 401) clears the stack to `signedOutHome()`. */
 export function useSignedOutRedirect() {
-  const { active } = useAccounts();
+  const { accounts, active } = useSession();
   const wasSignedIn = useRef(active !== null);
   useEffect(() => {
-    if (wasSignedIn.current && !active) resetTo('/server');
+    if (wasSignedIn.current && !active) resetTo(signedOutHome(accounts));
     wasSignedIn.current = active !== null;
-  }, [active]);
+  }, [accounts, active]);
 }
 
 /** Leaf for the root layout, so account changes don't re-render the whole navigator. */
 export function SignedOutRedirect() {
   useSignedOutRedirect();
   return null;
-}
-
-/** Server passed between auth screens as route params, with a stable identity. Null without one. */
-export function useServerParams(): Server | null {
-  const { url, name, version } = useLocalSearchParams<Server>();
-  return useMemo(() => (url ? { url, name, version } : null), [url, name, version]);
 }

@@ -5,22 +5,25 @@ import { Storage } from 'expo-sqlite/kv-store';
 import { Appearance as RNAppearance } from 'react-native';
 
 import Settings from '@/app/settings';
-import { useAccounts, type Account } from '@/auth';
+import { useSession, type Account } from '@/session';
 import { setAppearance } from '@/settings';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
-jest.mock('@/auth', () => ({ useAccounts: jest.fn() }));
+jest.mock('@/session', () => ({ useSession: jest.fn() }));
 
 const { router } = jest.requireMock<{ router: { push: jest.Mock } }>('expo-router');
 
 const anna: Account = {
-  id: 'a',
-  server: { url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' },
+  id: 'srv.a',
+  server: { id: 'srv', url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' },
+  userId: 'a',
   userName: 'anna',
+  deviceId: 'dev',
 };
 
-function signedIn(active: Account | null) {
-  jest.mocked(useAccounts).mockReturnValue({ accounts: active ? [active] : [], activeId: active?.id ?? null, active });
+/** Session with `active` signed in plus any signed-out `others`. */
+function signedIn(active: Account | null, others: Account[] = []) {
+  jest.mocked(useSession).mockReturnValue({ accounts: [...(active ? [active] : []), ...others], active });
 }
 
 describe('Settings screen', () => {

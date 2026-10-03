@@ -2,7 +2,7 @@
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 
-import { probeServer } from '@/auth';
+import { authErrorMessage, probeServer } from '@/auth';
 import { Button } from '@/components/Button';
 import { Page } from '@/components/Page';
 import { Text } from '@/components/Text';
@@ -35,9 +35,9 @@ export default function Server() {
     setLoading(true);
     try {
       const server = await probeServer(candidates);
-      if (mounted.current) router.push({ pathname: '/login', params: server });
-    } catch {
-      if (mounted.current) setError("Couldn't reach a Jellyfin server at this address.");
+      if (mounted.current) router.push({ pathname: '/login', params: { url: server.url } });
+    } catch (e) {
+      if (mounted.current) setError(authErrorMessage(e, 'probe'));
     } finally {
       busy.current = false;
       if (mounted.current) setLoading(false);

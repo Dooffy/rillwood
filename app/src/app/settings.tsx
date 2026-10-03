@@ -3,19 +3,20 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { useAccounts } from '@/auth';
 import { Avatar } from '@/components/Avatar';
 import { Chevron, ListRow, ListSection } from '@/components/List';
 import { Page } from '@/components/Page';
 import { Segmented } from '@/components/Segmented';
 import { Text } from '@/components/Text';
+import { signedOutHome } from '@/navigation';
+import { useSession } from '@/session';
 import { APPEARANCE_OPTIONS, setAppearance, useAppearance } from '@/settings';
 import { minTouch, radii, spacing, useColors } from '@/theme';
 
 // Downloads rows show the defaults (CLAUDE.md §2); they become editable in M5 / M6.
 export default function Settings() {
   const appearance = useAppearance();
-  const { active } = useAccounts();
+  const { accounts, active } = useSession();
   const c = useColors();
 
   return (
@@ -23,7 +24,7 @@ export default function Settings() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={active ? `${active.userName}, ${active.server.name}` : 'Sign in'}
-        onPress={() => router.push(active ? '/account' : '/server')}
+        onPress={() => router.push(active ? '/account' : signedOutHome(accounts))}
         style={({ pressed }) => [styles.profile, { backgroundColor: pressed ? c.elevated : c.surface }]}
       >
         <Avatar name={active?.userName} />

@@ -1,88 +1,91 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Auth calls used by the (auth) screens. UI-only stubs for now: no network, accounts in memory only.
-// M2 wiring replaces the bodies with api.ts calls and moves accounts into session.tsx (docs/context/api.md).
-import { useSyncExternalStore } from 'react';
+// Auth flows behind the (auth) screens: probe a server, sign in, Quick Connect (docs/context/api.md).
+import { randomUUID } from 'expo-crypto';
+import { useLocalSearchParams } from 'expo-router';
+import { useMemo } from 'react';
 
-export type Server = { url: string; name: string; version: string };
-
-export type Account = { id: string; server: Server; userName: string };
+import {
+  ApiError,
+  authenticateByName,
+  authenticateWithQuickConnect,
+  findServer,
+  getQuickConnectEnabled,
+  getQuickConnectState,
+  initiateQuickConnect,
+} from '@/api';
+import { addAccount, knownServer, rememberServer, type Server } from '@/session';
 
 export const QUICK_CONNECT_POLL_MS = 5000;
 
-const STUB_DELAY_MS = 500;
-const STUB_APPROVE_MS = 6000;
-
-const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-/** First candidate that answers `/System/Info/Public`. */
-export async function probeServer(candidates: string[]): Promise<Server> {
-  await delay(STUB_DELAY_MS);
-  return { url: candidates[0], name: 'Jellyfin', version: '12.1.0' };
+/** First candidate URL that answers like a Jellyfin server (https before http). */
+export async function probeServer(candidates: string[], signal?: AbortSignal): Promise<Server> {
+  const { baseUrl, info } = await findServer(candidates, signal);
+  const server: Server = { id: info.Id, url: baseUrl, name: info.ServerName, version: info.Version };
+  rememberServer(server);
+  return server;
 }
 
-export async function signIn(server: Server, userName: string, _password: string): Promise<void> {
-  await delay(STUB_DELAY_MS);
-  addAccount(server, userName);
+/**
+ * Server for Sign in / Quick Connect from the `url` route param - only one the user probed or has an account on
+ * (`knownServer`), never trusted from the params themselves. Null → back to Add server.
+ */
+export function useServerParam(): Server | null {
+  const { url } = useLocalSearchParams<{ url?: string }>();
+  return useMemo(() => (url ? knownServer(url) : null), [url]);
 }
 
-export async function quickConnectEnabled(_server: Server): Promise<boolean> {
-  return true;
+export async function signIn(server: Server, userName: string, password: string): Promise<void> {
+  const deviceId = randomUUID();
+  const auth = await authenticateByName({ baseUrl: server.url, deviceId }, userName, password);
+  await addAccount(server, auth, deviceId);
 }
 
-export async function initiateQuickConnect(_server: Server): Promise<{ code: string; secret: string }> {
-  await delay(STUB_DELAY_MS);
-  return { code: '482913', secret: String(Date.now()) };
+export function quickConnectEnabled(server: Server, signal?: AbortSignal): Promise<boolean> {
+  return getQuickConnectEnabled({ baseUrl: server.url }, signal);
 }
 
-/** True once the code is approved on another device. */
-export async function checkQuickConnect(_server: Server, secret: string): Promise<boolean> {
-  return Date.now() - Number(secret) > STUB_APPROVE_MS;
+/** Resolves after `ms`; rejects with `aborted` as soon as the signal fires. */
+function wait(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(new ApiError('aborted'));
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
 }
 
-/** Exchanges the approved secret for a session. An aborted `signal` adds no account. */
-export async function finishQuickConnect(server: Server, _secret: string, signal: AbortSignal): Promise<void> {
-  await delay(STUB_DELAY_MS);
-  signal.throwIfAborted();
-  addAccount(server, 'Quick Connect user');
+/**
+ * Full Quick Connect sign-in: shows the code via `onCode`, polls until it's approved on another device, then adds
+ * the account. Aborting the signal stops polling and never adds the account.
+ */
+export async function quickConnect(
+  server: Server,
+  { signal, onCode }: { signal: AbortSignal; onCode: (code: string) => void },
+): Promise<void> {
+  const conn = { baseUrl: server.url, deviceId: randomUUID() };
+  const { Secret, Code } = await initiateQuickConnect(conn, signal);
+  onCode(Code);
+  let approved = false;
+  while (!approved) {
+    await wait(QUICK_CONNECT_POLL_MS, signal);
+    approved = (await getQuickConnectState(conn, Secret, signal)).Authenticated;
+  }
+  const auth = await authenticateWithQuickConnect(conn, Secret, signal);
+  if (signal.aborted) throw new ApiError('aborted');
+  await addAccount(server, auth, conn.deviceId);
 }
 
-// In-memory accounts store.
-
-export type AccountsState = { accounts: Account[]; activeId: string | null; active: Account | null };
-
-let state: AccountsState = { accounts: [], activeId: null, active: null };
-const listeners = new Set<() => void>();
-
-function set(accounts: Account[], activeId: string | null) {
-  state = { accounts, activeId, active: accounts.find((a) => a.id === activeId) ?? null };
-  listeners.forEach((l) => l());
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-function addAccount(server: Server, userName: string) {
-  const id = `${server.url}|${userName}`;
-  const account = { id, server, userName };
-  set([...state.accounts.filter((a) => a.id !== id), account], id);
-}
-
-export function switchAccount(id: string) {
-  set(state.accounts, id);
-}
-
-export function removeAccount(id: string) {
-  const accounts = state.accounts.filter((a) => a.id !== id);
-  set(accounts, state.activeId === id ? (accounts[0]?.id ?? null) : state.activeId);
-}
-
-export function getAccounts(): AccountsState {
-  return state;
-}
-
-/** All accounts + the active one (null when signed out). */
-export function useAccounts(): AccountsState {
-  return useSyncExternalStore(subscribe, getAccounts);
+/** User-facing message for a failed auth call. */
+export function authErrorMessage(error: unknown, action: 'probe' | 'signIn' | 'quickConnect'): string {
+  const e = error instanceof ApiError ? error : null;
+  if (e?.kind === 'network') return "Couldn't reach the server. Check the address and your connection.";
+  if (action === 'probe') return "That address doesn't look like a Jellyfin server.";
+  if (action === 'signIn' && e?.status === 401) return 'Wrong username or password.';
+  if (action === 'quickConnect' && e?.status === 401) return 'Quick Connect is turned off on this server.';
+  return 'Something went wrong. Try again.';
 }
