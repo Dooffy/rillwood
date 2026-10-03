@@ -161,6 +161,15 @@ describe('Add server', () => {
     expect(mocked.probeServer).not.toHaveBeenCalled();
   });
 
+  // Regression: the error stayed up while the user was already fixing the address.
+  it('clears the error when the address is edited', async () => {
+    await render(<Server />);
+    await fireEvent.changeText(screen.getByLabelText('Server address'), 'ftp://nope');
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+    await fireEvent.changeText(screen.getByLabelText('Server address'), 'jf.example.com');
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('probes the candidates and opens Sign in with only the address', async () => {
     mocked.probeServer.mockResolvedValue(server);
     await render(<Server />);
@@ -252,6 +261,17 @@ describe('Sign in', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(message);
     expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  // Regression: "Wrong username or password" stayed up while the user was retyping.
+  it.each(['Username', 'Password'])('clears the error when the %s is edited', async (field) => {
+    mocked.signIn.mockRejectedValue(new ApiError('http', 401));
+    await render(<Login />);
+    await fireEvent.changeText(screen.getByLabelText('Username'), 'anna');
+    await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
+    await screen.findByRole('alert');
+    await fireEvent.changeText(screen.getByLabelText(field), 'x');
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('locks the whole form while signing in', async () => {
@@ -398,6 +418,8 @@ describe('Accounts', () => {
     const [homeAnna, cabinAnna] = screen.getAllByRole('button', { name: 'anna' });
     expect(within(homeAnna).queryByText('Active')).toBeNull();
     expect(within(cabinAnna).getByText('Active')).toBeOnTheScreen();
+    // No "Inactive" label - only the current and signed-out accounts are marked.
+    expect(screen.queryByText('Inactive')).toBeNull();
   });
 
   it('switches to an account', async () => {

@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { SymbolView } from 'expo-symbols';
-import { forwardRef, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View, type TextInputInstance, type TextInputProps } from 'react-native';
+import { forwardRef, useRef, useState } from 'react';
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+  type TextInputInstance,
+  type TextInputProps,
+} from 'react-native';
 
 import { minTouch, radii, spacing, type, useColors } from '@/theme';
 
@@ -14,6 +22,16 @@ export type TextFieldProps = Omit<TextInputProps, 'style' | 'secureTextEntry'> &
   secure?: boolean;
 };
 
+/**
+ * iOS wipes a hidden password field on the first keystroke after it regains focus, so a typo can't be fixed.
+ * Rebuild the intended text: wiped by a delete → drop the last character, wiped by typing → append it.
+ * A wipe leaves at most the one typed character; longer text is a normal edit, autofill or paste - kept as is.
+ */
+export function repairSecureEdit(previous: string, next: string): string {
+  if (previous === '' || next.length > 1) return next;
+  return next === '' ? previous.slice(0, -1) : previous + next;
+}
+
 /** Labelled text input with an optional error line. */
 export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function TextField(
   { label, error, secure = false, ...input },
@@ -21,7 +39,9 @@ export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function 
 ) {
   const c = useColors();
   const [hidden, setHidden] = useState(true);
+  const refocused = useRef(false);
   const locked = input.editable === false;
+  const guard = secure && hidden && Platform.OS === 'ios';
 
   return (
     <View style={styles.container}>
@@ -43,6 +63,15 @@ export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function 
           cursorColor={c.text}
           secureTextEntry={secure && hidden}
           {...input}
+          onFocus={(e) => {
+            refocused.current = guard && !!input.value;
+            input.onFocus?.(e);
+          }}
+          onChangeText={(text) => {
+            const repair = refocused.current;
+            refocused.current = false;
+            input.onChangeText?.(repair ? repairSecureEdit(input.value ?? '', text) : text);
+          }}
           style={[styles.input, { color: c.text }]}
         />
         {secure && (
@@ -50,7 +79,11 @@ export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function 
             accessibilityRole="button"
             accessibilityLabel={hidden ? 'Show password' : 'Hide password'}
             disabled={locked}
-            onPress={() => setHidden((h) => !h)}
+            onPress={() => {
+              // iOS also wipes on the first keystroke after the text is hidden again; shown text is never wiped.
+              refocused.current = hidden ? false : Platform.OS === 'ios' && !!input.value;
+              setHidden(!hidden);
+            }}
             style={styles.toggle}
           >
             <SymbolView

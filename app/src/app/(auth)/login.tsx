@@ -40,6 +40,12 @@ export default function Login() {
 
   if (!server) return <Redirect href="/server" />;
 
+  /** Typing clears the last error. */
+  const edit = (set: (text: string) => void) => (text: string) => {
+    set(text);
+    setError(undefined);
+  };
+
   const submit = async () => {
     if (name === '' || busy.current) return;
     busy.current = true;
@@ -81,7 +87,7 @@ export default function Login() {
       <TextField
         label="Username"
         value={userName}
-        onChangeText={setUserName}
+        onChangeText={edit(setUserName)}
         textContentType="username"
         autoComplete="username"
         autoCapitalize="none"
@@ -96,7 +102,7 @@ export default function Login() {
         label="Password"
         secure
         value={password}
-        onChangeText={setPassword}
+        onChangeText={edit(setPassword)}
         error={error}
         textContentType="password"
         autoComplete="current-password"

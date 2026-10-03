@@ -14,6 +14,7 @@ const dark = {
   accent: '#FFFFFF',
   onAccent: '#000000',
   danger: '#FF453A',
+  success: '#30D158',
 };
 
 export type Colors = typeof dark;
@@ -30,6 +31,7 @@ const light: Colors = {
   accent: '#000000',
   onAccent: '#FFFFFF',
   danger: '#FF3B30',
+  success: '#34C759',
 };
 
 export const palettes = { dark, light } as const;

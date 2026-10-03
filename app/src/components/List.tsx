@@ -38,16 +38,23 @@ export function Chevron() {
 export type ListRowProps = {
   label: string;
   value?: string;
+  /** Status dot before the value: `active` → green dot + primary text, `muted` → grey dot. */
+  dot?: 'active' | 'muted';
   onPress?: () => void;
 };
 
 /** Tappable rows get a chevron; rows without `onPress` show a read-only value. */
-export function ListRow({ label, value, onPress }: ListRowProps) {
+export function ListRow({ label, value, dot, onPress }: ListRowProps) {
   const c = useColors();
   const content = (
     <>
       <Text style={styles.label}>{label}</Text>
-      {value !== undefined && <Text secondary>{value}</Text>}
+      {value !== undefined && (
+        <View style={styles.value}>
+          {dot && <View style={[styles.dot, { backgroundColor: dot === 'active' ? c.success : c.elevated2 }]} />}
+          <Text secondary={dot !== 'active'}>{value}</Text>
+        </View>
+      )}
       {onPress && <Chevron />}
     </>
   );
@@ -57,6 +64,7 @@ export function ListRow({ label, value, onPress }: ListRowProps) {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityValue={value === undefined ? undefined : { text: value }}
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && { backgroundColor: c.elevated }]}
     >
@@ -79,4 +87,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm + spacing.xs,
   },
   label: { flex: 1 },
+  value: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2 },
+  dot: { width: 8, height: 8, borderRadius: radii.pill },
 });
