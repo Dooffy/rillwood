@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react';
 
 import { useSession } from '@/session';
 
-/** Route param marking the first-run flow (Welcome → Add server → Sign in → Quick Connect): step pills + help. */
+/** Route param marking the first-run flow (Welcome → Add server → Sign in → Quick Connect): step pills + intro copy. */
 export const ONBOARDING = { onboarding: '1' } as const;
 
 export function useOnboarding(): boolean {

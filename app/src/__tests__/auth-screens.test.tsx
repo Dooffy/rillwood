@@ -130,12 +130,17 @@ describe('Onboarding steps', () => {
     expect(screen.queryByText(/Quick Connect/)).toBeNull();
   });
 
-  it('keeps the plain form when adding a server from Accounts', async () => {
+  it('gives the same help without the steps when adding a server from Accounts', async () => {
     useLocalSearchParams.mockReturnValue({});
+    mocked.probeServer.mockResolvedValue(server);
     await render(<Server />);
     expect(screen.queryByLabelText(/Step 1 of 2/)).toBeNull();
-    expect(screen.queryByText('Where do I find it?')).toBeNull();
-    expect(screen.queryByRole('button', { name: /Use example/ })).toBeNull();
+    expect(screen.queryByText(/plays your own Jellyfin library/)).toBeNull();
+    expect(screen.getByText(/address you use to open Jellyfin/)).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Where do I find it?' })).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Use example jellyfin.example.com' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/login', params: { url: server.url } });
   });
 });
 
