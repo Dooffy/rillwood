@@ -70,9 +70,10 @@ All values live in `src/theme.ts`. Never hardcode colours, radii or font sizes i
 | Separator | `#38383A` | `#C6C6C8` |
 | Text primary / secondary | `#FFFFFF` / `#98989F` | `#000000` / `#6C6C70` |
 | Inactive icon | `#8E8E93` | `#8E8E93` |
+| Danger (errors, destructive) | `#FF453A` | `#FF3B30` |
 | Accent | White (primary buttons white bg, black text) | Black (black bg, white text) |
 | Font | System (SF on iOS) - leave `fontFamily` unset | same |
-| Radii | Cards 8-14; buttons, icon buttons, segmented controls and pills full (capsule / circle, Apple TV style) | same |
+| Radii | Cards 8-14, large cards (profile) 20; buttons, icon buttons, segmented controls and pills full (capsule / circle, Apple TV style) | same |
 
 Accent tweak options: `#0A84FF`, `#30D158`, `#FF9F0A` - flip button text to white when non-white accent.
 
@@ -102,7 +103,7 @@ Repo layout:
 ```
 src/app/                 expo-router
   _layout.tsx            providers, reconcile/cleanup/sync on AppState active
-  (auth)/server.tsx, login.tsx, quick-connect.tsx, accounts.tsx
+  (auth)/server.tsx, login.tsx, quick-connect.tsx, accounts.tsx, account.tsx   (no group layout - screens join the root stack)
   (tabs)/home.tsx, library.tsx, search.tsx, downloads.tsx
   item/[id].tsx          movie / episode detail
   series/[id].tsx
@@ -111,13 +112,16 @@ src/app/                 expo-router
 src/theme.ts             design tokens
 src/api.ts               fetch client + endpoints + DTO types
 src/session.tsx          SessionContext (accounts, active, token)
+src/auth.ts              auth calls for the (auth) screens - UI-only stubs until M2 wiring
+src/server.ts            server address → probe URLs, min version check (pure)
+src/navigation.ts        resetTo (clear stack), signed-out redirect
 src/useFetch.ts          in-memory cache, abort, invalidate()
 src/downloads.ts         store, queue, reconcile, cleanup, storage
 src/sync.ts              offline progress queue replay
 src/settings.ts          user settings in kv-store (appearance; downloads + offload later)
 src/player/Player.tsx    PlayerEngine interface + re-export of active engine
 src/player/mpv.tsx       mpv adapter
-src/components/          Button, IconButton, Text, Toast, Spinner, Screen, List, Segmented, PosterCard, LandscapeCard, Row, ProgressBar, DownloadRing
+src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List, Segmented, PosterCard, LandscapeCard, Row, ProgressBar, DownloadRing
 src/dev/                 dev-only previews, rendered behind `__DEV__` (never in release)
 modules/mpv/             vendored native module (+ UPSTREAM.md: upstream repo + commit)
 modules/downloads/       own native background downloader (iOS + Android)

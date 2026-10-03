@@ -5,7 +5,11 @@ Read before working on `src/api.ts` (fetch client, endpoints, DTO types), `src/u
 ## Rules
 
 - Plain `fetch` wrapper, hand-written DTO types, no `any` (root §2, §10). 8s fail-fast timeout, `ApiError`, offline flag; `/System/Info/Public` probe on foreground.
-- Server target: **Jellyfin 12.1 base**, 12.0 + 10.11.x supported, warn below 10.10.7.
+- Server target: **Jellyfin 12.1 base**, 12.0 + 10.11.x supported, warn below 10.10.7 (`isOutdatedServer` in `src/server.ts`, shown on Sign in).
+- Server address (`serverUrlCandidates` in `src/server.ts`): trim, lowercase scheme + host, keep port and reverse-proxy sub-path, drop `/web/...`, query, hash and trailing `/`. No scheme → probe `https://` then `http://`. Reject `user:pass@`, other schemes, bad ports.
+- Launch: signed in → Home, signed out → Add server (`src/app/index.tsx`). Losing the active account (last one removed; later the global 401) → `useSignedOutRedirect` in the root layout clears the stack to Add server. Sign in / Quick Connect success clears the stack to Home (`resetTo`).
+- Auth screens call `src/auth.ts` (probe, sign in, Quick Connect, accounts store). It is a UI-only stub (no network, accounts in memory) until the M2 wiring swaps in `api.ts` + `session.tsx`; keep the function signatures so the screens don't change. Quick Connect's final exchange takes an `AbortSignal` - closing the screen must not add the account.
+- Wiring TODO: Sign in / Quick Connect read the server from route params, so a `rillwood://login?url=...` deep link can point them at any address. Before real requests, pass a reference to a server `probeServer` confirmed (session state) or re-validate `url` with `serverUrlCandidates`.
 - **Auth header only.** 12.x rejects `X-Emby-Token`, `?api_key=` and the `Emby` scheme (10.11 still accepts them). `?ApiKey=` still works on both but is banned - no tokens in URLs.
   ```
   Authorization: MediaBrowser Client="Rillwood", Device="iPhone", DeviceId="<per-account id>", Version="0.1.0", Token="<token>"

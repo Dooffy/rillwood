@@ -13,6 +13,7 @@ const dark = {
   iconInactive: '#8E8E93',
   accent: '#FFFFFF',
   onAccent: '#000000',
+  danger: '#FF453A',
 };
 
 export type Colors = typeof dark;
@@ -28,6 +29,7 @@ const light: Colors = {
   iconInactive: '#8E8E93',
   accent: '#000000',
   onAccent: '#FFFFFF',
+  danger: '#FF3B30',
 };
 
 export const palettes = { dark, light } as const;
@@ -48,6 +50,7 @@ export function useColors(): Colors {
 
 export const radii = {
   card: 12,
+  cardLarge: 20,
   pill: 999,
 } as const;
 

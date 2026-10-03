@@ -32,6 +32,12 @@ describe('Button', () => {
     expect(screen.getByText('Cancel')).toHaveStyle({ color: colors.text });
   });
 
+  it('uses danger text on the elevated surface for destructive', async () => {
+    await render(<Button title="Remove" variant="destructive" onPress={() => {}} />);
+    expect(screen.getByRole('button')).toHaveStyle({ backgroundColor: colors.elevated });
+    expect(screen.getByText('Remove')).toHaveStyle({ color: colors.danger });
+  });
+
   it('ignores presses when disabled', async () => {
     const onPress = jest.fn();
     await render(<Button title="Sign in" disabled onPress={onPress} />);

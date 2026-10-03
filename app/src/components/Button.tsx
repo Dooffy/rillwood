@@ -8,7 +8,8 @@ import { Text } from './Text';
 export type ButtonProps = {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary';
+  /** destructive = secondary surface with danger text (remove, sign out). */
+  variant?: 'primary' | 'secondary' | 'destructive';
   loading?: boolean;
   disabled?: boolean;
 };
@@ -16,7 +17,7 @@ export type ButtonProps = {
 export function Button({ title, onPress, variant = 'primary', loading = false, disabled = false }: ButtonProps) {
   const c = useColors();
   const primary = variant === 'primary';
-  const fg = primary ? c.onAccent : c.text;
+  const fg = primary ? c.onAccent : variant === 'destructive' ? c.danger : c.text;
   const inactive = disabled || loading;
 
   return (

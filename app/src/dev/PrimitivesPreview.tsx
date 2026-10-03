@@ -8,6 +8,7 @@ import { ListRow, ListSection } from '@/components/List';
 import { Segmented } from '@/components/Segmented';
 import { Spinner } from '@/components/Spinner';
 import { Text } from '@/components/Text';
+import { TextField } from '@/components/TextField';
 import { useToast } from '@/components/Toast';
 import { APPEARANCE_OPTIONS, setAppearance, useAppearance } from '@/settings';
 import { radii, spacing, type, useColors } from '@/theme';
@@ -61,6 +62,11 @@ export function PrimitivesPreview() {
           label="Download"
           onPress={() => toast('Download pressed')}
         />
+      </View>
+
+      <View style={styles.block}>
+        <TextField label="Text field" placeholder="Placeholder" />
+        <TextField label="Secure field" secure defaultValue="secret" />
       </View>
 
       <ListSection title="List">
