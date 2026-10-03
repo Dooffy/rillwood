@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { ToastProvider } from '@/components/Toast';
-import { SignedOutRedirect } from '@/navigation';
+import { SignedOutRedirect, tabsTitle } from '@/navigation';
 import { applyNativeAppearance, useAppearance } from '@/settings';
 import { ColorsContext, palettes, resolveScheme } from '@/theme';
 
@@ -46,7 +46,7 @@ export default function RootLayout() {
             headerTintColor: c.text,
           }}
         >
-          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(tabs)" options={({ route }) => ({ title: tabsTitle(route) })} />
           {/* Header hidden, but the title labels the back button on Add server (else iOS shows the route path). */}
           <Stack.Screen name="(auth)/welcome" options={{ title: 'Welcome' }} />
           <Stack.Screen name="(auth)/server" options={pages.server} />

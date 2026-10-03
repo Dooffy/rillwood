@@ -4,7 +4,7 @@ import { renderHook } from '@testing-library/react-native';
 
 import { useSession, type Account } from '@/session';
 
-import { resetTo, useSignedOutRedirect } from './navigation';
+import { resetTo, tabsTitle, useSignedOutRedirect } from './navigation';
 
 jest.mock('expo-router', () => ({
   router: { canDismiss: jest.fn(), dismissAll: jest.fn(), replace: jest.fn() },
@@ -72,5 +72,26 @@ describe('useSignedOutRedirect', () => {
     const { rerender } = await renderHook(() => useSignedOutRedirect());
     await rerender({});
     expect(router.replace).not.toHaveBeenCalled();
+  });
+});
+
+// Regression: screens pushed over the tabs (Settings) showed "(tabs)" as the iOS back button text.
+describe('tabsTitle', () => {
+  /** The tabs route as React Navigation passes it, with the nested tab state once a tab is focused. */
+  const tabs = (focused?: string) => ({
+    name: '(tabs)',
+    ...(focused && { state: { index: 0, routes: [{ name: focused }] } }),
+  });
+
+  it('is Home before a tab is focused', () => {
+    expect(tabsTitle(tabs())).toBe('Home');
+  });
+
+  it('follows the focused tab', () => {
+    expect(tabsTitle(tabs('search'))).toBe('Search');
+  });
+
+  it('falls back to Home for an unknown route name', () => {
+    expect(tabsTitle(tabs('nope'))).toBe('Home');
   });
 });

@@ -145,6 +145,14 @@ describe('Onboarding steps', () => {
 });
 
 describe('Add server', () => {
+  it('clears the error when an example is picked', async () => {
+    await render(<Server />);
+    await fireEvent.changeText(screen.getByLabelText('Server address'), 'ftp://nope');
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Use example jellyfin.example.com' }));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('rejects an invalid address without probing', async () => {
     await render(<Server />);
     await fireEvent.changeText(screen.getByLabelText('Server address'), 'ftp://nope');

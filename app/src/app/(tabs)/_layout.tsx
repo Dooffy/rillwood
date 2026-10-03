@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { NativeTabs, type NativeTabsTriggerIconProps } from 'expo-router/native-tabs';
 
+import { TAB_TITLES } from '@/navigation';
 import { useColors } from '@/theme';
 
-const TABS: { name: string; label: string; icon: NativeTabsTriggerIconProps }[] = [
-  { name: 'home', label: 'Home', icon: { sf: { default: 'house', selected: 'house.fill' }, md: 'home' } },
-  { name: 'library', label: 'Library', icon: { sf: 'rectangle.stack', md: 'video_library' } },
-  { name: 'search', label: 'Search', icon: { sf: 'magnifyingglass', md: 'search' } },
-  { name: 'downloads', label: 'Downloads', icon: { sf: 'arrow.down.circle', md: 'download' } },
+const TABS: { name: keyof typeof TAB_TITLES; icon: NativeTabsTriggerIconProps }[] = [
+  { name: 'home', icon: { sf: { default: 'house', selected: 'house.fill' }, md: 'home' } },
+  { name: 'library', icon: { sf: 'rectangle.stack', md: 'video_library' } },
+  { name: 'search', icon: { sf: 'magnifyingglass', md: 'search' } },
+  { name: 'downloads', icon: { sf: 'arrow.down.circle', md: 'download' } },
 ];
 
 export default function TabsLayout() {
@@ -21,7 +22,7 @@ export default function TabsLayout() {
       {TABS.map((t) => (
         // Nested navigators don't inherit the root contentStyle.
         <NativeTabs.Trigger key={t.name} name={t.name} contentStyle={{ backgroundColor: c.background }}>
-          <NativeTabs.Trigger.Label>{t.label}</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Label>{TAB_TITLES[t.name]}</NativeTabs.Trigger.Label>
           <NativeTabs.Trigger.Icon {...t.icon} />
         </NativeTabs.Trigger>
       ))}

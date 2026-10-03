@@ -74,7 +74,12 @@ export default function Server() {
         onSubmitEditing={connect}
         editable={!loading}
       />
-      <AddressExamples onPick={setAddress} />
+      <AddressExamples
+        onPick={(example) => {
+          setAddress(example);
+          setError(undefined);
+        }}
+      />
       <WhereToFindServer />
       <Button title="Continue" onPress={connect} loading={loading} disabled={address.trim() === ''} />
     </Page>
