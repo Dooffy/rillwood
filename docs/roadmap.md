@@ -25,7 +25,7 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [x] Appearance setting (System / Dark / Light) in Settings, light palette, `useColors()` (`CLAUDE.md` §2, §3)
 - [x] `api.ts` (header, 8s timeout, `ApiError`, offline flag), DeviceId - rules in `docs/context/api.md` (auth endpoints; browse / playback endpoints land with M3 / M4)
 - [x] `useFetch` (cache key `accountId|path`, TTL, abort, `invalidate`)
-- [ ] Components: PosterCard, LandscapeCard, Row, ProgressBar, DownloadRing
+- [x] Components: PosterCard, LandscapeCard, Row, ProgressBar, DownloadRing
 - [ ] TS strict, ESLint/Prettier, SPDX headers, CONTRIBUTING (DCO)
 - [x] Test setup: `jest-expo` + RNTL, `npm test`, CI on every branch + `main`
 - [x] First unit tests for `api.ts`

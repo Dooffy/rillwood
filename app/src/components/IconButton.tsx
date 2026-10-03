@@ -2,7 +2,7 @@
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { Pressable, StyleSheet } from 'react-native';
 
-import { minTouch, radii, useColors } from '@/theme';
+import { minTouch, pressedOpacity, radii, useColors } from '@/theme';
 
 export type IconButtonProps = {
   /** SF Symbol on iOS, Material Symbol on Android. */
@@ -41,5 +41,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pressed: { opacity: 0.5 },
+  pressed: { opacity: pressedOpacity },
 });

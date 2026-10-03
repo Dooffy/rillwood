@@ -55,6 +55,15 @@ export function useScheme(): Scheme {
   return useColors() === palettes.light ? 'light' : 'dark';
 }
 
+/** On artwork (posters, backdrops): the image is the background, so these stay the same in both themes. */
+export const onArtwork = {
+  fill: '#FFFFFF',
+  track: 'rgba(255, 255, 255, 0.35)',
+  scrim: 'rgba(0, 0, 0, 0.55)',
+  /** Bottom fade under the progress bar so it reads on bright art (Apple TV style). */
+  fade: 'linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.35) 45%, rgba(0, 0, 0, 0.75) 100%)',
+} as const;
+
 export const radii = {
   card: 12,
   cardLarge: 20,
@@ -71,6 +80,9 @@ export const type = {
 } as const;
 
 export const minTouch = 44;
+
+/** Opacity of a pressed button, card or row. */
+export const pressedOpacity = 0.5;
 
 export const spacing = {
   xs: 4,
