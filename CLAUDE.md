@@ -114,6 +114,7 @@ src/app/                 expo-router
 src/theme.ts             design tokens
 src/format.ts            display formatting (time left)
 src/api.ts               fetch client + endpoints + DTO types
+src/items.ts             pure item logic: Home requests, Latest shaping, time left, card titles, image picks + URLs
 src/session.ts           session store: accounts (kv-store), tokens (secure-store), active account, 401 sign-out
 src/auth.ts              auth flows for the (auth) screens: probe, sign in, Quick Connect
 src/server.ts            server address → probe URLs, min version check (pure)
@@ -134,7 +135,7 @@ modules/downloads/       own native background downloader (iOS + Android)
 
 | Working on | Read |
 |---|---|
-| `api.ts`, `session.ts`, `auth.ts`, `useFetch.ts`, auth / accounts, any server call | `docs/context/api.md` - endpoints, auth header, DeviceId, 401/403, tokens |
+| `api.ts`, `items.ts`, `session.ts`, `auth.ts`, `useFetch.ts`, auth / accounts, any server call | `docs/context/api.md` - endpoints, auth header, DeviceId, 401/403, tokens |
 | `src/player/`, player screen | `docs/context/player.md` - `PlayerEngine` contract, resume, reporting, engine issues |
 | `modules/mpv/`, player binaries | `docs/context/mpv.md` - binaries, NDK pin, mpv options, logs |
 | `downloads.ts`, `modules/downloads/`, Downloads screen | `docs/context/downloads.md` - native contract, HTTP resume rules, store, offload |

@@ -55,7 +55,8 @@
     "format:check": "prettier --check .",
     "bundle:check": "expo export --platform ios --platform android --output-dir .bundle-check && rm -rf .bundle-check",
     "check": "npm run lint && npm run typecheck && npm run format:check && npm test -- --ci",
-    "licenses": "node scripts/check-licenses.mjs"
+    "licenses": "node scripts/check-licenses.mjs",
+    "check:home": "node --no-warnings scripts/check-home.mjs"
   },
   "private": true,
   "jest": {
