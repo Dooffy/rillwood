@@ -64,7 +64,7 @@ describe('Settings screen', () => {
     await render(<Settings />);
     expect(screen.getByText('Add a Jellyfin server')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
-    expect(router.push).toHaveBeenCalledWith('/server');
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/server', params: { onboarding: '1' } });
   });
 
   it('shows the download defaults and app version', async () => {

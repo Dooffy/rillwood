@@ -49,21 +49,22 @@ describe('resetTo', () => {
 });
 
 describe('useSignedOutRedirect', () => {
-  it('goes to Add server when the active account goes away', async () => {
+  it('goes to Welcome when the active account goes away and none is left', async () => {
     signedIn(anna);
     const { rerender } = await renderHook(() => useSignedOutRedirect());
     expect(router.replace).not.toHaveBeenCalled();
     signedIn(null);
     await rerender({});
-    expect(router.replace).toHaveBeenCalledWith('/server');
+    expect(router.replace).toHaveBeenCalledWith('/welcome');
   });
 
-  it('goes to the saved accounts when signed-out accounts remain', async () => {
+  // Regression: with saved signed-out accounts, signing out landed on Accounts instead of the Welcome start.
+  it('goes to Welcome even when signed-out accounts remain', async () => {
     signedIn(anna);
     const { rerender } = await renderHook(() => useSignedOutRedirect());
     signedIn(null, [{ ...anna, signedOut: true }]);
     await rerender({});
-    expect(router.replace).toHaveBeenCalledWith('/accounts');
+    expect(router.replace).toHaveBeenCalledWith('/welcome');
   });
 
   it('does nothing when already signed out', async () => {

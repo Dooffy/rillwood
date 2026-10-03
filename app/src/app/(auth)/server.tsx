@@ -5,11 +5,16 @@ import { useEffect, useRef, useState } from 'react';
 import { authErrorMessage, probeServer } from '@/auth';
 import { Button } from '@/components/Button';
 import { Page } from '@/components/Page';
+import { AddressExamples, WhereToFindServer } from '@/components/ServerHelp';
+import { StepPills } from '@/components/StepPills';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
-import { serverUrlCandidates } from '@/server';
+import { ONBOARDING, useOnboarding } from '@/navigation';
+import { ONBOARDING_STEPS, serverUrlCandidates } from '@/server';
 
+/** Add server. From Welcome (`onboarding=1`): step 1 of 2 with an explanation, example addresses and where to find it. */
 export default function Server() {
+  const onboarding = useOnboarding();
   const [address, setAddress] = useState('');
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
@@ -35,7 +40,8 @@ export default function Server() {
     setLoading(true);
     try {
       const server = await probeServer(candidates);
-      if (mounted.current) router.push({ pathname: '/login', params: { url: server.url } });
+      if (mounted.current)
+        router.push({ pathname: '/login', params: { url: server.url, ...(onboarding && ONBOARDING) } });
     } catch (e) {
       if (mounted.current) setError(authErrorMessage(e, 'probe'));
     } finally {
@@ -45,8 +51,13 @@ export default function Server() {
   }
 
   return (
-    <Page form>
-      <Text secondary>Enter your Jellyfin server address.</Text>
+    <Page form busy={loading}>
+      {onboarding && <StepPills steps={ONBOARDING_STEPS} current={0} />}
+      <Text secondary>
+        {onboarding
+          ? 'Rillwood plays your own Jellyfin library. Enter the address you use to open Jellyfin in a browser.'
+          : 'Enter your Jellyfin server address.'}
+      </Text>
       <TextField
         label="Server address"
         placeholder="https://jellyfin.example.com"
@@ -61,6 +72,12 @@ export default function Server() {
         onSubmitEditing={connect}
         editable={!loading}
       />
+      {onboarding && (
+        <>
+          <AddressExamples onPick={setAddress} />
+          <WhereToFindServer />
+        </>
+      )}
       <Button title="Continue" onPress={connect} loading={loading} disabled={address.trim() === ''} />
     </Page>
   );

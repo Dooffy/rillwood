@@ -7,12 +7,15 @@ import { authErrorMessage, quickConnect, useServerParam } from '@/auth';
 import { Button } from '@/components/Button';
 import { Page } from '@/components/Page';
 import { Spinner } from '@/components/Spinner';
+import { StepPills } from '@/components/StepPills';
 import { Text } from '@/components/Text';
-import { resetTo } from '@/navigation';
+import { resetTo, useOnboarding } from '@/navigation';
+import { ONBOARDING_STEPS } from '@/server';
 import { radii, spacing, useColors } from '@/theme';
 
 export default function QuickConnect() {
   const server = useServerParam();
+  const onboarding = useOnboarding();
   const c = useColors();
   const [code, setCode] = useState<string>();
   const [error, setError] = useState<string>();
@@ -40,6 +43,7 @@ export default function QuickConnect() {
 
   return (
     <Page>
+      {onboarding && <StepPills steps={ONBOARDING_STEPS} current={1} />}
       <Text secondary>
         On a device that is already signed in, open Jellyfin and go to Settings - Quick Connect, then enter this code.
       </Text>

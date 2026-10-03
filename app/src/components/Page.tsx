@@ -1,19 +1,37 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { useEffect, type ReactNode } from 'react';
+import { Keyboard, ScrollView, StyleSheet, View } from 'react-native';
 
 import { spacing } from '@/theme';
 
-/** Stack page under a native large-title header (settings, auth). `form` lets taps reach inputs and drags dismiss the keyboard. */
-export function Page({ form = false, children }: { form?: boolean; children: ReactNode }) {
+type PageProps = {
+  /** Lets taps reach inputs and drags dismiss the keyboard. */
+  form?: boolean;
+  /** An async submit is running: the whole page ignores touches and the keyboard goes away. */
+  busy?: boolean;
+  children: ReactNode;
+};
+
+/** Stack page under a native large-title header (settings, auth). */
+export function Page({ form = false, busy = false, children }: PageProps) {
+  useEffect(() => {
+    if (busy) Keyboard.dismiss();
+  }, [busy]);
+
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
       keyboardDismissMode={form ? 'interactive' : 'none'}
       keyboardShouldPersistTaps={form ? 'handled' : 'never'}
-      contentContainerStyle={styles.content}
     >
-      {children}
+      <View
+        testID="page-content"
+        pointerEvents={busy ? 'none' : 'auto'}
+        accessibilityState={{ busy }}
+        style={styles.content}
+      >
+        {children}
+      </View>
     </ScrollView>
   );
 }

@@ -36,6 +36,13 @@ describe('TextField', () => {
     expect(screen.getByRole('button', { name: 'Hide password' })).toBeOnTheScreen();
   });
 
+  it('dims and locks the show / hide toggle when not editable', async () => {
+    await render(<TextField label="Password" secure editable={false} />);
+    expect(screen.getByRole('button', { name: 'Show password' })).toBeDisabled();
+    await fireEvent.press(screen.getByRole('button', { name: 'Show password' }));
+    expect(screen.getByLabelText('Password')).toHaveProp('secureTextEntry', true);
+  });
+
   it('has no toggle for plain fields', async () => {
     await render(<TextField label="Username" />);
     expect(screen.queryByRole('button')).toBeNull();

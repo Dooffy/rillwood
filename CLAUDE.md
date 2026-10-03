@@ -103,7 +103,7 @@ Repo layout:
 ```
 src/app/                 expo-router
   _layout.tsx            providers, reconcile/cleanup/sync on AppState active
-  (auth)/server.tsx, login.tsx, quick-connect.tsx, accounts.tsx, account.tsx   (no group layout - screens join the root stack)
+  (auth)/welcome.tsx, server.tsx, login.tsx, quick-connect.tsx, accounts.tsx, account.tsx   (no group layout - screens join the root stack)
   (tabs)/home.tsx, library.tsx, search.tsx, downloads.tsx
   item/[id].tsx          movie / episode detail
   series/[id].tsx
@@ -121,7 +121,7 @@ src/sync.ts              offline progress queue replay
 src/settings.ts          user settings in kv-store (appearance; downloads + offload later)
 src/player/Player.tsx    PlayerEngine interface + re-export of active engine
 src/player/mpv.tsx       mpv adapter
-src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List, Segmented, PosterCard, LandscapeCard, Row, ProgressBar, DownloadRing
+src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List, StepPills, ServerHelp, LogoMark, Segmented, PosterCard, LandscapeCard, Row, ProgressBar, DownloadRing
 src/dev/                 dev-only previews, rendered behind `__DEV__` (never in release)
 modules/mpv/             vendored native module (+ UPSTREAM.md: upstream repo + commit)
 modules/downloads/       own native background downloader (iOS + Android)
@@ -216,6 +216,7 @@ eas build -p android --profile production --local --output app.aab  # → Play C
 - No tokens in URLs, logs or persisted paths. No `console.*` in committed code.
 - Relative file paths only; resolve against `Paths.document` at runtime.
 - Every tappable card is `Pressable` (future TV focus).
+- Async submit locks the whole form, not just the button: `<Page form busy={loading}>` (blocks every touch, dismisses the keyboard), fields `editable={!loading}`, the button `loading`, and a ref guard against a double submit in one frame. Results that land after the screen is left must not navigate or set state.
 - Hyphens, not em dashes, in UI copy and docs.
 - Run `npm run check` in `app/` (lint, typecheck, format, tests) before calling a task done; CI also runs doctor, bundle and licence checks. New logic ships with tests; bug fixes ship with a regression test.
 - Docs ship with the code: keep `CLAUDE.md`, `docs/context/` and `docs/` current in the same commit (`/submit-code` checks this). Hard rules that apply everywhere stay in this file; feature details go in `docs/context/<feature>.md`.

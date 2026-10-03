@@ -1,9 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Navigation helpers shared by screens and the root layout.
-import { router, type Href } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useRef } from 'react';
 
-import { useSession, type Account } from '@/session';
+import { useSession } from '@/session';
+
+/** Route param marking the first-run flow (Welcome → Add server → Sign in → Quick Connect): step pills + help. */
+export const ONBOARDING = { onboarding: '1' } as const;
+
+export function useOnboarding(): boolean {
+  return useLocalSearchParams<{ onboarding?: string }>().onboarding === ONBOARDING.onboarding;
+}
 
 /** Clear the stack and show `href` as its only screen (no back). Used after sign in / sign out. */
 export function resetTo(href: Href) {
@@ -11,19 +18,17 @@ export function resetTo(href: Href) {
   router.replace(href);
 }
 
-/** Where a signed-out user starts: their saved accounts, or Add server on a fresh install. */
-export function signedOutHome(accounts: Account[]): Href {
-  return accounts.length > 0 ? '/accounts' : '/server';
-}
-
-/** Losing the active account (signed out, removed, 401) clears the stack to `signedOutHome()`. */
+/**
+ * Losing the active account (signed out, removed, 401) clears the stack to Welcome - the one signed-out start.
+ * Saved signed-out accounts are one tap away there ("Use a saved account").
+ */
 export function useSignedOutRedirect() {
-  const { accounts, active } = useSession();
+  const { active } = useSession();
   const wasSignedIn = useRef(active !== null);
   useEffect(() => {
-    if (wasSignedIn.current && !active) resetTo(signedOutHome(accounts));
+    if (wasSignedIn.current && !active) resetTo('/welcome');
     wasSignedIn.current = active !== null;
-  }, [accounts, active]);
+  }, [active]);
 }
 
 /** Leaf for the root layout, so account changes don't re-render the whole navigator. */
