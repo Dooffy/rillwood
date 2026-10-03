@@ -3,52 +3,37 @@ import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { checkQuickConnect, finishQuickConnect, initiateQuickConnect, QUICK_CONNECT_POLL_MS } from '@/auth';
+import { authErrorMessage, quickConnect, useServerParam } from '@/auth';
 import { Button } from '@/components/Button';
 import { Page } from '@/components/Page';
 import { Spinner } from '@/components/Spinner';
 import { Text } from '@/components/Text';
-import { resetTo, useServerParams } from '@/navigation';
+import { resetTo } from '@/navigation';
 import { radii, spacing, useColors } from '@/theme';
 
 export default function QuickConnect() {
-  const server = useServerParams();
+  const server = useServerParam();
   const c = useColors();
   const [code, setCode] = useState<string>();
-  const [failed, setFailed] = useState(false);
+  const [error, setError] = useState<string>();
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!server) return;
-    // Aborted on unmount / retry: stops polling and keeps a cancelled sign-in from adding the account.
+    // Aborted on unmount / retry: stops polling and a cancelled sign-in never adds the account.
     const controller = new AbortController();
-    const { signal } = controller;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const wait = () => new Promise<void>((resolve) => (timer = setTimeout(resolve, QUICK_CONNECT_POLL_MS)));
-    (async () => {
-      try {
-        const { code: next, secret } = await initiateQuickConnect(server);
-        if (signal.aborted) return;
-        setCode(next);
-        do await wait();
-        while (!signal.aborted && !(await checkQuickConnect(server, secret)));
-        if (signal.aborted) return;
-        await finishQuickConnect(server, secret, signal);
-        if (!signal.aborted) resetTo('/home');
-      } catch {
-        if (!signal.aborted) setFailed(true);
-      }
-    })();
-    return () => {
-      controller.abort();
-      clearTimeout(timer);
-    };
+    quickConnect(server, { signal: controller.signal, onCode: setCode })
+      .then(() => resetTo('/home'))
+      .catch((e: unknown) => {
+        if (!controller.signal.aborted) setError(authErrorMessage(e, 'quickConnect'));
+      });
+    return () => controller.abort();
   }, [server, attempt]);
 
   if (!server) return <Redirect href="/server" />;
 
   function retry() {
-    setFailed(false);
+    setError(undefined);
     setCode(undefined);
     setAttempt((a) => a + 1);
   }
@@ -64,17 +49,17 @@ export default function QuickConnect() {
             {code}
           </Text>
         )}
-        {code === undefined && !failed && <Spinner />}
+        {code === undefined && error === undefined && <Spinner />}
       </View>
-      {failed && (
+      {error !== undefined && (
         <>
           <Text secondary accessibilityRole="alert">
-            Quick Connect failed. Check the server allows it and try again.
+            {error}
           </Text>
           <Button title="Try again" onPress={retry} />
         </>
       )}
-      {code !== undefined && !failed && (
+      {code !== undefined && error === undefined && (
         <View style={styles.waiting}>
           <ActivityIndicator color={c.textSecondary} />
           <Text secondary>Waiting for approval</Text>

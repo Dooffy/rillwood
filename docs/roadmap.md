@@ -34,13 +34,13 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 ## M2 - Auth + accounts
 
 - [x] Auth screens UI on stubs (`src/auth.ts`): TextField, Add server, Sign in, Quick Connect, Accounts, Account (profile card in Settings), signed-out redirect
-- [ ] Server screen (normalise URL, validate, version warning)
-- [ ] Password login, Quick Connect (show code, poll; hide when `/QuickConnect/Enabled` is false)
-- [ ] SessionContext: accounts in kv-store, tokens in secure-store `tok_<accountId>`
-- [ ] Account switcher sheet, add/remove/sign out
-- [ ] Global 401 → signed-out state, keep downloads
+- [x] Server screen (normalise URL, validate, version warning)
+- [x] Password login, Quick Connect (show code, poll; hide when `/QuickConnect/Enabled` is false)
+- [x] Session store: accounts in kv-store, tokens in secure-store `tok_<accountId>`
+- [x] Account switcher sheet, add/remove/sign out
+- [x] Global 401 → signed-out state, keep downloads
 - [ ] Onboarding rework: first-run Add server is welcoming and guides the user to start (logo, what Rillwood is, what a server address looks like, where to find it); keep the plain form when adding from Accounts
-- [ ] Test vs `dev/jellyfin` 12.1 (base) + 10.11; iOS warm deep links emit `url` events (expo/expo#50230)
+- [ ] Test vs `dev/jellyfin` 12.1 (base) + 10.11 (auth flows passed live on 12.1, 2026-10-03; 10.11 + on-device run open); iOS warm deep links emit `url` events (expo/expo#50230)
 
 ## M3 - Browse
 

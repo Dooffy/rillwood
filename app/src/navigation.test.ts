@@ -2,27 +2,30 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { renderHook } from '@testing-library/react-native';
 
-import { useAccounts, type Account } from '@/auth';
+import { useSession, type Account } from '@/session';
 
 import { resetTo, useSignedOutRedirect } from './navigation';
 
 jest.mock('expo-router', () => ({
   router: { canDismiss: jest.fn(), dismissAll: jest.fn(), replace: jest.fn() },
 }));
-jest.mock('@/auth', () => ({ useAccounts: jest.fn() }));
+jest.mock('@/session', () => ({ useSession: jest.fn() }));
 
 const { router } = jest.requireMock<{
   router: { canDismiss: jest.Mock; dismissAll: jest.Mock; replace: jest.Mock };
 }>('expo-router');
 
 const anna: Account = {
-  id: 'a',
-  server: { url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' },
+  id: 'srv.a',
+  server: { id: 'srv', url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' },
+  userId: 'a',
   userName: 'anna',
+  deviceId: 'dev',
 };
 
-function signedIn(active: Account | null) {
-  jest.mocked(useAccounts).mockReturnValue({ accounts: active ? [active] : [], activeId: active?.id ?? null, active });
+/** Session with `active` signed in plus any signed-out `others`. */
+function signedIn(active: Account | null, others: Account[] = []) {
+  jest.mocked(useSession).mockReturnValue({ accounts: [...(active ? [active] : []), ...others], active });
 }
 
 beforeEach(() => {
@@ -53,6 +56,14 @@ describe('useSignedOutRedirect', () => {
     signedIn(null);
     await rerender({});
     expect(router.replace).toHaveBeenCalledWith('/server');
+  });
+
+  it('goes to the saved accounts when signed-out accounts remain', async () => {
+    signedIn(anna);
+    const { rerender } = await renderHook(() => useSignedOutRedirect());
+    signedIn(null, [{ ...anna, signedOut: true }]);
+    await rerender({});
+    expect(router.replace).toHaveBeenCalledWith('/accounts');
   });
 
   it('does nothing when already signed out', async () => {

@@ -71,9 +71,12 @@ export function useOffline(): boolean {
 
 // 401 listeners: the session signs the account out (keeps downloads). Only for signed-in calls (`accountId`).
 
-const unauthorizedListeners = new Set<(accountId: string) => void>();
+/** Gets the rejected token too, so a late 401 for a replaced token doesn't sign out the new session. */
+type UnauthorizedListener = (accountId: string, token: string | undefined) => void;
 
-export function onUnauthorized(listener: (accountId: string) => void): () => void {
+const unauthorizedListeners = new Set<UnauthorizedListener>();
+
+export function onUnauthorized(listener: UnauthorizedListener): () => void {
   unauthorizedListeners.add(listener);
   return () => unauthorizedListeners.delete(listener);
 }
@@ -139,7 +142,10 @@ export async function request<T>(
   if (!probe) setOffline(false);
   if (!response.ok) {
     const accountId = 'accountId' in conn ? conn.accountId : undefined;
-    if (response.status === 401 && accountId) unauthorizedListeners.forEach((l) => l(accountId));
+    if (response.status === 401 && accountId) {
+      const token = 'token' in conn ? conn.token : undefined;
+      unauthorizedListeners.forEach((l) => l(accountId, token));
+    }
     // Path only - the query can carry a Quick Connect secret.
     throw new ApiError('http', response.status, `${method} ${path} → ${response.status}`);
   }
@@ -190,7 +196,7 @@ export function getPublicSystemInfo(conn: ServerConnection, signal?: AbortSignal
 }
 
 /** Empty when the server hides users (common) - always allow a typed username. */
-export function getPublicUsers(conn: Connection, signal?: AbortSignal) {
+export function getPublicUsers(conn: ServerConnection, signal?: AbortSignal) {
   return request<UserDto[]>(conn, '/Users/Public', { signal });
 }
 
@@ -202,7 +208,7 @@ export function authenticateByName(conn: Connection, username: string, password:
   });
 }
 
-export function getQuickConnectEnabled(conn: Connection, signal?: AbortSignal) {
+export function getQuickConnectEnabled(conn: ServerConnection, signal?: AbortSignal) {
   return request<boolean>(conn, '/QuickConnect/Enabled', { signal });
 }
 
