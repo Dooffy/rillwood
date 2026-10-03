@@ -7,6 +7,7 @@ import Accounts from '@/app/(auth)/accounts';
 import Home from '@/app/(tabs)/home';
 import Player from '@/app/player';
 import Settings from '@/app/settings';
+import * as session from '@/session';
 import { palettes } from '@/theme';
 import { ToastProvider } from '@/components/Toast';
 
@@ -16,12 +17,21 @@ jest.mock('expo-status-bar', () => ({ StatusBar: jest.fn(() => null) }));
 const { router } = jest.requireMock<{ router: { push: jest.Mock; back: jest.Mock } }>('expo-router');
 const { StatusBar } = jest.requireMock<{ StatusBar: jest.Mock }>('expo-status-bar');
 
+const anna: session.Account = {
+  id: 'srv.a',
+  server: { id: 'srv', url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' },
+  userId: 'a',
+  userName: 'anna',
+  deviceId: 'dev',
+};
+
 async function renderScreen(ui: ReactElement) {
   await render(<ToastProvider>{ui}</ToastProvider>);
 }
 
 describe('navigation', () => {
   beforeEach(() => {
+    jest.restoreAllMocks();
     jest.clearAllMocks();
   });
 
@@ -38,6 +48,13 @@ describe('navigation', () => {
     await renderScreen(ui);
     await fireEvent.press(screen.getByRole('button', { name: button }));
     expect(router.push).toHaveBeenCalledWith(route);
+  });
+
+  it('Home shows the active user as the Settings button', async () => {
+    jest.spyOn(session, 'useSession').mockReturnValue({ accounts: [anna], active: anna });
+    await renderScreen(<Home />);
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeOnTheScreen();
+    expect(screen.getByText('A', { includeHiddenElements: true })).toBeOnTheScreen();
   });
 
   it('Player Close goes back', async () => {

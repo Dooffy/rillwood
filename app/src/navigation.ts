@@ -1,12 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Navigation helpers shared by screens and the root layout.
 import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { getFocusedRouteNameFromRoute } from 'expo-router/react-navigation';
 import { useEffect, useRef } from 'react';
 
 import { useSession } from '@/session';
 
-/** Route param marking the first-run flow (Welcome → Add server → Sign in → Quick Connect): step pills + help. */
+/** Route param marking the first-run flow (Welcome → Add server → Sign in → Quick Connect): step pills + intro copy. */
 export const ONBOARDING = { onboarding: '1' } as const;
+
+/** Tab bar labels by route name (`src/app/(tabs)/`). */
+export const TAB_TITLES = { home: 'Home', library: 'Library', search: 'Search', downloads: 'Downloads' } as const;
+
+/**
+ * Title of the tabs screen in the root stack = the focused tab. iOS shows it as the back button text on screens pushed
+ * over the tabs (Settings, detail) - without it the back button reads "(tabs)".
+ */
+export function tabsTitle(route: Parameters<typeof getFocusedRouteNameFromRoute>[0]): string {
+  const name = getFocusedRouteNameFromRoute(route) ?? 'home';
+  return TAB_TITLES[name as keyof typeof TAB_TITLES] ?? TAB_TITLES.home;
+}
 
 export function useOnboarding(): boolean {
   return useLocalSearchParams<{ onboarding?: string }>().onboarding === ONBOARDING.onboarding;

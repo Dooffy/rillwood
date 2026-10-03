@@ -39,9 +39,9 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [x] Session store: accounts in kv-store, tokens in secure-store `tok_<accountId>`
 - [x] Account switcher sheet, add/remove/sign out
 - [x] Global 401 → signed-out state, keep downloads
-- [x] Onboarding rework: Welcome (library wall) → Add server → Sign in as numbered steps with explanations, example addresses and "Where do I find it?"; plain form when adding from Accounts
-- [ ] Rework Add server from Settings / Accounts: same help as onboarding (examples, where to find it) without the welcome steps; settle the final logo (the two-wave `LogoMark` is the candidate) and use it for the app icon
-- [ ] Test vs `dev/jellyfin` 12.1 (base) + 10.11 (auth flows passed live on 12.1, 2026-10-03; 10.11 + on-device run open); iOS warm deep links emit `url` events (expo/expo#50230)
+- [x] Onboarding rework: Welcome (library wall) → Add server → Sign in as numbered steps with explanations, example addresses and "Where do I find it?"
+- [x] Rework Add server from Settings / Accounts: same help as onboarding (examples, where to find it) without the welcome steps; final logo = the two-wave `LogoMark`, used for the app icon (iOS, Android adaptive + monochrome) and splash
+- [ ] Test vs `dev/jellyfin` 12.1 (base) + 10.11 (auth flows passed live on 12.1 + 10.11, 2026-10-03; in-app run on 10.11 + on-device run open); iOS warm deep links emit `url` events (expo/expo#50230)
 
 ## M3 - Browse
 
@@ -101,7 +101,8 @@ Design + sources: `docs/research/background-downloads.md`.
 
 - [ ] Settings: accounts, playback defaults, downloads, cache clear, licenses screen
 - [ ] Perf (FlashList if FlatList stutters, image sizes, cold start <2s), accessibility pass
-- [ ] Icon, splash (light + dark variant - splash is black only today), screenshots, privacy policy ("connects to your own server")
+- [ ] iPad layout for every screen (`supportsTablet` is off today): adaptive grids, readable-width forms and pages, landscape, split view / Stage Manager sizes
+- [ ] Splash light + dark variant (black only today; icon + splash mark done in M2), screenshots, privacy policy ("connects to your own server")
 - [ ] `/update-modules`: vendored modules, native binaries + Expo packages current, no blockers
 - [ ] CI native + playback checks (skill to create later):
   - Android native build + vendored Kotlin unit tests on `ubuntu-latest`, path-filtered to `app/modules/**` + native config
@@ -116,3 +117,11 @@ Design + sources: `docs/research/background-downloads.md`.
 - [ ] Release checks: Xcode privacy report on the archive, AAB 16 KB page alignment, release permissions list, no spike / test screens
 - [ ] TestFlight + Play internal, 3-5 testers
 - [ ] Tag release; publish mpv/FFmpeg source tarballs
+
+## Post-release
+
+- [ ] Localization: extract UI strings, locale-aware dates / sizes / durations, first extra languages, RTL check
+
+## Ideas
+
+- [ ] Research Apple TV (tvOS) + Google TV / Android TV apps: focus navigation (every card is already `Pressable`), RN TV support, player on TV, store requirements

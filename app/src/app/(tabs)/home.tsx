@@ -1,23 +1,29 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
-import { IconButton } from '@/components/IconButton';
+import { Avatar } from '@/components/Avatar';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { PrimitivesPreview } from '@/dev/PrimitivesPreview';
-import { spacing } from '@/theme';
+import { useSession } from '@/session';
+import { minTouch, spacing } from '@/theme';
 
 export default function Home() {
+  const { active } = useSession();
   return (
     <Screen
       title="Home"
       right={
-        <IconButton
-          icon={{ ios: 'gearshape', android: 'settings' }}
-          label="Settings"
+        // Active user's avatar opens Settings (accounts live there), like the system apps' profile button.
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
           onPress={() => router.push('/settings')}
-        />
+          style={({ pressed }) => [styles.profile, pressed && styles.pressed]}
+        >
+          <Avatar name={active?.userName} size={36} />
+        </Pressable>
       }
     >
       <ScrollView contentContainerStyle={styles.content}>
@@ -30,4 +36,6 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   content: { gap: spacing.lg },
+  profile: { width: minTouch, height: minTouch, alignItems: 'center', justifyContent: 'center' },
+  pressed: { opacity: 0.5 },
 });

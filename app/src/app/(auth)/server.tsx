@@ -12,7 +12,10 @@ import { TextField } from '@/components/TextField';
 import { ONBOARDING, useOnboarding } from '@/navigation';
 import { ONBOARDING_STEPS, serverUrlCandidates } from '@/server';
 
-/** Add server. From Welcome (`onboarding=1`): step 1 of 2 with an explanation, example addresses and where to find it. */
+/**
+ * Add server with example addresses and where to find it. From Welcome (`onboarding=1`) it is also step 1 of 2 with an
+ * intro; from Accounts it skips the steps.
+ */
 export default function Server() {
   const onboarding = useOnboarding();
   const [address, setAddress] = useState('');
@@ -27,6 +30,12 @@ export default function Server() {
     },
     [],
   );
+
+  /** Typing or picking an example clears the last error. */
+  const editAddress = (text: string) => {
+    setAddress(text);
+    setError(undefined);
+  };
 
   async function connect() {
     if (busy.current) return;
@@ -54,15 +63,14 @@ export default function Server() {
     <Page form busy={loading}>
       {onboarding && <StepPills steps={ONBOARDING_STEPS} current={0} />}
       <Text secondary>
-        {onboarding
-          ? 'Rillwood plays your own Jellyfin library. Enter the address you use to open Jellyfin in a browser.'
-          : 'Enter your Jellyfin server address.'}
+        {onboarding && 'Rillwood plays your own Jellyfin library. '}Enter the address you use to open Jellyfin in a
+        browser.
       </Text>
       <TextField
         label="Server address"
         placeholder="https://jellyfin.example.com"
         value={address}
-        onChangeText={setAddress}
+        onChangeText={editAddress}
         error={error}
         keyboardType="url"
         textContentType="URL"
@@ -72,12 +80,8 @@ export default function Server() {
         onSubmitEditing={connect}
         editable={!loading}
       />
-      {onboarding && (
-        <>
-          <AddressExamples onPick={setAddress} />
-          <WhereToFindServer />
-        </>
-      )}
+      <AddressExamples onPick={editAddress} />
+      <WhereToFindServer />
       <Button title="Continue" onPress={connect} loading={loading} disabled={address.trim() === ''} />
     </Page>
   );

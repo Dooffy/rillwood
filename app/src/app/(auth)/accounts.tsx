@@ -4,7 +4,7 @@ import { Alert } from 'react-native';
 
 import { removeAccount, signOut, switchAccount, useSession, type Account } from '@/session';
 import { Button } from '@/components/Button';
-import { ListRow, ListSection } from '@/components/List';
+import { ListRow, ListSection, type ListRowProps } from '@/components/List';
 import { Page } from '@/components/Page';
 import { Text } from '@/components/Text';
 import { resetTo } from '@/navigation';
@@ -52,7 +52,9 @@ export default function Accounts() {
     ]);
   }
 
-  const status = (a: Account) => (a.signedOut ? 'Signed out' : a.id === active?.id ? 'Active' : undefined);
+  /** Only states that need attention: the current account and signed-out ones. Other rows stay clean. */
+  const status = (a: Account): Pick<ListRowProps, 'value' | 'dot'> =>
+    a.signedOut ? { value: 'Signed out', dot: 'muted' } : a.id === active?.id ? { value: 'Active', dot: 'active' } : {};
 
   return (
     <Page>
@@ -60,7 +62,7 @@ export default function Accounts() {
       {groupByServer(accounts).map((list) => (
         <ListSection key={list[0].server.url} title={list[0].server.name}>
           {list.map((a) => (
-            <ListRow key={a.id} label={a.userName} value={status(a)} onPress={() => manage(a)} />
+            <ListRow key={a.id} label={a.userName} {...status(a)} onPress={() => manage(a)} />
           ))}
           <ListRow
             label="Add user"

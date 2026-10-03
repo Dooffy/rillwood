@@ -130,22 +130,44 @@ describe('Onboarding steps', () => {
     expect(screen.queryByText(/Quick Connect/)).toBeNull();
   });
 
-  it('keeps the plain form when adding a server from Accounts', async () => {
+  it('gives the same help without the steps when adding a server from Accounts', async () => {
     useLocalSearchParams.mockReturnValue({});
+    mocked.probeServer.mockResolvedValue(server);
     await render(<Server />);
     expect(screen.queryByLabelText(/Step 1 of 2/)).toBeNull();
-    expect(screen.queryByText('Where do I find it?')).toBeNull();
-    expect(screen.queryByRole('button', { name: /Use example/ })).toBeNull();
+    expect(screen.queryByText(/plays your own Jellyfin library/)).toBeNull();
+    expect(screen.getByText(/address you use to open Jellyfin/)).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Where do I find it?' })).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Use example jellyfin.example.com' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/login', params: { url: server.url } });
   });
 });
 
 describe('Add server', () => {
+  it('clears the error when an example is picked', async () => {
+    await render(<Server />);
+    await fireEvent.changeText(screen.getByLabelText('Server address'), 'ftp://nope');
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Use example jellyfin.example.com' }));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('rejects an invalid address without probing', async () => {
     await render(<Server />);
     await fireEvent.changeText(screen.getByLabelText('Server address'), 'ftp://nope');
     await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
     expect(screen.getByRole('alert')).toHaveTextContent(/Enter an address/);
     expect(mocked.probeServer).not.toHaveBeenCalled();
+  });
+
+  // Regression: the error stayed up while the user was already fixing the address.
+  it('clears the error when the address is edited', async () => {
+    await render(<Server />);
+    await fireEvent.changeText(screen.getByLabelText('Server address'), 'ftp://nope');
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+    await fireEvent.changeText(screen.getByLabelText('Server address'), 'jf.example.com');
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('probes the candidates and opens Sign in with only the address', async () => {
@@ -239,6 +261,17 @@ describe('Sign in', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(message);
     expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  // Regression: "Wrong username or password" stayed up while the user was retyping.
+  it.each(['Username', 'Password'])('clears the error when the %s is edited', async (field) => {
+    mocked.signIn.mockRejectedValue(new ApiError('http', 401));
+    await render(<Login />);
+    await fireEvent.changeText(screen.getByLabelText('Username'), 'anna');
+    await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
+    await screen.findByRole('alert');
+    await fireEvent.changeText(screen.getByLabelText(field), 'x');
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('locks the whole form while signing in', async () => {
@@ -385,6 +418,8 @@ describe('Accounts', () => {
     const [homeAnna, cabinAnna] = screen.getAllByRole('button', { name: 'anna' });
     expect(within(homeAnna).queryByText('Active')).toBeNull();
     expect(within(cabinAnna).getByText('Active')).toBeOnTheScreen();
+    // No "Inactive" label - only the current and signed-out accounts are marked.
+    expect(screen.queryByText('Inactive')).toBeNull();
   });
 
   it('switches to an account', async () => {

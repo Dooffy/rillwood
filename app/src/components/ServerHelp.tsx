@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Address help for Add server: tappable examples and "Where do I find it?". Used by onboarding; the Accounts flow
-// gets it with the Add server rework (docs/roadmap.md).
+// Address help for Add server: tappable examples and "Where do I find it?". Shown in onboarding and from Accounts.
 import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, View } from 'react-native';
 

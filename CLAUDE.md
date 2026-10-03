@@ -14,17 +14,17 @@ Rillwood is a new, open-source mobile client for Jellyfin servers. Goals: browse
 
 | In MVP | Out (post-MVP) |
 |---|---|
-| Add server, login (password + Quick Connect), multiple accounts/servers, switch | tvOS / Android TV (focus engine) |
+| Add server, login (password + Quick Connect), multiple accounts/servers, switch | tvOS / Android TV (focus engine) - research in `docs/roadmap.md` Ideas |
 | Home: Up Next hero, Continue Watching, Next Up, Recently Added | PiP, AirPlay, Chromecast, SyncPlay |
 | Library: Movies / TV grid, sort, unwatched filter, search | Trickplay, intro skip |
 | Movie + series detail (seasons, episodes) | Download quality presets / transcoded downloads |
 | Playback via libmpv: direct play everything, resume, tracks, progress reporting | Live TV, music, books, admin |
 | | LGPL player builds (iOS dynamic MPVKit, Android optional) - §7, §11 |
 | Background downloads (movie / episode / season), pause/resume, survive app kill | Remote-access relay (separate project) |
-| Offline mode + progress sync on reconnect | |
+| Offline mode + progress sync on reconnect | Localization (English only in MVP) |
 | Auto-offload downloads (default: 7 days after watched) | |
 
-Platforms: **iOS first**, Android phones in the same release.
+Platforms: **iOS first**, Android phones in the same release. iPad layout before release (M7).
 
 ---
 
@@ -71,6 +71,7 @@ All values live in `src/theme.ts`. Never hardcode colours, radii or font sizes i
 | Text primary / secondary | `#FFFFFF` / `#98989F` | `#000000` / `#6C6C70` |
 | Inactive icon | `#8E8E93` | `#8E8E93` |
 | Danger (errors, destructive) | `#FF453A` | `#FF3B30` |
+| Success (status dot: active account) | `#30D158` | `#34C759` |
 | Accent | White (primary buttons white bg, black text) | Black (black bg, white text) |
 | Font | System (SF on iOS) - leave `fontFamily` unset | same |
 | Radii | Cards 8-14, large cards (profile) 20; buttons, icon buttons, segmented controls and pills full (capsule / circle, Apple TV style) | same |
