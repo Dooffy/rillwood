@@ -29,7 +29,8 @@ const conn: Connection = {
 };
 const anon: Connection = { baseUrl: 'https://jf.example.com', deviceId: 'dev-1' };
 
-const fetchMock = jest.fn<typeof fetch>();
+// The call shape api.ts uses; DOM `fetch` overloads differ between type setups (CI vs local), so cast once below.
+const fetchMock = jest.fn<(url: string, init?: RequestInit) => Promise<Response>>();
 
 function reply(status: number, body?: unknown) {
   const text = body === undefined ? '' : typeof body === 'string' ? body : JSON.stringify(body);
@@ -41,7 +42,7 @@ function networkError() {
 }
 
 /** Never answers; rejects like real fetch when its signal aborts. */
-function hang(_url: string | URL | Request, init?: RequestInit) {
+function hang(_url: string, init?: RequestInit) {
   return new Promise<Response>((_, reject) => {
     init?.signal?.addEventListener('abort', () => reject(new Error('AbortError')));
   });
@@ -54,7 +55,7 @@ function lastCall() {
 
 beforeEach(() => {
   fetchMock.mockReset();
-  global.fetch = fetchMock;
+  global.fetch = fetchMock as unknown as typeof fetch;
 });
 
 afterEach(async () => {
@@ -293,7 +294,7 @@ describe('findServer', () => {
   });
 
   it('returns as soon as the first candidate wins and cancels the rest', async () => {
-    fetchMock.mockImplementation((url, init) => (String(url).startsWith('https') ? reply(200, info) : hang(url, init)));
+    fetchMock.mockImplementation((url, init) => (url.startsWith('https') ? reply(200, info) : hang(url, init)));
     await expect(findServer(candidates)).resolves.toMatchObject({ baseUrl: 'https://jf.local' });
     expect(fetchMock.mock.calls[1][1]!.signal!.aborted).toBe(true);
   });
@@ -305,13 +306,13 @@ describe('findServer', () => {
   });
 
   it('falls back to http when https fails', async () => {
-    fetchMock.mockImplementation((url) => (String(url).startsWith('https') ? networkError() : reply(200, info)));
+    fetchMock.mockImplementation((url) => (url.startsWith('https') ? networkError() : reply(200, info)));
     await expect(findServer(candidates)).resolves.toEqual({ baseUrl: 'http://jf.local', info });
   });
 
   it('probes candidates in parallel, not one timeout after another', async () => {
     jest.useFakeTimers();
-    fetchMock.mockImplementation((url, init) => (String(url).startsWith('https') ? hang(url, init) : reply(200, info)));
+    fetchMock.mockImplementation((url, init) => (url.startsWith('https') ? hang(url, init) : reply(200, info)));
     const pending = findServer(candidates);
     await jest.advanceTimersByTimeAsync(TIMEOUT_MS);
     await expect(pending).resolves.toMatchObject({ baseUrl: 'http://jf.local' });
