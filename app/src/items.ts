@@ -146,10 +146,11 @@ export function episodes(seriesId: string, seasonId: string): Endpoint {
 
 /**
  * The episode the series' Play button starts: in progress, else the one after the highest-numbered watched episode,
- * else the first (both versions answer S01E01 when nothing is watched). Empty once the last episode is watched.
+ * else the first (both versions answer S01E01 when nothing is watched). Empty once the last episode is watched. With
+ * the overview for the line under Play.
  */
 export function seriesNextUp(seriesId: string): Endpoint {
-  return { path: '/Shows/NextUp', query: { seriesId, limit: 1, enableResumable: true } };
+  return { path: '/Shows/NextUp', query: { seriesId, limit: 1, enableResumable: true, fields: 'Overview' } };
 }
 
 /** "More Like This" for a movie or series: `{Items}`, often empty on sparse metadata. */
@@ -163,16 +164,30 @@ export function similar(id: string): Endpoint {
  */
 export function defaultSeasonId(list: BaseItemDto[], next?: BaseItemDto): string | undefined {
   if (next?.SeasonId && list.some((s) => s.Id === next.SeasonId)) return next.SeasonId;
-  return (list.find((s) => (s.IndexNumber ?? 0) > 0) ?? list[0])?.Id;
+  return (realSeasons(list)[0] ?? list[0])?.Id;
 }
 
-/** What the series' Play button does: the next-up episode (resumed when started), else the first episode shown. */
+/** Under a season in the season menu: "Watched", "5 unwatched", or nothing. */
+export function seasonDetail(season: BaseItemDto): string | undefined {
+  if (season.UserData?.Played) return 'Watched';
+  const unwatched = season.UserData?.UnplayedItemCount;
+  return unwatched ? `${unwatched} unwatched` : undefined;
+}
+
+/**
+ * What the series' Play button does: the next-up episode (resumed at its position when started), else the first
+ * episode shown.
+ */
 export function seriesPlayTarget(
   next: BaseItemDto | undefined,
   seasonEpisodes: BaseItemDto[] = [],
-): { episode: BaseItemDto; resume: boolean } | undefined {
+): { episode: BaseItemDto; resume: boolean; start: number } | undefined {
   const episode = next ?? seasonEpisodes[0];
-  return episode && { episode, resume: playback(episode).progress !== undefined };
+  if (!episode) return undefined;
+  const { progress, resumeSeconds = 0 } = playback(episode);
+  return progress !== undefined
+    ? { episode, resume: true, start: resumeSeconds }
+    : { episode, resume: false, start: 0 };
 }
 
 /** "2019-2023", "2019-" while continuing, "2019" for one year or without an end. */
@@ -182,6 +197,11 @@ export function yearRange({ ProductionYear: start, EndDate, Status }: BaseItemDt
   const end = EndDate ? new Date(EndDate).getUTCFullYear() : undefined;
   // Bad metadata (unparseable or earlier end) shows the start year alone.
   return end !== undefined && Number.isFinite(end) && end > start ? `${start}-${end}` : `${start}`;
+}
+
+/** Seasons that count for "3 Seasons": Specials (index 0) left out; `ChildCount` may include them. */
+export function realSeasons(list: BaseItemDto[]): BaseItemDto[] {
+  return list.filter((s) => (s.IndexNumber ?? 0) > 0);
 }
 
 /** "1 Season", "3 Seasons". */
@@ -374,6 +394,13 @@ export function detailSubtitle(item: BaseItemDto): string {
       ? [episodeCode(item), item.SeasonName]
       : [KIND[item.Type], ...(item.Genres ?? []).slice(0, 2)];
   return parts.filter(Boolean).join(' · ');
+}
+
+/** "S2, E3 · Pilot" - names an episode in a line of text (under Play, menu titles); the name alone without numbers. */
+export function episodeLine(ep: BaseItemDto): string {
+  const { ParentIndexNumber: season, IndexNumber: episode } = ep;
+  const code = episode === undefined ? undefined : season === undefined ? `E${episode}` : `S${season}, E${episode}`;
+  return code ? `${code} · ${ep.Name}` : ep.Name;
 }
 
 /** "S1:E3"; "E3" without a season; undefined without an episode number. */

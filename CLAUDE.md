@@ -72,6 +72,7 @@ All values live in `src/theme.ts`. Never hardcode colours, radii or font sizes i
 | Inactive icon | `#8E8E93` | `#8E8E93` |
 | Danger (errors, destructive) | `#FF453A` | `#FF3B30` |
 | Success (status dot: active account) | `#30D158` | `#34C759` |
+| Backdrop (behind sheets / menus) | `rgba(0,0,0,0.5)` | same (`backdrop`) |
 | On artwork (progress / watched status over images, bottom fade) | fill `#FFFFFF`, track `rgba(255,255,255,0.35)`, fade = black 0 → 0.75 gradient (`backgroundImage`) | same (`onArtwork`) |
 | Accent | White (primary buttons white bg, black text) | Black (black bg, white text) |
 | Font | System (SF on iOS) - leave `fontFamily` unset | same |
@@ -118,7 +119,7 @@ src/items.ts             pure item logic: Home requests + layout, Latest shaping
 src/session.ts           session store: accounts (kv-store), tokens (secure-store), active account, 401 sign-out
 src/auth.ts              auth flows for the (auth) screens: probe, sign in, Quick Connect
 src/server.ts            server address → probe URLs, min version check (pure)
-src/navigation.ts        resetTo (clear stack), signed-out redirect, openItem
+src/navigation.ts        resetTo (clear stack), signed-out redirect, openItem, openPlayer
 src/useFetch.ts          in-memory cache, abort, invalidate()
 src/useImage.ts          image URL for the active server, sized to the screen scale
 src/detail.ts            detailView: everything the detail screen shows, from one item (pure)
@@ -127,7 +128,7 @@ src/sync.ts              offline progress queue replay
 src/settings.ts          user settings in kv-store (appearance; downloads + offload later)
 src/player/Player.tsx    PlayerEngine interface + re-export of active engine
 src/player/mpv.tsx       mpv adapter
-src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List, StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message, Artwork, Row, ProgressBar, DownloadRing
+src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List, StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message, DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, ProgressRing, Artwork, Row, ProgressBar, DownloadRing
 src/dev/                 dev-only previews, rendered behind `__DEV__` (never in release)
 modules/mpv/             vendored native module (+ UPSTREAM.md: upstream repo + commit)
 modules/downloads/       own native background downloader (iOS + Android)

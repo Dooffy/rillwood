@@ -11,6 +11,7 @@ import {
   detailSubtitle,
   directors,
   episodes,
+  episodeLine,
   episodeTitle,
   continueWatching,
   episodeCode,
@@ -30,8 +31,10 @@ import {
   personRole,
   playback,
   posterImage,
+  realSeasons,
   recentlyAdded,
   seasonCount,
+  seasonDetail,
   seasons,
   seriesNextUp,
   seriesPlayTarget,
@@ -519,7 +522,7 @@ describe('series', () => {
     });
     expect(seriesNextUp('series-1')).toEqual({
       path: '/Shows/NextUp',
-      query: { seriesId: 'series-1', limit: 1, enableResumable: true },
+      query: { seriesId: 'series-1', limit: 1, enableResumable: true, fields: 'Overview' },
     });
     expect(similar('a/b')).toEqual({ path: '/Items/a%2Fb/Similar', query: { limit: 20 } });
   });
@@ -532,11 +535,31 @@ describe('series', () => {
     expect(defaultSeasonId([])).toBeUndefined();
   });
 
+  it('names an episode in a line, and a season by its watch state', () => {
+    expect(episodeLine({ ...episode(3), Name: 'Pilot' })).toBe('S1, E3 · Pilot');
+    expect(episodeLine({ ...episode(3), ParentIndexNumber: undefined, Name: 'Pilot' })).toBe('E3 · Pilot');
+    expect(episodeLine({ ...episode(3), IndexNumber: undefined, Name: 'Pilot' })).toBe('Pilot');
+    expect(seasonDetail({ ...s1, UserData: { PlaybackPositionTicks: 0, Played: true } })).toBe('Watched');
+    expect(seasonDetail({ ...s1, UserData: { PlaybackPositionTicks: 0, Played: false, UnplayedItemCount: 5 } })).toBe(
+      '5 unwatched',
+    );
+    expect(seasonDetail(s1)).toBeUndefined();
+  });
+
+  it('counts real seasons only (Specials have index 0)', () => {
+    expect(realSeasons([specials, s1, s2]).map((s) => s.Id)).toEqual(['season-1', 'season-2']);
+    expect(realSeasons([specials])).toEqual([]);
+  });
+
   it('plays the next episode, resuming it when started, else the first shown', () => {
     const started = episode(2, { UserData: { PlaybackPositionTicks: 400_000_000, Played: false } });
-    expect(seriesPlayTarget(started)).toEqual({ episode: started, resume: true });
-    expect(seriesPlayTarget(episode(2))).toEqual({ episode: episode(2), resume: false });
-    expect(seriesPlayTarget(undefined, [episode(1), episode(2)])).toEqual({ episode: episode(1), resume: false });
+    expect(seriesPlayTarget(started)).toEqual({ episode: started, resume: true, start: 40 });
+    expect(seriesPlayTarget(episode(2))).toEqual({ episode: episode(2), resume: false, start: 0 });
+    expect(seriesPlayTarget(undefined, [episode(1), episode(2)])).toEqual({
+      episode: episode(1),
+      resume: false,
+      start: 0,
+    });
     expect(seriesPlayTarget(undefined, [])).toBeUndefined();
   });
 
