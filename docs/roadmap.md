@@ -50,7 +50,9 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [x] Movie detail (backdrop scrim, chips, Resume/Play, version/audio/sub rows, cast)
 - [x] Series detail (season picker, episodes with progress + download state)
 - [x] Search inside the Library (one tab: browse + search, debounced, type capsules, shared filter sheet + tags, paged one-type lists)
-- [ ] Mark watched / favourite; skeleton, empty, error states
+- [x] Mark watched / favourite (detail ✓ / ♥, episode menu, Mark Season n as Watched in the season menu, confirm before unwatching a season / show)
+- [ ] Skeleton, empty, error states pass (detail + series load with a spinner today)
+- [ ] Long press on any poster (Home, Library, More Like This): Play / Mark as Watched / Add to Favourites / Download
 
 ## M4 - Playback
 

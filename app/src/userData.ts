@@ -49,3 +49,14 @@ export async function setUserFlag(item: BaseItemDto, flag: UserFlag, value: bool
     if (latest.get(key) === mine) latest.delete(key);
   }
 }
+
+const FAILED: Record<UserFlag, [on: string, off: string]> = {
+  played: ["Couldn't mark as watched.", "Couldn't mark as unwatched."],
+  favourite: ["Couldn't add to favourites.", "Couldn't remove from favourites."],
+};
+
+/** Toast for a failed change: what failed, then what to do. */
+export function userFlagError(flag: UserFlag, value: boolean, error: ApiError): string {
+  const what = FAILED[flag][value ? 0 : 1];
+  return `${what} ${error.kind === 'network' ? 'Check your connection and try again.' : 'Try again.'}`;
+}

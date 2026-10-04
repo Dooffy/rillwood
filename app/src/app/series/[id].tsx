@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Series detail (Apple TV style): hero, Play / Resume the next episode + watched / favourite, next-episode line,
 // overview, chips, "Season n ⌃⌄" menu, horizontal episode cards (▶ + ⋯ / long press), cast & crew, More Like This.
-// The header ↓ downloads the selected season. Data rules: docs/context/api.md (Series data). Playback lands in M4;
-// watched, favourite and downloads are placeholders for now.
+// The header ↓ downloads the selected season. ✓ / ♥ mark the whole show; the season menu marks a season. Data rules:
+// docs/context/api.md (Series data). Playback lands in M4, downloads in M5.
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -41,6 +41,7 @@ import {
 import { openItem, openPlayer } from '@/navigation';
 import { useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
+import { useUserFlag } from '@/useUserFlag';
 import { spacing } from '@/theme';
 
 export default function SeriesDetail() {
@@ -56,6 +57,7 @@ export default function SeriesDetail() {
 
 function Series({ series }: { series: BaseItemDto }) {
   const image = useImage();
+  const mark = useUserFlag();
   const { width } = useWindowDimensions();
   const nextRequest = seriesNextUp(series.Id);
   const seasonList = useFetch<ItemsResult>(seasons(series.Id).path);
@@ -82,7 +84,7 @@ function Series({ series }: { series: BaseItemDto }) {
           subtitle={view.subtitle}
         />
         <View style={styles.body}>
-          <SeriesPlay seriesId={series.Id} seasonId={seasonId} next={nextEpisode} nextSettled={nextSettled} />
+          <SeriesPlay series={series} seasonId={seasonId} next={nextEpisode} nextSettled={nextSettled} />
           {series.Overview?.trim() ? <Overview text={series.Overview.trim()} /> : null}
           <Chips items={view.chips} />
         </View>
@@ -103,7 +105,7 @@ function Series({ series }: { series: BaseItemDto }) {
           ) : (
             <>
               <View style={styles.body}>
-                <SeasonMenu seasons={list} value={seasonId} onChange={setPicked} />
+                <SeasonMenu seasons={list} value={seasonId} onChange={setPicked} onMark={mark} />
               </View>
               {seasonId && (
                 // key: a new season starts a new list (its own start position, not the last season's scroll).
@@ -125,17 +127,18 @@ function Series({ series }: { series: BaseItemDto }) {
  * "S2, E3 · Title: overview". Reads the same episode list as the cards (one shared request).
  */
 function SeriesPlay({
-  seriesId,
+  series,
   seasonId,
   next,
   nextSettled,
 }: {
-  seriesId: string;
+  series: BaseItemDto;
   seasonId?: string;
   next?: BaseItemDto;
   nextSettled: boolean;
 }) {
-  const request = seasonId ? episodes(seriesId, seasonId) : undefined;
+  const mark = useUserFlag();
+  const request = seasonId ? episodes(series.Id, seasonId) : undefined;
   const { data } = useFetch<ItemsResult>(request?.path ?? null, { query: request?.query });
   const target = nextSettled ? seriesPlayTarget(next, data?.Items) : undefined;
   return (
@@ -144,6 +147,9 @@ function SeriesPlay({
         playTitle={target?.resume ? 'Resume Episode' : 'Play Episode'}
         onPlay={target ? () => openPlayer(target.episode, target.start) : undefined}
         onStartOver={target?.resume ? () => openPlayer(target.episode, 0) : undefined}
+        played={series.UserData?.Played === true}
+        favourite={series.UserData?.IsFavorite === true}
+        onMark={(flag, value) => mark(series, flag, value)}
       />
       {target && (
         <Text numberOfLines={2}>
@@ -160,6 +166,7 @@ function EpisodeCards({ seriesId, seasonId, startAt }: { seriesId: string; seaso
   const image = useImage();
   const { width } = useWindowDimensions();
   const toast = useToast();
+  const mark = useUserFlag();
   const request = episodes(seriesId, seasonId);
   const { data, error, refresh } = useFetch<ItemsResult>(request.path, { query: request.query });
   const [menuFor, setMenuFor] = useState<BaseItemDto>();
@@ -190,13 +197,21 @@ function EpisodeCards({ seriesId, seasonId, startAt }: { seriesId: string; seaso
     ),
     Math.max(0, data.Items.length - visible),
   );
+  // No episode has an overview (common on sparse metadata): compact cards, no empty reserved lines.
+  const withOverviews = data.Items.some((ep) => !!ep.Overview?.trim());
   const menu: SheetAction[] = menuFor
     ? [
         ...(playback(menuFor).progress !== undefined
           ? [{ label: 'Play from Start', onPress: () => openPlayer(menuFor, 0) }]
           : []),
-        { label: menuFor.UserData?.Played ? 'Mark as Unwatched' : 'Mark as Watched', onPress: () => toast(SOON) },
-        { label: 'Add to Favourites', onPress: () => toast(SOON) },
+        {
+          label: menuFor.UserData?.Played ? 'Mark as Unwatched' : 'Mark as Watched',
+          onPress: () => mark(menuFor, 'played', !menuFor.UserData?.Played),
+        },
+        {
+          label: menuFor.UserData?.IsFavorite ? 'Remove from Favourites' : 'Add to Favourites',
+          onPress: () => mark(menuFor, 'favourite', !menuFor.UserData?.IsFavorite),
+        },
         { label: 'Download Episode', onPress: () => toast(SOON) },
       ]
     : [];
@@ -231,6 +246,8 @@ function EpisodeCards({ seriesId, seasonId, startAt }: { seriesId: string; seaso
               remainingSeconds={state.remainingSeconds}
               runtimeSeconds={ep.RunTimeTicks ? ticksToSeconds(ep.RunTimeTicks) : undefined}
               played={state.played}
+              favourite={ep.UserData?.IsFavorite === true}
+              overviewLines={withOverviews}
               onPress={() => openItem(ep)}
               onPlay={() => openPlayer(ep, state.resumeSeconds ?? 0)}
               onMore={() => setMenuFor(ep)}

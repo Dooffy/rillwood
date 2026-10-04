@@ -27,6 +27,9 @@ export type EpisodeCardProps = {
   remainingSeconds?: number;
   runtimeSeconds?: number;
   played?: boolean;
+  favourite?: boolean;
+  /** Reserve 3 overview lines (some episode in the season has an overview), so the cards in a row line up. */
+  overviewLines?: boolean;
   /** Card tap: the episode's detail. */
   onPress: () => void;
   /** ▶ in the footer: play / resume. */
@@ -46,8 +49,9 @@ function timeLabel({ played, progress, remainingSeconds, runtimeSeconds }: Episo
 }
 
 /**
- * Apple TV style episode card: still fading into the card, EPISODE n, title, 3 lines of overview; footer with ▶
- * (progress ring + time left / runtime) and ⋯. VoiceOver reads the card as one element with Play and More actions.
+ * Apple TV style episode card: still fading into the card, EPISODE n, title, 3 lines of overview (none reserved when
+ * the season has no overviews); footer with ▶ (progress ring + time left / runtime), ♥ when a favourite, and ⋯.
+ * VoiceOver reads the card as one element with Play and More actions.
  */
 export const EpisodeCard = memo(function EpisodeCard(props: EpisodeCardProps) {
   const {
@@ -58,6 +62,8 @@ export const EpisodeCard = memo(function EpisodeCard(props: EpisodeCardProps) {
     progress,
     remainingSeconds,
     played = false,
+    favourite = false,
+    overviewLines = true,
     onPress,
     onPlay,
     onMore,
@@ -74,7 +80,9 @@ export const EpisodeCard = memo(function EpisodeCard(props: EpisodeCardProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={[name, played ? 'watched' : undefined].filter(Boolean).join(', ')}
+      accessibilityLabel={[name, played ? 'watched' : undefined, favourite ? 'favourite' : undefined]
+        .filter(Boolean)
+        .join(', ')}
       accessibilityHint="Opens the episode"
       // The ▶ and ⋯ buttons sit inside the card, which VoiceOver reads as one element: offer them as actions.
       accessibilityActions={[
@@ -110,9 +118,11 @@ export const EpisodeCard = memo(function EpisodeCard(props: EpisodeCardProps) {
         <Text variant="label" numberOfLines={1}>
           {title}
         </Text>
-        <Text variant="caption" secondary numberOfLines={OVERVIEW_LINES} style={styles.overview}>
-          {overview ?? ''}
-        </Text>
+        {overviewLines && (
+          <Text variant="caption" secondary numberOfLines={OVERVIEW_LINES} style={styles.overview}>
+            {overview ?? ''}
+          </Text>
+        )}
       </View>
       <View style={styles.footer}>
         <Pressable
@@ -129,6 +139,7 @@ export const EpisodeCard = memo(function EpisodeCard(props: EpisodeCardProps) {
               {time}
             </Text>
           ) : null}
+          {favourite && <SymbolView name={{ ios: 'heart.fill', android: 'favorite' }} tintColor={c.text} size={13} />}
         </Pressable>
         <Pressable
           accessibilityRole="button"
