@@ -260,6 +260,25 @@ describe('useFetch', () => {
     expect(result.current.error).toBeUndefined();
   });
 
+  // Pull to refresh / Retry on Home: a row whose first request failed has nothing cached to mark stale.
+  it('invalidate retries a mounted hook whose request failed', async () => {
+    request.mockRejectedValueOnce(new ApiError('network')).mockResolvedValueOnce('ok');
+    const { result } = await renderHook(() => useFetch('/Items/invalidate-retry'));
+    await waitFor(() => expect(result.current.error?.kind).toBe('network'));
+    await act(() => invalidate('/Items/invalidate'));
+    await waitFor(() => expect(result.current.data).toBe('ok'));
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+
+  it('invalidate leaves unmounted failed paths alone', async () => {
+    request.mockRejectedValueOnce(new ApiError('network'));
+    const { result, unmount } = await renderHook(() => useFetch('/Items/gone'));
+    await waitFor(() => expect(result.current.error?.kind).toBe('network'));
+    await unmount();
+    await act(() => invalidate('/Items/gone'));
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
   it('shares one request between hooks on the same path; aborts only when the last one leaves', async () => {
     const next = deferred();
     request.mockReturnValue(next.promise);

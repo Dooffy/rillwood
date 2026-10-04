@@ -4,6 +4,7 @@ import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { getFocusedRouteNameFromRoute } from 'expo-router/react-navigation';
 import { useEffect, useRef } from 'react';
 
+import type { BaseItemDto } from '@/api';
 import { useSession } from '@/session';
 
 /** Route param marking the first-run flow (Welcome → Add server → Sign in → Quick Connect): step pills + intro copy. */
@@ -48,4 +49,9 @@ export function useSignedOutRedirect() {
 export function SignedOutRedirect() {
   useSignedOutRedirect();
   return null;
+}
+
+/** Detail screen for a card: series → `/series/[id]`, movies and episodes → `/item/[id]`. */
+export function openItem({ Id: id, Type }: BaseItemDto) {
+  router.push({ pathname: Type === 'Series' ? '/series/[id]' : '/item/[id]', params: { id } });
 }
