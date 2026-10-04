@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Movie / episode detail: hero, Play + watched / favourite, overview, chips, Directed by, media rows, cast & crew,
-// More Like This. Data rules: docs/context/api.md (Detail). Playback lands in M4; watched, favourite and download
-// are placeholders for now.
+// More Like This. Data rules: docs/context/api.md (Detail). Playback lands in M4, download in M5.
 import { useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
@@ -24,6 +23,7 @@ import { isItemId, itemDetail, type TrackRow } from '@/items';
 import { openItem, openPlayer } from '@/navigation';
 import { useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
+import { useUserFlag } from '@/useUserFlag';
 import { spacing } from '@/theme';
 
 export default function ItemDetail() {
@@ -39,6 +39,7 @@ export default function ItemDetail() {
 
 function Detail({ item }: { item: BaseItemDto }) {
   const image = useImage();
+  const mark = useUserFlag();
   const { width } = useWindowDimensions();
   const view = detailView(item);
   const { progress, resumeSeconds = 0, remainingSeconds = 0, played } = view.playback;
@@ -86,16 +87,13 @@ function Detail({ item }: { item: BaseItemDto }) {
             onPlay={() => openPlayer(item, resumeSeconds)}
             onStartOver={inProgress ? () => openPlayer(item, 0) : undefined}
             played={played}
+            favourite={item.UserData?.IsFavorite === true}
+            onMark={(flag, value) => mark(item, flag, value)}
           />
 
           {item.Overview?.trim() ? <Overview text={item.Overview.trim()} /> : null}
 
           <Chips items={view.chips} />
-          {played && (
-            <Text variant="caption" secondary>
-              ✓ Watched
-            </Text>
-          )}
           {view.directors.length > 0 && (
             <Text secondary>
               Directed by <Text>{view.directors.join(', ')}</Text>

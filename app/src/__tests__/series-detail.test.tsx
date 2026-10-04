@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { fireEvent, render as rtlRender, screen } from '@testing-library/react-native';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { act, fireEvent, render as rtlRender, screen } from '@testing-library/react-native';
 import type { ReactElement } from 'react';
+import { Alert, type AlertButton } from 'react-native';
 
 import * as api from '@/api';
 import { ApiError, type BaseItemDto, type RequestOptions } from '@/api';
@@ -104,6 +105,12 @@ beforeEach(() => {
   });
 });
 
+// The episode FlatList renders more cells on a timer (50 ms batches). Let it run inside act before the test ends, else
+// on a busy machine it fires between steps and React warns about an update outside act.
+afterEach(async () => {
+  await act(() => new Promise((resolve) => setTimeout(resolve, 100)));
+});
+
 describe('SeriesDetail', () => {
   it('shows the series with years, real seasons only, genre line and overview', async () => {
     await render(<SeriesDetail />);
@@ -176,7 +183,7 @@ describe('SeriesDetail', () => {
     expect(router.push).toHaveBeenLastCalledWith({ pathname: '/item/[id]', params: { id: 'ep-2-2' } });
   });
 
-  it('opens episode actions from ⋯ and long press; they are placeholders for now', async () => {
+  it('opens episode actions from ⋯ and long press; labels follow the state, Download is a placeholder', async () => {
     const started = episode(2, 1, { UserData: { PlaybackPositionTicks: 6_000_000_000, Played: false } });
     routes.nextup = items(started);
     routes['episodes:season-2'] = items(
@@ -217,5 +224,44 @@ describe('SeriesDetail', () => {
     await render(<SeriesDetail />);
     expect(screen.getAllByText("This series isn't available.").length).toBeGreaterThan(0);
     expect(request).not.toHaveBeenCalled();
+  });
+
+  it('marks an episode watched from its menu; the card shows it at once', async () => {
+    const setPlayed = jest.spyOn(api, 'setPlayed').mockReturnValue(new Promise(() => {}));
+    await render(<SeriesDetail />);
+    await fireEvent.press(await screen.findByRole('button', { name: 'More for Episode 2, Chapter 2' }));
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Mark as Watched' }));
+    expect(await screen.findByRole('button', { name: 'Episode 2, Chapter 2, watched' })).toBeOnTheScreen();
+    expect(setPlayed).toHaveBeenCalledWith(expect.anything(), 'ep-2-2', true);
+  });
+
+  it('marks the shown season from the season menu, every episode in it at once', async () => {
+    const setPlayed = jest.spyOn(api, 'setPlayed').mockReturnValue(new Promise(() => {}));
+    await render(<SeriesDetail />);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Season 2' }));
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Mark Season 2 as Watched' }));
+    expect(setPlayed).toHaveBeenCalledWith(expect.anything(), 'season-2', true);
+    expect(await screen.findByRole('button', { name: 'Episode 2, Chapter 2, watched' })).toBeOnTheScreen();
+  });
+
+  it('asks before unwatching the whole show (it clears progress)', async () => {
+    routes[`/Items/${SHOW}`] = { ...show, UserData: { PlaybackPositionTicks: 0, Played: true } };
+    const setPlayed = jest.spyOn(api, 'setPlayed').mockReturnValue(new Promise(() => {}));
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    await render(<SeriesDetail />);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Mark as unwatched', selected: true }));
+    expect(alert).toHaveBeenCalledWith(`Mark ${show.Name} as unwatched?`, expect.any(String), expect.any(Array));
+    expect(setPlayed).not.toHaveBeenCalled();
+    const buttons = alert.mock.calls[0][2] as AlertButton[];
+    await act(async () => buttons.find((b) => b.style === 'destructive')?.onPress?.());
+    expect(setPlayed).toHaveBeenCalledWith(expect.anything(), SHOW, false);
+  });
+
+  it('adds an episode to favourites from its menu; its card shows it', async () => {
+    jest.spyOn(api, 'setFavourite').mockReturnValue(new Promise(() => {}));
+    await render(<SeriesDetail />);
+    await fireEvent.press(await screen.findByRole('button', { name: 'More for Episode 2, Chapter 2' }));
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Add to Favourites' }));
+    expect(await screen.findByRole('button', { name: 'Episode 2, Chapter 2, favourite' })).toBeOnTheScreen();
   });
 });

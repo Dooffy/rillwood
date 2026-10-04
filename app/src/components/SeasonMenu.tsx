@@ -4,24 +4,28 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { BaseItemDto } from '@/api';
-import { seasonDetail } from '@/items';
+import { seasonDetail, type UserFlag } from '@/items';
 import { minTouch, pressedOpacity, spacing, useColors } from '@/theme';
 
 import { ActionSheet } from './ActionSheet';
 import { Text } from './Text';
 
 /**
- * "Season 2 ⌃⌄" heading that opens a sheet of seasons ("Watched" / "5 unwatched", ✓ on the current one). One season
- * is a plain heading. Owns its open state, so opening it re-renders only this.
+ * "Season 2 ⌃⌄" heading that opens a sheet of seasons ("Watched" / "5 unwatched", ✓ on the current one), then
+ * "Mark Season 2 as Watched / Unwatched". One season is a plain heading (the show's ✓ marks it). Owns its open state,
+ * so opening it re-renders only this.
  */
 export function SeasonMenu({
   seasons,
   value,
   onChange,
+  onMark,
 }: {
   seasons: BaseItemDto[];
   value?: string;
   onChange: (seasonId: string) => void;
+  /** Mark the shown season watched / unwatched. */
+  onMark: (season: BaseItemDto, flag: UserFlag, value: boolean) => void;
 }) {
   const c = useColors();
   const [open, setOpen] = useState(false);
@@ -54,12 +58,22 @@ export function SeasonMenu({
       </Pressable>
       <ActionSheet
         visible={open}
-        actions={seasons.map((s) => ({
-          label: s.Name,
-          detail: seasonDetail(s),
-          selected: s.Id === value,
-          onPress: () => onChange(s.Id),
-        }))}
+        actions={[
+          ...seasons.map((s) => ({
+            label: s.Name,
+            detail: seasonDetail(s),
+            selected: s.Id === value,
+            onPress: () => onChange(s.Id),
+          })),
+          ...(current
+            ? [
+                {
+                  label: `Mark ${current.Name} as ${current.UserData?.Played ? 'Unwatched' : 'Watched'}`,
+                  onPress: () => onMark(current, 'played', !current.UserData?.Played),
+                },
+              ]
+            : []),
+        ]}
         onClose={() => setOpen(false)}
       />
     </>

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { RefreshControlProps } from 'react-native';
 
@@ -80,6 +80,12 @@ beforeEach(() => {
       return Promise.resolve({ Items: [{ Name: 'Animation' }], TotalRecordCount: 0 }) as Promise<never>;
     return Promise.resolve(answer(options?.query ?? {})) as Promise<never>;
   });
+});
+
+// FlatList renders more cells on a timer (50 ms batches). Let it run inside act before the test ends, else on a busy
+// machine it fires between steps and React warns about an update outside act.
+afterEach(async () => {
+  await act(() => new Promise((resolve) => setTimeout(resolve, 100)));
 });
 
 const lastQuery = () => request.mock.calls.filter(([, p]) => p === '/Items').at(-1)?.[2]?.query;

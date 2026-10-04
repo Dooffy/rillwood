@@ -7,7 +7,7 @@ import { ApiError, type BaseItemDto, type ItemsResult, type UserItemDataDto } fr
 import * as session from '@/session';
 import { invalidate, useFetch } from '@/useFetch';
 
-import { setUserFlag } from './userData';
+import { setUserFlag, userFlagError } from './userData';
 
 const server = { id: 'srv', url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' };
 const anna: session.Account = { id: 'srv.a', server, userId: 'a', userName: 'anna', deviceId: 'dev-a' };
@@ -150,5 +150,17 @@ describe('setUserFlag', () => {
     const season: BaseItemDto = { Id: 's1', Name: 'Season 1', Type: 'Season', UserData: unseen };
     await act(() => setUserFlag(season, 'played', false).then(() => undefined));
     expect(result.current.data?.Items.map((e) => e.UserData)).toEqual([watched.UserData, started.UserData]);
+  });
+});
+
+describe('userFlagError', () => {
+  it('says what failed, then what to do', () => {
+    expect(userFlagError('played', true, new ApiError('network'))).toBe(
+      "Couldn't mark as watched. Check your connection and try again.",
+    );
+    expect(userFlagError('played', false, new ApiError('http', 500))).toBe("Couldn't mark as unwatched. Try again.");
+    expect(userFlagError('favourite', false, new ApiError('http', 404))).toBe(
+      "Couldn't remove from favourites. Try again.",
+    );
   });
 });

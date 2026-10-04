@@ -127,6 +127,7 @@ src/usePullToRefresh.ts  RefreshControl state: spinner until loading ends + 500 
 src/useDebounced.ts      value once it stops changing (search while typing)
 src/recentSearches.ts    recent search terms per account, in memory for the session
 src/userData.ts          mark watched / favourite: optimistic cache + paged list patch, server answer, refetch
+src/useUserFlag.ts       mark from a button / menu: failure toast, confirm before unwatching a season / show
 src/detail.ts            detailView: everything the detail screen shows, from one item (pure)
 src/downloads.ts         store, queue, reconcile, cleanup, storage
 src/sync.ts              offline progress queue replay

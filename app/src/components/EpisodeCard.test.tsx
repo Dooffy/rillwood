@@ -56,4 +56,14 @@ describe('EpisodeCard', () => {
     expect(h.onPlay).toHaveBeenCalledTimes(1);
     expect(h.onMore).toHaveBeenCalledTimes(1);
   });
+
+  it('shows ♥ for a favourite and reads it out', async () => {
+    await render(<EpisodeCard episode={1} title="Pilot" played favourite runtimeSeconds={2700} {...handlers()} />);
+    expect(screen.getByRole('button', { name: 'Episode 1, Pilot, watched, favourite' })).toBeOnTheScreen();
+  });
+
+  it('reserves no overview lines when the season has no overviews', async () => {
+    await render(<EpisodeCard episode={1} title="Pilot" overview="It begins." overviewLines={false} {...handlers()} />);
+    expect(screen.queryByText('It begins.')).toBeNull();
+  });
 });
