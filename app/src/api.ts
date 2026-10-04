@@ -271,6 +271,12 @@ export type BaseItemDto = {
   SeriesName?: string;
   SeasonId?: string;
   SeasonName?: string;
+  /** Series: `Continuing` or `Ended`. */
+  Status?: string;
+  /** Series: last air date (ISO) once ended. */
+  EndDate?: string;
+  /** Series: number of seasons; season: number of episodes. */
+  ChildCount?: number;
   SeriesPrimaryImageTag?: string;
   ImageTags?: Partial<Record<ImageType, string>>;
   BackdropImageTags?: string[];

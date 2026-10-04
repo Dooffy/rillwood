@@ -18,9 +18,17 @@ import {
   posterImage,
   recentlyAdded,
   cardTitles,
+  defaultSeasonId,
+  episodes,
+  episodeTitle,
+  seasons,
+  seriesNextUp,
+  seriesPlayTarget,
+  similar,
   TICKS_PER_SECOND,
   ticksToSeconds,
   userViews,
+  yearRange,
 } from '../src/items.ts';
 
 const args = process.argv.slice(2);
@@ -92,12 +100,12 @@ try {
     await call('GET', '/Items', { query: { searchTerm: 'Test Show', includeItemTypes: 'Series', recursive: true } })
   ).Items;
   if (!movie || !show) throw new Error('No movie >= 6 min or no Test Show - run dev/jellyfin/make-test-media.sh');
-  const episodes = (await call('GET', `/Shows/${show.Id}/Episodes`)).Items;
-  if (episodes.length < 2) throw new Error('Test Show needs 2+ episodes - run dev/jellyfin/make-test-media.sh');
+  const showEpisodes = (await call('GET', `/Shows/${show.Id}/Episodes`)).Items;
+  if (showEpisodes.length < 2) throw new Error('Test Show needs 2+ episodes - run dev/jellyfin/make-test-media.sh');
   const now = new Date().toISOString();
   for (const [item, change] of [
     [movie, { PlaybackPositionTicks: 120 * TICKS_PER_SECOND, LastPlayedDate: now }],
-    [episodes[0], { Played: true, LastPlayedDate: now }],
+    [showEpisodes[0], { Played: true, LastPlayedDate: now }],
   ]) {
     const { PlaybackPositionTicks, Played, LastPlayedDate } = await call('GET', `/UserItems/${item.Id}/UserData`);
     restore.push([item.Id, { PlaybackPositionTicks, Played, LastPlayedDate }]);
@@ -122,9 +130,23 @@ try {
   const next = (await get(nextUp)).Items;
   const titles = next[0] && cardTitles(next[0]);
   check(
-    next[0]?.Id === episodes[1].Id && titles.subtitle.startsWith('S1:E2'),
+    next[0]?.Id === showEpisodes[1].Id && titles.subtitle.startsWith('S1:E2'),
     `Next Up: ${titles ? `${titles.title} / ${titles.subtitle}` : 'empty'}`,
   );
+
+  // Series: seasons, the season to open, its episodes, and what Play starts (S01E01 is watched now).
+  const seriesItem = await get(itemDetail(show.Id));
+  const seasonList = (await get(seasons(show.Id))).Items;
+  const [nextEpisode] = (await get(seriesNextUp(show.Id))).Items;
+  const seasonId = defaultSeasonId(seasonList, nextEpisode);
+  const seasonEpisodes = seasonId ? (await get(episodes(show.Id, seasonId))).Items : [];
+  const target = seriesPlayTarget(nextEpisode, seasonEpisodes);
+  check(
+    target?.episode.Id === showEpisodes[1].Id && !target.resume && seasonEpisodes[0]?.UserData?.Played === true,
+    `Series ${seriesItem.Name} (${yearRange(seriesItem)}, ${seasonList.length} season(s)): opens ${seasonList.find((x) => x.Id === seasonId)?.Name}, ${seasonEpisodes.map(episodeTitle).join(' / ')}; Play → ${target?.episode.Name}`,
+  );
+  const similarItems = await get(similar(movie.Id));
+  check(Array.isArray(similarItems.Items), `Similar to ${movie.Name}: ${similarItems.Items.length} item(s)`);
 
   // Detail: the movie's facts, default tracks and cast from /Items/{id}.
   const detail = await get(itemDetail(movie.Id));

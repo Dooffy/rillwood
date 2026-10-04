@@ -7,7 +7,11 @@ import {
   cardTitles,
   castAndCrew,
   detailFacts,
+  defaultSeasonId,
   detailSubtitle,
+  directors,
+  episodes,
+  episodeTitle,
   continueWatching,
   episodeCode,
   homeLayout,
@@ -27,7 +31,13 @@ import {
   playback,
   posterImage,
   recentlyAdded,
+  seasonCount,
+  seasons,
+  seriesNextUp,
+  seriesPlayTarget,
+  similar,
   ticksToSeconds,
+  yearRange,
 } from './items';
 
 // Trimmed from the dev servers (dev/jellyfin): Latest for the Shows library.
@@ -481,7 +491,8 @@ describe('detail', () => {
       'Movie · Animation · Fantasy',
     );
     expect(detailSubtitle({ ...episode(2), SeasonName: 'Season 1' })).toBe('S1:E2 · Season 1');
-    expect(detailSubtitle({ Id: 's', Name: 'S', Type: 'Series' })).toBe('');
+    expect(detailSubtitle({ Id: 's', Name: 'S', Type: 'Series' })).toBe('TV Show');
+    expect(detailSubtitle({ Id: 'x', Name: 'X', Type: 'Season' })).toBe('');
   });
 
   it('uses the item logo as title art when it has one', () => {
@@ -491,5 +502,78 @@ describe('detail', () => {
       tag: 'l',
     });
     expect(logoImage(movie)).toBeUndefined();
+  });
+});
+
+describe('series', () => {
+  // Trimmed from the dev servers (Test Show) plus a Specials season.
+  const specials: BaseItemDto = { Id: 'sp', Name: 'Specials', Type: 'Season', IndexNumber: 0, SeriesId: 'series-1' };
+  const s1: BaseItemDto = { Id: 'season-1', Name: 'Season 1', Type: 'Season', IndexNumber: 1, SeriesId: 'series-1' };
+  const s2: BaseItemDto = { Id: 'season-2', Name: 'Season 2', Type: 'Season', IndexNumber: 2, SeriesId: 'series-1' };
+
+  it('asks for seasons, episodes with overviews, the series next up and similar items', () => {
+    expect(seasons('series-1')).toEqual({ path: '/Shows/series-1/Seasons' });
+    expect(episodes('series-1', 'season-1')).toEqual({
+      path: '/Shows/series-1/Episodes',
+      query: { seasonId: 'season-1', fields: 'Overview' },
+    });
+    expect(seriesNextUp('series-1')).toEqual({
+      path: '/Shows/NextUp',
+      query: { seriesId: 'series-1', limit: 1, enableResumable: true },
+    });
+    expect(similar('a/b')).toEqual({ path: '/Items/a%2Fb/Similar', query: { limit: 20 } });
+  });
+
+  it('opens the season of the next episode, else the first real season', () => {
+    expect(defaultSeasonId([specials, s1, s2], { ...episode(1), SeasonId: 'season-2' })).toBe('season-2');
+    expect(defaultSeasonId([specials, s1, s2], { ...episode(1), SeasonId: 'gone' })).toBe('season-1');
+    expect(defaultSeasonId([specials, s1, s2])).toBe('season-1');
+    expect(defaultSeasonId([specials])).toBe('sp');
+    expect(defaultSeasonId([])).toBeUndefined();
+  });
+
+  it('plays the next episode, resuming it when started, else the first shown', () => {
+    const started = episode(2, { UserData: { PlaybackPositionTicks: 400_000_000, Played: false } });
+    expect(seriesPlayTarget(started)).toEqual({ episode: started, resume: true });
+    expect(seriesPlayTarget(episode(2))).toEqual({ episode: episode(2), resume: false });
+    expect(seriesPlayTarget(undefined, [episode(1), episode(2)])).toEqual({ episode: episode(1), resume: false });
+    expect(seriesPlayTarget(undefined, [])).toBeUndefined();
+  });
+
+  it.each([
+    [{ ProductionYear: 2019, Status: 'Ended', EndDate: '2023-05-28T00:00:00.0000000Z' }, '2019-2023'],
+    [{ ProductionYear: 2019, Status: 'Continuing' }, '2019-'],
+    [{ ProductionYear: 2019, Status: 'Ended', EndDate: '2019-12-01T00:00:00Z' }, '2019'],
+    [{ ProductionYear: 2026 }, '2026'],
+    [{ ProductionYear: 2019, Status: 'Ended', EndDate: 'not a date' }, '2019'],
+    [{ ProductionYear: 2019, Status: 'Ended', EndDate: '2018-01-01T00:00:00Z' }, '2019'],
+    [{}, undefined],
+  ])('yearRange(%j) → %p', (fields, label) => {
+    expect(yearRange({ Id: 's', Name: 'S', Type: 'Series', ...fields })).toBe(label);
+  });
+
+  it.each([
+    [1, '1 Season'],
+    [3, '3 Seasons'],
+    [0, undefined],
+    [undefined, undefined],
+  ])('seasonCount(%p) → %p', (count, label) => {
+    expect(seasonCount(count)).toBe(label);
+  });
+
+  it('numbers episodes in their season list', () => {
+    expect(episodeTitle({ ...episode(2), Name: 'Pilot' })).toBe('2. Pilot');
+    expect(episodeTitle({ ...episode(2), IndexNumber: undefined, Name: 'Pilot' })).toBe('Pilot');
+  });
+
+  it('names the directors, and calls series TV shows', () => {
+    const people = [
+      { Id: 'a', Name: 'Halina Reijn', Type: 'Actor' },
+      { Id: 'd', Name: 'Colin Levy', Type: 'Director' },
+      { Id: 'd2', Name: 'Second Director', Type: 'Director' },
+    ];
+    expect(directors(people)).toEqual(['Colin Levy', 'Second Director']);
+    expect(directors(undefined)).toEqual([]);
+    expect(detailSubtitle({ ...series121, Genres: ['Drama'] })).toBe('TV Show · Drama');
   });
 });
