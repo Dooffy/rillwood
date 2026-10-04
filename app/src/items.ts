@@ -132,6 +132,73 @@ export function isItemId(id: unknown): id is string {
   return typeof id === 'string' && /[1-9a-f]/i.test(id);
 }
 
+// Series detail (`/series/[id]`).
+
+/** Seasons of a series, in order (Specials = index 0). */
+export function seasons(seriesId: string): Endpoint {
+  return { path: `/Shows/${encodeURIComponent(seriesId)}/Seasons` };
+}
+
+/** Episodes of one season, in order. `Overview` is not sent by default. */
+export function episodes(seriesId: string, seasonId: string): Endpoint {
+  return { path: `/Shows/${encodeURIComponent(seriesId)}/Episodes`, query: { seasonId, fields: 'Overview' } };
+}
+
+/**
+ * The episode the series' Play button starts: in progress, else the one after the highest-numbered watched episode,
+ * else the first (both versions answer S01E01 when nothing is watched). Empty once the last episode is watched.
+ */
+export function seriesNextUp(seriesId: string): Endpoint {
+  return { path: '/Shows/NextUp', query: { seriesId, limit: 1, enableResumable: true } };
+}
+
+/** "More Like This" for a movie or series: `{Items}`, often empty on sparse metadata. */
+export function similar(id: string): Endpoint {
+  return { path: `/Items/${encodeURIComponent(id)}/Similar`, query: { limit: ROW_LIMIT } };
+}
+
+/**
+ * Season shown first: the one holding the next episode, else the first real season (Specials have index 0), else
+ * the first.
+ */
+export function defaultSeasonId(list: BaseItemDto[], next?: BaseItemDto): string | undefined {
+  if (next?.SeasonId && list.some((s) => s.Id === next.SeasonId)) return next.SeasonId;
+  return (list.find((s) => (s.IndexNumber ?? 0) > 0) ?? list[0])?.Id;
+}
+
+/** What the series' Play button does: the next-up episode (resumed when started), else the first episode shown. */
+export function seriesPlayTarget(
+  next: BaseItemDto | undefined,
+  seasonEpisodes: BaseItemDto[] = [],
+): { episode: BaseItemDto; resume: boolean } | undefined {
+  const episode = next ?? seasonEpisodes[0];
+  return episode && { episode, resume: playback(episode).progress !== undefined };
+}
+
+/** "2019-2023", "2019-" while continuing, "2019" for one year or without an end. */
+export function yearRange({ ProductionYear: start, EndDate, Status }: BaseItemDto): string | undefined {
+  if (!start) return undefined;
+  if (Status === 'Continuing') return `${start}-`;
+  const end = EndDate ? new Date(EndDate).getUTCFullYear() : undefined;
+  // Bad metadata (unparseable or earlier end) shows the start year alone.
+  return end !== undefined && Number.isFinite(end) && end > start ? `${start}-${end}` : `${start}`;
+}
+
+/** "1 Season", "3 Seasons". */
+export function seasonCount(count: number | undefined): string | undefined {
+  return count ? `${count} Season${count === 1 ? '' : 's'}` : undefined;
+}
+
+/** "1. Pilot" - episode title inside its season list; the name alone without a number. */
+export function episodeTitle({ IndexNumber: n, Name }: BaseItemDto): string {
+  return n === undefined ? Name : `${n}. ${Name}`;
+}
+
+/** Directors' names for "Directed by …" (server order). */
+export function directors(people: PersonDto[] = []): string[] {
+  return people.filter((p) => p.Type === 'Director').map((p) => p.Name);
+}
+
 /** Facts for the detail chips; runtime as seconds (the screen formats it). */
 export type DetailFacts = {
   year?: number;
@@ -298,12 +365,14 @@ export function cardTitles(item: BaseItemDto): { title: string; subtitle?: strin
   return { title: item.Name, subtitle: item.ProductionYear?.toString() };
 }
 
-/** Line under the detail title: "S1:E2 · Season 1" for episodes, "Movie · Animation · Fantasy" otherwise. */
+const KIND: Record<string, string | undefined> = { Movie: 'Movie', Series: 'TV Show' };
+
+/** Line under the detail title: "S1:E2 · Season 1" for episodes, "Movie · Animation · Fantasy" / "TV Show · Drama" otherwise. */
 export function detailSubtitle(item: BaseItemDto): string {
   const parts =
     item.Type === 'Episode'
       ? [episodeCode(item), item.SeasonName]
-      : [item.Type === 'Movie' ? 'Movie' : undefined, ...(item.Genres ?? []).slice(0, 2)];
+      : [KIND[item.Type], ...(item.Genres ?? []).slice(0, 2)];
   return parts.filter(Boolean).join(' · ');
 }
 

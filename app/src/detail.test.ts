@@ -70,6 +70,28 @@ describe('detailView', () => {
       media: { video: undefined, audio: undefined, subtitles: undefined },
       versions: undefined,
       people: [],
+      directors: [],
     });
+  });
+
+  it('shows years and seasons for a series, and the directors for movies', () => {
+    const series: BaseItemDto = {
+      Id: 'show',
+      Name: 'Test Show',
+      Type: 'Series',
+      ProductionYear: 2019,
+      Status: 'Ended',
+      EndDate: '2023-05-28T00:00:00Z',
+      ChildCount: 3,
+      OfficialRating: 'TV-MA',
+      CommunityRating: 8.1,
+      Genres: ['Drama'],
+    };
+    expect(detailView(series, now)).toMatchObject({
+      subtitle: 'TV Show · Drama',
+      chips: ['2019-2023', '3 Seasons', 'TV-MA', '★ 8.1'],
+    });
+    const directed = { ...sintel, People: [{ Id: 'd', Name: 'Colin Levy', Type: 'Director' }] };
+    expect(detailView(directed, now).directors).toEqual(['Colin Levy']);
   });
 });

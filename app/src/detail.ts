@@ -8,9 +8,12 @@ import {
   castAndCrew,
   detailFacts,
   detailSubtitle,
+  directors,
   logoImage,
   mediaRows,
   playback,
+  seasonCount,
+  yearRange,
   type ImageRef,
   type MediaRows,
   type Playback,
@@ -22,7 +25,10 @@ export type DetailView = {
   logo?: ImageRef;
   /** "Movie · Animation · Fantasy" / "S1:E2 · Season 1"; empty when there is nothing to say. */
   subtitle: string;
-  /** "2010", "12m", "Ends at 9:45 PM", "PG", "★ 7.3", "4K", "5.1", "CC", ... in that order. */
+  /**
+   * Movies / episodes: "2010", "12m", "Ends at 9:45 PM", "PG", "★ 7.3", "4K", "5.1", "CC", ... in that order.
+   * Series: "2019-2023", "3 Seasons", "TV-MA", "★ 8.1".
+   */
   chips: string[];
   playback: Playback;
   /** Default tracks of the first media source. */
@@ -30,6 +36,8 @@ export type DetailView = {
   /** Set when the item has several files: how many, and the one that plays. */
   versions?: { count: number; name?: string };
   people: PersonDto[];
+  /** For "Directed by …" (movies). */
+  directors: string[];
 };
 
 export function detailView(item: BaseItemDto, now: Date = new Date()): DetailView {
@@ -37,18 +45,21 @@ export function detailView(item: BaseItemDto, now: Date = new Date()): DetailVie
   const watch = playback(item);
   const sources = item.MediaSources ?? [];
   const runtime = facts.runtimeSeconds ?? 0;
-  const chips = [
-    facts.year?.toString(),
-    formatRemaining(runtime),
-    formatEndsAt(watch.remainingSeconds ?? runtime, now),
-    facts.rating,
-    facts.score && `★ ${facts.score}`,
-    facts.resolution,
-    facts.hdr,
-    facts.audio,
-    facts.atmos,
-    facts.subtitles,
-  ];
+  const rated = [facts.rating, facts.score && `★ ${facts.score}`];
+  const chips =
+    item.Type === 'Series'
+      ? [yearRange(item), seasonCount(item.ChildCount), ...rated]
+      : [
+          facts.year?.toString(),
+          formatRemaining(runtime),
+          formatEndsAt(watch.remainingSeconds ?? runtime, now),
+          ...rated,
+          facts.resolution,
+          facts.hdr,
+          facts.audio,
+          facts.atmos,
+          facts.subtitles,
+        ];
   return {
     art: backdropImage(item),
     logo: logoImage(item),
@@ -58,5 +69,6 @@ export function detailView(item: BaseItemDto, now: Date = new Date()): DetailVie
     media: mediaRows(sources[0]),
     versions: sources.length > 1 ? { count: sources.length, name: sources[0].Name } : undefined,
     people: castAndCrew(item.People),
+    directors: directors(item.People),
   };
 }
