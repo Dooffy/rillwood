@@ -16,7 +16,7 @@ Rillwood is a new, open-source mobile client for Jellyfin servers. Goals: browse
 |---|---|
 | Add server, login (password + Quick Connect), multiple accounts/servers, switch | tvOS / Android TV (focus engine) - research in `docs/roadmap.md` Ideas |
 | Home: Up Next hero, Continue Watching, Next Up, Recently Added | PiP, AirPlay, Chromecast, SyncPlay |
-| Library: Movies / TV grid, sort, unwatched filter, search | Trickplay, intro skip |
+| Library: browse + search in one tab (All / Movies / Shows / Episodes, sort, filters) | Trickplay, intro skip |
 | Movie + series detail (seasons, episodes) | Download quality presets / transcoded downloads |
 | Playback via libmpv: direct play everything, resume, tracks, progress reporting | Live TV, music, books, admin |
 | | LGPL player builds (iOS dynamic MPVKit, Android optional) - §7, §11 |
@@ -80,7 +80,7 @@ All values live in `src/theme.ts`. Never hardcode colours, radii or font sizes i
 
 Accent tweak options: `#0A84FF`, `#30D158`, `#FF9F0A` - flip button text to white when non-white accent.
 
-Rules: large titles 34/700, section headers 20/700 with chevron, 16:9 landscape cards for resume, 2:3 posters, white progress bars (over artwork: bottom fade + time left after the bar, `[=====   ] 9m`; watched items show `✓ Watched` in the same spot), download ring built from plain views (grey track + white arc; stop square = downloading, arrow = paused), min 44pt touch targets, tab bar: Home / Library / Search / Downloads.
+Rules: large titles 34/700, section headers 20/700 with chevron, 16:9 landscape cards for resume, 2:3 posters, white progress bars (over artwork: bottom fade + time left after the bar, `[=====   ] 9m`; watched items show `✓ Watched` in the same spot), download ring built from plain views (grey track + white arc; stop square = downloading, arrow = paused), min 44pt touch targets, tab bar: Home / Library / Downloads (search lives in Library).
 
 ---
 
@@ -107,7 +107,7 @@ Repo layout:
 src/app/                 expo-router
   _layout.tsx            providers, reconcile/cleanup/sync on AppState active
   (auth)/welcome.tsx, server.tsx, login.tsx, quick-connect.tsx, accounts.tsx, account.tsx   (no group layout - screens join the root stack)
-  (tabs)/home.tsx, library.tsx, search.tsx, downloads.tsx
+  (tabs)/home.tsx, library.tsx (browse + search), downloads.tsx
   item/[id].tsx          movie / episode detail
   series/[id].tsx
   player.tsx
@@ -122,15 +122,17 @@ src/server.ts            server address → probe URLs, min version check (pure)
 src/navigation.ts        resetTo (clear stack), signed-out redirect, openItem, openPlayer
 src/useFetch.ts          in-memory cache, abort, invalidate()
 src/useImage.ts          image URL for the active server, sized to the screen scale
-src/useLibrary.ts        library grid pages for the active account: load more, refresh, reset per query / account
+src/usePagedItems.ts     paged lists (Library): load more, refresh, retry, reset per list / account
 src/usePullToRefresh.ts  RefreshControl state: spinner until loading ends + 500 ms hold (Home, Library)
+src/useDebounced.ts      value once it stops changing (search while typing)
+src/recentSearches.ts    recent search terms per account, in memory for the session
 src/detail.ts            detailView: everything the detail screen shows, from one item (pure)
 src/downloads.ts         store, queue, reconcile, cleanup, storage
 src/sync.ts              offline progress queue replay
 src/settings.ts          user settings in kv-store (appearance; downloads + offload later)
 src/player/Player.tsx    PlayerEngine interface + re-export of active engine
 src/player/mpv.tsx       mpv adapter
-src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List, StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message, DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing, Artwork, Row, ProgressBar, DownloadRing
+src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List, StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message, DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing, SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing
 src/dev/                 dev-only previews, rendered behind `__DEV__` (never in release)
 modules/mpv/             vendored native module (+ UPSTREAM.md: upstream repo + commit)
 modules/downloads/       own native background downloader (iOS + Android)
@@ -140,7 +142,7 @@ modules/downloads/       own native background downloader (iOS + Android)
 
 | Working on | Read |
 |---|---|
-| `api.ts`, `items.ts`, `session.ts`, `auth.ts`, `useFetch.ts`, `useImage.ts`, `useLibrary.ts`, auth / accounts, any server call | `docs/context/api.md` - endpoints, auth header, DeviceId, 401/403, tokens |
+| `api.ts`, `items.ts`, `session.ts`, `auth.ts`, `useFetch.ts`, `useImage.ts`, `usePagedItems.ts`, auth / accounts, any server call | `docs/context/api.md` - endpoints, auth header, DeviceId, 401/403, tokens |
 | `src/player/`, player screen | `docs/context/player.md` - `PlayerEngine` contract, resume, reporting, engine issues |
 | `modules/mpv/`, player binaries | `docs/context/mpv.md` - binaries, NDK pin, mpv options, logs |
 | `downloads.ts`, `modules/downloads/`, Downloads screen | `docs/context/downloads.md` - native contract, HTTP resume rules, store, offload |
@@ -190,7 +192,7 @@ Keep non-route code out of `src/app/`. `app/` and `web/` are independent project
 | M0 | Setup + player spike | Local MKV + auth'd stream play on physical iPhone (then Android) |
 | M1 | Foundation | Router shell, theme tokens, api.ts, session, useFetch |
 | M2 | Auth + accounts | 2 servers × 2 users, switch without restart, Quick Connect, 401 handled |
-| M3 | Browse | Home, library (paging/sort/filter), search, movie + series detail |
+| M3 | Browse | Home, library (browse + search, paging/sort/filter), movie + series detail |
 | M4 | Playback | Resume, tracks, progress visible in Jellyfin dashboard, autoplay next |
 | M5 | Downloads | 20GB file survives kill, season download, reconcile works |
 | M6 | Offline + offload + sync | Flight mode browse/play, auto-delete, progress syncs |

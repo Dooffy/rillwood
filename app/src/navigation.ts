@@ -11,7 +11,7 @@ import { useSession } from '@/session';
 export const ONBOARDING = { onboarding: '1' } as const;
 
 /** Tab bar labels by route name (`src/app/(tabs)/`). */
-export const TAB_TITLES = { home: 'Home', library: 'Library', search: 'Search', downloads: 'Downloads' } as const;
+export const TAB_TITLES = { home: 'Home', library: 'Library', downloads: 'Downloads' } as const;
 
 /**
  * Title of the tabs screen in the root stack = the focused tab. iOS shows it as the back button text on screens pushed
