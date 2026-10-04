@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import * as SystemUI from 'expo-system-ui';
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { ToastProvider } from '@/components/Toast';
@@ -28,6 +29,13 @@ export default function RootLayout() {
 
   useEffect(() => {
     applyNativeAppearance();
+  }, []);
+
+  // Upright portrait everywhere; only the player unlocks rotation while it's open. app.json allows all orientations
+  // (so the player can rotate); the config plugin locks iOS before JS runs, this covers Android. A layout effect runs
+  // before every passive one, so a player opened at launch (deep link) still unlocks after this.
+  useLayoutEffect(() => {
+    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -60,9 +68,10 @@ export default function RootLayout() {
           <Stack.Screen
             name="player"
             options={{
-              presentation: 'fullScreenModal',
+              // See-through, so pulling the player down shows the screen below (the player draws its own black).
+              presentation: 'transparentModal',
               animation: 'fade',
-              contentStyle: { backgroundColor: palettes.dark.background },
+              contentStyle: { backgroundColor: 'transparent' },
             }}
           />
         </Stack>

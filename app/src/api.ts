@@ -252,6 +252,12 @@ export type PlaybackInfoResponse = {
   ErrorCode?: string;
 };
 
+/** Chapter marker of a video (`/Items/{id}`). */
+export type ChapterInfoDto = {
+  StartPositionTicks: number;
+  Name?: string;
+};
+
 /** Cast / crew entry of an item. */
 export type PersonDto = {
   Id: string;
@@ -308,6 +314,7 @@ export type BaseItemDto = {
   CommunityRating?: number;
   MediaSources?: MediaSourceDto[];
   People?: PersonDto[];
+  Chapters?: ChapterInfoDto[];
 };
 
 /** Paged list. `/Items/Latest` is the exception: a bare array. */

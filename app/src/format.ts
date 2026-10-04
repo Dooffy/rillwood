@@ -25,6 +25,15 @@ export function spokenRemaining(seconds: number): string | undefined {
   return [h > 0 ? part(h, 'hour') : undefined, m > 0 ? part(m, 'minute') : undefined].filter(Boolean).join(' ');
 }
 
+/** Player clock: "4:05", "1:02:03"; "0:00" for anything not positive or finite. */
+export function formatClock(seconds: number): string {
+  const total = Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = String(total % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
+}
+
 /** "Ends at 9:45 PM" in the device's clock format, for `seconds` of playback starting `now`. */
 export function formatEndsAt(seconds: number, now: Date = new Date()): string | undefined {
   if (!Number.isFinite(seconds) || seconds <= 0) return undefined;

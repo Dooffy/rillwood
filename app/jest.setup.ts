@@ -32,6 +32,26 @@ jest.mock('expo-secure-store', () => {
 
 jest.mock('expo-symbols', () => ({ SymbolView: () => null }));
 
+// Liquid Glass is native-only: tests get the translucent fallback (`Glass`).
+jest.mock('expo-glass-effect', () => ({
+  GlassView: require('react-native').View,
+  isLiquidGlassAvailable: () => false,
+}));
+
+// Reanimated + worklets run on the JS thread in tests.
+jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
+// Reanimated 4.7 under the native Jest preset loads its native initializer, which needs the native module: use the
+// JS one (no CSS event handler) - re-check on Reanimated bumps.
+jest.mock('react-native-reanimated/src/initializers.native.ts', () =>
+  jest.requireActual('react-native-reanimated/src/initializers.ts'),
+);
+// The mock's useSharedValue returns a new object every render; real shared values are stable.
+jest.mock('react-native-reanimated', () => {
+  const mock = require('react-native-reanimated/mock');
+  const { useState } = require('react');
+  return { ...mock, useSharedValue: <T>(init: T) => useState(() => mock.useSharedValue(init))[0] };
+});
+
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 
 // RN's Modal mock never calls onDismiss; iOS calls it once a hidden modal has finished closing. Mirror that so code

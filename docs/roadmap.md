@@ -58,8 +58,8 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 
 - [x] PlaybackInfo (profile per `docs/context/api.md`, check `SupportsDirectPlay`) → media source → static URL; external subs URL built in the client
 - [x] Player screen: PlaybackInfo → `PlayerEngine` (mpv adapter), loading / error + Retry, Close
-- [ ] Player UI (Apple TV style, one PR): no permanent chrome - tap shows / hides the controls overlay (auto-hide ~3 s); overlay = close (chevron-down, also for VoiceOver), title, tracks / speed, ⟲10 / play-pause / 10⟳, scrubber with chapters; pull down to close (gesture-handler + reanimated, springs back under the threshold); double-tap left / right = ±10s; no brightness / volume swipes; landscape
-- [ ] Orientation: `app.json` `orientation` → `default`, lock non-player screens to portrait (needs `expo-screen-orientation` - approve in `CLAUDE.md` §2)
+- [x] Player UI (Apple TV style): no permanent chrome - tap shows / hides the controls overlay (auto-hide 3 s, not while paused / scrubbing / VoiceOver); overlay = close (chevron-down), title, ⟲10 / play-pause / 10⟳, scrubber with chapters; pull down to close (springs back under the threshold); double-tap left / right = ±10s; no brightness / volume swipes. Tracks / speed button comes with the tracks sheet
+- [x] Orientation: `app.json` `orientation` → `default`, `expo-screen-orientation` locks upright portrait at launch, the player unlocks while open
 - [ ] Investigate PiP when the app goes to the background (`docs/open-items.md`): decide MVP or post-MVP
 - [ ] Tracks sheet (audio, subs incl. external, speed, sub size/offset); start with the server defaults (`playSource` `defaultAudio` / `defaultSubtitle` → mpv ids) - without an initial subtitle id iOS starts with subs off
 - [ ] Resume prompt when the item has a resume point (server keeps 5-90%, items ≥ 5 min only)
