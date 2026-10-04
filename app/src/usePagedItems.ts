@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Library grid pages for the active account: first page on mount, more on demand (docs/context/api.md, Library).
-// Own hook rather than useFetch: pages accumulate into one list, and a new query or account starts over. Not tied to
-// useFetch's invalidate(): the grid refreshes on pull to refresh (or a new query), not when other screens change data.
+// Paged item lists for the active account (Library grid / one type's search results): first page on mount, more on demand
+// (docs/context/api.md, Library data). Own hook rather than useFetch: pages accumulate into one list, and a new query
+// or account starts over. Not tied to useFetch's invalidate(): lists refresh on pull to refresh (or a new query).
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 
-import { ApiError, request, type ItemsResult, type BaseItemDto } from '@/api';
-import { libraryPage, mergePage, nextPageStart, type LibraryQuery } from '@/items';
+import { ApiError, request, type BaseItemDto, type Endpoint, type ItemsResult } from '@/api';
+import { mergePage, nextPageStart } from '@/items';
 import { connectionFor, useSession } from '@/session';
 
 type PageState = {
-  /** `accountId|query` the state belongs to; anything else is stale. */
+  /** `accountId|list id` the state belongs to; anything else is stale. */
   key: string;
   items: BaseItemDto[];
   /** Server total; undefined until the first page answers. */
@@ -25,7 +25,7 @@ type PageState = {
 
 const empty = (key: string, loading = true): PageState => ({ key, items: [], offset: 0, loading });
 
-export type Library = {
+export type PagedItems = {
   items: BaseItemDto[];
   total?: number;
   /** Failure of the last page request; older items stay. */
@@ -41,11 +41,16 @@ export type Library = {
   retry: () => void;
 };
 
-export function useLibrary(query: LibraryQuery): Library {
+/**
+ * Pages of `pageAt(startIndex)` for the active account. `id` names the list (its query): a new id starts over; `null`
+ * = idle (nothing to show yet).
+ */
+export function usePagedItems(id: string | null, pageAt: (startIndex: number) => Endpoint): PagedItems {
   const { active } = useSession();
-  const conn = active ? connectionFor(active) : null;
-  // Signed out (no token): idle, not loading - nothing will be requested.
-  const key = `${conn ? active?.id : ''}|${query.kind}|${query.sort}|${query.unwatched}`;
+  const signedIn = active ? connectionFor(active) : null;
+  const conn = id === null ? null : signedIn;
+  // Signed out (no token) or no list: idle, not loading - nothing will be requested.
+  const key = `${conn ? active?.id : ''}|${id ?? ''}`;
   const [state, setState] = useState<PageState>(() => empty(key, !!conn));
   const live = state.key === key ? state : empty(key, !!conn);
   const controller = useRef<AbortController | null>(null);
@@ -56,7 +61,7 @@ export function useLibrary(query: LibraryQuery): Library {
     controller.current?.abort();
     const ctrl = new AbortController();
     controller.current = ctrl;
-    const endpoint = libraryPage(query, startIndex);
+    const endpoint = pageAt(startIndex);
     request<ItemsResult>(conn, endpoint.path, { query: endpoint.query, signal: ctrl.signal }).then(
       (page) =>
         setState((s) => ({

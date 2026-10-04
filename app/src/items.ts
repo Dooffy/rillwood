@@ -1,7 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Pure item logic: Home requests (path + query for useFetch), DTO → card data, image URLs (docs/context/api.md).
 // Type-only imports, so dev scripts can load this file with plain Node (scripts/check-home.mjs).
-import type { BaseItemDto, Endpoint, ImageType, ItemsResult, MediaSourceDto, MediaStreamDto, PersonDto } from '@/api';
+import type {
+  BaseItemDto,
+  Endpoint,
+  ImageType,
+  ItemsResult,
+  MediaSourceDto,
+  MediaStreamDto,
+  PersonDto,
+  Query,
+} from '@/api';
 
 export const TICKS_PER_SECOND = 10_000_000;
 
@@ -346,13 +355,16 @@ export function personImage({ Id, PrimaryImageTag }: PersonDto): ImageRef | unde
   return PrimaryImageTag ? { itemId: Id, type: 'Primary', tag: PrimaryImageTag } : undefined;
 }
 
-// Library grid (`/library`).
+// Library (`/library`): browse and search in one list.
 
-export type LibraryKind = 'movies' | 'shows';
 export type LibrarySort = 'name' | 'added' | 'year' | 'rating';
-export type LibraryQuery = { kind: LibraryKind; sort: LibrarySort; unwatched: boolean };
+/** Type capsules. */
+export type SearchScope = 'all' | 'movies' | 'shows' | 'episodes';
 
-/** Items per `/Items` page. */
+/** What the Library shows: optional search term, type, sort (browsing only) and filters. */
+export type LibraryQuery = { term?: string; scope: SearchScope; sort: LibrarySort; filters: Filters };
+
+/** Items per page of an endless list. */
 export const LIBRARY_PAGE_SIZE = 50;
 
 /** Sort menu, in order. */
@@ -363,15 +375,46 @@ export const LIBRARY_SORTS: { key: LibrarySort; label: string }[] = [
   { key: 'rating', label: 'Rating' },
 ];
 
+/** Type capsules, in order. */
+export const SEARCH_SCOPES: { key: SearchScope; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'movies', label: 'Movies' },
+  { key: 'shows', label: 'Shows' },
+  { key: 'episodes', label: 'Episodes' },
+];
+
+/** Shortest term sent to the server: one letter already matches every word starting with it. */
+export const SEARCH_MIN_LENGTH = 1;
+
+/** The term to search for (trimmed), or undefined while it is empty. */
+export function searchTerm(text: string): string | undefined {
+  const term = text.trim();
+  return term.length >= SEARCH_MIN_LENGTH ? term : undefined;
+}
+
+/** Server types per capsule. Browsing All lists movies and shows; episodes only come with a term. */
+function scopeTypes(scope: SearchScope, searching: boolean): string {
+  switch (scope) {
+    case 'all':
+      return searching ? 'Movie,Series,Episode' : 'Movie,Series';
+    case 'movies':
+      return 'Movie';
+    case 'shows':
+      return 'Series';
+    case 'episodes':
+      return 'Episode';
+  }
+}
+
 /** Server sort keys; SortName breaks ties so pages stay stable. */
-function sortQuery(kind: LibraryKind, sort: LibrarySort): { sortBy: string; sortOrder: 'Ascending' | 'Descending' } {
+function sortQuery(scope: SearchScope, sort: LibrarySort): { sortBy: string; sortOrder: 'Ascending' | 'Descending' } {
   switch (sort) {
     case 'name':
       return { sortBy: 'SortName', sortOrder: 'Ascending' };
     case 'added':
       // Shows count as new when an episode lands, not when the series folder first appeared.
       return {
-        sortBy: `${kind === 'shows' ? 'DateLastContentAdded' : 'DateCreated'},SortName`,
+        sortBy: `${scope === 'shows' ? 'DateLastContentAdded' : 'DateCreated'},SortName`,
         sortOrder: 'Descending',
       };
     case 'year':
@@ -382,27 +425,31 @@ function sortQuery(kind: LibraryKind, sort: LibrarySort): { sortBy: string; sort
 }
 
 /**
- * One page of the grid: every movie or every show the user can see, across libraries (no `parentId`). Unknown
- * `sortBy` values are ignored by the server, so the keys are fixed here.
+ * `/Items` for the Library: every item of the type the user can see, across libraries (no `parentId`), narrowed by the
+ * filters. With a term the server ranks the matches (the sort is not sent); without one the sort applies. Unknown
+ * `sortBy` values are ignored by the server, so the keys are fixed here. `limit: 0` = count only (the filter sheet).
  */
-export function libraryPage({ kind, sort, unwatched }: LibraryQuery, startIndex: number): Endpoint {
+export function listItems(
+  { term, scope, sort, filters }: LibraryQuery,
+  limit: number = LIBRARY_PAGE_SIZE,
+  startIndex?: number,
+): Endpoint {
   return {
     path: '/Items',
     query: {
-      includeItemTypes: kind === 'movies' ? 'Movie' : 'Series',
+      searchTerm: term,
+      includeItemTypes: scopeTypes(scope, !!term),
       recursive: true,
-      ...sortQuery(kind, sort),
-      filters: unwatched ? 'IsUnplayed' : undefined,
+      ...(term ? {} : sortQuery(scope, sort)),
+      ...filterQuery(filters),
       startIndex,
-      limit: LIBRARY_PAGE_SIZE,
+      limit,
     },
   };
 }
 
-/**
- * Where the next page starts, or undefined once everything is loaded. `offset` = server items fetched so far (not the
- * merged list's length: repeats dropped by `mergePage` would make the next page overlap the last one).
- */
+/** Where the next page starts, or undefined once everything is loaded. `offset` = server items fetched so far (not the
+ * merged list's length: repeats dropped by `mergePage` would make the next page overlap the last one). */
 export function nextPageStart(offset: number, total: number | undefined): number | undefined {
   return total !== undefined && offset < total ? offset : undefined;
 }
@@ -411,6 +458,106 @@ export function nextPageStart(offset: number, total: number | undefined): number
 export function mergePage(items: BaseItemDto[], page: BaseItemDto[]): BaseItemDto[] {
   const seen = new Set(items.map((i) => i.Id));
   return [...items, ...page.filter((i) => !seen.has(i.Id))];
+}
+
+// Filters (Library filter sheet).
+
+export type ShowState = 'all' | 'unwatched' | 'inProgress' | 'watched' | 'favourites';
+
+export type Filters = {
+  show: ShowState;
+  /** Any of these (OR). */
+  genres: string[];
+  /** Decade starts (2010 = 2010-2019); 0 = older than the oldest listed decade. Any of these. */
+  decades: number[];
+  /** Community rating at least this (0-10); undefined = any. */
+  minRating?: number;
+  only4K: boolean;
+};
+
+export const NO_FILTERS: Filters = { show: 'all', genres: [], decades: [], only4K: false };
+
+export const SHOW_STATES: { key: ShowState; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'unwatched', label: 'Unwatched' },
+  { key: 'inProgress', label: 'In Progress' },
+  { key: 'watched', label: 'Watched' },
+  { key: 'favourites', label: 'Favourites' },
+];
+
+/** Decade chips, newest first, then "Older". */
+export const DECADES: { key: number; label: string }[] = [
+  { key: 2020, label: '2020s' },
+  { key: 2010, label: '2010s' },
+  { key: 2000, label: '2000s' },
+  { key: 1990, label: '1990s' },
+  { key: 0, label: 'Older' },
+];
+
+export const MIN_RATINGS = [6, 7, 8];
+
+const SHOW_FILTER: Record<ShowState, string | undefined> = {
+  all: undefined,
+  unwatched: 'IsUnplayed',
+  inProgress: 'IsResumable',
+  watched: 'IsPlayed',
+  favourites: 'IsFavorite',
+};
+
+const OLDEST_DECADE = 1990;
+const FIRST_YEAR = 1900;
+
+function decadeYears(decade: number): number[] {
+  const [from, to] = decade === 0 ? [FIRST_YEAR, OLDEST_DECADE - 1] : [decade, decade + 9];
+  return Array.from({ length: to - from + 1 }, (_, i) => from + i);
+}
+
+/** `/Items` parameters for the filters (same on 10.11 + 12.1); empty when nothing is set. */
+export function filterQuery(f: Filters): Query {
+  return {
+    filters: SHOW_FILTER[f.show],
+    genres: f.genres.length ? f.genres.join('|') : undefined,
+    years: f.decades.length ? f.decades.flatMap(decadeYears).join(',') : undefined,
+    minCommunityRating: f.minRating,
+    is4K: f.only4K || undefined,
+  };
+}
+
+export type ActiveFilter = { id: string; label: string };
+
+/** One removable chip per active filter, in sheet order. */
+export function activeFilters(f: Filters): ActiveFilter[] {
+  return [
+    ...(f.show === 'all' ? [] : [{ id: 'show', label: SHOW_STATES.find((s) => s.key === f.show)?.label ?? f.show }]),
+    ...f.genres.map((g) => ({ id: `genre:${g}`, label: g })),
+    ...f.decades.map((d) => ({ id: `decade:${d}`, label: DECADES.find((x) => x.key === d)?.label ?? `${d}s` })),
+    ...(f.minRating === undefined ? [] : [{ id: 'rating', label: `★ ${f.minRating}+` }]),
+    ...(f.only4K ? [{ id: '4k', label: '4K' }] : []),
+  ];
+}
+
+/** Filters without the chip `id` (from `activeFilters`). */
+export function removeFilter(f: Filters, id: string): Filters {
+  if (id === 'show') return { ...f, show: 'all' };
+  if (id === 'rating') return { ...f, minRating: undefined };
+  if (id === '4k') return { ...f, only4K: false };
+  if (id.startsWith('genre:')) return { ...f, genres: f.genres.filter((g) => `genre:${g}` !== id) };
+  if (id.startsWith('decade:')) return { ...f, decades: f.decades.filter((d) => `decade:${d}` !== id) };
+  return f;
+}
+
+/** Genres for the filter sheet: `/Genres` of movies and shows, by name. (10.11 reports a total of 0 - use `Items`.) */
+export const genresEndpoint: Endpoint = {
+  path: '/Genres',
+  query: { includeItemTypes: 'Movie,Series', recursive: true, sortBy: 'SortName', sortOrder: 'Ascending' },
+};
+
+export type SearchGroups = { movies: BaseItemDto[]; shows: BaseItemDto[]; episodes: BaseItemDto[] };
+
+/** Splits mixed results into the screen's sections, keeping the server's order inside each. */
+export function groupResults(items: BaseItemDto[]): SearchGroups {
+  const of = (type: string) => items.filter((i) => i.Type === type);
+  return { movies: of('Movie'), shows: of('Series'), episodes: of('Episode') };
 }
 
 // Card data.

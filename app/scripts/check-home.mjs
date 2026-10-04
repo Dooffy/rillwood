@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Checks the Home + detail data layer (src/items.ts) against a dev server: rows, Recently Added shaping, time left,
-// detail facts / tracks / cast, series, library paging / sorts / unwatched, image URLs.
+// detail facts / tracks / cast, series, library paging / sorts / unwatched, search + filters, image URLs.
 // Sets a resume point on a movie >= 6 min and marks Test Show S01E01 played as the dev user `test`, then restores both.
 // Usage (from app/): npm run check:home [-- --server http://localhost:8097]. Needs dev/jellyfin running.
 // Dev-only credentials - never use them on a real server.
@@ -18,8 +18,13 @@ import {
   posterImage,
   recentlyAdded,
   cardTitles,
+  genresEndpoint,
+  groupResults,
+  NO_FILTERS,
+  searchTerm,
   LIBRARY_SORTS,
-  libraryPage,
+  ROW_LIMIT,
+  listItems,
   mergePage,
   nextPageStart,
   defaultSeasonId,
@@ -67,6 +72,10 @@ async function call(method, path, { query, body } = {}) {
 
 const get = (endpoint) => call('GET', endpoint.path, { query: endpoint.query });
 
+/** Library query as the screen builds it (term, type, sort, filters). */
+const lib = (change = {}) => ({ scope: 'movies', sort: 'name', filters: NO_FILTERS, ...change });
+const page = (change, startIndex, limit = 50) => listItems(lib(change), limit, startIndex);
+
 let failures = 0;
 function check(ok, message) {
   process.stdout.write(`${ok ? 'ok  ' : 'FAIL'} ${message}\n`);
@@ -108,7 +117,7 @@ try {
   if (showEpisodes.length < 2) throw new Error('Test Show needs 2+ episodes - run dev/jellyfin/make-test-media.sh');
   const now = new Date().toISOString();
   // First movie by name, marked watched for the library's unwatched filter.
-  const [watchedMovie] = (await get(libraryPage({ kind: 'movies', sort: 'name', unwatched: false }, 0))).Items;
+  const [watchedMovie] = (await get(page({}, 0))).Items;
   for (const [item, change] of [
     [movie, { PlaybackPositionTicks: 120 * TICKS_PER_SECOND, LastPlayedDate: now }],
     [showEpisodes[0], { Played: true, LastPlayedDate: now }],
@@ -156,9 +165,8 @@ try {
   check(Array.isArray(similarItems.Items), `Similar to ${movie.Name}: ${similarItems.Items.length} item(s)`);
 
   // Library: every movie across libraries, paged to the end, sorted, and without watched ones.
-  const byName = { kind: 'movies', sort: 'name', unwatched: false };
-  const first = await get(libraryPage(byName, 0));
-  const tail = await get(libraryPage(byName, first.TotalRecordCount - 2));
+  const first = await get(page({}, 0));
+  const tail = await get(page({}, first.TotalRecordCount - 2));
   const merged = mergePage(first.Items, tail.Items);
   check(
     first.TotalRecordCount > 2 &&
@@ -169,21 +177,64 @@ try {
   );
   const firstNames = [];
   for (const { key } of LIBRARY_SORTS) {
-    firstNames.push((await get(libraryPage({ ...byName, sort: key }, 0))).Items[0]?.Name);
+    firstNames.push((await get(page({ sort: key }, 0))).Items[0]?.Name);
   }
   check(
     new Set(firstNames).size > 1,
     `Library sorts change the order (${LIBRARY_SORTS.map((x, i) => `${x.key}: ${firstNames[i]}`).join(', ')})`,
   );
-  const unwatched = await get(libraryPage({ ...byName, unwatched: true }, 0));
+  const unwatched = await get(page({ filters: { ...NO_FILTERS, show: 'unwatched' } }, 0));
   check(
     unwatched.TotalRecordCount === first.TotalRecordCount - 1 && !unwatched.Items.some((i) => i.Id === watchedMovie.Id),
     `Library unwatched: ${unwatched.TotalRecordCount} (${watchedMovie.Name} hidden)`,
   );
-  const shows = await get(libraryPage({ kind: 'shows', sort: 'added', unwatched: false }, 0));
+  const shows = await get(page({ scope: 'shows', sort: 'added' }, 0));
+  const rowMovies = await get(page({ scope: 'movies' }, undefined, ROW_LIMIT));
+  const rowShows = await get(page({ scope: 'shows' }, undefined, ROW_LIMIT));
+  check(
+    rowMovies.Items.every((i) => i.Type === 'Movie') &&
+      rowShows.Items.every((i) => i.Type === 'Series') &&
+      rowShows.Items.length > 0,
+    `Library All rows: ${rowMovies.Items.length} movie(s), ${rowShows.Items.length} show(s) (one request each)`,
+  );
   check(
     shows.Items.every((i) => i.Type === 'Series'),
     `Library shows by date added: ${shows.Items.map((i) => i.Name).join(', ')}`,
+  );
+
+  // Search: one mixed request, grouped by the app; one letter already matches words starting with it.
+  const found = groupResults((await get(page({ term: searchTerm('test'), scope: 'all' }, 0, 60))).Items);
+  const oneLetter = (await get(page({ term: searchTerm('s'), scope: 'all' }, 0, 60))).Items;
+  check(
+    oneLetter.length > 0 &&
+      found.shows.some((i) => i.Id === show.Id) &&
+      found.episodes.length === showEpisodes.length &&
+      found.episodes.every((i) => i.SeriesId === show.Id),
+    `Search "test": ${found.shows.length} show(s), ${found.episodes.length} episode(s), ${found.movies.length} movie(s); "s": ${oneLetter.length} item(s)`,
+  );
+
+  // Filters: genres from /Genres, then search narrowed by genre / decade / rating / 4K / type; count-only request.
+  const genreNames = (await get(genresEndpoint)).Items.map((g) => g.Name);
+  const filtered = async (scope, f) =>
+    (await get(page({ term: 's', scope, filters: { ...NO_FILTERS, ...f } }, undefined, 0))).TotalRecordCount;
+  const all = await filtered('all', {});
+  const counts = {
+    genre: await filtered('all', { genres: genreNames.slice(0, 1) }),
+    decade2010s: await filtered('all', { decades: [2010] }),
+    rating7: await filtered('all', { minRating: 7 }),
+    only4K: await filtered('all', { only4K: true }),
+    movies: await filtered('movies', {}),
+    unwatched: await filtered('all', { show: 'unwatched' }),
+  };
+  check(
+    genreNames.length > 0 &&
+      Object.values(counts).every((n) => n <= all) &&
+      counts.genre < all &&
+      counts.only4K < all &&
+      counts.movies < all,
+    `Filters on "s" (${all}): ${Object.entries(counts)
+      .map(([k, n]) => `${k} ${n}`)
+      .join(', ')}; genres ${genreNames.join(', ')}`,
   );
 
   // Detail: the movie's facts, default tracks and cast from /Items/{id}.

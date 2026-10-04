@@ -26,7 +26,8 @@ describe('Row', () => {
         <Text>Episode 3</Text>
       </Row>,
     );
-    await fireEvent.press(screen.getByRole('button', { name: 'Continue Watching' }));
+    expect(screen.getByText('See All')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue Watching, See All' }));
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 });

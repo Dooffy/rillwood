@@ -7,7 +7,6 @@ import { useColors } from '@/theme';
 const TABS: { name: keyof typeof TAB_TITLES; icon: NativeTabsTriggerIconProps }[] = [
   { name: 'home', icon: { sf: { default: 'house', selected: 'house.fill' }, md: 'home' } },
   { name: 'library', icon: { sf: 'rectangle.stack', md: 'video_library' } },
-  { name: 'search', icon: { sf: 'magnifyingglass', md: 'search' } },
   { name: 'downloads', icon: { sf: 'arrow.down.circle', md: 'download' } },
 ];
 

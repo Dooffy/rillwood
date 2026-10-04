@@ -5,6 +5,7 @@ import type { BaseItemDto, MediaStreamDto } from './api';
 import {
   backdropImage,
   cardTitles,
+  activeFilters,
   castAndCrew,
   detailFacts,
   defaultSeasonId,
@@ -12,6 +13,10 @@ import {
   directors,
   episodes,
   episodeLine,
+  filterQuery,
+  NO_FILTERS,
+  removeFilter,
+  groupResults,
   episodeTitle,
   continueWatching,
   episodeCode,
@@ -23,7 +28,7 @@ import {
   itemDetail,
   landscapeImage,
   LIBRARY_SORTS,
-  libraryPage,
+  listItems,
   mergePage,
   nextPageStart,
   LIBRARY_PAGE_SIZE,
@@ -40,14 +45,19 @@ import {
   recentlyAdded,
   seasonCount,
   seasonDetail,
+  SEARCH_SCOPES,
+  searchTerm,
   seasons,
   seriesNextUp,
   seriesPlayTarget,
   similar,
   ticksToSeconds,
   yearRange,
-  type LibraryKind,
+  type Filters,
+  type LibraryQuery,
   type LibrarySort,
+  type SearchScope,
+  type ShowState,
 } from './items';
 
 // Trimmed from the dev servers (dev/jellyfin): Latest for the Shows library.
@@ -609,23 +619,34 @@ describe('series', () => {
 });
 
 describe('library', () => {
-  it('asks for every movie or show the user can see, a page at a time', () => {
-    expect(libraryPage({ kind: 'movies', sort: 'name', unwatched: false }, 0)).toEqual({
+  const browse = (change: Partial<LibraryQuery> = {}): LibraryQuery => ({
+    scope: 'movies',
+    sort: 'name',
+    filters: NO_FILTERS,
+    ...change,
+  });
+
+  it('browses every item of the type across libraries, sorted, a page at a time', () => {
+    expect(listItems(browse())).toEqual({
       path: '/Items',
       query: {
+        searchTerm: undefined,
         includeItemTypes: 'Movie',
         recursive: true,
         sortBy: 'SortName',
         sortOrder: 'Ascending',
         filters: undefined,
-        startIndex: 0,
+        genres: undefined,
+        years: undefined,
+        minCommunityRating: undefined,
+        is4K: undefined,
+        startIndex: undefined,
         limit: LIBRARY_PAGE_SIZE,
       },
     });
-    expect(libraryPage({ kind: 'shows', sort: 'name', unwatched: true }, 50).query).toMatchObject({
+    expect(listItems(browse({ scope: 'shows' }), 50, 100).query).toMatchObject({
       includeItemTypes: 'Series',
-      filters: 'IsUnplayed',
-      startIndex: 50,
+      startIndex: 100,
     });
   });
 
@@ -634,12 +655,27 @@ describe('library', () => {
     ['shows', 'added', 'DateLastContentAdded,SortName', 'Descending'],
     ['movies', 'year', 'ProductionYear,SortName', 'Descending'],
     ['shows', 'rating', 'CommunityRating,SortName', 'Descending'],
-  ] as [LibraryKind, LibrarySort, string, string][])('%s by %s → %s %s', (kind, sort, sortBy, sortOrder) => {
-    expect(libraryPage({ kind, sort, unwatched: false }, 0).query).toMatchObject({ sortBy, sortOrder });
+  ] as [SearchScope, LibrarySort, string, string][])('%s by %s → %s %s', (scope, sort, sortBy, sortOrder) => {
+    expect(listItems(browse({ scope, sort })).query).toMatchObject({ sortBy, sortOrder });
   });
 
-  it('lists the sorts in menu order', () => {
-    expect(LIBRARY_SORTS.map((s) => s.label)).toEqual(['Name', 'Date Added', 'Year', 'Rating']);
+  it('searches with a term: ranked by the server (no sort), episodes included in All', () => {
+    const q = listItems(browse({ term: 'sintel', scope: 'all', sort: 'year' }), 60).query;
+    expect(q).toMatchObject({ searchTerm: 'sintel', includeItemTypes: 'Movie,Series,Episode', limit: 60 });
+    expect(q).not.toHaveProperty('sortBy');
+    // Browsing All lists movies and shows only.
+    expect(listItems(browse({ scope: 'all' })).query?.includeItemTypes).toBe('Movie,Series');
+    expect(listItems(browse({ scope: 'episodes', term: 's' })).query?.includeItemTypes).toBe('Episode');
+  });
+
+  it('adds the filters, and asks for the count only with limit 0', () => {
+    const q = listItems(browse({ filters: { ...NO_FILTERS, genres: ['Animation'], show: 'inProgress' } }), 0).query;
+    expect(q).toMatchObject({ genres: 'Animation', filters: 'IsResumable', limit: 0 });
+  });
+
+  it('lists the sorts and types in menu order', () => {
+    expect(LIBRARY_SORTS.map((x) => x.label)).toEqual(['Name', 'Date Added', 'Year', 'Rating']);
+    expect(SEARCH_SCOPES.map((x) => x.label)).toEqual(['All', 'Movies', 'Shows', 'Episodes']);
   });
 
   it('knows where the next page starts and when everything is loaded', () => {
@@ -653,5 +689,65 @@ describe('library', () => {
     const b = { ...movie, Id: 'b' };
     const c = { ...movie, Id: 'c' };
     expect(mergePage([a, b], [b, c]).map((i) => i.Id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('searches from the first letter, trimmed', () => {
+    expect(searchTerm('  s ')).toBe('s');
+    expect(searchTerm(' si ')).toBe('si');
+    expect(searchTerm('   ')).toBeUndefined();
+  });
+
+  it('groups mixed results, keeping the server order', () => {
+    // Trimmed from the dev servers: episodes come before their show.
+    const groups = groupResults([episode(1), episode(2), series121, movie]);
+    expect(groups.episodes.map((i) => i.Id)).toEqual(['ep-1', 'ep-2']);
+    expect(groups.shows).toEqual([series121]);
+    expect(groups.movies).toEqual([movie]);
+  });
+});
+
+describe('filters', () => {
+  it('sends nothing without filters', () => {
+    expect(Object.values(filterQuery(NO_FILTERS)).filter((v) => v !== undefined)).toEqual([]);
+  });
+
+  it.each([
+    ['unwatched', 'IsUnplayed'],
+    ['inProgress', 'IsResumable'],
+    ['watched', 'IsPlayed'],
+    ['favourites', 'IsFavorite'],
+  ] as [ShowState, string][])('show %s → filters=%s', (show, filter) => {
+    expect(filterQuery({ ...NO_FILTERS, show }).filters).toBe(filter);
+  });
+
+  it('turns genres, decades, rating and 4K into server parameters', () => {
+    const q = filterQuery({
+      show: 'all',
+      genres: ['Animation', 'Fantasy'],
+      decades: [2010],
+      minRating: 7,
+      only4K: true,
+    });
+    expect(q).toMatchObject({
+      genres: 'Animation|Fantasy',
+      years: '2010,2011,2012,2013,2014,2015,2016,2017,2018,2019',
+      minCommunityRating: 7,
+      is4K: true,
+    });
+  });
+
+  it('covers every year before the 1990s with Older', () => {
+    const years = String(filterQuery({ ...NO_FILTERS, decades: [0] }).years).split(',');
+    expect(years[0]).toBe('1900');
+    expect(years.at(-1)).toBe('1989');
+  });
+
+  it('lists active filters as chips and removes them one by one', () => {
+    const f: Filters = { show: 'unwatched', genres: ['Animation'], decades: [2010], minRating: 8, only4K: true };
+    const chips = activeFilters(f);
+    expect(chips.map((c) => c.label)).toEqual(['Unwatched', 'Animation', '2010s', '★ 8+', '4K']);
+    const cleared = chips.reduce<Filters>((acc, c) => removeFilter(acc, c.id), f);
+    expect(cleared).toEqual({ ...NO_FILTERS, minRating: undefined });
+    expect(activeFilters(cleared)).toEqual([]);
   });
 });

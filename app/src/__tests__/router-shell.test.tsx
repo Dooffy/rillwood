@@ -9,7 +9,7 @@ describe('router shell', () => {
     expect(screen.getByRole('button', { name: 'Get started' })).toBeOnTheScreen();
   });
 
-  it.each(['/library', '/search', '/downloads', '/welcome', '/server', '/accounts', '/account', '/settings'])(
+  it.each(['/library', '/downloads', '/welcome', '/server', '/accounts', '/account', '/settings'])(
     'resolves %s',
     async (path) => {
       const result = await renderRouter('./src/app', { initialUrl: path });

@@ -4,10 +4,15 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import * as api from '@/api';
 import { ApiError, type BaseItemDto, type RequestOptions } from '@/api';
-import type { LibraryQuery } from '@/items';
+import { listItems, NO_FILTERS, type LibraryQuery } from '@/items';
 import * as session from '@/session';
 
-import { useLibrary } from './useLibrary';
+import { usePagedItems } from './usePagedItems';
+
+/** Library pages for a query, the way the Library screen builds them. */
+function useLibrary(query: LibraryQuery) {
+  return usePagedItems(JSON.stringify(query), (start) => listItems(query, 50, start));
+}
 
 const server = { id: 'srv', url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' };
 const anna: session.Account = { id: 'srv.a', server, userId: 'a', userName: 'anna', deviceId: 'dev-a' };
@@ -38,7 +43,7 @@ async function release() {
   await act(async () => held.splice(0).forEach((answer) => answer()));
 }
 
-const movies: LibraryQuery = { kind: 'movies', sort: 'name', unwatched: false };
+const movies: LibraryQuery = { scope: 'movies', sort: 'name', filters: NO_FILTERS };
 
 beforeEach(() => {
   request.mockReset();
@@ -54,7 +59,7 @@ beforeEach(() => {
   }));
 });
 
-describe('useLibrary', () => {
+describe('usePagedItems', () => {
   it('loads the first page as the active account', async () => {
     serve(120);
     hold = true;
@@ -104,7 +109,7 @@ describe('useLibrary', () => {
     await waitFor(() => expect(result.current.items).toHaveLength(100));
 
     hold = true;
-    await rerender({ ...movies, unwatched: true });
+    await rerender({ ...movies, filters: { ...NO_FILTERS, show: 'unwatched' } });
     expect(result.current.items).toHaveLength(0);
     await release();
     await waitFor(() => expect(result.current.items).toHaveLength(50));
@@ -116,7 +121,7 @@ describe('useLibrary', () => {
 
     active = ben;
     hold = true;
-    await rerender({ ...movies, unwatched: true });
+    await rerender({ ...movies, filters: { ...NO_FILTERS, show: 'unwatched' } });
     expect(result.current.items).toHaveLength(0);
     await release();
     await waitFor(() => expect(result.current.items).toHaveLength(50));
@@ -254,5 +259,13 @@ describe('useLibrary', () => {
     await act(() => result.current.retry());
     await waitFor(() => expect(result.current.items).toHaveLength(100));
     expect(request).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('usePagedItems without a list', () => {
+  it('stays idle for a null id', async () => {
+    const { result } = await renderHook(() => usePagedItems(null, (start) => listItems(movies, 50, start)));
+    expect(result.current).toMatchObject({ items: [], loading: false, hasMore: false });
+    expect(request).not.toHaveBeenCalled();
   });
 });
