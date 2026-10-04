@@ -7,8 +7,17 @@ import { spacing } from '@/theme';
 
 import { Text } from './Text';
 
+export type ScreenProps = {
+  title: string;
+  /** Next to the title (profile button). */
+  right?: ReactNode;
+  /** false: content runs edge to edge (horizontal rows pad themselves). */
+  padded?: boolean;
+  children?: ReactNode;
+};
+
 /** Screen with its own large title (tabs). Stack screens with a native header use `Page`. */
-export function Screen({ title, right, children }: { title: string; right?: ReactNode; children?: ReactNode }) {
+export function Screen({ title, right, padded = true, children }: ScreenProps) {
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.header}>
@@ -17,7 +26,7 @@ export function Screen({ title, right, children }: { title: string; right?: Reac
         </Text>
         {right}
       </View>
-      <View style={styles.body}>{children}</View>
+      <View style={[styles.body, padded && styles.padded]}>{children}</View>
     </SafeAreaView>
   );
 }
@@ -31,5 +40,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
   },
-  body: { flex: 1, padding: spacing.md, gap: spacing.md },
+  body: { flex: 1 },
+  padded: { padding: spacing.md, gap: spacing.md },
 });

@@ -2,7 +2,7 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import { cardLabel, LandscapeCard, PosterCard } from './Card';
+import { CardPlaceholder, cardLabel, LANDSCAPE_WIDTH, LandscapeCard, POSTER_WIDTH, PosterCard } from './Card';
 
 describe('cardLabel', () => {
   it.each([
@@ -73,5 +73,24 @@ describe('LandscapeCard', () => {
     await render(<LandscapeCard title="Episode 4" onPress={() => {}} />);
     expect(screen.queryByRole('progressbar')).toBeNull();
     expect(screen.queryByTestId('artwork-fade')).toBeNull();
+  });
+});
+
+describe('CardPlaceholder', () => {
+  it.each([
+    ['poster', POSTER_WIDTH],
+    ['landscape', LANDSCAPE_WIDTH],
+  ] as ['poster' | 'landscape', number][])(
+    '%s takes the card width and stays out of VoiceOver',
+    async (shape, width) => {
+      await render(<CardPlaceholder shape={shape} />);
+      expect(screen.queryByTestId('card-placeholder')).toBeNull();
+      expect(screen.getByTestId('card-placeholder', { includeHiddenElements: true })).toHaveStyle({ width });
+    },
+  );
+
+  it('fills its parent for the hero', async () => {
+    await render(<CardPlaceholder shape="landscape" width="100%" />);
+    expect(screen.getByTestId('card-placeholder', { includeHiddenElements: true })).toHaveStyle({ width: '100%' });
   });
 });

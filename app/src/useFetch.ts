@@ -53,20 +53,19 @@ function isFresh(entry: Entry | undefined, ttl: number): entry is Entry {
   return entry !== undefined && Date.now() - entry.at < ttl;
 }
 
+// Mounted hooks per `accountId|path|query`. Lets `invalidate` retry a hook whose request failed - it has no cache
+// entry to mark stale. Account ids have no `|`, so the path starts after the first one.
+const mounted = new Map<string, number>();
+
 /**
  * Marks cached responses whose path starts with `pathPrefix` (all when omitted) stale, for every account. Mounted
- * `useFetch` hooks for those paths refetch and keep showing the old data meanwhile.
+ * `useFetch` hooks for those paths refetch (failed ones too) and keep showing the old data meanwhile.
  */
 export function invalidate(pathPrefix = '') {
-  const stale: string[] = [];
-  for (const [accountId, entries] of cache) {
-    for (const [pathKey, entry] of entries) {
-      if (!pathKey.startsWith(pathPrefix)) continue;
-      entry.at = 0;
-      stale.push(`${accountId}|${pathKey}`);
-    }
+  for (const entries of cache.values()) {
+    for (const [pathKey, entry] of entries) if (pathKey.startsWith(pathPrefix)) entry.at = 0;
   }
-  bump(stale);
+  bump([...mounted.keys()].filter((key) => key.slice(key.indexOf('|') + 1).startsWith(pathPrefix)));
 }
 
 export type FetchOptions = {
@@ -102,6 +101,16 @@ export function useFetch<T>(path: string | null, { query, ttl = DEFAULT_TTL_MS }
   const [settled, setSettled] = useState<{ id: string; error: ApiError | undefined }>();
   const id = `${key}#${version}`;
   const entry = accountId && pathKey !== null ? cache.get(accountId)?.get(pathKey) : undefined;
+
+  useEffect(() => {
+    if (!key) return;
+    mounted.set(key, (mounted.get(key) ?? 0) + 1);
+    return () => {
+      const hooks = (mounted.get(key) ?? 1) - 1;
+      if (hooks > 0) mounted.set(key, hooks);
+      else mounted.delete(key);
+    };
+  }, [key]);
 
   useEffect(() => {
     prune();

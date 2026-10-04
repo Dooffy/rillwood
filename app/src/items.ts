@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Pure item logic: Home requests (path + query for useFetch), DTO → card data, image URLs (docs/context/api.md).
 // Type-only imports, so dev scripts can load this file with plain Node (scripts/check-home.mjs).
-import type { BaseItemDto, Endpoint, ImageType } from '@/api';
+import type { BaseItemDto, Endpoint, ImageType, ItemsResult } from '@/api';
 
 export const TICKS_PER_SECOND = 10_000_000;
 
@@ -23,6 +23,59 @@ export const nextUp: Endpoint = { path: '/Shows/NextUp', query: { limit: ROW_LIM
 /** Recently Added for one library. Answers with a bare array - shape it with `recentlyAdded`. */
 export function latest(parentId: string): Endpoint {
   return { path: '/Items/Latest', query: { parentId, limit: ROW_LIMIT } };
+}
+
+/** Every path Home reads; pull to refresh / Retry invalidate these (Latest is one path for all libraries). */
+export const homePaths = [userViews.path, continueWatching.path, nextUp.path, latest('').path];
+
+/** A `useFetch` result: data once loaded, error once failed (both undefined while loading). */
+type Loaded = { data?: ItemsResult; error?: unknown };
+
+export type HomeLayout = {
+  /** Up Next: the latest started item, else the next episode. Left out of its row. */
+  hero?: BaseItemDto;
+  heroFromResume: boolean;
+  /** No hero yet, but one may come: show its placeholder. */
+  heroPending: boolean;
+  /** Row items without the hero; undefined while loading or failed. */
+  resume?: BaseItemDto[];
+  nextUp?: BaseItemDto[];
+  /** Libraries with a Recently Added row; undefined while loading or failed. */
+  libraries?: BaseItemDto[];
+  /** Views, Resume and Next Up all failed: one error + Retry instead of rows. */
+  allFailed: boolean;
+  /** Everything loaded and empty, Recently Added rows included: the empty message. */
+  empty: boolean;
+};
+
+/** What Home shows from its requests. `latestCounts`: items per library id once its Recently Added row loaded. */
+export function homeLayout(
+  views: Loaded,
+  resume: Loaded,
+  next: Loaded,
+  latestCounts: Record<string, number | undefined>,
+): HomeLayout {
+  const resumeItems = resume.data?.Items;
+  const nextItems = next.data?.Items;
+  const resumeDone = resumeItems !== undefined || resume.error !== undefined;
+  const nextDone = nextItems !== undefined || next.error !== undefined;
+  const heroFromResume = !!resumeItems?.length;
+  const hero = heroFromResume ? resumeItems[0] : resumeDone ? nextItems?.[0] : undefined;
+  const libraries = views.data && homeLibraries(views.data.Items);
+  return {
+    hero,
+    heroFromResume,
+    heroPending: !hero && (!resumeDone || !nextDone),
+    resume: heroFromResume ? resumeItems.slice(1) : resumeItems,
+    nextUp: hero && !heroFromResume ? nextItems?.slice(1) : nextItems,
+    libraries,
+    allFailed: [views, resume, next].every((r) => r.data === undefined && r.error !== undefined),
+    empty:
+      resumeItems?.length === 0 &&
+      nextItems?.length === 0 &&
+      libraries !== undefined &&
+      libraries.every((l) => latestCounts[l.Id] === 0),
+  };
 }
 
 /** Libraries with a Recently Added row, in server order. */

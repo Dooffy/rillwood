@@ -2,7 +2,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { spokenRemaining } from '@/format';
-import { pressedOpacity, spacing } from '@/theme';
+import { pressedOpacity, radii, spacing, type, useColors } from '@/theme';
 
 import { Artwork } from './Artwork';
 import { isInProgress } from './ProgressBar';
@@ -65,17 +65,44 @@ function MediaCard({ aspectRatio, width, ...props }: CardProps & { aspectRatio: 
   );
 }
 
+/** Default card widths in points (image URLs are sized from them). */
+export const POSTER_WIDTH = 120;
+export const LANDSCAPE_WIDTH = 260;
+
 /** 2:3 poster with title + subtitle under it (library grid, Recently Added). */
-export function PosterCard({ width = 120, ...props }: CardProps) {
+export function PosterCard({ width = POSTER_WIDTH, ...props }: CardProps) {
   return <MediaCard {...props} width={width} aspectRatio={2 / 3} />;
 }
 
 /** 16:9 card with the progress bar over the image (Continue Watching, Next Up, episodes). */
-export function LandscapeCard({ width = 260, ...props }: CardProps) {
+export function LandscapeCard({ width = LANDSCAPE_WIDTH, ...props }: CardProps) {
   return <MediaCard {...props} width={width} aspectRatio={16 / 9} />;
+}
+
+/**
+ * Grey card while a row loads: artwork box + two text lines. `width="100%"` for the Home hero. Hidden from VoiceOver
+ * (the row says "Loading").
+ */
+export function CardPlaceholder({ shape, width }: { shape: 'poster' | 'landscape'; width?: number | '100%' }) {
+  const c = useColors();
+  const poster = shape === 'poster';
+  return (
+    <View
+      testID="card-placeholder"
+      importantForAccessibility="no-hide-descendants"
+      accessibilityElementsHidden
+      style={[styles.card, { width: width ?? (poster ? POSTER_WIDTH : LANDSCAPE_WIDTH) }]}
+    >
+      <View style={[styles.placeholderArt, { aspectRatio: poster ? 2 / 3 : 16 / 9, backgroundColor: c.surface }]} />
+      <View style={[styles.placeholderLine, { width: '70%', backgroundColor: c.surface }]} />
+      <View style={[styles.placeholderLine, { width: '40%', backgroundColor: c.surface }]} />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
   card: { gap: spacing.sm },
   pressed: { opacity: pressedOpacity },
+  placeholderArt: { width: '100%', borderRadius: radii.card },
+  placeholderLine: { height: type.caption.fontSize, borderRadius: radii.pill },
 });

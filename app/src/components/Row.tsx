@@ -7,6 +7,9 @@ import { minTouch, pressedOpacity, spacing } from '@/theme';
 import { Chevron } from './List';
 import { Text } from './Text';
 
+/** Space between cards in a row. */
+export const CARD_GAP = spacing.sm + spacing.xs;
+
 export type RowProps = {
   title: string;
   /** Opens the full list; the header gets a chevron. */
@@ -56,5 +59,5 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   pressed: { opacity: pressedOpacity },
-  list: { paddingHorizontal: spacing.md, gap: spacing.sm + spacing.xs },
+  list: { paddingHorizontal: spacing.md, gap: CARD_GAP },
 });

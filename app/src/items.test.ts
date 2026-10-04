@@ -7,7 +7,9 @@ import {
   cardTitles,
   continueWatching,
   episodeCode,
+  homeLayout,
   homeLibraries,
+  homePaths,
   imageUrl,
   landscapeImage,
   latest,
@@ -244,5 +246,49 @@ describe('images', () => {
     expect(imageUrl('https://jf', { itemId: 'i', type: 'Thumb', tag: 't' }, width, scale)).toContain(
       `fillWidth=${pixels}&`,
     );
+  });
+});
+
+describe('homeLayout', () => {
+  const list = (...items: BaseItemDto[]) => ({ data: { Items: items, TotalRecordCount: items.length } });
+  const views = list({ Id: 'lib', Name: 'Movies', Type: 'CollectionFolder', CollectionType: 'movies' });
+  const loading = {};
+  const failed = { error: new Error('offline') };
+  const ep = episode(2);
+
+  it('makes the latest started item the hero and leaves it out of its row', () => {
+    const layout = homeLayout(views, list(movie, episode(1)), list(ep), {});
+    expect(layout).toMatchObject({ hero: movie, heroFromResume: true, heroPending: false, resume: [episode(1)] });
+    expect(layout.nextUp).toEqual([ep]);
+  });
+
+  it('falls back to the next episode, out of Next Up', () => {
+    expect(homeLayout(views, list(), list(ep), {})).toMatchObject({ hero: ep, heroFromResume: false, nextUp: [] });
+  });
+
+  it('waits for Resume before picking Next Up, and for Next Up when Resume is empty or failed', () => {
+    expect(homeLayout(views, loading, list(ep), {})).toMatchObject({ hero: undefined, heroPending: true });
+    expect(homeLayout(views, list(), loading, {})).toMatchObject({ hero: undefined, heroPending: true });
+    expect(homeLayout(views, failed, loading, {})).toMatchObject({ hero: undefined, heroPending: true });
+    expect(homeLayout(views, failed, list(ep), {})).toMatchObject({ hero: ep, heroPending: false });
+    expect(homeLayout(views, list(), list(), {})).toMatchObject({ hero: undefined, heroPending: false });
+  });
+
+  it('is all-failed only when views, Resume and Next Up all failed', () => {
+    expect(homeLayout(failed, failed, failed, {}).allFailed).toBe(true);
+    expect(homeLayout(failed, failed, list(), {}).allFailed).toBe(false);
+    expect(homeLayout(failed, failed, loading, {}).allFailed).toBe(false);
+  });
+
+  it('is empty only once every Recently Added row loaded empty', () => {
+    expect(homeLayout(views, list(), list(), {}).empty).toBe(false);
+    expect(homeLayout(views, list(), list(), { lib: 3 }).empty).toBe(false);
+    expect(homeLayout(views, list(), list(), { lib: 0 }).empty).toBe(true);
+    expect(homeLayout(list(), list(), list(), {}).empty).toBe(true);
+    expect(homeLayout(views, list(movie), list(), { lib: 0 }).empty).toBe(false);
+  });
+
+  it('refreshes every Latest row through one path prefix', () => {
+    expect(homePaths).toEqual(['/UserViews', '/UserItems/Resume', '/Shows/NextUp', '/Items/Latest']);
   });
 });
