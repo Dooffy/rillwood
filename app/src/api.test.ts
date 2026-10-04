@@ -8,6 +8,7 @@ import {
   authenticateWithQuickConnect,
   authHeader,
   findServer,
+  getPlaybackInfo,
   getPublicUsers,
   getQuickConnectEnabled,
   getQuickConnectState,
@@ -348,4 +349,19 @@ describe('user data endpoints', () => {
       expect((init?.headers as Record<string, string>).Authorization).toContain('Token="tok-secret"');
     },
   );
+});
+
+describe('playback endpoints', () => {
+  it('posts the body to PlaybackInfo, header auth', async () => {
+    fetchMock.mockImplementation(() => reply(200, { MediaSources: [], PlaySessionId: 'ps' }));
+    await expect(getPlaybackInfo(conn, 'abc', { MediaSourceId: 'ms1' })).resolves.toEqual({
+      MediaSources: [],
+      PlaySessionId: 'ps',
+    });
+    const { url, init, headers } = lastCall();
+    expect(url).toBe('https://jf.example.com/Items/abc/PlaybackInfo');
+    expect(init.method).toBe('POST');
+    expect(headers.Authorization).toContain('Token="tok-secret"');
+    expect(JSON.parse(String(init.body))).toEqual({ MediaSourceId: 'ms1' });
+  });
 });

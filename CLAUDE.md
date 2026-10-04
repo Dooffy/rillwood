@@ -129,6 +129,7 @@ src/recentSearches.ts    recent search terms per account, in memory for the sess
 src/userData.ts          mark watched / favourite: optimistic cache + paged list patch, server answer, refetch
 src/useUserFlag.ts       mark from a button / menu: failure toast, confirm before unwatching a season / show
 src/detail.ts            detailView: everything the detail screen shows, from one item (pure)
+src/playback.ts          PlaybackInfo → play source (pure): device profile, direct play check, stream + sidecar subtitle URLs
 src/downloads.ts         store, queue, reconcile, cleanup, storage
 src/sync.ts              offline progress queue replay
 src/settings.ts          user settings in kv-store (appearance; downloads + offload later)
