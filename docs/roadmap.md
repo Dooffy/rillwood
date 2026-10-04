@@ -45,10 +45,10 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 
 ## M3 - Browse
 
-- [ ] Home rows + Up Next hero
+- [x] Home rows + Up Next hero
 - [x] Library grid (paging 50, sort, unwatched), Movies/TV segmented
-- [ ] Movie detail (backdrop scrim, chips, Resume/Play, version/audio/sub rows, cast)
-- [ ] Series detail (season picker, episodes with progress + download state)
+- [x] Movie detail (backdrop scrim, chips, Resume/Play, version/audio/sub rows, cast)
+- [x] Series detail (season picker, episodes with progress + download state)
 - [x] Search inside the Library (one tab: browse + search, debounced, type capsules, shared filter sheet + tags, paged one-type lists)
 - [ ] Mark watched / favourite; skeleton, empty, error states
 

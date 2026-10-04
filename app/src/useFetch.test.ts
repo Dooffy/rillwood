@@ -6,7 +6,7 @@ import * as api from '@/api';
 import { ApiError } from '@/api';
 import * as session from '@/session';
 
-import { invalidate, useFetch } from './useFetch';
+import { invalidate, onCacheUpdate, updateCached, useFetch } from './useFetch';
 
 const server = { id: 'srv', url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' };
 const anna: session.Account = { id: 'srv.a', server, userId: 'a', userName: 'anna', deviceId: 'dev-a' };
@@ -292,5 +292,41 @@ describe('useFetch', () => {
     await act(() => next.resolve('next up'));
     expect(b.result.current.data).toBe('next up');
     await b.unmount();
+  });
+});
+
+describe('updateCached', () => {
+  it("rewrites the account's cached responses in place: hooks re-render, nothing refetches", async () => {
+    request.mockReturnValue(Promise.resolve({ n: 1 }) as Promise<never>);
+    const { result } = await renderHook(() => useFetch<{ n: number }>('/Items/patch-me'));
+    await waitFor(() => expect(result.current.data).toEqual({ n: 1 }));
+    await act(() => updateCached('srv.b', () => ({ n: 99 })));
+    expect(result.current.data).toEqual({ n: 1 }); // Another account's cache: untouched.
+    await act(() => updateCached('srv.a', (data) => ((data as { n?: number }).n === 1 ? { n: 2 } : undefined)));
+    expect(result.current).toMatchObject({ data: { n: 2 }, loading: false, error: undefined });
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes each change on to lists outside the cache, even with nothing cached', () => {
+    const listener = jest.fn();
+    const stop = onCacheUpdate(listener);
+    const change = () => undefined;
+    updateCached('srv.nothing-cached', change);
+    stop();
+    updateCached('srv.a', change);
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenCalledWith('srv.nothing-cached', change);
+  });
+
+  it('invalidate starts a new request: a running one may predate a change, so its answer is not kept', async () => {
+    const old = deferred();
+    const fresh = deferred();
+    request.mockReturnValueOnce(old.promise).mockReturnValueOnce(fresh.promise);
+    const { result } = await renderHook(() => useFetch<{ v: number }>('/Items/restarted'));
+    await act(() => invalidate('/Items/restarted'));
+    expect(request).toHaveBeenCalledTimes(2);
+    await act(() => fresh.resolve({ v: 2 }));
+    await act(() => old.resolve({ v: 1 }));
+    expect(result.current.data).toEqual({ v: 2 });
   });
 });

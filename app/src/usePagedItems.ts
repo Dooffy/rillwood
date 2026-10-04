@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Paged item lists for the active account (Library grid / one type's search results): first page on mount, more on demand
 // (docs/context/api.md, Library data). Own hook rather than useFetch: pages accumulate into one list, and a new query
-// or account starts over. Not tied to useFetch's invalidate(): lists refresh on pull to refresh (or a new query).
+// or account starts over. Not tied to useFetch's invalidate(): lists refresh on pull to refresh (or a new query); optimistic
+// `updateCached` changes patch the loaded items.
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 
 import { ApiError, request, type BaseItemDto, type Endpoint, type ItemsResult } from '@/api';
 import { mergePage, nextPageStart } from '@/items';
 import { connectionFor, useSession } from '@/session';
+import { onCacheUpdate } from '@/useFetch';
 
 type PageState = {
   /** `accountId|list id` the state belongs to; anything else is stale. */
@@ -54,6 +56,23 @@ export function usePagedItems(id: string | null, pageAt: (startIndex: number) =>
   const [state, setState] = useState<PageState>(() => empty(key, !!conn));
   const live = state.key === key ? state : empty(key, !!conn);
   const controller = useRef<AbortController | null>(null);
+  // Changes made while a page request runs: its answer may predate them, so they apply to it too.
+  const missed = useRef<((data: unknown) => unknown)[] | null>(null);
+
+  // Optimistic changes (watched / favourite) show in the loaded items at once (no refetch: pages would shift).
+  useEffect(
+    () =>
+      onCacheUpdate((accountId, change) => {
+        missed.current?.push(change);
+        setState((s) => {
+          if (!s.key.startsWith(`${accountId}|`)) return s;
+          // Same shape back: the change patches lists of items.
+          const items = change(s.items) as BaseItemDto[] | undefined;
+          return items ? { ...s, items } : s;
+        });
+      }),
+    [],
+  );
 
   // One request at a time: a new one (new query, refresh) aborts the last.
   const load = (startIndex: number) => {
@@ -62,17 +81,24 @@ export function usePagedItems(id: string | null, pageAt: (startIndex: number) =>
     const ctrl = new AbortController();
     controller.current = ctrl;
     const endpoint = pageAt(startIndex);
+    const changes: ((data: unknown) => unknown)[] = [];
+    missed.current = changes;
     request<ItemsResult>(conn, endpoint.path, { query: endpoint.query, signal: ctrl.signal }).then(
-      (page) =>
+      (page) => {
+        let pageItems = page.Items;
+        for (const change of changes) pageItems = (change(pageItems) as BaseItemDto[] | undefined) ?? pageItems;
+        if (missed.current === changes) missed.current = null;
         setState((s) => ({
           key,
-          items: mergePage(s.key === key && startIndex > 0 ? s.items : [], page.Items),
+          items: mergePage(s.key === key && startIndex > 0 ? s.items : [], pageItems),
           // An empty page means the end, whatever the total says (hidden or removed items): stop asking.
           total: page.Items.length === 0 ? startIndex : page.TotalRecordCount,
           offset: startIndex + page.Items.length,
           loading: false,
-        })),
+        }));
+      },
       (e: unknown) => {
+        if (missed.current === changes) missed.current = null;
         if (e instanceof ApiError && e.kind === 'aborted') return;
         setState((s) => ({
           ...(s.key === key ? s : empty(key)),

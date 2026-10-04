@@ -65,7 +65,39 @@ export function invalidate(pathPrefix = '') {
   for (const entries of cache.values()) {
     for (const [pathKey, entry] of entries) if (pathKey.startsWith(pathPrefix)) entry.at = 0;
   }
-  bump([...mounted.keys()].filter((key) => key.slice(key.indexOf('|') + 1).startsWith(pathPrefix)));
+  restart([...mounted.keys()].filter((key) => key.slice(key.indexOf('|') + 1).startsWith(pathPrefix)));
+}
+
+/** New requests for these keys: a running one may answer from before a change, so it is no longer joined or cached. */
+function restart(keys: string[]) {
+  for (const key of keys) inflight.delete(key);
+  bump(keys);
+}
+
+/**
+ * Rewrites an account's cached responses in place (optimistic updates): `change` returns the new data, or undefined to
+ * leave a response as it is. Hooks on changed responses re-render; freshness is kept, so nothing refetches. Paged
+ * lists (`onCacheUpdate`) get the same change.
+ */
+export function updateCached(accountId: string, change: (data: unknown) => unknown) {
+  const keys: string[] = [];
+  for (const [pathKey, entry] of cache.get(accountId) ?? []) {
+    const next = change(entry.data);
+    if (next === undefined) continue;
+    entry.data = next;
+    keys.push(`${accountId}|${pathKey}`);
+  }
+  bump(keys);
+  cacheListeners.forEach((l) => l(accountId, change));
+}
+
+type CacheListener = (accountId: string, change: (data: unknown) => unknown) => void;
+const cacheListeners = new Set<CacheListener>();
+
+/** Lists that keep their own items outside this cache (paged lists) get every `updateCached` change too. */
+export function onCacheUpdate(listener: CacheListener): () => void {
+  cacheListeners.add(listener);
+  return () => cacheListeners.delete(listener);
 }
 
 export type FetchOptions = {
@@ -129,6 +161,8 @@ export function useFetch<T>(path: string | null, { query, ttl = DEFAULT_TTL_MS }
         ? (Object.fromEntries(JSON.parse(queryKey) as [string, string | number | boolean][]) as Query)
         : undefined;
       const promise = request<unknown>(conn, path, { query: q, signal: controller.signal }).then((data) => {
+        // Superseded by invalidate / refresh: its answer may predate a change.
+        if (inflight.get(key) !== shared) return;
         inflight.delete(key);
         // Signed out meanwhile: don't cache for it.
         if (!connectionFor(account)) return;
@@ -160,7 +194,7 @@ export function useFetch<T>(path: string | null, { query, ttl = DEFAULT_TTL_MS }
     if (!key || !accountId || pathKey === null) return;
     const current = cache.get(accountId)?.get(pathKey);
     if (current) current.at = 0;
-    bump([key]);
+    restart([key]);
   };
 
   const done = settled?.id === id;

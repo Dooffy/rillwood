@@ -27,9 +27,12 @@ import {
   isItemId,
   itemDetail,
   landscapeImage,
+  changedUserData,
   LIBRARY_SORTS,
   listItems,
   mergePage,
+  patchItem,
+  patchResponse,
   nextPageStart,
   LIBRARY_PAGE_SIZE,
   latest,
@@ -749,5 +752,75 @@ describe('filters', () => {
     const cleared = chips.reduce<Filters>((acc, c) => removeFilter(acc, c.id), f);
     expect(cleared).toEqual({ ...NO_FILTERS, minRating: undefined });
     expect(activeFilters(cleared)).toEqual([]);
+  });
+});
+
+describe('user data', () => {
+  const seen = { PlaybackPositionTicks: 6_000_000_000, Played: false, PlayedPercentage: 40, IsFavorite: false };
+  const film: BaseItemDto = { ...movie, Id: 'film', UserData: seen };
+  const season: BaseItemDto = {
+    Id: 'season-1',
+    Name: 'Season 1',
+    Type: 'Season',
+    SeriesId: 'show',
+    UserData: { PlaybackPositionTicks: 0, Played: false, UnplayedItemCount: 3 },
+  };
+  const ep1: BaseItemDto = { ...episode(1), SeasonId: 'season-1', SeriesId: 'show', UserData: seen };
+  const other: BaseItemDto = { ...episode(2), Id: 'other', SeasonId: 'season-2', SeriesId: 'show-2' };
+
+  it('predicts the server: favourite only flips IsFavorite', () => {
+    expect(changedUserData(seen, 'favourite', true)).toEqual({ ...seen, IsFavorite: true });
+  });
+
+  it('predicts the server: watched or unwatched clears the resume point; watched zeroes unplayed counts', () => {
+    expect(changedUserData(seen, 'played', true)).toMatchObject({
+      Played: true,
+      PlaybackPositionTicks: 0,
+      PlayedPercentage: undefined,
+    });
+    expect(changedUserData(seen, 'played', false)).toMatchObject({ Played: false, PlaybackPositionTicks: 0 });
+    expect(changedUserData(season.UserData, 'played', true).UnplayedItemCount).toBe(0);
+    // Unwatched: the count comes with the refetch.
+    expect(changedUserData(season.UserData, 'played', false).UnplayedItemCount).toBe(3);
+    expect(changedUserData(undefined, 'played', true)).toEqual({
+      Played: true,
+      PlaybackPositionTicks: 0,
+      PlayedPercentage: undefined,
+    });
+  });
+
+  it('patches the item, preferring the server answer', () => {
+    expect(patchItem(film, { itemId: 'film', flag: 'played', value: true }).UserData).toMatchObject({
+      Played: true,
+      PlaybackPositionTicks: 0,
+    });
+    const answer = { PlaybackPositionTicks: 0, Played: true, PlayCount: 1 };
+    expect(patchItem(film, { itemId: 'film', flag: 'played', value: true, userData: answer }).UserData).toBe(answer);
+  });
+
+  it('marks what is inside a season or series, but never cascades favourites', () => {
+    expect(patchItem(ep1, { itemId: 'season-1', flag: 'played', value: true }).UserData?.Played).toBe(true);
+    expect(patchItem(ep1, { itemId: 'show', flag: 'played', value: true }).UserData?.Played).toBe(true);
+    expect(patchItem(season, { itemId: 'show', flag: 'played', value: true }).UserData?.UnplayedItemCount).toBe(0);
+    expect(patchItem(ep1, { itemId: 'season-1', flag: 'favourite', value: true })).toBe(ep1);
+    expect(patchItem(other, { itemId: 'season-1', flag: 'played', value: true })).toBe(other);
+  });
+
+  it('patches cached responses of every shape, new objects only where something changed', () => {
+    const change = { itemId: 'film', flag: 'favourite', value: true } as const;
+    const patched = patchResponse({ Items: [other, film], TotalRecordCount: 2 }, change) as {
+      Items: BaseItemDto[];
+      TotalRecordCount: number;
+    };
+    expect(patched.TotalRecordCount).toBe(2);
+    expect(patched.Items[0]).toBe(other);
+    expect(patched.Items[1].UserData?.IsFavorite).toBe(true);
+    expect((patchResponse([film], change) as BaseItemDto[])[0].UserData?.IsFavorite).toBe(true);
+    expect((patchResponse(film, change) as BaseItemDto).UserData?.IsFavorite).toBe(true);
+    // Untouched or not item data → undefined (the cache entry stays as it is).
+    expect(patchResponse({ Items: [other] }, change)).toBeUndefined();
+    expect(patchResponse(other, change)).toBeUndefined();
+    expect(patchResponse({ Version: '12.1.0' }, change)).toBeUndefined();
+    expect(patchResponse(null, change)).toBeUndefined();
   });
 });

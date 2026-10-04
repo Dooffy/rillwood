@@ -126,6 +126,7 @@ src/usePagedItems.ts     paged lists (Library): load more, refresh, retry, reset
 src/usePullToRefresh.ts  RefreshControl state: spinner until loading ends + 500 ms hold (Home, Library)
 src/useDebounced.ts      value once it stops changing (search while typing)
 src/recentSearches.ts    recent search terms per account, in memory for the session
+src/userData.ts          mark watched / favourite: optimistic cache + paged list patch, server answer, refetch
 src/detail.ts            detailView: everything the detail screen shows, from one item (pure)
 src/downloads.ts         store, queue, reconcile, cleanup, storage
 src/sync.ts              offline progress queue replay
@@ -142,7 +143,7 @@ modules/downloads/       own native background downloader (iOS + Android)
 
 | Working on | Read |
 |---|---|
-| `api.ts`, `items.ts`, `session.ts`, `auth.ts`, `useFetch.ts`, `useImage.ts`, `usePagedItems.ts`, auth / accounts, any server call | `docs/context/api.md` - endpoints, auth header, DeviceId, 401/403, tokens |
+| `api.ts`, `items.ts`, `session.ts`, `auth.ts`, `useFetch.ts`, `useImage.ts`, `usePagedItems.ts`, `userData.ts`, auth / accounts, any server call | `docs/context/api.md` - endpoints, auth header, DeviceId, 401/403, tokens |
 | `src/player/`, player screen | `docs/context/player.md` - `PlayerEngine` contract, resume, reporting, engine issues |
 | `modules/mpv/`, player binaries | `docs/context/mpv.md` - binaries, NDK pin, mpv options, logs |
 | `downloads.ts`, `modules/downloads/`, Downloads screen | `docs/context/downloads.md` - native contract, HTTP resume rules, store, offload |

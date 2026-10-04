@@ -8,6 +8,7 @@ import { listItems, NO_FILTERS, type LibraryQuery } from '@/items';
 import * as session from '@/session';
 
 import { usePagedItems } from './usePagedItems';
+import { setUserFlag } from './userData';
 
 /** Library pages for a query, the way the Library screen builds them. */
 function useLibrary(query: LibraryQuery) {
@@ -267,5 +268,33 @@ describe('usePagedItems without a list', () => {
     const { result } = await renderHook(() => usePagedItems(null, (start) => listItems(movies, 50, start)));
     expect(result.current).toMatchObject({ items: [], loading: false, hasMore: false });
     expect(request).not.toHaveBeenCalled();
+  });
+});
+
+describe('usePagedItems and watched / favourite', () => {
+  it('shows a change in the loaded items at once, without refetching', async () => {
+    serve(120);
+    jest.spyOn(session, 'getSession').mockImplementation(() => ({ accounts: [anna, ben], active }));
+    jest.spyOn(api, 'setPlayed').mockResolvedValue({ PlaybackPositionTicks: 0, Played: true });
+    const { result } = await renderHook(() => useLibrary(movies));
+    await waitFor(() => expect(result.current.items).toHaveLength(50));
+    const before = result.current.items;
+    const calls = request.mock.calls.length;
+    await act(() => setUserFlag(item(3), 'played', true).then(() => undefined));
+    expect(result.current.items[3].UserData?.Played).toBe(true);
+    expect(result.current.items[4]).toBe(before[4]);
+    expect(request.mock.calls.length).toBe(calls);
+  });
+
+  it('applies a change made while a page loads to that page too', async () => {
+    serve(120);
+    jest.spyOn(session, 'getSession').mockImplementation(() => ({ accounts: [anna, ben], active }));
+    jest.spyOn(api, 'setPlayed').mockResolvedValue({ PlaybackPositionTicks: 0, Played: true });
+    hold = true;
+    const { result } = await renderHook(() => useLibrary(movies));
+    await act(() => setUserFlag(item(3), 'played', true).then(() => undefined));
+    await release();
+    await waitFor(() => expect(result.current.items).toHaveLength(50));
+    expect(result.current.items[3].UserData?.Played).toBe(true);
   });
 });
