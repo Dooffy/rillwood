@@ -34,6 +34,7 @@ import { playbackInfoBody, playErrorMessage, playSource, type PlaySource } from 
 import { HIDE_AFTER_MS, PULL_CLOSE_DISTANCE, SEEK_STEP, seekTarget, shouldClose } from '@/player/controls';
 import { Player, type PlayerRef } from '@/player/Player';
 import { createProgress } from '@/player/progress';
+import { useReporting } from '@/player/useReporting';
 import { connectionFor, getSession, useSession } from '@/session';
 import { ColorsContext, palettes, radii, spacing } from '@/theme';
 import { useFetch } from '@/useFetch';
@@ -133,6 +134,16 @@ export default function PlayerScreen() {
     return () => clearTimeout(timer);
   }, [shown, playing, paused, scrubbing, screenReader, touched]);
 
+  // Jellyfin sees the session: start once mpv loaded the file, progress every 10 s / pause / seek, stop on leave.
+  const { seeked } = useReporting({
+    accountId,
+    itemId: isItemId(id) ? id : undefined,
+    play: state.status === 'ready' ? state.play : undefined,
+    started: playing,
+    paused,
+    progress,
+  });
+
   const close = () => router.back();
   const retry = () => setAttempt((n) => n + 1);
   const touch = () => setTouched((n) => n + 1);
@@ -140,6 +151,7 @@ export default function PlayerScreen() {
     const to = seekTarget(seconds, progress.get().duration);
     player.current?.seek(to);
     progress.set({ position: to });
+    seeked();
   };
   const seekBy = (delta: number) => seek(progress.get().position + delta);
 
@@ -256,7 +268,6 @@ export default function PlayerScreen() {
             started={playing}
             paused={paused}
             progress={progress}
-            chapters={item?.Chapters}
             onClose={close}
             onTogglePause={() => setPaused((p) => !p)}
             onSeekBy={(delta) => {

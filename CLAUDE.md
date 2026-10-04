@@ -137,8 +137,9 @@ src/sync.ts              offline progress queue replay
 src/settings.ts          user settings in kv-store (appearance; downloads + offload later)
 src/player/Player.tsx    PlayerEngine interface + re-export of active engine
 src/player/mpv.tsx       mpv adapter
-src/player/controls.ts   player controls logic (pure): seek clamp, pull-to-close threshold, scrubber maths, chapter marks
+src/player/controls.ts   player controls logic (pure): seek clamp, pull-to-close threshold, scrubber maths
 src/player/progress.ts   position + duration store outside React state (only the controls re-render)
+src/player/useReporting.ts  Sessions/Playing, Progress (10 s, pause, seek, background), Stopped + refetch
 src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List, StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message, DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing, SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing, PlayerControls, Glass
 src/dev/                 dev-only previews, rendered behind `__DEV__` (never in release)
 modules/mpv/             vendored native module (+ UPSTREAM.md: upstream repo + commit)

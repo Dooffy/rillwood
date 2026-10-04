@@ -2,7 +2,7 @@
 // Player overlay, Apple TV style, on glass (`Glass`): close + title on top, ⟲10 / play-pause / 10⟳ in the middle,
 // scrubber at the bottom. No dimming layer - the glass keeps the controls readable over the video.
 // The screen decides when it shows; before playback starts (loading, error) only the top bar is there.
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, View, type GestureResponderEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,11 +10,10 @@ import { Glass } from '@/components/Glass';
 import { IconButton } from '@/components/IconButton';
 import { clamp01 } from '@/components/ProgressBar';
 import { Text } from '@/components/Text';
-import type { ChapterInfoDto } from '@/api';
 import { formatClock } from '@/format';
-import { chapterMarks, positionAt, SEEK_STEP } from '@/player/controls';
+import { positionAt, SEEK_STEP } from '@/player/controls';
 import { useProgress, type ProgressStore } from '@/player/progress';
-import { backdrop, minTouch, onArtwork, radii, spacing } from '@/theme';
+import { minTouch, onArtwork, radii, spacing } from '@/theme';
 
 export type PlayerControlsProps = {
   title?: string;
@@ -23,8 +22,6 @@ export type PlayerControlsProps = {
   started: boolean;
   paused: boolean;
   progress: ProgressStore;
-  /** The item's chapters; marks on the scrubber once the duration is known. */
-  chapters?: ChapterInfoDto[];
   onClose: () => void;
   onTogglePause: () => void;
   onSeekBy: (seconds: number) => void;
@@ -96,15 +93,13 @@ export function PlayerControls(props: PlayerControlsProps) {
   );
 }
 
-/** Track with chapter ticks; drag or tap to seek, VoiceOver swipes up / down for ±10s. Seeks on release. */
-function Scrubber({ progress, chapters, onSeek, onScrub, onSeekBy }: PlayerControlsProps) {
+/** Track; drag or tap to seek, VoiceOver swipes up / down for ±10s. Seeks on release. */
+function Scrubber({ progress, onSeek, onScrub, onSeekBy }: PlayerControlsProps) {
   const { position, duration } = useProgress(progress);
   const width = useRef(0);
   const [dragging, setDragging] = useState<number | null>(null);
   const shown = dragging ?? position;
   const fraction = clamp01(shown / duration);
-  // Here, where the duration is subscribed: it arrives with the load, often after the item.
-  const marks = useMemo(() => chapterMarks(chapters, duration), [chapters, duration]);
   const at = (e: GestureResponderEvent) => positionAt(e.nativeEvent.locationX, width.current, duration);
   const end = () => {
     setDragging(null);
@@ -141,9 +136,6 @@ function Scrubber({ progress, chapters, onSeek, onScrub, onSeekBy }: PlayerContr
         {/* Children ignore touches, so locationX is always relative to the track. */}
         <View style={styles.bar} pointerEvents="none">
           <View style={[styles.fill, { width: `${fraction * 100}%` }]} />
-          {marks.map((f) => (
-            <View key={f} testID="chapter-mark" style={[styles.mark, { left: `${f * 100}%` }]} />
-          ))}
         </View>
         <View style={[styles.thumb, { left: `${fraction * 100}%` }]} pointerEvents="none" />
       </View>
@@ -181,7 +173,6 @@ const styles = StyleSheet.create({
   track: { height: minTouch, justifyContent: 'center' },
   bar: { height: BAR, borderRadius: radii.pill, backgroundColor: onArtwork.track, overflow: 'hidden' },
   fill: { height: BAR, backgroundColor: onArtwork.fill },
-  mark: { position: 'absolute', top: 0, width: 2, height: BAR, backgroundColor: backdrop },
   thumb: {
     position: 'absolute',
     width: THUMB,

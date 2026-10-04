@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Checks the Home + detail data layer (src/items.ts) against a dev server: rows, Recently Added shaping, time left,
 // detail facts / tracks / cast, series, library paging / sorts / unwatched, search + filters, image URLs, and
-// playback sources (src/playback.ts): every movie + an episode direct plays, stream + sidecar subtitle URLs answer.
+// playback sources (src/playback.ts): every movie + an episode direct plays, stream + sidecar subtitle URLs answer,
+// and playback reporting (Playing / Progress / Stopped bodies) lands as resume point / watched.
 // Sets a resume point on a movie >= 6 min and marks Test Show S01E01 played as the dev user `test`, then restores both.
 // Usage (from app/): npm run check:home [-- --server http://localhost:8097]. Needs dev/jellyfin running.
 // Dev-only credentials - never use them on a real server.
@@ -41,7 +42,7 @@ import {
   userViews,
   yearRange,
 } from '../src/items.ts';
-import { playbackInfoBody, playSource } from '../src/playback.ts';
+import { playbackInfoBody, playbackReport, playSource } from '../src/playback.ts';
 
 const args = process.argv.slice(2);
 const flag = args.indexOf('--server');
@@ -324,6 +325,32 @@ try {
   } else {
     check(false, 'No playable "H264 AAC SRT" movie - run dev/jellyfin/make-test-media.sh');
   }
+  // Reporting (playbackReport): on the movie >= 6 min (resume points need >= 5 min), a session stopped at 2:00 leaves a
+  // resume point; one stopped at 95% marks it watched. `keep` restores it first in finally.
+  await keep(movie.Id);
+  const session = async (stopAt) => {
+    const answer = await call('POST', `/Items/${movie.Id}/PlaybackInfo`, { body: playbackInfoBody() });
+    const result = playSource({ baseUrl: server, token }, movie.Id, answer);
+    if (!result.ok) throw new Error(`${movie.Name}: no direct play (${result.problem})`);
+    const report = (seconds, extra) => ({ body: playbackReport(movie.Id, result.play, seconds, extra) });
+    await call('POST', '/Sessions/Playing', report(0, { IsPaused: false }));
+    await call('POST', '/Sessions/Playing/Progress', report(stopAt, { IsPaused: false, EventName: 'TimeUpdate' }));
+    await call('POST', '/Sessions/Playing/Stopped', report(stopAt));
+    return userData(movie.Id);
+  };
+  await call('DELETE', `/UserPlayedItems/${movie.Id}`);
+  const afterResume = await session(120);
+  check(
+    afterResume.PlaybackPositionTicks === 120 * TICKS_PER_SECOND &&
+      !afterResume.Played &&
+      Boolean(afterResume.LastPlayedDate),
+    `Reporting ${movie.Name}: stopped at 2:00 → resume point ${afterResume.PlaybackPositionTicks / TICKS_PER_SECOND} s, LastPlayedDate set`,
+  );
+  const afterWatched = await session(Math.round((movie.RunTimeTicks / TICKS_PER_SECOND) * 0.95));
+  check(
+    afterWatched.Played && afterWatched.PlaybackPositionTicks === 0,
+    'Reporting: stopped at 95% → watched, no resume',
+  );
 } finally {
   // UserData can't clear LastPlayedDate (null is ignored); marking unplayed resets it, then the old state goes back.
   // Best effort per step: one failure must not leave the other item changed or the session open.
