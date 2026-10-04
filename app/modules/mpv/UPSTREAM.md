@@ -28,13 +28,14 @@ The embedded mpv view (`MpvPlayerView`) with its renderer, engine, PiP, Now Play
 
 ## Local modifications
 
-| File                        | Change                                                                                       |
-| --------------------------- | -------------------------------------------------------------------------------------------- |
-| `expo-module.config.json`   | Register `MpvPlayerModule` only (no `NativePlayerModule`)                                    |
-| `index.ts`                  | Drop `NativePlayerPresentation` exports                                                      |
-| `android/build.gradle`      | Drop Compose plugin + Compose, Media3, FFmpeg decoder, TV deps. Keep `dev.jdtech.mpv:libmpv` |
-| `src/MpvPlayerView.web.tsx` | Drop `react-i18next`, static iframe title                                                    |
-| `src/MpvPlayerView.tsx`     | Drop `console.log` in PiP methods (CLAUDE.md §10)                                            |
+| File                         | Change                                                                                                                      |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `expo-module.config.json`    | Register `MpvPlayerModule` only (no `NativePlayerModule`)                                                                   |
+| `index.ts`                   | Drop `NativePlayerPresentation` exports                                                                                     |
+| `android/build.gradle`       | Drop Compose plugin + Compose, Media3, FFmpeg decoder, TV deps. Keep `dev.jdtech.mpv:libmpv`                                |
+| `src/MpvPlayerView.web.tsx`  | Drop `react-i18next`, static iframe title                                                                                   |
+| `src/MpvPlayerView.tsx`      | Drop `console.log` in PiP methods (CLAUDE.md §10)                                                                           |
+| `ios/MPVLayerRenderer.swift` | `stop()` keeps the display layer alive until `mpv_terminate_destroy` returns (I14: use-after-free in `render_osd` on Close) |
 
 Vendored files are excluded from Prettier (`app/.prettierignore`) to stay diffable against upstream.
 

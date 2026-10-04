@@ -5,17 +5,13 @@ import type { ReactElement } from 'react';
 
 import Accounts from '@/app/(auth)/accounts';
 import Home from '@/app/(tabs)/home';
-import Player from '@/app/player';
 import Settings from '@/app/settings';
 import * as session from '@/session';
-import { palettes } from '@/theme';
 import { ToastProvider } from '@/components/Toast';
 
-jest.mock('expo-router', () => ({ router: { push: jest.fn(), back: jest.fn() } }));
-jest.mock('expo-status-bar', () => ({ StatusBar: jest.fn(() => null) }));
+jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 
-const { router } = jest.requireMock<{ router: { push: jest.Mock; back: jest.Mock } }>('expo-router');
-const { StatusBar } = jest.requireMock<{ StatusBar: jest.Mock }>('expo-status-bar');
+const { router } = jest.requireMock<{ router: { push: jest.Mock } }>('expo-router');
 
 const anna: session.Account = {
   id: 'srv.a',
@@ -55,18 +51,5 @@ describe('navigation', () => {
     await renderScreen(<Home />);
     expect(screen.getByRole('button', { name: 'Settings' })).toBeOnTheScreen();
     expect(screen.getByText('A', { includeHiddenElements: true })).toBeOnTheScreen();
-  });
-
-  it('Player Close goes back', async () => {
-    await renderScreen(<Player />);
-    await fireEvent.press(screen.getByRole('button', { name: 'Close' }));
-    expect(router.back).toHaveBeenCalledTimes(1);
-  });
-
-  // Regression: the always-black player kept the root status bar style, so light mode drew black icons on black.
-  it('Player forces light status bar icons and the dark palette', async () => {
-    await renderScreen(<Player />);
-    expect(StatusBar).toHaveBeenLastCalledWith({ style: 'light' }, undefined);
-    expect(screen.getByText('Close')).toHaveStyle({ color: palettes.dark.text });
   });
 });

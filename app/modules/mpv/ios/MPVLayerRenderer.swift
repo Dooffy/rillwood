@@ -578,12 +578,22 @@ final class MPVLayerRenderer {
             // (stop() may run from deinit). Ordering on the serial queue
             // guarantees the drain runs after any still-pending client calls
             // against this handle, and terminate runs after the drain.
+            //
+            // Rillwood: mpv holds the display layer only as an unretained
+            // `wid` pointer, and its vo thread keeps drawing (render_osd)
+            // until mpv_terminate_destroy returns. Keep the layer alive until
+            // then, or closing the player frees it under the vo thread
+            // (crash: `-[... bounds]: unrecognized selector` in render_osd).
+            // One explicit retain, released on main (closure captures could
+            // drop the last reference on a background thread).
+            let layer = Unmanaged.passRetained(displayLayer)
             queue.async {
                 Self.quitAndDrain(handle)
                 // mpv_terminate_destroy may need the main thread for
                 // AVFoundation cleanup, so keep it off this queue too.
                 DispatchQueue.global(qos: .userInitiated).async {
                     mpv_terminate_destroy(handle)
+                    DispatchQueue.main.async { layer.release() }
                 }
             }
         }

@@ -57,17 +57,20 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 ## M4 - Playback
 
 - [x] PlaybackInfo (profile per `docs/context/api.md`, check `SupportsDirectPlay`) → media source → static URL; external subs URL built in the client
-- [ ] Player UI: landscape, ±10s, scrubber with chapters, auto-hide, gestures
+- [x] Player screen: PlaybackInfo → `PlayerEngine` (mpv adapter), loading / error + Retry, Close
+- [ ] Player UI (Apple TV style, one PR): no permanent chrome - tap shows / hides the controls overlay (auto-hide ~3 s); overlay = close (chevron-down, also for VoiceOver), title, tracks / speed, ⟲10 / play-pause / 10⟳, scrubber with chapters; pull down to close (gesture-handler + reanimated, springs back under the threshold); double-tap left / right = ±10s; no brightness / volume swipes; landscape
 - [ ] Orientation: `app.json` `orientation` → `default`, lock non-player screens to portrait (needs `expo-screen-orientation` - approve in `CLAUDE.md` §2)
-- [ ] Tracks sheet (audio, subs incl. external, speed, sub size/offset)
+- [ ] Investigate PiP when the app goes to the background (`docs/open-items.md`): decide MVP or post-MVP
+- [ ] Tracks sheet (audio, subs incl. external, speed, sub size/offset); start with the server defaults (`playSource` `defaultAudio` / `defaultSubtitle` → mpv ids) - without an initial subtitle id iOS starts with subs off
 - [ ] Resume prompt when the item has a resume point (server keeps 5-90%, items ≥ 5 min only)
 - [ ] Reporting start/progress/stop with PlaySessionId
 - [ ] Autoplay next + up-next overlay (last 30s); remember audio/sub language per user
 - [ ] Player fixes from the M0 spike (`docs/test-plans/mpv.md`):
   - I2 iOS hwdec lost in background: `vid=no` on scene background, `vid=auto` on foreground (keep bounded decoder reset as fallback); pause or keep audio per `docs/open-items.md` decision
-  - I3 stale first progress: gate progress on the current load generation
-  - I4 same URL ignored: `PlayerEngine` does `seek(0)` + `play()` (or a load id)
+  - [x] I3 stale first progress: gate progress on the current load generation (`src/player/mpv.tsx`)
+  - [x] I4 same URL ignored: `PlayerEngine` does `seek(0)` + `play()` (or a load id)
   - I6 iOS subtitle fonts: bundle Noto (Latin, Arabic, Hebrew; CJK per `docs/open-items.md`) via `expo-font` `ios.fonts`, OFL-1.1 in `THIRD_PARTY_NOTICES.md`
+  - I15 no error event for a failed open: emit `onError` on `END_FILE` reason error (both platforms, with I8); drop the 30 s JS load timeout once it lands
   - I8 no EOF event: `onPlaybackEnd` view event on both platforms, unify `keep-open` first, ignore stale EOF from the previous file, don't gate auto-advance on `isPlaying`
 - [ ] mpv options on both platforms (I11): `network-timeout=15`, `stream-lavf-o=reconnect=1,reconnect_on_network_error=1,reconnect_delay_max=30` (~26 s window - a lower max shortens it; mpv default today ~11 s); `PlayerEngine` reloads at the saved position when EOF arrives with position < duration (with I8). Demuxer caps (`demuxer-max-bytes` 64-100 MiB, `demuxer-max-back-bytes` 32 MiB) for 4K remux memory
 - [ ] I13: mpv verbose log prints the auth header - lower mpv log level or redact `Token=` in the module's log forwarding
