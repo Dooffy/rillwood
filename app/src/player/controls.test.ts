@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from '@jest/globals';
 
-import { chapterMarks, positionAt, seekTarget, shouldClose } from './controls';
+import { positionAt, seekTarget, shouldClose } from './controls';
 import { createProgress } from './progress';
 
 describe('shouldClose', () => {
@@ -30,15 +30,6 @@ describe('positionAt', () => {
     expect(positionAt(-20, 300, 9000)).toBe(0);
     expect(positionAt(400, 300, 9000)).toBe(9000);
     expect(positionAt(150, 0, 9000)).toBe(0);
-  });
-});
-
-describe('chapterMarks', () => {
-  it('fractions inside the track, start and end left out', () => {
-    const ticks = (s: number) => ({ StartPositionTicks: s * 10_000_000 });
-    expect(chapterMarks([ticks(0), ticks(250), ticks(500), ticks(1000)], 1000)).toEqual([0.25, 0.5]);
-    expect(chapterMarks(undefined, 1000)).toEqual([]);
-    expect(chapterMarks([ticks(250)], 0)).toEqual([]);
   });
 });
 

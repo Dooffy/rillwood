@@ -252,12 +252,6 @@ export type PlaybackInfoResponse = {
   ErrorCode?: string;
 };
 
-/** Chapter marker of a video (`/Items/{id}`). */
-export type ChapterInfoDto = {
-  StartPositionTicks: number;
-  Name?: string;
-};
-
 /** Cast / crew entry of an item. */
 export type PersonDto = {
   Id: string;
@@ -314,7 +308,6 @@ export type BaseItemDto = {
   CommunityRating?: number;
   MediaSources?: MediaSourceDto[];
   People?: PersonDto[];
-  Chapters?: ChapterInfoDto[];
 };
 
 /** Paged list. `/Items/Latest` is the exception: a bare array. */
@@ -394,6 +387,37 @@ export function getPlaybackInfo(conn: Connection, itemId: string, body: unknown,
     body,
     signal,
   });
+}
+
+/**
+ * `Sessions/Playing*` body (PlaybackStartInfo / PlaybackProgressInfo / PlaybackStopInfo - only the fields we send).
+ * Resume rules apply on every report: < 5% → position 0, ≥ 90% → Played (docs/research/jellyfin-api.md §4).
+ */
+export type PlaybackReport = {
+  ItemId: string;
+  MediaSourceId: string;
+  PlaySessionId?: string;
+  PositionTicks: number;
+  PlayMethod: 'DirectPlay';
+  CanSeek: boolean;
+  IsPaused?: boolean;
+  /** Progress only: `TimeUpdate`, `Pause`, `Unpause`. */
+  EventName?: 'TimeUpdate' | 'Pause' | 'Unpause';
+};
+
+/** Session start: sets LastPlayedDate + PlayCount (only here). 204. */
+export function reportPlaybackStart(conn: Connection, report: PlaybackReport) {
+  return request<void>(conn, '/Sessions/Playing', { method: 'POST', body: report });
+}
+
+/** Position update (every 10 s, pause / unpause, seek). 204. */
+export function reportPlaybackProgress(conn: Connection, report: PlaybackReport) {
+  return request<void>(conn, '/Sessions/Playing/Progress', { method: 'POST', body: report });
+}
+
+/** Session end with the final position. 204. */
+export function reportPlaybackStopped(conn: Connection, report: PlaybackReport) {
+  return request<void>(conn, '/Sessions/Playing/Stopped', { method: 'POST', body: report });
 }
 
 /** Revokes the token server-side (401 afterwards). A 401 here (token already dead) is not a sign-out event. */

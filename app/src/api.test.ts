@@ -15,6 +15,9 @@ import {
   initiateQuickConnect,
   isOffline,
   logout,
+  reportPlaybackProgress,
+  reportPlaybackStart,
+  reportPlaybackStopped,
   onUnauthorized,
   request,
   setFavourite,
@@ -363,5 +366,30 @@ describe('playback endpoints', () => {
     expect(init.method).toBe('POST');
     expect(headers.Authorization).toContain('Token="tok-secret"');
     expect(JSON.parse(String(init.body))).toEqual({ MediaSourceId: 'ms1' });
+  });
+});
+
+describe('playback reporting endpoints', () => {
+  const report = {
+    ItemId: 'i',
+    MediaSourceId: 'ms',
+    PlaySessionId: 'ps',
+    PositionTicks: 1_200_000_000,
+    PlayMethod: 'DirectPlay',
+    CanSeek: true,
+  } as const;
+
+  it.each([
+    [reportPlaybackStart, '/Sessions/Playing'],
+    [reportPlaybackProgress, '/Sessions/Playing/Progress'],
+    [reportPlaybackStopped, '/Sessions/Playing/Stopped'],
+  ])('%#: POST %s with the report, header auth', async (call, path) => {
+    fetchMock.mockImplementation(() => reply(204));
+    await expect(call(conn, report)).resolves.toBeUndefined();
+    const { url, init, headers } = lastCall();
+    expect(url).toBe(`https://jf.example.com${path}`);
+    expect(init.method).toBe('POST');
+    expect(headers.Authorization).toContain('Token="tok-secret"');
+    expect(JSON.parse(String(init.body))).toEqual(report);
   });
 });

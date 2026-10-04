@@ -51,17 +51,12 @@ const source: MediaSourceDto = {
   MediaStreams: [{ Type: 'Subtitle', Index: 2, Codec: 'subrip', IsExternal: true, Language: 'ger' }],
 };
 const request = jest.spyOn(api, 'getPlaybackInfo');
-// Title + chapters come from the item (useFetch → api.request).
+// The title comes from the item (useFetch → api.request).
 const movie: BaseItemDto = {
   Id: ID,
   Name: 'Sintel',
   Type: 'Movie',
   ProductionYear: 2010,
-  Chapters: [
-    { StartPositionTicks: 0 },
-    { StartPositionTicks: 3000 * 10_000_000 },
-    { StartPositionTicks: 6000 * 10_000_000 },
-  ],
 };
 const itemRequest = jest.spyOn(api, 'request');
 let reply: () => Promise<PlaybackInfoResponse | undefined>;
@@ -84,6 +79,10 @@ beforeEach(() => {
   itemRequest.mockImplementation(() => Promise.resolve(movie) as Promise<never>);
   jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(false);
 });
+// Reporting is tested on its own (src/player/useReporting.test.ts); here only that the screen drives it.
+const started = jest.spyOn(api, 'reportPlaybackStart').mockResolvedValue();
+const progressed = jest.spyOn(api, 'reportPlaybackProgress').mockResolvedValue();
+const stopped = jest.spyOn(api, 'reportPlaybackStopped').mockResolvedValue();
 
 /** Renders, lets mpv report the load (duration 888 s) and a position. */
 async function renderPlaying(position = 100) {
@@ -284,7 +283,7 @@ describe('Player screen', () => {
     expect(mockSeek).toHaveBeenLastCalledWith(100);
   });
 
-  it('scrubber: drag and release seeks to that point; chapter marks inside the track', async () => {
+  it('scrubber: drag and release seeks to that point', async () => {
     await renderPlaying(0);
     const scrubber = screen.getByTestId('scrubber');
     await fireEvent(scrubber, 'layout', { nativeEvent: { layout: { width: 300 } } });
@@ -294,7 +293,6 @@ describe('Player screen', () => {
     expect(mockSeek).not.toHaveBeenCalled();
     await fireEvent(scrubber, 'responderRelease', { nativeEvent: { locationX: 150 } });
     expect(mockSeek).toHaveBeenLastCalledWith(4500);
-    expect(screen.getAllByTestId('chapter-mark', { includeHiddenElements: true })).toHaveLength(2);
   });
 
   it('scrubber with VoiceOver: swipe up / down = ±10 s', async () => {
@@ -346,5 +344,23 @@ describe('Player screen', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
     await act(() => lastPlayer().onLoad?.({ duration: 9000, audio: [], subs: [] }));
     expect(screen.getByRole('button', { name: 'Pause' })).toBeOnTheScreen();
+  });
+
+  it('reports the session: start once loaded, progress on seek, stopped on leave', async () => {
+    const { unmount } = await render(<PlayerScreen />);
+    expect(started).not.toHaveBeenCalled();
+    await act(() => lastPlayer().onLoad?.({ duration: 9000, audio: [], subs: [] }));
+    expect(started).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ ItemId: ID, MediaSourceId: 'ms', PlaySessionId: 'ps', PositionTicks: 400_000_000 }),
+    );
+    await act(() => lastPlayer().onProgress?.({ position: 100, duration: 9000 }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Forward 10 seconds' }));
+    expect(progressed).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ PositionTicks: 1_100_000_000 }),
+    );
+    await unmount();
+    expect(stopped).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ PositionTicks: 1_100_000_000 }));
   });
 });

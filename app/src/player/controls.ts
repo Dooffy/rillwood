@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Player controls logic (pure): seek steps, pull-down to close, scrubber maths, chapter marks.
-import type { ChapterInfoDto } from '@/api';
-import { ticksToSeconds } from '@/items';
+// Player controls logic (pure): seek steps, pull-down to close, scrubber maths.
 
 export const SEEK_STEP = 10;
 /** Controls hide after this long without a touch (not while paused, scrubbing or with VoiceOver on). */
@@ -27,10 +25,4 @@ export function seekTarget(seconds: number, duration: number): number {
 export function positionAt(x: number, width: number, duration: number): number {
   if (width <= 0 || duration <= 0) return 0;
   return Math.min(Math.max(x / width, 0), 1) * duration;
-}
-
-/** Chapter starts as fractions of the duration, inside the track (0 and the end left out). */
-export function chapterMarks(chapters: ChapterInfoDto[] | undefined, duration: number): number[] {
-  if (!chapters || duration <= 0) return [];
-  return chapters.map((c) => ticksToSeconds(c.StartPositionTicks) / duration).filter((f) => f > 0 && f < 1);
 }

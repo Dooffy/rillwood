@@ -2,7 +2,7 @@
 // PlaybackInfo → what the player loads (docs/context/player.md): the media source, its static stream URL and the
 // sidecar subtitle URLs. URLs are built here, never taken from the server (`DeliveryUrl` carries `ApiKey=<token>`).
 // Pure (type-only imports), so `npm run check:home` loads it with plain Node.
-import type { ApiError, Connection, MediaSourceDto, MediaStreamDto, PlaybackInfoResponse } from '@/api';
+import type { ApiError, Connection, MediaSourceDto, MediaStreamDto, PlaybackInfoResponse, PlaybackReport } from '@/api';
 
 // Sidecar text formats the server converts (srt / subrip / vtt / ass checked on 10.11 + 12.1). ASS keeps its styling.
 const SUB_EXTENSION: Record<string, string> = {
@@ -119,6 +119,27 @@ export function playSource(
       defaultAudio: source.DefaultAudioStreamIndex,
       defaultSubtitle: source.DefaultSubtitleStreamIndex,
     },
+  };
+}
+
+// Local copy: this module stays importable by plain Node (`npm run check:home`), so no runtime `@/` imports.
+const TICKS_PER_SECOND = 10_000_000;
+
+/** `Sessions/Playing*` body for `play` at `seconds` (direct play, seekable). */
+export function playbackReport(
+  itemId: string,
+  play: Pick<PlaySource, 'mediaSourceId' | 'playSessionId'>,
+  seconds: number,
+  extra: Pick<PlaybackReport, 'IsPaused' | 'EventName'> = {},
+): PlaybackReport {
+  return {
+    ItemId: itemId,
+    MediaSourceId: play.mediaSourceId,
+    PlaySessionId: play.playSessionId,
+    PositionTicks: Math.round(Math.max(seconds, 0) * TICKS_PER_SECOND),
+    PlayMethod: 'DirectPlay',
+    CanSeek: true,
+    ...extra,
   };
 }
 

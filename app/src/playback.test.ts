@@ -5,6 +5,7 @@ import { ApiError, type Connection, type MediaSourceDto, type PlaybackInfoRespon
 import {
   externalSubs,
   playbackInfoBody,
+  playbackReport,
   playErrorMessage,
   playSource,
   streamUrl,
@@ -150,5 +151,22 @@ describe('playErrorMessage', () => {
     [new ApiError('http', 500), /Couldn't start playback/],
   ] as [PlayProblem | ApiError, RegExp][])('%s', (error, text) => {
     expect(playErrorMessage(error)).toMatch(text);
+  });
+});
+
+describe('playbackReport', () => {
+  const play = { mediaSourceId: 'ms', playSessionId: 'ps' };
+
+  it('direct play body with ticks, ids and the extra fields', () => {
+    expect(playbackReport('i', play, 12.34, { IsPaused: true })).toEqual({
+      ItemId: 'i',
+      MediaSourceId: 'ms',
+      PlaySessionId: 'ps',
+      PositionTicks: 123_400_000,
+      PlayMethod: 'DirectPlay',
+      CanSeek: true,
+      IsPaused: true,
+    });
+    expect(playbackReport('i', play, -3).PositionTicks).toBe(0);
   });
 });
