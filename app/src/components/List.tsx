@@ -52,7 +52,9 @@ export function ListRow({ label, value, dot, onPress }: ListRowProps) {
       {value !== undefined && (
         <View style={styles.value}>
           {dot && <View style={[styles.dot, { backgroundColor: dot === 'active' ? c.success : c.elevated2 }]} />}
-          <Text secondary={dot !== 'active'}>{value}</Text>
+          <Text secondary={dot !== 'active'} numberOfLines={1} style={styles.valueText}>
+            {value}
+          </Text>
         </View>
       )}
       {onPress && <Chevron />}
@@ -86,7 +88,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + spacing.xs,
   },
-  label: { flex: 1 },
-  value: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2 },
+  // Both shrink: a long value truncates to one line, a long label (user name) wraps.
+  label: { flexGrow: 1, flexShrink: 1 },
+  value: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2, flexShrink: 1 },
+  valueText: { flexShrink: 1 },
   dot: { width: 8, height: 8, borderRadius: radii.pill },
 });

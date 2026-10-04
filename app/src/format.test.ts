@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from '@jest/globals';
 
-import { formatRemaining, spokenRemaining } from './format';
+import { formatEndsAt, formatRemaining, spokenRemaining } from './format';
 
 describe('formatRemaining / spokenRemaining', () => {
   it.each([
@@ -19,5 +19,17 @@ describe('formatRemaining / spokenRemaining', () => {
   it.each([0, -5, Number.NaN, Number.POSITIVE_INFINITY])('is undefined for %p', (seconds) => {
     expect(formatRemaining(seconds)).toBeUndefined();
     expect(spokenRemaining(seconds)).toBeUndefined();
+  });
+});
+
+describe('formatEndsAt', () => {
+  it('adds the seconds to now, in the local clock format', () => {
+    const now = new Date(2026, 9, 4, 21, 0);
+    const expected = new Date(2026, 9, 4, 21, 45).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    expect(formatEndsAt(45 * 60, now)).toBe(`Ends at ${expected}`);
+  });
+
+  it.each([0, -5, Number.NaN])('is undefined for %p', (seconds) => {
+    expect(formatEndsAt(seconds)).toBeUndefined();
   });
 });

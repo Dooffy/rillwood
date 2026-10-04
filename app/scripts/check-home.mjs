@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Checks the Home data layer (src/items.ts) against a dev server: rows, Recently Added shaping, time left, image URLs.
+// Checks the Home + detail data layer (src/items.ts) against a dev server: rows, Recently Added shaping, time left,
+// detail facts / tracks / cast, image URLs.
 // Sets a resume point on a movie >= 6 min and marks Test Show S01E01 played as the dev user `test`, then restores both.
 // Usage (from app/): npm run check:home [-- --server http://localhost:8097]. Needs dev/jellyfin running.
 // Dev-only credentials - never use them on a real server.
 import {
+  castAndCrew,
   continueWatching,
+  detailFacts,
+  itemDetail,
+  mediaRows,
   homeLibraries,
   imageUrl,
   latest,
@@ -119,6 +124,15 @@ try {
   check(
     next[0]?.Id === episodes[1].Id && titles.subtitle.startsWith('S1:E2'),
     `Next Up: ${titles ? `${titles.title} / ${titles.subtitle}` : 'empty'}`,
+  );
+
+  // Detail: the movie's facts, default tracks and cast from /Items/{id}.
+  const detail = await get(itemDetail(movie.Id));
+  const facts = detailFacts(detail);
+  const rows = mediaRows(detail.MediaSources?.[0]);
+  check(
+    facts.runtimeSeconds > 0 && facts.resolution !== undefined && rows.video !== undefined && rows.audio !== undefined,
+    `Detail ${detail.Name}: ${Object.values(facts).filter(Boolean).join(', ')}; audio "${rows.audio?.value}" (${rows.audio?.count}), subtitles "${rows.subtitles?.value ?? 'none'}" (${rows.subtitles?.count ?? 0}), ${castAndCrew(detail.People).length} cast & crew`,
   );
 
   // Images: no auth, long cache via the tag.

@@ -1,19 +1,29 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from '@jest/globals';
 
-import type { BaseItemDto } from './api';
+import type { BaseItemDto, MediaStreamDto } from './api';
 import {
   backdropImage,
   cardTitles,
+  castAndCrew,
+  detailFacts,
+  detailSubtitle,
   continueWatching,
   episodeCode,
   homeLayout,
   homeLibraries,
   homePaths,
   imageUrl,
+  isItemId,
+  itemDetail,
   landscapeImage,
   latest,
+  logoImage,
+  mediaRows,
   nextUp,
+  PEOPLE_LIMIT,
+  personImage,
+  personRole,
   playback,
   posterImage,
   recentlyAdded,
@@ -146,6 +156,7 @@ describe('playback', () => {
     expect(state.played).toBe(false);
     expect(state.progress).toBeCloseTo(120 / 878.9);
     expect(state.remainingSeconds).toBeCloseTo(758.9);
+    expect(state.resumeSeconds).toBe(120);
   });
 
   it('shows played items as watched without a bar', () => {
@@ -164,7 +175,7 @@ describe('playback', () => {
 
   it('clamps a position past the runtime', () => {
     const state = playback({ ...movie, UserData: { PlaybackPositionTicks: 9_000_000_000, Played: false } });
-    expect(state).toEqual({ progress: 1, remainingSeconds: 0, played: false });
+    expect(state).toEqual({ progress: 1, resumeSeconds: 900, remainingSeconds: 0, played: false });
   });
 });
 
@@ -290,5 +301,195 @@ describe('homeLayout', () => {
 
   it('refreshes every Latest row through one path prefix', () => {
     expect(homePaths).toEqual(['/UserViews', '/UserItems/Resume', '/Shows/NextUp', '/Items/Latest']);
+  });
+});
+
+// Trimmed from the dev servers: Sintel (Real library) and Multi Audio Multi Subs.
+const video4k: MediaStreamDto = {
+  Type: 'Video',
+  Index: 0,
+  Codec: 'h264',
+  DisplayTitle: '4K H264 SDR',
+  Width: 4096,
+  Height: 1744,
+  VideoRange: 'SDR',
+  VideoRangeType: 'SDR',
+};
+const ac3: MediaStreamDto = {
+  Type: 'Audio',
+  Index: 1,
+  Codec: 'ac3',
+  Language: 'eng',
+  DisplayTitle: 'AC3 5.1 @ 640 Kbps - English - Dolby Digital - Default',
+  IsDefault: true,
+  Channels: 6,
+};
+const deu: MediaStreamDto = {
+  Type: 'Subtitle',
+  Index: 2,
+  Codec: 'subrip',
+  Language: 'deu',
+  DisplayTitle: 'German - Default - SUBRIP',
+  IsDefault: true,
+};
+const eng: MediaStreamDto = {
+  Type: 'Subtitle',
+  Index: 3,
+  Codec: 'subrip',
+  Language: 'eng',
+  DisplayTitle: 'English - SUBRIP',
+};
+const sintelDetail: BaseItemDto = {
+  ...movie,
+  OfficialRating: 'PG',
+  CommunityRating: 7.3,
+  MediaSources: [{ Id: 'movie-1', Name: 'Sintel (2010)', MediaStreams: [video4k, ac3, deu, eng] }],
+};
+
+describe('detail', () => {
+  it('asks for the item by id, encoded', () => {
+    expect(itemDetail('abc')).toEqual({ path: '/Items/abc' });
+    expect(itemDetail('a/b').path).toBe('/Items/a%2Fb');
+  });
+
+  it.each([
+    ['ecdda3284954ff60759e87e5ddb37fb8', true],
+    ['', false],
+    ['00000000-0000-0000-0000-000000000000', false],
+    [undefined, false],
+    [['a', 'b'], false],
+  ])('isItemId(%p) → %p', (id, valid) => {
+    expect(isItemId(id)).toBe(valid);
+  });
+
+  it('collects the chip facts from the item and its first source', () => {
+    expect(detailFacts(sintelDetail)).toEqual({
+      year: 2010,
+      runtimeSeconds: 878.9,
+      rating: 'PG',
+      score: '7.3',
+      resolution: '4K',
+      hdr: undefined,
+      audio: '5.1',
+      atmos: undefined,
+      subtitles: 'CC',
+    });
+  });
+
+  it('flags Atmos audio and SDH subtitles', () => {
+    const streams = [video4k, { ...ac3, Profile: 'TrueHD + Atmos' }, { ...eng, IsHearingImpaired: true }];
+    expect(detailFacts({ ...movie, MediaSources: [{ Id: 's', MediaStreams: streams }] })).toMatchObject({
+      atmos: 'Dolby Atmos',
+      subtitles: 'SDH',
+    });
+  });
+
+  it.each([
+    [{ Width: 1920, Height: 800 }, '1080p'],
+    [{ Width: 1280, Height: 720 }, '720p'],
+    [{ Width: 720, Height: 480 }, 'SD'],
+    [{ Width: 3840, Height: 2160 }, '4K'],
+  ])('resolution of %j is %s', (size, label) => {
+    const item = { ...movie, MediaSources: [{ Id: 's', MediaStreams: [{ Type: 'Video', Index: 0, ...size }] }] };
+    expect(detailFacts(item).resolution).toBe(label);
+  });
+
+  it.each([
+    ['DOVIWithHDR10', 'HDR', 'Dolby Vision'],
+    ['HDR10Plus', 'HDR', 'HDR10+'],
+    ['HDR10', 'HDR', 'HDR10'],
+    ['HLG', 'HDR', 'HLG'],
+    ['Unknown', 'HDR', 'HDR'],
+    ['DOVIInvalid', 'HDR', 'HDR'],
+    ['DOVIInvalid', 'SDR', undefined],
+    ['SDR', 'SDR', undefined],
+  ])('%s / %s → %p', (type, range, label) => {
+    const stream = { ...video4k, VideoRangeType: type, VideoRange: range };
+    expect(detailFacts({ ...movie, MediaSources: [{ Id: 's', MediaStreams: [stream] }] }).hdr).toBe(label);
+  });
+
+  it('copes with an item without media or ratings', () => {
+    expect(detailFacts({ Id: 'x', Name: 'X', Type: 'Movie' })).toEqual({
+      year: undefined,
+      runtimeSeconds: undefined,
+      rating: undefined,
+      score: undefined,
+      resolution: undefined,
+      hdr: undefined,
+      audio: undefined,
+      atmos: undefined,
+      subtitles: undefined,
+    });
+  });
+
+  it('summarises what plays by default, with track counts', () => {
+    expect(mediaRows(sintelDetail.MediaSources?.[0])).toEqual({
+      video: { value: '4K H264 SDR', count: 1 },
+      audio: { value: 'AC3 5.1 @ 640 Kbps - English - Dolby Digital - Default', count: 1 },
+      subtitles: { value: 'German - Default - SUBRIP', count: 2 },
+    });
+  });
+
+  it('uses the first audio track without a default, and Off for subtitles without one', () => {
+    const rows = mediaRows({
+      Id: 's',
+      MediaStreams: [
+        { ...ac3, IsDefault: false, DisplayTitle: 'English 440Hz - AAC - Mono' },
+        { ...ac3, Index: 2, IsDefault: false, DisplayTitle: 'Ukrainian 880Hz - Dolby Digital - Mono' },
+        { ...eng },
+      ],
+    });
+    expect(rows.audio).toEqual({ value: 'English 440Hz - AAC - Mono', count: 2 });
+    expect(rows.subtitles).toEqual({ value: 'Off', count: 1 });
+    expect(rows.video).toBeUndefined();
+  });
+
+  it('has no rows without a media source', () => {
+    expect(mediaRows(undefined)).toEqual({ video: undefined, audio: undefined, subtitles: undefined });
+  });
+
+  it('lists cast in billing order, then directors and writers, without producers', () => {
+    const people = [
+      { Id: 'd', Name: 'Colin Levy', Type: 'Director', Role: 'Director' },
+      { Id: 'a1', Name: 'Halina Reijn', Type: 'Actor', Role: 'Sintel (voice)', PrimaryImageTag: 't1' },
+      { Id: 'p', Name: 'Ton Roosendaal', Type: 'Producer' },
+      { Id: 'w', Name: 'Esther Wouda', Type: 'Writer' },
+      { Id: 'a2', Name: 'Thom Hoffman', Type: 'Actor', Role: 'Shaman (voice)' },
+      { Id: 'g', Name: 'Guest', Type: 'GuestStar' },
+    ];
+    expect(castAndCrew(people).map((p) => p.Id)).toEqual(['a1', 'a2', 'g', 'd', 'w']);
+    expect(castAndCrew(undefined)).toEqual([]);
+    expect(personImage(people[1])).toEqual({ itemId: 'a1', type: 'Primary', tag: 't1' });
+    expect(personImage(people[0])).toBeUndefined();
+    expect(people.map(personRole)).toEqual([
+      'Director',
+      'Sintel (voice)',
+      'Producer',
+      'Writer',
+      'Shaman (voice)',
+      undefined,
+    ]);
+  });
+
+  it(`shows at most ${PEOPLE_LIMIT} people`, () => {
+    const many = Array.from({ length: 150 }, (_, i) => ({ Id: `p${i}`, Name: `P${i}`, Type: 'Actor' }));
+    expect(castAndCrew(many)).toHaveLength(PEOPLE_LIMIT);
+  });
+
+  it('builds the line under the title', () => {
+    expect(detailSubtitle({ ...movie, Genres: ['Animation', 'Fantasy', 'Adventure'] })).toBe(
+      'Movie · Animation · Fantasy',
+    );
+    expect(detailSubtitle({ ...episode(2), SeasonName: 'Season 1' })).toBe('S1:E2 · Season 1');
+    expect(detailSubtitle({ Id: 's', Name: 'S', Type: 'Series' })).toBe('');
+  });
+
+  it('uses the item logo as title art when it has one', () => {
+    expect(logoImage({ ...movie, ImageTags: { Primary: 'p', Logo: 'l' } })).toEqual({
+      itemId: 'movie-1',
+      type: 'Logo',
+      tag: 'l',
+    });
+    expect(logoImage(movie)).toBeUndefined();
   });
 });

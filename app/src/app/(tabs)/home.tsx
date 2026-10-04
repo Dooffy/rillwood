@@ -2,13 +2,13 @@
 // Home: Up Next hero, Continue Watching, Next Up, Recently Added per library (docs/context/api.md, Home data).
 import { router } from 'expo-router';
 import { memo, useCallback, useEffect, useState, type ReactNode } from 'react';
-import { PixelRatio, Pressable, RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { ApiError, type BaseItemDto, type ItemsResult } from '@/api';
 import { Avatar } from '@/components/Avatar';
-import { Button } from '@/components/Button';
 import { CardPlaceholder, LANDSCAPE_WIDTH, LandscapeCard, POSTER_WIDTH, PosterCard } from '@/components/Card';
 import { Hero } from '@/components/Hero';
+import { loadErrorMessage, Message } from '@/components/Message';
 import { CARD_GAP, Row } from '@/components/Row';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
@@ -19,7 +19,6 @@ import {
   continueWatching,
   homeLayout,
   homePaths,
-  imageUrl,
   landscapeImage,
   latest,
   nextUp,
@@ -27,11 +26,11 @@ import {
   posterImage,
   recentlyAdded,
   userViews,
-  type ImageRef,
 } from '@/items';
 import { openItem } from '@/navigation';
 import { useSession } from '@/session';
 import { invalidate, useFetch } from '@/useFetch';
+import { useImage } from '@/useImage';
 import { minTouch, pressedOpacity, spacing, useColors } from '@/theme';
 
 /**
@@ -43,19 +42,6 @@ const REFRESH_HOLD_MS = 500;
 /** Pull to refresh / Retry: refetch every Home row, failed ones too. */
 function refreshHome() {
   homePaths.forEach((path) => invalidate(path));
-}
-
-function errorMessage(error: ApiError): string {
-  return error.kind === 'network' ? "Couldn't reach the server." : "Couldn't load this.";
-}
-
-/** Card image URL for the active server, sized to `width` points on this screen. */
-function useImage() {
-  const { active } = useSession();
-  const baseUrl = active?.server.url;
-  const scale = PixelRatio.get();
-  return (ref: ImageRef | undefined, width: number) =>
-    baseUrl && ref ? imageUrl(baseUrl, ref, width, scale) : undefined;
 }
 
 export default function Home() {
@@ -129,9 +115,8 @@ export default function Home() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.text} />}
       >
         {layout.allFailed ? (
-          <View style={styles.message}>
-            <Text secondary>{errorMessage(views.error!)}</Text>
-            <Button title="Retry" variant="secondary" onPress={refreshHome} />
+          <View style={styles.padded}>
+            <Message text={loadErrorMessage(views.error!)} retry={refreshHome} />
           </View>
         ) : (
           <>
@@ -253,10 +238,7 @@ function ItemRow({ title, shape, items, error, retry, card }: ItemRowProps) {
       {items ? (
         items.map(card)
       ) : error ? (
-        <View style={styles.rowError}>
-          <Text secondary>{errorMessage(error)}</Text>
-          <Button title="Retry" variant="secondary" onPress={retry} />
-        </View>
+        <Message text={loadErrorMessage(error)} retry={retry} />
       ) : (
         <View accessible accessibilityLabel={`Loading ${title}`} style={styles.placeholders}>
           {[0, 1, 2].map((i) => (
@@ -274,6 +256,5 @@ const styles = StyleSheet.create({
   profile: { width: minTouch, height: minTouch, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: pressedOpacity },
   message: { paddingHorizontal: spacing.md, gap: spacing.md, alignItems: 'flex-start' },
-  rowError: { gap: spacing.sm, alignItems: 'flex-start' },
   placeholders: { flexDirection: 'row', gap: CARD_GAP },
 });

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 
 import { minTouch, radii, spacing, useColors } from '@/theme';
@@ -12,9 +13,11 @@ export type ButtonProps = {
   variant?: 'primary' | 'secondary' | 'destructive';
   loading?: boolean;
   disabled?: boolean;
+  /** Symbol before the title (SF Symbol on iOS, Material Symbol on Android): `play.fill` on Play. */
+  icon?: SymbolViewProps['name'];
 };
 
-export function Button({ title, onPress, variant = 'primary', loading = false, disabled = false }: ButtonProps) {
+export function Button({ title, onPress, variant = 'primary', loading = false, disabled = false, icon }: ButtonProps) {
   const c = useColors();
   const primary = variant === 'primary';
   const fg = primary ? c.onAccent : variant === 'destructive' ? c.danger : c.text;
@@ -36,9 +39,12 @@ export function Button({ title, onPress, variant = 'primary', loading = false, d
       {loading ? (
         <ActivityIndicator color={fg} />
       ) : (
-        <Text variant="button" style={{ color: fg }}>
-          {title}
-        </Text>
+        <>
+          {icon && <SymbolView name={icon} tintColor={fg} size={16} />}
+          <Text variant="button" style={[styles.title, { color: fg }]}>
+            {title}
+          </Text>
+        </>
       )}
     </Pressable>
   );
@@ -49,8 +55,11 @@ const styles = StyleSheet.create({
     minHeight: minTouch,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.lg,
+    flexDirection: 'row',
+    gap: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  title: { flexShrink: 1 },
   dimmed: { opacity: 0.5 },
 });

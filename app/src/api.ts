@@ -203,6 +203,52 @@ export type UserItemDataDto = {
   LastPlayedDate?: string;
 };
 
+/** One video / audio / subtitle stream of a media source. */
+export type MediaStreamDto = {
+  /** `Video`, `Audio`, `Subtitle`, ... */
+  Type: string;
+  Index: number;
+  Codec?: string;
+  Language?: string;
+  Title?: string;
+  /** Server-built label: "English - Dolby Digital - 5.1 - Default". */
+  DisplayTitle?: string;
+  IsDefault?: boolean;
+  IsForced?: boolean;
+  IsExternal?: boolean;
+  Width?: number;
+  Height?: number;
+  /** `SDR`, `HDR`. */
+  VideoRange?: string;
+  /** `SDR`, `HDR10`, `HDR10Plus`, `HLG`, `DOVI`, `DOVIWithHDR10`, ... */
+  VideoRangeType?: string;
+  Channels?: number;
+  /** Audio: "LC", "TrueHD + Atmos", "Dolby Atmos" ... */
+  Profile?: string;
+  /** Subtitles for the deaf and hard of hearing (SDH). */
+  IsHearingImpaired?: boolean;
+};
+
+/** A file (version) of an item. */
+export type MediaSourceDto = {
+  Id: string;
+  Name?: string;
+  Container?: string;
+  Size?: number;
+  MediaStreams?: MediaStreamDto[];
+};
+
+/** Cast / crew entry of an item. */
+export type PersonDto = {
+  Id: string;
+  Name: string;
+  /** Character for actors, job for crew. */
+  Role?: string;
+  /** `Actor`, `GuestStar`, `Director`, `Writer`, `Producer`, ... */
+  Type?: string;
+  PrimaryImageTag?: string;
+};
+
 /** Library item or view (`/UserViews`). */
 export type BaseItemDto = {
   Id: string;
@@ -233,6 +279,15 @@ export type BaseItemDto = {
   ParentThumbItemId?: string;
   ParentThumbImageTag?: string;
   UserData?: UserItemDataDto;
+  // Detail (`/Items/{id}`) only.
+  Overview?: string;
+  Genres?: string[];
+  /** Age rating: "PG-13". */
+  OfficialRating?: string;
+  /** 0-10. */
+  CommunityRating?: number;
+  MediaSources?: MediaSourceDto[];
+  People?: PersonDto[];
 };
 
 /** Paged list. `/Items/Latest` is the exception: a bare array. */
