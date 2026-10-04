@@ -22,6 +22,11 @@ import {
   isItemId,
   itemDetail,
   landscapeImage,
+  LIBRARY_SORTS,
+  libraryPage,
+  mergePage,
+  nextPageStart,
+  LIBRARY_PAGE_SIZE,
   latest,
   logoImage,
   mediaRows,
@@ -41,6 +46,8 @@ import {
   similar,
   ticksToSeconds,
   yearRange,
+  type LibraryKind,
+  type LibrarySort,
 } from './items';
 
 // Trimmed from the dev servers (dev/jellyfin): Latest for the Shows library.
@@ -598,5 +605,53 @@ describe('series', () => {
     expect(directors(people)).toEqual(['Colin Levy', 'Second Director']);
     expect(directors(undefined)).toEqual([]);
     expect(detailSubtitle({ ...series121, Genres: ['Drama'] })).toBe('TV Show · Drama');
+  });
+});
+
+describe('library', () => {
+  it('asks for every movie or show the user can see, a page at a time', () => {
+    expect(libraryPage({ kind: 'movies', sort: 'name', unwatched: false }, 0)).toEqual({
+      path: '/Items',
+      query: {
+        includeItemTypes: 'Movie',
+        recursive: true,
+        sortBy: 'SortName',
+        sortOrder: 'Ascending',
+        filters: undefined,
+        startIndex: 0,
+        limit: LIBRARY_PAGE_SIZE,
+      },
+    });
+    expect(libraryPage({ kind: 'shows', sort: 'name', unwatched: true }, 50).query).toMatchObject({
+      includeItemTypes: 'Series',
+      filters: 'IsUnplayed',
+      startIndex: 50,
+    });
+  });
+
+  it.each([
+    ['movies', 'added', 'DateCreated,SortName', 'Descending'],
+    ['shows', 'added', 'DateLastContentAdded,SortName', 'Descending'],
+    ['movies', 'year', 'ProductionYear,SortName', 'Descending'],
+    ['shows', 'rating', 'CommunityRating,SortName', 'Descending'],
+  ] as [LibraryKind, LibrarySort, string, string][])('%s by %s → %s %s', (kind, sort, sortBy, sortOrder) => {
+    expect(libraryPage({ kind, sort, unwatched: false }, 0).query).toMatchObject({ sortBy, sortOrder });
+  });
+
+  it('lists the sorts in menu order', () => {
+    expect(LIBRARY_SORTS.map((s) => s.label)).toEqual(['Name', 'Date Added', 'Year', 'Rating']);
+  });
+
+  it('knows where the next page starts and when everything is loaded', () => {
+    expect(nextPageStart(50, 120)).toBe(50);
+    expect(nextPageStart(120, 120)).toBeUndefined();
+    expect(nextPageStart(0, undefined)).toBeUndefined();
+  });
+
+  it('appends a page without repeating items that shifted between pages', () => {
+    const a = { ...movie, Id: 'a' };
+    const b = { ...movie, Id: 'b' };
+    const c = { ...movie, Id: 'c' };
+    expect(mergePage([a, b], [b, c]).map((i) => i.Id)).toEqual(['a', 'b', 'c']);
   });
 });

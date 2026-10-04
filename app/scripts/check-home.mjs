@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Checks the Home + detail data layer (src/items.ts) against a dev server: rows, Recently Added shaping, time left,
-// detail facts / tracks / cast, image URLs.
+// detail facts / tracks / cast, series, library paging / sorts / unwatched, image URLs.
 // Sets a resume point on a movie >= 6 min and marks Test Show S01E01 played as the dev user `test`, then restores both.
 // Usage (from app/): npm run check:home [-- --server http://localhost:8097]. Needs dev/jellyfin running.
 // Dev-only credentials - never use them on a real server.
@@ -18,6 +18,10 @@ import {
   posterImage,
   recentlyAdded,
   cardTitles,
+  LIBRARY_SORTS,
+  libraryPage,
+  mergePage,
+  nextPageStart,
   defaultSeasonId,
   episodes,
   episodeTitle,
@@ -103,9 +107,12 @@ try {
   const showEpisodes = (await call('GET', `/Shows/${show.Id}/Episodes`)).Items;
   if (showEpisodes.length < 2) throw new Error('Test Show needs 2+ episodes - run dev/jellyfin/make-test-media.sh');
   const now = new Date().toISOString();
+  // First movie by name, marked watched for the library's unwatched filter.
+  const [watchedMovie] = (await get(libraryPage({ kind: 'movies', sort: 'name', unwatched: false }, 0))).Items;
   for (const [item, change] of [
     [movie, { PlaybackPositionTicks: 120 * TICKS_PER_SECOND, LastPlayedDate: now }],
     [showEpisodes[0], { Played: true, LastPlayedDate: now }],
+    [watchedMovie, { Played: true, LastPlayedDate: now }],
   ]) {
     const { PlaybackPositionTicks, Played, LastPlayedDate } = await call('GET', `/UserItems/${item.Id}/UserData`);
     restore.push([item.Id, { PlaybackPositionTicks, Played, LastPlayedDate }]);
@@ -147,6 +154,37 @@ try {
   );
   const similarItems = await get(similar(movie.Id));
   check(Array.isArray(similarItems.Items), `Similar to ${movie.Name}: ${similarItems.Items.length} item(s)`);
+
+  // Library: every movie across libraries, paged to the end, sorted, and without watched ones.
+  const byName = { kind: 'movies', sort: 'name', unwatched: false };
+  const first = await get(libraryPage(byName, 0));
+  const tail = await get(libraryPage(byName, first.TotalRecordCount - 2));
+  const merged = mergePage(first.Items, tail.Items);
+  check(
+    first.TotalRecordCount > 2 &&
+      tail.Items.length === 2 &&
+      merged.length === first.TotalRecordCount &&
+      nextPageStart(merged.length, first.TotalRecordCount) === undefined,
+    `Library movies: ${first.TotalRecordCount} across libraries, last page of 2 merges to the whole list`,
+  );
+  const firstNames = [];
+  for (const { key } of LIBRARY_SORTS) {
+    firstNames.push((await get(libraryPage({ ...byName, sort: key }, 0))).Items[0]?.Name);
+  }
+  check(
+    new Set(firstNames).size > 1,
+    `Library sorts change the order (${LIBRARY_SORTS.map((x, i) => `${x.key}: ${firstNames[i]}`).join(', ')})`,
+  );
+  const unwatched = await get(libraryPage({ ...byName, unwatched: true }, 0));
+  check(
+    unwatched.TotalRecordCount === first.TotalRecordCount - 1 && !unwatched.Items.some((i) => i.Id === watchedMovie.Id),
+    `Library unwatched: ${unwatched.TotalRecordCount} (${watchedMovie.Name} hidden)`,
+  );
+  const shows = await get(libraryPage({ kind: 'shows', sort: 'added', unwatched: false }, 0));
+  check(
+    shows.Items.every((i) => i.Type === 'Series'),
+    `Library shows by date added: ${shows.Items.map((i) => i.Name).join(', ')}`,
+  );
 
   // Detail: the movie's facts, default tracks and cast from /Items/{id}.
   const detail = await get(itemDetail(movie.Id));

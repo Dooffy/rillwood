@@ -122,6 +122,7 @@ src/server.ts            server address → probe URLs, min version check (pure)
 src/navigation.ts        resetTo (clear stack), signed-out redirect, openItem, openPlayer
 src/useFetch.ts          in-memory cache, abort, invalidate()
 src/useImage.ts          image URL for the active server, sized to the screen scale
+src/useLibrary.ts        library grid pages for the active account: load more, refresh, reset per query / account
 src/detail.ts            detailView: everything the detail screen shows, from one item (pure)
 src/downloads.ts         store, queue, reconcile, cleanup, storage
 src/sync.ts              offline progress queue replay
@@ -138,7 +139,7 @@ modules/downloads/       own native background downloader (iOS + Android)
 
 | Working on | Read |
 |---|---|
-| `api.ts`, `items.ts`, `session.ts`, `auth.ts`, `useFetch.ts`, `useImage.ts`, auth / accounts, any server call | `docs/context/api.md` - endpoints, auth header, DeviceId, 401/403, tokens |
+| `api.ts`, `items.ts`, `session.ts`, `auth.ts`, `useFetch.ts`, `useImage.ts`, `useLibrary.ts`, auth / accounts, any server call | `docs/context/api.md` - endpoints, auth header, DeviceId, 401/403, tokens |
 | `src/player/`, player screen | `docs/context/player.md` - `PlayerEngine` contract, resume, reporting, engine issues |
 | `modules/mpv/`, player binaries | `docs/context/mpv.md` - binaries, NDK pin, mpv options, logs |
 | `downloads.ts`, `modules/downloads/`, Downloads screen | `docs/context/downloads.md` - native contract, HTTP resume rules, store, offload |

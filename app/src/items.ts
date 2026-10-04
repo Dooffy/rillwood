@@ -346,6 +346,73 @@ export function personImage({ Id, PrimaryImageTag }: PersonDto): ImageRef | unde
   return PrimaryImageTag ? { itemId: Id, type: 'Primary', tag: PrimaryImageTag } : undefined;
 }
 
+// Library grid (`/library`).
+
+export type LibraryKind = 'movies' | 'shows';
+export type LibrarySort = 'name' | 'added' | 'year' | 'rating';
+export type LibraryQuery = { kind: LibraryKind; sort: LibrarySort; unwatched: boolean };
+
+/** Items per `/Items` page. */
+export const LIBRARY_PAGE_SIZE = 50;
+
+/** Sort menu, in order. */
+export const LIBRARY_SORTS: { key: LibrarySort; label: string }[] = [
+  { key: 'name', label: 'Name' },
+  { key: 'added', label: 'Date Added' },
+  { key: 'year', label: 'Year' },
+  { key: 'rating', label: 'Rating' },
+];
+
+/** Server sort keys; SortName breaks ties so pages stay stable. */
+function sortQuery(kind: LibraryKind, sort: LibrarySort): { sortBy: string; sortOrder: 'Ascending' | 'Descending' } {
+  switch (sort) {
+    case 'name':
+      return { sortBy: 'SortName', sortOrder: 'Ascending' };
+    case 'added':
+      // Shows count as new when an episode lands, not when the series folder first appeared.
+      return {
+        sortBy: `${kind === 'shows' ? 'DateLastContentAdded' : 'DateCreated'},SortName`,
+        sortOrder: 'Descending',
+      };
+    case 'year':
+      return { sortBy: 'ProductionYear,SortName', sortOrder: 'Descending' };
+    case 'rating':
+      return { sortBy: 'CommunityRating,SortName', sortOrder: 'Descending' };
+  }
+}
+
+/**
+ * One page of the grid: every movie or every show the user can see, across libraries (no `parentId`). Unknown
+ * `sortBy` values are ignored by the server, so the keys are fixed here.
+ */
+export function libraryPage({ kind, sort, unwatched }: LibraryQuery, startIndex: number): Endpoint {
+  return {
+    path: '/Items',
+    query: {
+      includeItemTypes: kind === 'movies' ? 'Movie' : 'Series',
+      recursive: true,
+      ...sortQuery(kind, sort),
+      filters: unwatched ? 'IsUnplayed' : undefined,
+      startIndex,
+      limit: LIBRARY_PAGE_SIZE,
+    },
+  };
+}
+
+/**
+ * Where the next page starts, or undefined once everything is loaded. `offset` = server items fetched so far (not the
+ * merged list's length: repeats dropped by `mergePage` would make the next page overlap the last one).
+ */
+export function nextPageStart(offset: number, total: number | undefined): number | undefined {
+  return total !== undefined && offset < total ? offset : undefined;
+}
+
+/** Appends a page, skipping items already shown (pages shift when the library changes between requests). */
+export function mergePage(items: BaseItemDto[], page: BaseItemDto[]): BaseItemDto[] {
+  const seen = new Set(items.map((i) => i.Id));
+  return [...items, ...page.filter((i) => !seen.has(i.Id))];
+}
+
 // Card data.
 
 export function ticksToSeconds(ticks: number): number {
