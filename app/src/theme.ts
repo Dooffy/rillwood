@@ -63,6 +63,9 @@ export const onArtwork = {
   fade: 'linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.35) 45%, rgba(0, 0, 0, 0.75) 100%)',
 } as const;
 
+/** Dims the screen behind a sheet or menu, in both themes. */
+export const backdrop = 'rgba(0, 0, 0, 0.5)';
+
 export const radii = {
   card: 12,
   cardLarge: 20,

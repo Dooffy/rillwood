@@ -1,7 +1,261 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { Spinner } from '@/components/Spinner';
+// Series detail (Apple TV style): hero, Play / Resume the next episode + watched / favourite, next-episode line,
+// overview, chips, "Season n ⌃⌄" menu, horizontal episode cards (▶ + ⋯ / long press), cast & crew, More Like This.
+// The header ↓ downloads the selected season. Data rules: docs/context/api.md (Series data). Playback lands in M4;
+// watched, favourite and downloads are placeholders for now.
+import { useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
+import { FlatList, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
-// Detail screen lands in M3. Never fetch with an empty id (docs/context/api.md).
+import type { BaseItemDto, ItemsResult } from '@/api';
+import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
+import { CastRow } from '@/components/CastRow';
+import { Chips } from '@/components/Chips';
+import { DetailActions } from '@/components/DetailActions';
+import { DetailHeader } from '@/components/DetailHeader';
+import { DetailHero, HERO_ART_SCALE, LOGO_WIDTH } from '@/components/DetailHero';
+import { EPISODE_CARD_WIDTH, EpisodeCard } from '@/components/EpisodeCard';
+import { loadErrorMessage, Message } from '@/components/Message';
+import { MoreLikeThis } from '@/components/MoreLikeThis';
+import { Overview } from '@/components/Overview';
+import { SeasonMenu } from '@/components/SeasonMenu';
+import { CARD_GAP } from '@/components/Row';
+import { Spinner } from '@/components/Spinner';
+import { Text } from '@/components/Text';
+import { SOON, useToast } from '@/components/Toast';
+import { detailView } from '@/detail';
+import {
+  defaultSeasonId,
+  episodeLine,
+  episodes,
+  isItemId,
+  itemDetail,
+  landscapeImage,
+  playback,
+  realSeasons,
+  seasons,
+  seriesNextUp,
+  seriesPlayTarget,
+  ticksToSeconds,
+} from '@/items';
+import { openItem, openPlayer } from '@/navigation';
+import { useFetch } from '@/useFetch';
+import { useImage } from '@/useImage';
+import { spacing } from '@/theme';
+
 export default function SeriesDetail() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const valid = isItemId(id);
+  const { data, error, refresh } = useFetch<BaseItemDto>(valid ? itemDetail(id).path : null);
+
+  if (!valid || error?.status === 404) return <Message fill text="This series isn't available." />;
+  if (data) return <Series series={data} />;
+  if (error) return <Message fill text={loadErrorMessage(error)} retry={refresh} />;
   return <Spinner fill />;
 }
+
+function Series({ series }: { series: BaseItemDto }) {
+  const image = useImage();
+  const { width } = useWindowDimensions();
+  const nextRequest = seriesNextUp(series.Id);
+  const seasonList = useFetch<ItemsResult>(seasons(series.Id).path);
+  const next = useFetch<ItemsResult>(nextRequest.path, { query: nextRequest.query });
+  const [picked, setPicked] = useState<string>();
+
+  const list = seasonList.data?.Items;
+  const nextEpisode = next.data?.Items[0];
+  // Wait for Next Up (or its failure) before opening a season, so the list doesn't jump to another one.
+  const nextSettled = next.data !== undefined || next.error !== undefined;
+  const seasonId = picked ?? (list && nextSettled ? defaultSeasonId(list, nextEpisode) : undefined);
+  const season = list?.find((s) => s.Id === seasonId);
+  const view = detailView(series, new Date(), list ? realSeasons(list).length : undefined);
+
+  return (
+    <>
+      <DetailHeader label={season ? `Download ${season.Name}` : 'Download'} />
+      {/* The hero runs under the transparent header (back + download over the art). */}
+      <ScrollView contentInsetAdjustmentBehavior="never" contentContainerStyle={styles.scroll}>
+        <DetailHero
+          art={image(view.art, width * HERO_ART_SCALE)}
+          logo={image(view.logo, LOGO_WIDTH)}
+          title={series.Name}
+          subtitle={view.subtitle}
+        />
+        <View style={styles.body}>
+          <SeriesPlay seriesId={series.Id} seasonId={seasonId} next={nextEpisode} nextSettled={nextSettled} />
+          {series.Overview?.trim() ? <Overview text={series.Overview.trim()} /> : null}
+          <Chips items={view.chips} />
+        </View>
+
+        <View style={styles.section}>
+          {list === undefined ? (
+            seasonList.error ? (
+              <View style={styles.body}>
+                <Message text={loadErrorMessage(seasonList.error)} retry={seasonList.refresh} />
+              </View>
+            ) : (
+              <Spinner />
+            )
+          ) : list.length === 0 ? (
+            <View style={styles.body}>
+              <Message text="No episodes on the server yet." />
+            </View>
+          ) : (
+            <>
+              <View style={styles.body}>
+                <SeasonMenu seasons={list} value={seasonId} onChange={setPicked} />
+              </View>
+              {seasonId && (
+                // key: a new season starts a new list (its own start position, not the last season's scroll).
+                <EpisodeCards key={seasonId} seriesId={series.Id} seasonId={seasonId} startAt={nextEpisode?.Id} />
+              )}
+            </>
+          )}
+        </View>
+
+        <CastRow people={view.people} />
+        <MoreLikeThis id={series.Id} />
+      </ScrollView>
+    </>
+  );
+}
+
+/**
+ * Play / Resume for the series (the next-up episode, else the first of the season shown) and the line naming it:
+ * "S2, E3 · Title: overview". Reads the same episode list as the cards (one shared request).
+ */
+function SeriesPlay({
+  seriesId,
+  seasonId,
+  next,
+  nextSettled,
+}: {
+  seriesId: string;
+  seasonId?: string;
+  next?: BaseItemDto;
+  nextSettled: boolean;
+}) {
+  const request = seasonId ? episodes(seriesId, seasonId) : undefined;
+  const { data } = useFetch<ItemsResult>(request?.path ?? null, { query: request?.query });
+  const target = nextSettled ? seriesPlayTarget(next, data?.Items) : undefined;
+  return (
+    <>
+      <DetailActions
+        playTitle={target?.resume ? 'Resume Episode' : 'Play Episode'}
+        onPlay={target ? () => openPlayer(target.episode, target.start) : undefined}
+        onStartOver={target?.resume ? () => openPlayer(target.episode, 0) : undefined}
+      />
+      {target && (
+        <Text numberOfLines={2}>
+          <Text variant="label">{episodeLine(target.episode)}</Text>
+          {target.episode.Overview ? <Text secondary>{`: ${target.episode.Overview}`}</Text> : null}
+        </Text>
+      )}
+    </>
+  );
+}
+
+/** One season's episodes as horizontal cards, scrolled to the next episode; ⋯ / long press open its actions. */
+function EpisodeCards({ seriesId, seasonId, startAt }: { seriesId: string; seasonId: string; startAt?: string }) {
+  const image = useImage();
+  const { width } = useWindowDimensions();
+  const toast = useToast();
+  const request = episodes(seriesId, seasonId);
+  const { data, error, refresh } = useFetch<ItemsResult>(request.path, { query: request.query });
+  const [menuFor, setMenuFor] = useState<BaseItemDto>();
+
+  if (!data) {
+    return error ? (
+      <View style={styles.body}>
+        <Message text={loadErrorMessage(error)} retry={refresh} />
+      </View>
+    ) : (
+      <Spinner />
+    );
+  }
+  if (data.Items.length === 0) {
+    return (
+      <View style={styles.body}>
+        <Message text="No episodes in this season." />
+      </View>
+    );
+  }
+
+  // Start at the next episode, but never past the last screenful of cards (no blank space after the last one).
+  const visible = Math.max(1, Math.floor(width / (EPISODE_CARD_WIDTH + CARD_GAP)));
+  const start = Math.min(
+    Math.max(
+      0,
+      data.Items.findIndex((ep) => ep.Id === startAt),
+    ),
+    Math.max(0, data.Items.length - visible),
+  );
+  const menu: SheetAction[] = menuFor
+    ? [
+        ...(playback(menuFor).progress !== undefined
+          ? [{ label: 'Play from Start', onPress: () => openPlayer(menuFor, 0) }]
+          : []),
+        { label: menuFor.UserData?.Played ? 'Mark as Unwatched' : 'Mark as Watched', onPress: () => toast(SOON) },
+        { label: 'Add to Favourites', onPress: () => toast(SOON) },
+        { label: 'Download Episode', onPress: () => toast(SOON) },
+      ]
+    : [];
+
+  return (
+    <>
+      <FlatList
+        horizontal
+        data={data.Items}
+        keyExtractor={(ep) => ep.Id}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.cards}
+        ItemSeparatorComponent={CardGap}
+        initialScrollIndex={start}
+        // About two cards fit on a phone: render a few, not the default 10.
+        initialNumToRender={3}
+        windowSize={5}
+        getItemLayout={(_, index) => ({
+          length: EPISODE_CARD_WIDTH + CARD_GAP,
+          offset: (EPISODE_CARD_WIDTH + CARD_GAP) * index,
+          index,
+        })}
+        renderItem={({ item: ep }) => {
+          const state = playback(ep);
+          return (
+            <EpisodeCard
+              episode={ep.IndexNumber}
+              title={ep.Name}
+              overview={ep.Overview}
+              image={image(landscapeImage(ep), EPISODE_CARD_WIDTH)}
+              progress={state.progress}
+              remainingSeconds={state.remainingSeconds}
+              runtimeSeconds={ep.RunTimeTicks ? ticksToSeconds(ep.RunTimeTicks) : undefined}
+              played={state.played}
+              onPress={() => openItem(ep)}
+              onPlay={() => openPlayer(ep, state.resumeSeconds ?? 0)}
+              onMore={() => setMenuFor(ep)}
+            />
+          );
+        }}
+      />
+      <ActionSheet
+        visible={menuFor !== undefined}
+        title={menuFor && episodeLine(menuFor)}
+        actions={menu}
+        onClose={() => setMenuFor(undefined)}
+      />
+    </>
+  );
+}
+
+function CardGap() {
+  return <View style={styles.gap} />;
+}
+
+const styles = StyleSheet.create({
+  scroll: { paddingBottom: spacing.lg, gap: spacing.lg },
+  body: { paddingHorizontal: spacing.md, gap: spacing.md },
+  section: { gap: spacing.xs },
+  cards: { paddingHorizontal: spacing.md },
+  gap: { width: CARD_GAP },
+});

@@ -40,7 +40,8 @@ export type DetailView = {
   directors: string[];
 };
 
-export function detailView(item: BaseItemDto, now: Date = new Date()): DetailView {
+/** `seasons`: real season count from the season list (series), better than `ChildCount`, which may hold Specials. */
+export function detailView(item: BaseItemDto, now: Date = new Date(), seasons?: number): DetailView {
   const facts = detailFacts(item);
   const watch = playback(item);
   const sources = item.MediaSources ?? [];
@@ -48,7 +49,7 @@ export function detailView(item: BaseItemDto, now: Date = new Date()): DetailVie
   const rated = [facts.rating, facts.score && `★ ${facts.score}`];
   const chips =
     item.Type === 'Series'
-      ? [yearRange(item), seasonCount(item.ChildCount), ...rated]
+      ? [yearRange(item), seasonCount(seasons ?? item.ChildCount), ...rated]
       : [
           facts.year?.toString(),
           formatRemaining(runtime),

@@ -55,3 +55,8 @@ export function SignedOutRedirect() {
 export function openItem({ Id: id, Type }: BaseItemDto) {
   router.push({ pathname: Type === 'Series' ? '/series/[id]' : '/item/[id]', params: { id } });
 }
+
+/** Opens the player (M4) on an item at `start` seconds. */
+export function openPlayer({ Id: id }: BaseItemDto, start = 0) {
+  router.push({ pathname: '/player', params: { id, start: String(Math.floor(start)) } });
+}

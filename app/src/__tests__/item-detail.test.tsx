@@ -165,7 +165,29 @@ describe('ItemDetail', () => {
     await render(<ItemDetail />);
     await fireEvent.press(await screen.findByRole('button', { name }));
     expect(await screen.findByText('Coming in a later build.')).toBeOnTheScreen();
-    expect(request).toHaveBeenCalledTimes(1);
+    // Nothing is written to the server yet: only the detail and More Like This reads.
+    expect(request.mock.calls.map(([, path]) => path)).toEqual([`/Items/${sintel.Id}`, `/Items/${sintel.Id}/Similar`]);
+  });
+
+  it('names the directors and shows More Like This', async () => {
+    const similarMovie = { Id: 'tears', Name: 'Tears of Steel', Type: 'Movie', ProductionYear: 2012 };
+    request.mockImplementation(
+      (_conn, path) =>
+        (path.endsWith('/Similar')
+          ? Promise.resolve({ Items: [similarMovie], TotalRecordCount: 1 })
+          : reply()) as Promise<never>,
+    );
+    await render(<ItemDetail />);
+    expect(await screen.findByText(/^Directed by/)).toHaveTextContent('Directed by Colin Levy');
+    expect(await screen.findByText('More Like This')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Tears of Steel, 2012' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/item/[id]', params: { id: 'tears' } });
+  });
+
+  it('hides More Like This when there is nothing similar', async () => {
+    await render(<ItemDetail />);
+    await screen.findByRole('header', { name: 'Sintel' });
+    expect(screen.queryByText('More Like This')).toBeNull();
   });
 
   it('plays from the start when nothing is watched', async () => {
