@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from '@jest/globals';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { Avatar, initials } from './Avatar';
 
@@ -27,5 +27,14 @@ describe('Avatar', () => {
   it('falls back to the person icon without a name', async () => {
     await render(<Avatar />);
     expect(screen.queryByText(/./, { includeHiddenElements: true })).toBeNull();
+  });
+
+  it('shows the photo when given, and initials when it fails to load', async () => {
+    await render(<Avatar name="Halina Reijn" image="https://jf.example.com/p.jpg" />);
+    const photo = screen.getByTestId('avatar-image', { includeHiddenElements: true });
+    expect(screen.queryByText('HR', { includeHiddenElements: true })).toBeNull();
+    await fireEvent(photo, 'error', { nativeEvent: { error: '404' } });
+    expect(screen.queryByTestId('avatar-image', { includeHiddenElements: true })).toBeNull();
+    expect(screen.getByText('HR', { includeHiddenElements: true })).toBeOnTheScreen();
   });
 });

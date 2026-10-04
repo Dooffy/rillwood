@@ -10,7 +10,8 @@ export type IconButtonProps = {
   /** Accessibility label - icon buttons have no visible text. */
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary';
+  /** plain: no circle (header bar buttons, where iOS draws its own). */
+  variant?: 'primary' | 'secondary' | 'plain';
 };
 
 /** Round icon button (Apple TV style). */
@@ -24,7 +25,7 @@ export function IconButton({ icon, label, onPress, variant = 'secondary' }: Icon
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
-        { backgroundColor: primary ? c.accent : c.elevated },
+        variant !== 'plain' && { backgroundColor: primary ? c.accent : c.elevated },
         pressed && styles.pressed,
       ]}
     >

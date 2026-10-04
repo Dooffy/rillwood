@@ -24,3 +24,10 @@ export function spokenRemaining(seconds: number): string | undefined {
   const part = (n: number, unit: string) => `${n} ${unit}${n === 1 ? '' : 's'}`;
   return [h > 0 ? part(h, 'hour') : undefined, m > 0 ? part(m, 'minute') : undefined].filter(Boolean).join(' ');
 }
+
+/** "Ends at 9:45 PM" in the device's clock format, for `seconds` of playback starting `now`. */
+export function formatEndsAt(seconds: number, now: Date = new Date()): string | undefined {
+  if (!Number.isFinite(seconds) || seconds <= 0) return undefined;
+  const end = new Date(now.getTime() + seconds * 1000);
+  return `Ends at ${end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+}

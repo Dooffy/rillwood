@@ -25,4 +25,18 @@ describe('IconButton', () => {
     await render(<IconButton icon={icon} label="Play" variant="primary" onPress={() => {}} />);
     expect(screen.getByRole('button', { name: 'Play' })).toHaveStyle({ backgroundColor: colors.accent });
   });
+
+  it('draws no circle when plain (header buttons)', async () => {
+    await render(
+      <IconButton
+        icon={{ ios: 'arrow.down', android: 'download' }}
+        label="Download"
+        variant="plain"
+        onPress={() => {}}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Download' })).not.toHaveStyle({
+      backgroundColor: palettes.dark.elevated,
+    });
+  });
 });

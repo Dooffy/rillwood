@@ -54,4 +54,10 @@ describe('Button', () => {
     await fireEvent.press(screen.getByRole('button'));
     expect(onPress).not.toHaveBeenCalled();
   });
+
+  it('shows an icon before the title', async () => {
+    await render(<Button title="Play" icon={{ ios: 'play.fill', android: 'play_arrow' }} onPress={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Play' })).toBeOnTheScreen();
+    expect(screen.getByText('Play')).toBeOnTheScreen();
+  });
 });

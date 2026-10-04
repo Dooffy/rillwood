@@ -114,18 +114,19 @@ src/app/                 expo-router
 src/theme.ts             design tokens
 src/format.ts            display formatting (time left)
 src/api.ts               fetch client + endpoints + DTO types
-src/items.ts             pure item logic: Home requests + layout, Latest shaping, time left, card titles, image picks + URLs
+src/items.ts             pure item logic: Home requests + layout, Latest shaping, time left, card titles, detail facts / tracks / cast, image picks + URLs
 src/session.ts           session store: accounts (kv-store), tokens (secure-store), active account, 401 sign-out
 src/auth.ts              auth flows for the (auth) screens: probe, sign in, Quick Connect
 src/server.ts            server address → probe URLs, min version check (pure)
 src/navigation.ts        resetTo (clear stack), signed-out redirect, openItem
 src/useFetch.ts          in-memory cache, abort, invalidate()
+src/useImage.ts          image URL for the active server, sized to the screen scale
 src/downloads.ts         store, queue, reconcile, cleanup, storage
 src/sync.ts              offline progress queue replay
 src/settings.ts          user settings in kv-store (appearance; downloads + offload later)
 src/player/Player.tsx    PlayerEngine interface + re-export of active engine
 src/player/mpv.tsx       mpv adapter
-src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List, StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Artwork, Row, ProgressBar, DownloadRing
+src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List, StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message, Artwork, Row, ProgressBar, DownloadRing
 src/dev/                 dev-only previews, rendered behind `__DEV__` (never in release)
 modules/mpv/             vendored native module (+ UPSTREAM.md: upstream repo + commit)
 modules/downloads/       own native background downloader (iOS + Android)
@@ -135,7 +136,7 @@ modules/downloads/       own native background downloader (iOS + Android)
 
 | Working on | Read |
 |---|---|
-| `api.ts`, `items.ts`, `session.ts`, `auth.ts`, `useFetch.ts`, auth / accounts, any server call | `docs/context/api.md` - endpoints, auth header, DeviceId, 401/403, tokens |
+| `api.ts`, `items.ts`, `session.ts`, `auth.ts`, `useFetch.ts`, `useImage.ts`, auth / accounts, any server call | `docs/context/api.md` - endpoints, auth header, DeviceId, 401/403, tokens |
 | `src/player/`, player screen | `docs/context/player.md` - `PlayerEngine` contract, resume, reporting, engine issues |
 | `modules/mpv/`, player binaries | `docs/context/mpv.md` - binaries, NDK pin, mpv options, logs |
 | `downloads.ts`, `modules/downloads/`, Downloads screen | `docs/context/downloads.md` - native contract, HTTP resume rules, store, offload |

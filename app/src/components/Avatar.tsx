@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { radii, type, useColors } from '@/theme';
@@ -19,10 +21,15 @@ export function initials(name: string): string {
     .toUpperCase();
 }
 
-/** Round user avatar: initials on a grey circle, person icon without a name. Server profile images come with api.ts. */
-export function Avatar({ name, size = 60 }: { name?: string; size?: number }) {
+/**
+ * Round avatar: `image` (cast photo) when given and loading, else initials on a grey circle, person icon without a
+ * name.
+ */
+export function Avatar({ name, image, size = 60 }: { name?: string; image?: string; size?: number }) {
   const c = useColors();
+  const [failed, setFailed] = useState<string>();
   const letters = name ? initials(name) : '';
+  const showImage = image !== undefined && failed !== image;
   return (
     <View
       testID="avatar"
@@ -30,7 +37,16 @@ export function Avatar({ name, size = 60 }: { name?: string; size?: number }) {
       importantForAccessibility="no-hide-descendants"
       accessibilityElementsHidden
     >
-      {letters ? (
+      {showImage ? (
+        <Image
+          testID="avatar-image"
+          source={image}
+          cachePolicy="memory-disk"
+          contentFit="cover"
+          style={StyleSheet.absoluteFill}
+          onError={() => setFailed(image)}
+        />
+      ) : letters ? (
         <Text style={{ fontWeight: type.button.fontWeight, fontSize: size * 0.4 }}>{letters}</Text>
       ) : (
         <SymbolView name={{ ios: 'person.fill', android: 'person' }} tintColor={c.textSecondary} size={size * 0.5} />
@@ -40,5 +56,5 @@ export function Avatar({ name, size = 60 }: { name?: string; size?: number }) {
 }
 
 const styles = StyleSheet.create({
-  circle: { borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
+  circle: { borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
 });
