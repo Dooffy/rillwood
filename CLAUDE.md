@@ -121,6 +121,7 @@ src/server.ts            server address → probe URLs, min version check (pure)
 src/navigation.ts        resetTo (clear stack), signed-out redirect, openItem
 src/useFetch.ts          in-memory cache, abort, invalidate()
 src/useImage.ts          image URL for the active server, sized to the screen scale
+src/detail.ts            detailView: everything the detail screen shows, from one item (pure)
 src/downloads.ts         store, queue, reconcile, cleanup, storage
 src/sync.ts              offline progress queue replay
 src/settings.ts          user settings in kv-store (appearance; downloads + offload later)

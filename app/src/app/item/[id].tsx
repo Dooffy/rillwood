@@ -19,21 +19,9 @@ import { Row } from '@/components/Row';
 import { Spinner } from '@/components/Spinner';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
-import { formatEndsAt, formatRemaining } from '@/format';
-import {
-  backdropImage,
-  castAndCrew,
-  detailFacts,
-  detailSubtitle,
-  isItemId,
-  itemDetail,
-  logoImage,
-  mediaRows,
-  personImage,
-  personRole,
-  playback,
-  type TrackRow,
-} from '@/items';
+import { detailView } from '@/detail';
+import { formatRemaining } from '@/format';
+import { isItemId, itemDetail, personImage, personRole, type TrackRow } from '@/items';
 import { openItem } from '@/navigation';
 import { useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
@@ -41,6 +29,8 @@ import { minTouch, pressedOpacity, spacing, useColors } from '@/theme';
 
 /** Hero art height / width (4:5, Apple TV style): backdrops are cover-cropped, posters fit almost whole. */
 const HERO_RATIO = 1.25;
+/** Image width / screen width for the hero: 16:9 art cover-cropped into 4:5 is about 2.2x as wide as the screen. */
+const HERO_ART_SCALE = HERO_RATIO * (16 / 9);
 const LOGO_WIDTH = 240;
 /** Longer overviews start clamped to 3 lines with More. */
 const OVERVIEW_CLAMP = 150;
@@ -68,29 +58,13 @@ function Detail({ item }: { item: BaseItemDto }) {
   const toast = useToast();
   const image = useImage();
   const { width } = useWindowDimensions();
-  const facts = detailFacts(item);
-  const [source] = item.MediaSources ?? [];
-  const versions = item.MediaSources?.length ?? 0;
-  const media = mediaRows(source);
-  const people = castAndCrew(item.People);
-  const { progress, resumeSeconds = 0, remainingSeconds, played } = playback(item);
+  const view = detailView(item);
+  const { progress, resumeSeconds = 0, remainingSeconds = 0, played } = view.playback;
   const inProgress = progress !== undefined;
-  // Cover-cropping 16:9 art into the 4:5 hero needs it about 2.2x the screen width to stay sharp.
-  const art = image(backdropImage(item), width * HERO_RATIO * (16 / 9));
-  const logo = image(logoImage(item), LOGO_WIDTH);
-  const subtitle = detailSubtitle(item);
-  const chips = [
-    facts.year?.toString(),
-    formatRemaining(facts.runtimeSeconds ?? 0),
-    formatEndsAt(remainingSeconds ?? facts.runtimeSeconds ?? 0),
-    facts.rating,
-    facts.score && `★ ${facts.score}`,
-    facts.resolution,
-    facts.hdr,
-    facts.audio,
-    facts.atmos,
-    facts.subtitles,
-  ].filter((chip): chip is string => !!chip);
+  // undefined at 0 (position at or past the runtime): no bare "left".
+  const left = formatRemaining(remainingSeconds);
+  const art = image(view.art, width * HERO_ART_SCALE);
+  const logo = image(view.logo, LOGO_WIDTH);
 
   return (
     <>
@@ -160,9 +134,9 @@ function Detail({ item }: { item: BaseItemDto }) {
                 {item.Name}
               </Text>
             )}
-            {subtitle !== '' && (
+            {view.subtitle !== '' && (
               <Text secondary numberOfLines={1}>
-                {subtitle}
+                {view.subtitle}
               </Text>
             )}
           </View>
@@ -174,9 +148,9 @@ function Detail({ item }: { item: BaseItemDto }) {
               <View style={styles.bar}>
                 <ProgressBar progress={progress} />
               </View>
-              {remainingSeconds !== undefined && (
+              {left && (
                 <Text variant="caption" secondary>
-                  {formatRemaining(remainingSeconds)} left
+                  {left} left
                 </Text>
               )}
             </View>
@@ -205,26 +179,26 @@ function Detail({ item }: { item: BaseItemDto }) {
 
           {item.Overview?.trim() ? <Overview text={item.Overview.trim()} /> : null}
 
-          <Chips items={chips} />
+          <Chips items={view.chips} />
           {played && (
             <Text variant="caption" secondary>
               ✓ Watched
             </Text>
           )}
 
-          {(media.video || media.audio || media.subtitles) && (
+          {(view.media.video || view.media.audio || view.media.subtitles) && (
             <ListSection title="Media">
-              {versions > 1 && <ListRow label={`Version (${versions})`} value={source?.Name} />}
-              {media.video && <TrackListRow label="Video" row={media.video} />}
-              {media.audio && <TrackListRow label="Audio" row={media.audio} />}
-              {media.subtitles && <TrackListRow label="Subtitles" row={media.subtitles} />}
+              {view.versions && <ListRow label={`Version (${view.versions.count})`} value={view.versions.name} />}
+              {view.media.video && <TrackListRow label="Video" row={view.media.video} />}
+              {view.media.audio && <TrackListRow label="Audio" row={view.media.audio} />}
+              {view.media.subtitles && <TrackListRow label="Subtitles" row={view.media.subtitles} />}
             </ListSection>
           )}
         </View>
 
-        {people.length > 0 && (
+        {view.people.length > 0 && (
           <Row title="Cast & Crew">
-            {people.map((p) => (
+            {view.people.map((p) => (
               <PersonCard
                 key={`${p.Id}-${p.Type}`}
                 name={p.Name}

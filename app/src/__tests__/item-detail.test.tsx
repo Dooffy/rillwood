@@ -188,6 +188,14 @@ describe('ItemDetail', () => {
     expect(router.push).toHaveBeenLastCalledWith({ pathname: '/player', params: { id: episode.Id, start: '0' } });
   });
 
+  it('shows no bare "left" when the position is at the runtime', async () => {
+    useLocalSearchParams.mockReturnValue({ id: episode.Id });
+    reply = () => Promise.resolve({ ...episode, UserData: { PlaybackPositionTicks: 1_200_210_000, Played: false } });
+    await render(<ItemDetail />);
+    expect(await screen.findByRole('button', { name: 'Resume' })).toBeOnTheScreen();
+    expect(screen.queryByText(/left$/)).toBeNull();
+  });
+
   it('opens the series from an episode', async () => {
     useLocalSearchParams.mockReturnValue({ id: episode.Id });
     reply = () => Promise.resolve(episode);
