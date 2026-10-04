@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { spokenRemaining } from '@/format';
@@ -35,7 +36,12 @@ export function cardLabel({ title, subtitle, progress, remainingSeconds, played 
   return [title, subtitle, state, left && `${left} left`].filter(Boolean).join(', ');
 }
 
-function MediaCard({ aspectRatio, width, ...props }: CardProps & { aspectRatio: number; width: number }) {
+// Memo: grids and rows re-render on refresh / paging; a card only changes with its own props.
+const MediaCard = memo(function MediaCard({
+  aspectRatio,
+  width,
+  ...props
+}: CardProps & { aspectRatio: number; width: number }) {
   const { title, subtitle, image, progress, remainingSeconds, played, onPress } = props;
   return (
     <Pressable
@@ -63,7 +69,7 @@ function MediaCard({ aspectRatio, width, ...props }: CardProps & { aspectRatio: 
       </View>
     </Pressable>
   );
-}
+});
 
 /** Default card widths in points (image URLs are sized from them). */
 export const POSTER_WIDTH = 120;

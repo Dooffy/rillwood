@@ -17,6 +17,8 @@ type PageState = {
   /** Server items fetched so far = where the next page starts. */
   offset: number;
   error?: ApiError;
+  /** Start index of the request that failed (0 = a refresh / first page), for `retry`. */
+  failedAt?: number;
   /** A page request is running. */
   loading: boolean;
 };
@@ -31,10 +33,12 @@ export type Library = {
   loading: boolean;
   /** More pages on the server. */
   hasMore: boolean;
-  /** Next page (end of the grid); no-op while loading or when everything is loaded. */
+  /** Next page (end of the grid); no-op while loading, after an error (use `retry`) or when everything is loaded. */
   loadMore: () => void;
-  /** From the first page again (pull to refresh, Retry); items stay until it answers. */
+  /** From the first page again (pull to refresh); items stay until it answers. */
   refresh: () => void;
+  /** Repeats the request that failed: a refresh or first page again, else the next page. */
+  retry: () => void;
 };
 
 export function useLibrary(query: LibraryQuery): Library {
@@ -68,6 +72,7 @@ export function useLibrary(query: LibraryQuery): Library {
         setState((s) => ({
           ...(s.key === key ? s : empty(key)),
           error: e instanceof ApiError ? e : new ApiError('network'),
+          failedAt: startIndex,
           loading: false,
         }));
       },
@@ -81,21 +86,29 @@ export function useLibrary(query: LibraryQuery): Library {
   }, [key]);
 
   const next = nextPageStart(live.offset, live.total);
+  const loadNext = () => {
+    if (!conn || live.loading || next === undefined) return;
+    setState({ ...live, loading: true, error: undefined, failedAt: undefined });
+    load(next);
+  };
+  // While an error shows, only Retry / refresh / a new query load again: the end of a list re-fires onEndReached
+  // when the footer changes size, which would retry a failing page in a loop.
+  const loadMore = () => {
+    if (!live.error) loadNext();
+  };
+  const refresh = () => {
+    if (!conn) return;
+    setState({ ...live, loading: true, error: undefined, failedAt: undefined });
+    load(0);
+  };
   return {
     items: live.items,
     total: live.total,
     error: live.error,
     loading: live.loading,
     hasMore: next !== undefined,
-    loadMore: () => {
-      if (!conn || live.loading || next === undefined) return;
-      setState({ ...live, loading: true, error: undefined });
-      load(next);
-    },
-    refresh: () => {
-      if (!conn) return;
-      setState({ ...live, loading: true, error: undefined });
-      load(0);
-    },
+    loadMore,
+    refresh,
+    retry: () => (live.failedAt === 0 ? refresh() : loadNext()),
   };
 }

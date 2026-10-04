@@ -136,7 +136,7 @@ describe('useLibrary', () => {
     await waitFor(() => expect(result.current.error?.kind).toBe('network'));
     expect(result.current.items).toHaveLength(50);
     serve(120);
-    await act(() => result.current.loadMore());
+    await act(() => result.current.retry());
     await waitFor(() => expect(result.current.items).toHaveLength(100));
     expect(result.current.error).toBeUndefined();
   });
@@ -219,5 +219,40 @@ describe('useLibrary', () => {
     await act(() => result.current.loadMore());
     expect(request).toHaveBeenCalledTimes(2);
     expect(result.current.items).toHaveLength(50);
+  });
+
+  // Regression: Retry after a failed refresh used to load the next page (or nothing) instead of refreshing.
+  it('retries whatever failed: a failed refresh refreshes again', async () => {
+    serve(11);
+    const { result } = await renderHook(() => useLibrary(movies));
+    await waitFor(() => expect(result.current.items).toHaveLength(11));
+    request.mockImplementationOnce(() => Promise.reject(new ApiError('network')));
+    await act(() => result.current.refresh());
+    await waitFor(() => expect(result.current.error?.kind).toBe('network'));
+    expect(result.current.items).toHaveLength(11);
+    serve(12);
+    await act(() => result.current.retry());
+    await waitFor(() => expect(result.current.total).toBe(12));
+    expect(request).toHaveBeenLastCalledWith(
+      expect.anything(),
+      '/Items',
+      expect.objectContaining({ query: expect.objectContaining({ startIndex: 0 }) }),
+    );
+  });
+
+  // Regression: onEndReached re-fires when the error footer changes the list height, which retried in a loop.
+  it('does not load more while an error shows; only retry does', async () => {
+    serve(120);
+    const { result } = await renderHook(() => useLibrary(movies));
+    await waitFor(() => expect(result.current.items).toHaveLength(50));
+    request.mockImplementationOnce(() => Promise.reject(new ApiError('network')));
+    await act(() => result.current.loadMore());
+    await waitFor(() => expect(result.current.error?.kind).toBe('network'));
+    await act(() => result.current.loadMore());
+    await act(() => result.current.loadMore());
+    expect(request).toHaveBeenCalledTimes(2);
+    await act(() => result.current.retry());
+    await waitFor(() => expect(result.current.items).toHaveLength(100));
+    expect(request).toHaveBeenCalledTimes(3);
   });
 });
