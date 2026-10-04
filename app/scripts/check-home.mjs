@@ -6,6 +6,7 @@
 // Dev-only credentials - never use them on a real server.
 import {
   castAndCrew,
+  changedUserData,
   continueWatching,
   detailFacts,
   itemDetail,
@@ -246,7 +247,39 @@ try {
     `Detail ${detail.Name}: ${Object.values(facts).filter(Boolean).join(', ')}; audio "${rows.audio?.value}" (${rows.audio?.count}), subtitles "${rows.subtitles?.value ?? 'none'}" (${rows.subtitles?.count ?? 0}), ${castAndCrew(detail.People).length} cast & crew`,
   );
 
-  // Images: no auth, long cache via the tag.
+  // Mark watched / favourite: each answer is what `changedUserData` predicts (the app shows it before the server
+  // answers); a season marks its episodes. Restored first (unshift), before the older restore entries.
+  const userData = async (id) => call('GET', `/UserItems/${id}/UserData`);
+  const keep = async (id) => {
+    const { PlaybackPositionTicks, Played, LastPlayedDate } = await userData(id);
+    restore.unshift([id, { PlaybackPositionTicks, Played, LastPlayedDate }]);
+  };
+  await keep(movie.Id);
+  const matches = [];
+  for (const [flag, value, path] of [
+    ['played', true, '/UserPlayedItems/'],
+    ['played', false, '/UserPlayedItems/'],
+    ['favourite', true, '/UserFavoriteItems/'],
+    ['favourite', false, '/UserFavoriteItems/'],
+  ]) {
+    const predicted = changedUserData(await userData(movie.Id), flag, value);
+    const answer = await call(value ? 'POST' : 'DELETE', `${path}${movie.Id}`);
+    matches.push(
+      answer.Played === predicted.Played &&
+        answer.PlaybackPositionTicks === predicted.PlaybackPositionTicks &&
+        !!answer.IsFavorite === !!predicted.IsFavorite,
+    );
+  }
+  for (const ep of seasonEpisodes) await keep(ep.Id);
+  await call('POST', `/UserPlayedItems/${seasonId}`);
+  const marked = (await get(episodes(show.Id, seasonId))).Items.filter((e) => e.UserData?.Played).length;
+  await call('DELETE', `/UserPlayedItems/${seasonId}`);
+  const cleared = (await get(episodes(show.Id, seasonId))).Items.filter((e) => e.UserData?.Played).length;
+  check(
+    matches.every(Boolean) && marked === seasonEpisodes.length && cleared === 0,
+    `Mark watched / favourite: answers as predicted (${matches.filter(Boolean).length}/${matches.length}); season marks ${marked}/${seasonEpisodes.length} episodes, unmarks to ${cleared}`,
+  );
+
   const ref = posterImage(movie);
   if (ref) {
     const res = await fetch(imageUrl(server, ref, 120, 3));

@@ -10,6 +10,7 @@ import type {
   MediaStreamDto,
   PersonDto,
   Query,
+  UserItemDataDto,
 } from '@/api';
 
 export const TICKS_PER_SECOND = 10_000_000;
@@ -558,6 +559,77 @@ export type SearchGroups = { movies: BaseItemDto[]; shows: BaseItemDto[]; episod
 export function groupResults(items: BaseItemDto[]): SearchGroups {
   const of = (type: string) => items.filter((i) => i.Type === type);
   return { movies: of('Movie'), shows: of('Series'), episodes: of('Episode') };
+}
+
+// User data (mark watched / favourite). Same on 10.11 + 12.1: `POST` / `DELETE` answer the new UserData, marking
+// played either way clears the resume point, and a season / series marks every episode in it.
+
+export type UserFlag = 'played' | 'favourite';
+/** One change: `itemId` set `flag` to `value`. `userData` = the server's answer for that item, once known. */
+export type UserDataChange = { itemId: string; flag: UserFlag; value: boolean; userData?: UserItemDataDto };
+
+/** UserData after the change, as the server answers it. */
+export function changedUserData(current: UserItemDataDto | undefined, flag: UserFlag, value: boolean): UserItemDataDto {
+  const base: UserItemDataDto = current ?? { PlaybackPositionTicks: 0, Played: false };
+  if (flag === 'favourite') return { ...base, IsFavorite: value };
+  return {
+    ...base,
+    Played: value,
+    PlaybackPositionTicks: 0,
+    PlayedPercentage: undefined,
+    ...(base.UnplayedItemCount !== undefined && value ? { UnplayedItemCount: 0 } : {}),
+  };
+}
+
+/**
+ * The item after the change, or the same object when it is untouched: the item itself (with the server's UserData when
+ * known), and for played its episodes / seasons (marking a season or series marks everything in it).
+ */
+export function patchItem(item: BaseItemDto, change: UserDataChange): BaseItemDto {
+  if (item.Id === change.itemId) {
+    return { ...item, UserData: change.userData ?? changedUserData(item.UserData, change.flag, change.value) };
+  }
+  const inside = change.flag === 'played' && (item.SeasonId === change.itemId || item.SeriesId === change.itemId);
+  return inside ? { ...item, UserData: changedUserData(item.UserData, 'played', change.value) } : item;
+}
+
+function isItem(value: unknown): value is BaseItemDto {
+  return typeof value === 'object' && value !== null && typeof (value as { Id?: unknown }).Id === 'string';
+}
+
+function mapList(list: unknown[], patch: (item: BaseItemDto) => BaseItemDto): unknown[] | undefined {
+  let changed = false;
+  const next = list.map((x) => {
+    if (!isItem(x)) return x;
+    const patched = patch(x);
+    if (patched !== x) changed = true;
+    return patched;
+  });
+  return changed ? next : undefined;
+}
+
+/**
+ * A cached response (an item, a list of items, or `{Items}`) with `patch` applied to every item, or undefined when
+ * `patch` changed nothing (it returns the same object to leave an item alone). New objects only where something
+ * changed, so screens re-render.
+ */
+export function mapItems(data: unknown, patch: (item: BaseItemDto) => BaseItemDto): unknown {
+  if (Array.isArray(data)) return mapList(data, patch);
+  if (isItem(data)) {
+    const patched = patch(data);
+    return patched === data ? undefined : patched;
+  }
+  const items = (data as { Items?: unknown } | null)?.Items;
+  if (Array.isArray(items)) {
+    const next = mapList(items, patch);
+    return next && { ...(data as object), Items: next };
+  }
+  return undefined;
+}
+
+/** `mapItems` with one user data change. */
+export function patchResponse(data: unknown, change: UserDataChange): unknown {
+  return mapItems(data, (item) => patchItem(item, change));
 }
 
 // Card data.

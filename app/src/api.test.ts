@@ -16,6 +16,8 @@ import {
   logout,
   onUnauthorized,
   request,
+  setFavourite,
+  setPlayed,
   TIMEOUT_MS,
   useOffline,
   type Connection,
@@ -327,4 +329,23 @@ describe('findServer', () => {
     fetchMock.mockImplementation(networkError);
     await expect(findServer(candidates)).rejects.toMatchObject({ kind: 'network' });
   });
+});
+
+describe('user data endpoints', () => {
+  it.each([
+    [() => setPlayed(conn, 'abc', true), 'POST', '/UserPlayedItems/abc'],
+    [() => setPlayed(conn, 'abc', false), 'DELETE', '/UserPlayedItems/abc'],
+    [() => setFavourite(conn, 'abc', true), 'POST', '/UserFavoriteItems/abc'],
+    [() => setFavourite(conn, 'abc', false), 'DELETE', '/UserFavoriteItems/abc'],
+  ] as [() => Promise<unknown>, string, string][])(
+    '%#: %s %s, header auth, answers the new UserData',
+    async (call, method, path) => {
+      fetchMock.mockImplementation(() => reply(200, { Played: true, PlaybackPositionTicks: 0 }));
+      await expect(call()).resolves.toEqual({ Played: true, PlaybackPositionTicks: 0 });
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe(`https://jf.example.com${path}`);
+      expect(init?.method).toBe(method);
+      expect((init?.headers as Record<string, string>).Authorization).toContain('Token="tok-secret"');
+    },
+  );
 });

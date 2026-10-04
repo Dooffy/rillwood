@@ -84,7 +84,7 @@ export function onUnauthorized(listener: UnauthorizedListener): () => void {
 export type Query = Record<string, string | number | boolean | undefined>;
 
 export type RequestOptions = {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'DELETE';
   query?: Query;
   body?: unknown;
   signal?: AbortSignal;
@@ -344,6 +344,23 @@ export function authenticateWithQuickConnect(conn: Connection, secret: string, s
     method: 'POST',
     body: { Secret: secret },
     signal,
+  });
+}
+
+// Endpoints - user data. Both answer the item's new UserData (200; same on 10.11 + 12.1). Unknown id: 404 on 12.x,
+// 500 on 10.11.
+
+/** Mark watched (`POST`) or unwatched (`DELETE`). Either clears the resume point; a season / series marks its episodes. */
+export function setPlayed(conn: Connection, itemId: string, played: boolean) {
+  return request<UserItemDataDto>(conn, `/UserPlayedItems/${encodeURIComponent(itemId)}`, {
+    method: played ? 'POST' : 'DELETE',
+  });
+}
+
+/** Add to (`POST`) or remove from (`DELETE`) favourites. */
+export function setFavourite(conn: Connection, itemId: string, favourite: boolean) {
+  return request<UserItemDataDto>(conn, `/UserFavoriteItems/${encodeURIComponent(itemId)}`, {
+    method: favourite ? 'POST' : 'DELETE',
   });
 }
 
