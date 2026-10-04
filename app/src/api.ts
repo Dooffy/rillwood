@@ -227,6 +227,8 @@ export type MediaStreamDto = {
   Profile?: string;
   /** Subtitles for the deaf and hard of hearing (SDH). */
   IsHearingImpaired?: boolean;
+  /** PlaybackInfo subtitles: `Embed`, `External`, `Encode`, `Hls`. `DeliveryUrl` is left out on purpose (`ApiKey=`). */
+  DeliveryMethod?: string;
 };
 
 /** A file (version) of an item. */
@@ -236,6 +238,18 @@ export type MediaSourceDto = {
   Container?: string;
   Size?: number;
   MediaStreams?: MediaStreamDto[];
+  // PlaybackInfo only.
+  /** False comes without an `ErrorCode` (no transcoding profiles are sent). */
+  SupportsDirectPlay?: boolean;
+  DefaultAudioStreamIndex?: number;
+  DefaultSubtitleStreamIndex?: number;
+};
+
+/** `POST /Items/{id}/PlaybackInfo`. `ErrorCode`: `NotAllowed`, `NoCompatibleStream`, `RateLimitExceeded`. */
+export type PlaybackInfoResponse = {
+  MediaSources: MediaSourceDto[];
+  PlaySessionId?: string;
+  ErrorCode?: string;
 };
 
 /** Cast / crew entry of an item. */
@@ -361,6 +375,17 @@ export function setPlayed(conn: Connection, itemId: string, played: boolean) {
 export function setFavourite(conn: Connection, itemId: string, favourite: boolean) {
   return request<UserItemDataDto>(conn, `/UserFavoriteItems/${encodeURIComponent(itemId)}`, {
     method: favourite ? 'POST' : 'DELETE',
+  });
+}
+
+// Endpoints - playback.
+
+/** Media sources + `PlaySessionId` for playing `itemId` (user from the token). `body` = `playbackInfoBody` (playback.ts). */
+export function getPlaybackInfo(conn: Connection, itemId: string, body: unknown, signal?: AbortSignal) {
+  return request<PlaybackInfoResponse>(conn, `/Items/${encodeURIComponent(itemId)}/PlaybackInfo`, {
+    method: 'POST',
+    body,
+    signal,
   });
 }
 

@@ -56,7 +56,7 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 
 ## M4 - Playback
 
-- [ ] PlaybackInfo (profile per `docs/context/api.md`, check `SupportsDirectPlay`) → media source → static URL; external subs URL built in the client
+- [x] PlaybackInfo (profile per `docs/context/api.md`, check `SupportsDirectPlay`) → media source → static URL; external subs URL built in the client
 - [ ] Player UI: landscape, ±10s, scrubber with chapters, auto-hide, gestures
 - [ ] Orientation: `app.json` `orientation` → `default`, lock non-player screens to portrait (needs `expo-screen-orientation` - approve in `CLAUDE.md` §2)
 - [ ] Tracks sheet (audio, subs incl. external, speed, sub size/offset)

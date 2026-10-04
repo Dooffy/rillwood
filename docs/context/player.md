@@ -32,7 +32,7 @@ export type PlayerRef = { seek(s: number): void; play(): void; pause(): void };
 
 - Keep playback position in a ref, not state.
 - Keep `PlayerEngine` free of mpv-specific concepts (a second engine may come later).
-- Sources: `PlaybackInfo` → check `SupportsDirectPlay` → static stream URL; external subtitle URLs built in the client (`docs/context/api.md`). mpv gets the token-only header (I1).
+- Sources (`src/playback.ts`, pure): `getPlaybackInfo` (`src/api.ts`, body = `playbackInfoBody(mediaSourceId)` with `DEVICE_PROFILE`) → `playSource` picks the requested version (else the first), refuses on `ErrorCode` (`NotAllowed` → its own message) or `SupportsDirectPlay` not true, and returns `{source: {uri, headers}, externalSubs, playSessionId, defaultAudio, defaultSubtitle}` - static stream URL, sidecar text subtitles (srt / subrip → `.srt`, ass / ssa → `.ass`, vtt → `.vtt`; image sidecars skipped - a `defaultSubtitle` pointing at one has no track to match) built in the client, never `DeliveryUrl`. mpv gets the token-only header `streamAuthHeader` (I1). Errors: `playErrorMessage`.
 - Resume prompt only when the item has a server resume point (server keeps 5-90%, items ≥ 5 min).
 - Reporting: `Sessions/Playing` (sets LastPlayedDate + PlayCount), `Progress` every 10s + on pause / seek (resume rules apply on every `Progress`), `Stopped`, all with `PlaySessionId`.
 - Known engine issues to handle here (details + fix directions in the test plan): I3 stale first progress after a new load, I4 same URL ignored (`seek(0)` + `play()`), I8 no end event (EOF arrives as `isPaused: true`; after EOF a seek doesn't resume without `play()`), I11 premature EOF after long network drops (reload at saved position when EOF arrives with position < duration).

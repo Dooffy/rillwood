@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Checks the Home + detail data layer (src/items.ts) against a dev server: rows, Recently Added shaping, time left,
-// detail facts / tracks / cast, series, library paging / sorts / unwatched, search + filters, image URLs.
+// detail facts / tracks / cast, series, library paging / sorts / unwatched, search + filters, image URLs, and
+// playback sources (src/playback.ts): every movie + an episode direct plays, stream + sidecar subtitle URLs answer.
 // Sets a resume point on a movie >= 6 min and marks Test Show S01E01 played as the dev user `test`, then restores both.
 // Usage (from app/): npm run check:home [-- --server http://localhost:8097]. Needs dev/jellyfin running.
 // Dev-only credentials - never use them on a real server.
@@ -40,6 +41,7 @@ import {
   userViews,
   yearRange,
 } from '../src/items.ts';
+import { playbackInfoBody, playSource } from '../src/playback.ts';
 
 const args = process.argv.slice(2);
 const flag = args.indexOf('--server');
@@ -291,6 +293,36 @@ try {
     );
   } else {
     check(false, `${movie.Name} has no Primary image tag`);
+  }
+  // Playback (src/playback.ts): the app's profile direct plays every movie and an episode; the built stream URL
+  // answers a Range request with the token-only header, sidecar subtitle URLs answer as text, no token in any URL.
+  const movies = (await call('GET', '/Items', { query: { includeItemTypes: 'Movie', recursive: true } })).Items;
+  let srtPlay; // H264 AAC SRT: the one movie with a sidecar SRT
+  for (const item of [...movies, showEpisodes[0]]) {
+    const answer = await call('POST', `/Items/${item.Id}/PlaybackInfo`, { body: playbackInfoBody() });
+    const result = playSource({ baseUrl: server, token }, item.Id, answer);
+    if (!result.ok) {
+      check(false, `${item.Name}: no direct play (${result.problem})`);
+      continue;
+    }
+    const { play } = result;
+    if (item.Name.startsWith('H264 AAC SRT')) srtPlay = play;
+    const urls = [play.source.uri, ...play.externalSubs.map((s) => s.uri)];
+    check(
+      Boolean(play.playSessionId) && urls.every((u) => !u.includes(token) && !/api_?key=/i.test(u)),
+      `${item.Name}: direct play, PlaySessionId, ${play.externalSubs.length} sidecar subs, no token in URLs`,
+    );
+  }
+  if (srtPlay) {
+    const { source, externalSubs } = srtPlay;
+    const stream = await fetch(source.uri, { headers: { ...source.headers, Range: 'bytes=0-0' } });
+    await stream.body?.cancel();
+    check(stream.status === 206, `H264 AAC SRT: static stream answers Range with 206 (${stream.status})`);
+    const sub = externalSubs[0];
+    const subText = sub ? await (await fetch(sub.uri, { headers: source.headers })).text() : '';
+    check(subText.includes('English subtitle'), `H264 AAC SRT: sidecar SRT served at ${sub?.uri.replace(server, '')}`);
+  } else {
+    check(false, 'No playable "H264 AAC SRT" movie - run dev/jellyfin/make-test-media.sh');
   }
 } finally {
   // UserData can't clear LastPlayedDate (null is ignored); marking unplayed resets it, then the old state goes back.
