@@ -31,13 +31,8 @@ import { openItem } from '@/navigation';
 import { useSession } from '@/session';
 import { invalidate, useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
+import { usePullToRefresh } from '@/usePullToRefresh';
 import { minTouch, pressedOpacity, spacing, useColors } from '@/theme';
-
-/**
- * How long the pull-to-refresh spinner stays after the rows answered. A fast server answers before the finger lifts;
- * ending the refresh mid-gesture drops the native inset and leaves the spinner drawn over the content (iOS).
- */
-const REFRESH_HOLD_MS = 500;
 
 /** Pull to refresh / Retry: refetch every Home row, failed ones too. */
 function refreshHome() {
@@ -62,18 +57,9 @@ export default function Home() {
     [],
   );
 
-  // Pull to refresh: the spinner stays until the top rows answered, plus REFRESH_HOLD_MS.
-  const [refreshing, setRefreshing] = useState(false);
+  // Pull to refresh: the spinner stays until the top rows answered.
   const loading = views.loading || resume.loading || next.loading;
-  useEffect(() => {
-    if (!refreshing || loading) return;
-    const timer = setTimeout(() => setRefreshing(false), REFRESH_HOLD_MS);
-    return () => clearTimeout(timer);
-  }, [refreshing, loading]);
-  const onRefresh = () => {
-    setRefreshing(true);
-    refreshHome();
-  };
+  const { refreshing, onRefresh } = usePullToRefresh(loading, refreshHome);
 
   const layout = homeLayout(
     views,
