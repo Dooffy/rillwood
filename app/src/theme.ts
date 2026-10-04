@@ -63,6 +63,9 @@ export const onArtwork = {
   fade: 'linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.35) 45%, rgba(0, 0, 0, 0.75) 100%)',
 } as const;
 
+/** Glass controls over video where Liquid Glass isn't available (Android, iOS < 26): see-through, no blur. */
+export const glassFallback = 'rgba(255, 255, 255, 0.18)';
+
 /** Dims the screen behind a sheet or menu, in both themes. */
 export const backdrop = 'rgba(0, 0, 0, 0.5)';
 

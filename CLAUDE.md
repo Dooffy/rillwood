@@ -43,6 +43,8 @@ Platforms: **iOS first**, Android phones in the same release. iPad layout before
 | Persistence | `expo-sqlite/kv-store` (accounts, downloads index, settings, sync queue) | Sync reads on boot |
 | Secrets | `expo-secure-store` (token per account) | Never put tokens in URLs or files. Only exception: the native downloader keeps a copy in OS-protected storage so downloads resume after process death (`docs/context/downloads.md`) |
 | Files | `expo-file-system` new API (`File`, `Directory`, `Paths`) | Store **relative** paths only (iOS container path changes) |
+| Orientation | `expo-screen-orientation` | Upright portrait everywhere (config plugin `initialOrientation: PORTRAIT_UP` + `lockAsync` in the root layout); the player unlocks (`DEFAULT`) while open and re-locks on leave. `app.json` `orientation: default` so the player can rotate. Native-stack / tabs `orientation` options don't hold in dev-client builds - don't use them |
+| Glass | `expo-glass-effect` (`Glass` primitive) | Player controls over video: Liquid Glass on iOS 26+, translucent fill (`glassFallback`) elsewhere. Glass never under opacity < 1 - hide by unmounting |
 | Images | `expo-image`, `cachePolicy="memory-disk"` | Disk keeps posters offline, memory avoids re-decoding on scroll |
 | Downloads | **Own Expo module** `modules/downloads` (Swift + Kotlin, Expo Modules API). Native owns the queue, concurrency (max 2) and resume | No third-party downloader, no system `DownloadManager`. iOS: background `URLSession`; Android 14+: UIDT job, 8-13: WorkManager + `dataSync` FGS. Design: `docs/context/downloads.md` |
 | Download network | User setting: **Wi-Fi only (default) / Any network** | Enforced natively by `modules/downloads`. No NetInfo |
@@ -50,7 +52,7 @@ Platforms: **iOS first**, Android phones in the same release. iPad layout before
 | Offload cleanup | Runs on app launch + foreground (`AppState` active) | No expo-background-task in MVP |
 | Network status | Fail-fast fetch (8s) + `/System/Info/Public` probe on foreground | |
 | Server target | **Jellyfin 12.1 base**, 12.0 + 10.11.x supported | Warn below 10.10.7. **Header auth only** (no `?api_key=` / `?ApiKey=`). Dev servers: `dev/jellyfin` (Docker, pinned 12.1 + 10.11). API rules: `docs/context/api.md` |
-| Tests | `jest-expo` + `@testing-library/react-native` (dev deps in `app/`), `*.test.ts(x)` next to the code; screen tests in `src/__tests__/` (never put tests in `src/app/` - expo-router treats files there as routes) | Unit tests for pure logic, regression test per bug fix, render tests for non-trivial components. Mock fetch / storage / native modules - shared mocks (kv-store, expo-symbols, safe-area) in `app/jest.setup.ts`. Native code: manual device test plans in `docs/test-plans/` |
+| Tests | `jest-expo` + `@testing-library/react-native` (dev deps in `app/`), `*.test.ts(x)` next to the code; screen tests in `src/__tests__/` (never put tests in `src/app/` - expo-router treats files there as routes) | Unit tests for pure logic, regression test per bug fix, render tests for non-trivial components. Mock fetch / storage / native modules - shared mocks (kv-store, expo-symbols, safe-area, glass, reanimated + worklets, gesture-handler) in `app/jest.setup.ts`. Native code: manual device test plans in `docs/test-plans/` |
 | CI | GitHub Actions, GitHub-hosted `ubuntu-latest`, `.github/workflows/ci.yml`. Runs on every branch push + PRs to `main` | One independent runner per check (matrix, `fail-fast: false`): Lint, Typecheck, Format, Unit tests (+ coverage), Expo doctor, Bundle (iOS + Android), Licences. Plus Commit format + DCO: `[PREFIX]` format, blank line, DCO, no AI attribution |
 | Builds | `eas build --local` (or prebuild + Xcode/Gradle), manual upload (Transporter / Play Console) | See §9 Xcode 27 note |
 | License | **GPL-3.0-or-later + App Store additional permission** (§7) | DCO, no CLA |
@@ -135,7 +137,9 @@ src/sync.ts              offline progress queue replay
 src/settings.ts          user settings in kv-store (appearance; downloads + offload later)
 src/player/Player.tsx    PlayerEngine interface + re-export of active engine
 src/player/mpv.tsx       mpv adapter
-src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List, StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message, DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing, SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing
+src/player/controls.ts   player controls logic (pure): seek clamp, pull-to-close threshold, scrubber maths, chapter marks
+src/player/progress.ts   position + duration store outside React state (only the controls re-render)
+src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List, StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message, DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing, SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing, PlayerControls, Glass
 src/dev/                 dev-only previews, rendered behind `__DEV__` (never in release)
 modules/mpv/             vendored native module (+ UPSTREAM.md: upstream repo + commit)
 modules/downloads/       own native background downloader (iOS + Android)

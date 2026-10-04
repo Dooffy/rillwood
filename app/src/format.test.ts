@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from '@jest/globals';
 
-import { formatEndsAt, formatRemaining, spokenRemaining } from './format';
+import { formatClock, formatEndsAt, formatRemaining, spokenRemaining } from './format';
 
 describe('formatRemaining / spokenRemaining', () => {
   it.each([
@@ -31,5 +31,18 @@ describe('formatEndsAt', () => {
 
   it.each([0, -5, Number.NaN])('is undefined for %p', (seconds) => {
     expect(formatEndsAt(seconds)).toBeUndefined();
+  });
+});
+
+describe('formatClock', () => {
+  it.each([
+    [0, '0:00'],
+    [5.9, '0:05'],
+    [245, '4:05'],
+    [3723, '1:02:03'],
+    [-3, '0:00'],
+    [Number.NaN, '0:00'],
+  ])('%d s → %s', (seconds, text) => {
+    expect(formatClock(seconds)).toBe(text);
   });
 });
