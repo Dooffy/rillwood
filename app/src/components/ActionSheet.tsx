@@ -46,7 +46,15 @@ export function ActionSheet({ visible, title, actions, onClose }: ActionSheetPro
     if (Platform.OS !== 'ios') runPending();
   };
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} onDismiss={runPending}>
+    // All orientations: the sheet follows the screen (the portrait lock lives in expo-screen-orientation).
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      supportedOrientations={['portrait', 'landscape']}
+      onRequestClose={onClose}
+      onDismiss={runPending}
+    >
       <Pressable accessibilityLabel="Close" accessibilityRole="button" style={styles.backdrop} onPress={onClose} />
       <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.sm }]}>
         <View accessibilityRole="menu" style={[styles.group, { backgroundColor: c.elevated }]}>
@@ -57,7 +65,8 @@ export function ActionSheet({ visible, title, actions, onClose }: ActionSheetPro
           )}
           {actions.map((action, i) => (
             <Pressable
-              key={action.label}
+              // Labels can repeat (two tracks named alike).
+              key={`${i}-${action.label}`}
               accessibilityRole="menuitem"
               accessibilityLabel={action.detail ? `${action.label}, ${action.detail}` : action.label}
               accessibilityState={action.selected === undefined ? undefined : { selected: action.selected }}

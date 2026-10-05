@@ -62,7 +62,9 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [x] Orientation: `app.json` `orientation` → `default`, `expo-screen-orientation` locks upright portrait at launch, the player unlocks while open
 - [ ] Investigate chapters in the player: marks on the scrubber (removed from the first Player UI - plain lines didn't explain themselves), names while scrubbing, snap / skip to chapter (`Chapters` on `/Items/{id}`)
 - [ ] Investigate PiP when the app goes to the background (`docs/open-items.md`): decide MVP or post-MVP
-- [ ] Tracks sheet (audio, subs incl. external, speed, sub size/offset); start with the server defaults (`playSource` `defaultAudio` / `defaultSubtitle` → mpv ids) - without an initial subtitle id iOS starts with subs off
+- [x] Tracks sheet (audio, subs incl. external, speed, sub size); starts with the server defaults as mpv ids (`trackOptions`)
+- [ ] Tracks: check the predicted mpv ids against the engine's track list from `onLoad` (a stream mpv drops or a sidecar that fails to load would shift ids)
+- [ ] Subtitle timing (offset) in the tracks menu: needs `setSubtitleDelay` in the Android module (iOS has it) - native change, `UPSTREAM.md`
 - [ ] Resume prompt when the item has a resume point (server keeps 5-90%, items ≥ 5 min only)
 - [x] Reporting start/progress/stop with PlaySessionId (`useReporting`; verified on 12.1 + 10.11 by `check:home`)
 - [ ] Autoplay next + up-next overlay (last 30s); remember audio/sub language per user

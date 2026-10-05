@@ -14,6 +14,10 @@ export type PlayerProps = {
   startSeconds?: number;
   audioTrack?: number;
   subtitleTrack?: number; // -1 = off
+  /** Playback rate, 1 = normal. */
+  speed?: number;
+  /** Subtitle size, 1 = normal. */
+  subtitleScale?: number;
   paused?: boolean;
   externalSubs?: { uri: string; lang?: string; title?: string }[];
   onLoad?(e: { duration: number; audio: Track[]; subs: Track[] }): void;

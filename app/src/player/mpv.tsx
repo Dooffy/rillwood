@@ -14,7 +14,7 @@ const ignore = () => {};
 const track = ({ id, lang, title, codec }: Track): Track => ({ id, lang, title, codec });
 
 export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(props, ref) {
-  const { source, paused = false, audioTrack, subtitleTrack } = props;
+  const { source, paused = false, audioTrack, subtitleTrack, speed = 1, subtitleScale = 1 } = props;
   const view = useRef<MpvPlayerViewRef>(null);
   // Latest props for event handlers and loads, without making them effect dependencies.
   const latest = useRef(props);
@@ -89,6 +89,13 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
   useEffect(() => {
     mounted.current = true;
   }, []);
+  // Speed and subtitle size are mpv-wide (they survive a new load): applied on every change, the first one included.
+  useEffect(() => {
+    view.current?.setSpeed(speed).catch(ignore);
+  }, [speed]);
+  useEffect(() => {
+    view.current?.setSubtitleScale(subtitleScale).catch(ignore);
+  }, [subtitleScale]);
 
   useImperativeHandle(
     ref,
@@ -113,6 +120,10 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
       if (mine !== load.current || loadedFor.current === mine) return;
       ready.current = true;
       loadedFor.current = mine;
+      // Again per load: Android creates its renderer only now, so the calls from the effects above may have gone nowhere.
+      const { speed: s = 1, subtitleScale: scale = 1 } = latest.current;
+      player.setSpeed(s).catch(ignore);
+      player.setSubtitleScale(scale).catch(ignore);
       latest.current.onLoad?.({ duration, audio: audio.map(track), subs: subs.map(track) });
     } catch {
       if (mine === load.current) ready.current = true;

@@ -56,10 +56,16 @@ export type PlaySource = {
   playSessionId?: string;
   source: { uri: string; headers: Record<string, string> };
   externalSubs: ExternalSub[];
-  /** Jellyfin stream indexes; subtitle -1 / undefined = off. */
+  /** What the tracks menu offers, with mpv track ids. */
+  audio: TrackOption[];
+  subtitles: TrackOption[];
+  /** mpv ids to start with (the server's defaults, i.e. the user's language preferences); subtitle -1 = off. */
   defaultAudio?: number;
-  defaultSubtitle?: number;
+  defaultSubtitle: number;
 };
+
+/** A track the player can switch to: `id` is mpv's (1-based per type), `index` Jellyfin's stream index. */
+export type TrackOption = { id: number; index: number; label: string };
 
 /**
  * - `none`: no media source (or not the requested one)
@@ -80,6 +86,29 @@ export function subtitleUrl(baseUrl: string, itemId: string, mediaSourceId: stri
   const ext = SUB_EXTENSION[stream.Codec?.toLowerCase() ?? ''];
   if (!ext) return null;
   return `${baseUrl}/Videos/${encodeURIComponent(itemId)}/${encodeURIComponent(mediaSourceId)}/Subtitles/${stream.Index}/Stream.${ext}`;
+}
+
+// Jellyfin's DisplayTitle marks the default track ("English - Default - SUBRIP"); the menu shows the choice itself.
+const trackLabel = (s: MediaStreamDto) =>
+  (s.DisplayTitle ?? s.Title ?? s.Language ?? s.Codec ?? `Track ${s.Index}`).replace(/ - Default\b/, '');
+
+/**
+ * Audio + subtitle tracks with their mpv ids. mpv numbers each type from 1 in file order, then the sidecar subtitles in
+ * the order they're added (`externalSubs` - formats it can't load are left out of both).
+ */
+export function trackOptions(
+  source: MediaSourceDto,
+  sidecars: ExternalSub[],
+): { audio: TrackOption[]; subtitles: TrackOption[] } {
+  const streams = source.MediaStreams ?? [];
+  const inFile = (type: string) => streams.filter((s) => s.Type === type && !s.IsExternal);
+  const option = (s: MediaStreamDto, i: number): TrackOption => ({ id: i + 1, index: s.Index, label: trackLabel(s) });
+  const embeddedSubs = inFile('Subtitle').map(option);
+  const sidecarSubs = sidecars.flatMap((sub, i) => {
+    const stream = streams.find((s) => s.Index === sub.index);
+    return stream ? [option(stream, embeddedSubs.length + i)] : [];
+  });
+  return { audio: inFile('Audio').map(option), subtitles: [...embeddedSubs, ...sidecarSubs] };
 }
 
 /** Sidecar subtitle files of a source (embedded ones are in the file - mpv finds those itself). */
@@ -106,6 +135,8 @@ export function playSource(
   const source = mediaSourceId ? info.MediaSources.find((s) => s.Id === mediaSourceId) : info.MediaSources[0];
   if (!source) return { ok: false, problem: 'none' };
   if (!source.SupportsDirectPlay) return { ok: false, problem: 'directPlay' };
+  const subs = externalSubs(conn.baseUrl, itemId, source);
+  const tracks = trackOptions(source, subs);
   return {
     ok: true,
     play: {
@@ -115,9 +146,10 @@ export function playSource(
         uri: streamUrl(conn.baseUrl, itemId, source.Id),
         headers: conn.token ? { Authorization: streamAuthHeader(conn.token) } : {},
       },
-      externalSubs: externalSubs(conn.baseUrl, itemId, source),
-      defaultAudio: source.DefaultAudioStreamIndex,
-      defaultSubtitle: source.DefaultSubtitleStreamIndex,
+      externalSubs: subs,
+      ...tracks,
+      defaultAudio: tracks.audio.find((t) => t.index === source.DefaultAudioStreamIndex)?.id ?? tracks.audio[0]?.id,
+      defaultSubtitle: tracks.subtitles.find((t) => t.index === source.DefaultSubtitleStreamIndex)?.id ?? -1,
     },
   };
 }

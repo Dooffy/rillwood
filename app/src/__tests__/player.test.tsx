@@ -48,7 +48,12 @@ const account: session.Account = {
 const source: MediaSourceDto = {
   Id: 'ms',
   SupportsDirectPlay: true,
-  MediaStreams: [{ Type: 'Subtitle', Index: 2, Codec: 'subrip', IsExternal: true, Language: 'ger' }],
+  DefaultAudioStreamIndex: 1,
+  DefaultSubtitleStreamIndex: -1,
+  MediaStreams: [
+    { Type: 'Audio', Index: 1, DisplayTitle: 'English - AAC - Stereo - Default' },
+    { Type: 'Subtitle', Index: 2, Codec: 'subrip', IsExternal: true, Language: 'ger', DisplayTitle: 'German - SRT' },
+  ],
 };
 const request = jest.spyOn(api, 'getPlaybackInfo');
 // The title comes from the item (useFetch → api.request).
@@ -175,6 +180,17 @@ describe('Player screen', () => {
     expect(Player.mock.calls.length).toBeGreaterThan(calls);
     expect(lastPlayer().startSeconds).toBe(123);
     expect(request).toHaveBeenCalledTimes(2);
+  });
+
+  // Regression: the menu page outlived a failed load, so the sheet reopened by itself once Retry played.
+  it('a playback error with the tracks menu open: Retry plays without the menu', async () => {
+    await renderPlaying();
+    await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
+    expect(screen.getByText('Subtitle size')).toBeOnTheScreen();
+    await act(() => lastPlayer().onError?.('Failed to open'));
+    await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
+    await act(() => lastPlayer().onLoad?.({ duration: 9000, audio: [], subs: [] }));
+    expect(screen.queryByText('Subtitle size')).toBeNull();
   });
 
   it('an empty / zero id never asks the server', async () => {
@@ -362,5 +378,33 @@ describe('Player screen', () => {
     );
     await unmount();
     expect(stopped).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ PositionTicks: 1_100_000_000 }));
+  });
+
+  it('starts with the server defaults (as mpv ids): audio 1, subtitles off', async () => {
+    await renderPlaying();
+    expect(lastPlayer()).toMatchObject({ audioTrack: 1, subtitleTrack: -1, speed: 1, subtitleScale: 1 });
+  });
+
+  it('tracks menu: current values, pick a subtitle, change speed; controls stay up while it is open', async () => {
+    jest.useFakeTimers();
+    try {
+      await renderPlaying();
+      await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
+      expect(screen.getByText('English - AAC - Stereo')).toBeOnTheScreen(); // Audio row's current value
+      expect(screen.getByText('Off')).toBeOnTheScreen(); // Subtitles row
+      await act(() => jest.advanceTimersByTime(10_000));
+      expect(screen.getByRole('button', { name: 'Pause' })).toBeOnTheScreen();
+
+      await fireEvent.press(screen.getByText('Subtitles'));
+      await fireEvent.press(screen.getByText('German - SRT'));
+      expect(lastPlayer().subtitleTrack).toBe(1);
+
+      await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
+      await fireEvent.press(screen.getByText('Speed'));
+      await fireEvent.press(screen.getByText('1.5×'));
+      expect(lastPlayer().speed).toBe(1.5);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
