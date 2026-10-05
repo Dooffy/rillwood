@@ -4,6 +4,7 @@ import { describe, expect, it } from '@jest/globals';
 import { ApiError, type Connection, type MediaSourceDto, type PlaybackInfoResponse } from './api';
 import {
   externalSubs,
+  trackOptions,
   playbackInfoBody,
   playbackReport,
   playErrorMessage,
@@ -83,8 +84,15 @@ describe('playSource', () => {
           headers: { Authorization: 'MediaBrowser Token="tok-secret"' },
         },
         externalSubs: expect.any(Array),
+        audio: [{ id: 1, index: 1, label: 'Track 1' }],
+        subtitles: [
+          { id: 1, index: 2, label: 'subrip' },
+          { id: 2, index: 3, label: 'English' },
+          { id: 3, index: 4, label: 'Signs' },
+        ],
+        // Server defaults (Jellyfin indexes 1 / 3) as mpv ids.
         defaultAudio: 1,
-        defaultSubtitle: 3,
+        defaultSubtitle: 2,
       },
     });
   });
@@ -168,5 +176,50 @@ describe('playbackReport', () => {
       IsPaused: true,
     });
     expect(playbackReport('i', play, -3).PositionTicks).toBe(0);
+  });
+});
+
+describe('trackOptions', () => {
+  const ms = (streams: MediaSourceDto['MediaStreams']): MediaSourceDto => ({ Id: 'ms', MediaStreams: streams });
+
+  it('mpv ids: per type in file order, sidecars after the embedded subtitles in the order they are added', () => {
+    const src = ms([
+      { Type: 'Subtitle', Index: 0, Codec: 'srt', IsExternal: true, DisplayTitle: 'German - SRT - External' },
+      { Type: 'Video', Index: 1 },
+      { Type: 'Audio', Index: 2, DisplayTitle: 'English - AAC - Stereo - Default' },
+      { Type: 'Audio', Index: 3, DisplayTitle: 'French - AC3 - 5.1' },
+      { Type: 'Subtitle', Index: 4, Codec: 'pgssub', DisplayTitle: 'English - PGS' },
+      { Type: 'Subtitle', Index: 5, Codec: 'ass', DisplayTitle: 'Signs - Default - ASS' },
+    ]);
+    const { audio, subtitles } = trackOptions(src, externalSubs('https://jf', 'i', src));
+    expect(audio).toEqual([
+      { id: 1, index: 2, label: 'English - AAC - Stereo' },
+      { id: 2, index: 3, label: 'French - AC3 - 5.1' },
+    ]);
+    expect(subtitles).toEqual([
+      { id: 1, index: 4, label: 'English - PGS' },
+      { id: 2, index: 5, label: 'Signs - ASS' },
+      { id: 3, index: 0, label: 'German - SRT - External' },
+    ]);
+  });
+
+  it('image sidecars are not loaded, so they get no id (and shift nothing)', () => {
+    const src = ms([
+      { Type: 'Subtitle', Index: 0, Codec: 'pgssub', IsExternal: true },
+      { Type: 'Subtitle', Index: 1, Codec: 'srt', IsExternal: true, Title: 'English' },
+    ]);
+    expect(trackOptions(src, externalSubs('https://jf', 'i', src)).subtitles).toEqual([
+      { id: 1, index: 1, label: 'English' },
+    ]);
+  });
+
+  it('no server default subtitle → off; no default audio → the first', () => {
+    const result = playSource(
+      conn,
+      'i',
+      info({ MediaSources: [{ ...source, DefaultAudioStreamIndex: undefined, DefaultSubtitleStreamIndex: -1 }] }),
+    );
+    expect(result.ok && result.play.defaultAudio).toBe(1);
+    expect(result.ok && result.play.defaultSubtitle).toBe(-1);
   });
 });

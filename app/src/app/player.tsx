@@ -29,6 +29,7 @@ import { Message } from '@/components/Message';
 import { PlayerControls } from '@/components/PlayerControls';
 import { Spinner } from '@/components/Spinner';
 import { Text } from '@/components/Text';
+import { TracksMenu, type TracksPage, type TracksValue } from '@/components/TracksMenu';
 import { cardTitles, isItemId, itemDetail } from '@/items';
 import { playbackInfoBody, playErrorMessage, playSource, type PlaySource } from '@/playback';
 import { HIDE_AFTER_MS, PULL_CLOSE_DISTANCE, SEEK_STEP, seekTarget, shouldClose } from '@/player/controls';
@@ -67,6 +68,10 @@ export default function PlayerScreen() {
   const [paused, setPaused] = useState(false);
   const [shown, setShown] = useState(true);
   const [scrubbing, setScrubbing] = useState(false);
+  // Tracks menu page (null = closed) and the choices made in it; until a choice, the server's defaults. Choices outlive
+  // a Retry (same item); speed and subtitle size apply to whatever plays.
+  const [menu, setMenu] = useState<TracksPage | null>(null);
+  const [choice, setChoice] = useState<Partial<TracksValue>>({});
   // Bumped on ±10 s: restarts the auto-hide timer (pause and scrubbing are timer deps already).
   const [touched, setTouched] = useState(0);
   const screenReader = useScreenReader();
@@ -85,6 +90,13 @@ export default function PlayerScreen() {
       : { status: 'loading' };
   const ready = state.status === 'ready';
   const playing = ready && started === key;
+  const play = state.status === 'ready' ? state.play : undefined;
+  const tracks: TracksValue = {
+    audio: choice.audio ?? play?.defaultAudio,
+    subtitle: choice.subtitle ?? play?.defaultSubtitle ?? -1,
+    speed: choice.speed ?? 1,
+    subtitleScale: choice.subtitleScale ?? 1,
+  };
 
   // The only screen that rotates: unlocked while open, back to upright portrait on leave.
   useEffect(() => {
@@ -127,25 +139,30 @@ export default function PlayerScreen() {
     return () => clearTimeout(timer);
   }, [ready, started, key]);
 
-  // Auto-hide while playing; paused, scrubbing or VoiceOver keep the controls up.
+  // Auto-hide while playing; paused, scrubbing, the tracks menu or VoiceOver keep the controls up.
+  const menuOpen = menu !== null;
   useEffect(() => {
-    if (!shown || !playing || paused || scrubbing || screenReader) return;
+    if (!shown || !playing || paused || scrubbing || menuOpen || screenReader) return;
     const timer = setTimeout(() => setShown(false), HIDE_AFTER_MS);
     return () => clearTimeout(timer);
-  }, [shown, playing, paused, scrubbing, screenReader, touched]);
+  }, [shown, playing, paused, scrubbing, menuOpen, screenReader, touched]);
 
   // Jellyfin sees the session: start once mpv loaded the file, progress every 10 s / pause / seek, stop on leave.
   const { seeked } = useReporting({
     accountId,
     itemId: isItemId(id) ? id : undefined,
-    play: state.status === 'ready' ? state.play : undefined,
+    play,
     started: playing,
     paused,
     progress,
   });
 
   const close = () => router.back();
-  const retry = () => setAttempt((n) => n + 1);
+  // The menu closes with the failed load; it mustn't reopen once the retry plays.
+  const retry = () => {
+    setMenu(null);
+    setAttempt((n) => n + 1);
+  };
   const touch = () => setTouched((n) => n + 1);
   const seek = (seconds: number) => {
     const to = seekTarget(seconds, progress.get().duration);
@@ -242,6 +259,10 @@ export default function PlayerScreen() {
                 externalSubs={state.play.externalSubs}
                 startSeconds={state.start}
                 paused={paused}
+                audioTrack={tracks.audio}
+                subtitleTrack={tracks.subtitle}
+                speed={tracks.speed}
+                subtitleScale={tracks.subtitleScale}
                 onLoad={(e) => {
                   progress.set({ duration: e.duration });
                   setStarted(key);
@@ -269,6 +290,7 @@ export default function PlayerScreen() {
             paused={paused}
             progress={progress}
             onClose={close}
+            onTracks={() => setMenu('main')}
             onTogglePause={() => setPaused((p) => !p)}
             onSeekBy={(delta) => {
               touch();
@@ -276,6 +298,16 @@ export default function PlayerScreen() {
             }}
             onSeek={seek}
             onScrub={setScrubbing}
+          />
+        )}
+        {play && (
+          <TracksMenu
+            page={menu}
+            onPage={setMenu}
+            audio={play.audio}
+            subtitles={play.subtitles}
+            value={tracks}
+            onChange={(next) => setChoice((c) => ({ ...c, ...next }))}
           />
         )}
       </ColorsContext.Provider>

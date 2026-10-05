@@ -23,6 +23,9 @@ const play: PlaySource = {
   playSessionId: 'ps',
   source: { uri: 'https://jf.example.com/Videos/i/stream?static=true&mediaSourceId=ms', headers: {} },
   externalSubs: [],
+  audio: [],
+  subtitles: [],
+  defaultSubtitle: -1,
 };
 
 const start = jest.spyOn(api, 'reportPlaybackStart');

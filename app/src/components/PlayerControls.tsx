@@ -23,6 +23,8 @@ export type PlayerControlsProps = {
   paused: boolean;
   progress: ProgressStore;
   onClose: () => void;
+  /** Opens the audio / subtitles / speed menu (shown once playing). */
+  onTracks: () => void;
   onTogglePause: () => void;
   onSeekBy: (seconds: number) => void;
   onSeek: (seconds: number) => void;
@@ -31,7 +33,7 @@ export type PlayerControlsProps = {
 };
 
 export function PlayerControls(props: PlayerControlsProps) {
-  const { title, subtitle, started, paused, onClose, onTogglePause, onSeekBy } = props;
+  const { title, subtitle, started, paused, onClose, onTracks, onTogglePause, onSeekBy } = props;
   const insets = useSafeAreaInsets();
   const sides = { paddingLeft: insets.left + spacing.md, paddingRight: insets.right + spacing.md };
   return (
@@ -57,6 +59,17 @@ export function PlayerControls(props: PlayerControlsProps) {
               </Text>
             )}
           </Glass>
+        )}
+        {started && (
+          // Right edge, past the title pill.
+          <View style={styles.trailing}>
+            <IconButton
+              icon={{ ios: 'ellipsis', android: 'more_horiz' }}
+              label="Audio, subtitles and speed"
+              variant="glass"
+              onPress={onTracks}
+            />
+          </View>
         )}
       </View>
       {started && (
@@ -153,6 +166,7 @@ const THUMB = 14;
 const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   // Title pill: as wide as its text, never past the screen edge.
+  trailing: { marginLeft: 'auto' },
   titles: {
     flexShrink: 1,
     minHeight: minTouch,

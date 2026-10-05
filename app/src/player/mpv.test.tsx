@@ -19,6 +19,8 @@ const mockNative = {
   getAudioTracks: jest.fn(async () => [{ id: 1, lang: 'eng', title: 'Stereo', codec: 'aac', channels: 2 }]),
   getSubtitleTracks: jest.fn(async () => [{ id: 1, lang: 'ger', codec: 'subrip', external: true }]),
   getDuration: jest.fn(async () => 888),
+  setSpeed: jest.fn(async (_speed: number) => {}),
+  setSubtitleScale: jest.fn(async (_scale: number) => {}),
 };
 let mockViewProps: MpvPlayerViewProps;
 
@@ -171,5 +173,23 @@ describe('MpvPlayer', () => {
     const { unmount } = await render(<MpvPlayer source={source} />);
     await unmount();
     expect(mockNative.destroy).not.toHaveBeenCalled();
+  });
+
+  it('speed and subtitle size go to mpv on every change', async () => {
+    const { rerender } = await render(<MpvPlayer source={source} />);
+    expect(mockNative.setSpeed).toHaveBeenLastCalledWith(1);
+    await rerender(<MpvPlayer source={source} speed={1.5} subtitleScale={1.25} />);
+    expect(mockNative.setSpeed).toHaveBeenLastCalledWith(1.5);
+    expect(mockNative.setSubtitleScale).toHaveBeenLastCalledWith(1.25);
+  });
+
+  // Regression: Android has no renderer before the file loads, so speed / size set at mount went nowhere (Retry).
+  it('speed and subtitle size are sent again once the load is ready', async () => {
+    await render(<MpvPlayer source={source} speed={1.5} subtitleScale={1.25} />);
+    mockNative.setSpeed.mockClear();
+    mockNative.setSubtitleScale.mockClear();
+    await tracksReady();
+    expect(mockNative.setSpeed).toHaveBeenCalledWith(1.5);
+    expect(mockNative.setSubtitleScale).toHaveBeenCalledWith(1.25);
   });
 });
