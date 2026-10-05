@@ -101,6 +101,8 @@ Design + sources: `docs/research/background-downloads.md`.
 ## M6 - Offline + offload + sync
 
 - [ ] Offline detection + offline UI (Downloads tab primary, detail from snapshots, `file://` playback)
+- [ ] Connection error UI: one consistent state when the server can't be reached (no network / server down / timeout / TLS), told apart from 401 and 5xx, with Retry; a banner over cached content instead of a full-screen error where data is already shown
+- [ ] Offline mode: switch to it automatically when the server is unreachable (`/System/Info/Public` probe on foreground), back online on reconnect; screens without cached data point to Downloads
 - [ ] Progress queue + replay per `docs/context/sync.md` (GET then POST, last writer wins on `LastPlayedDate`); watched sync for downloaded items
 - [ ] Offload settings + `cleanup()` + Keep pin + "Removes in N days" label + freed-GB toast
 - [ ] Weekly orphan sweep

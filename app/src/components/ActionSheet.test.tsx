@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it, jest } from '@jest/globals';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
 
 import { ActionSheet } from './ActionSheet';
 
@@ -43,5 +43,14 @@ describe('ActionSheet', () => {
       <ActionSheet visible={false} actions={[{ label: 'Download', onPress: () => {} }]} onClose={() => {}} />,
     );
     expect(screen.queryByText('Download')).toBeNull();
+  });
+
+  // Regression: a long list (subtitles in landscape) ran off the top of the screen and couldn't be reached.
+  it('long lists scroll inside the sheet; the title stays put', async () => {
+    const actions = Array.from({ length: 30 }, (_, i) => ({ label: `Track ${i + 1}`, onPress: () => {} }));
+    await render(<ActionSheet visible title="Subtitles" actions={actions} onClose={() => {}} />);
+    const list = screen.getByTestId('action-sheet-list');
+    expect(within(list).getByRole('menuitem', { name: 'Track 30' })).toBeOnTheScreen();
+    expect(within(list).queryByText('Subtitles')).toBeNull();
   });
 });

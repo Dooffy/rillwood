@@ -32,7 +32,14 @@ import { Text } from '@/components/Text';
 import { TracksMenu, type TracksPage, type TracksValue } from '@/components/TracksMenu';
 import { cardTitles, isItemId, itemDetail } from '@/items';
 import { playbackInfoBody, playErrorMessage, playSource, type PlaySource } from '@/playback';
-import { HIDE_AFTER_MS, PULL_CLOSE_DISTANCE, SEEK_STEP, seekTarget, shouldClose } from '@/player/controls';
+import {
+  HIDE_AFTER_MS,
+  PULL_CLOSE_DISTANCE,
+  SEEK_STEP,
+  seekTarget,
+  shouldClose,
+  subtitleScaleFor,
+} from '@/player/controls';
 import { Player, type PlayerRef } from '@/player/Player';
 import { createProgress } from '@/player/progress';
 import { useReporting } from '@/player/useReporting';
@@ -262,7 +269,7 @@ export default function PlayerScreen() {
                 audioTrack={tracks.audio}
                 subtitleTrack={tracks.subtitle}
                 speed={tracks.speed}
-                subtitleScale={tracks.subtitleScale}
+                subtitleScale={subtitleScaleFor(tracks.subtitleScale, height > width)}
                 onLoad={(e) => {
                   progress.set({ duration: e.duration });
                   setStarted(key);

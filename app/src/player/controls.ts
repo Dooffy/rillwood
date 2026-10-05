@@ -6,6 +6,12 @@ export const SEEK_STEP = 10;
 export const HIDE_AFTER_MS = 3000;
 /** Pull down further than this, or flick down faster, to close the player. */
 export const PULL_CLOSE_DISTANCE = 120;
+/** Portrait shows the picture small and mpv sizes text to the picture: subtitles a step larger there. */
+export const PORTRAIT_SUBTITLE_SCALE = 1.25;
+
+/** Subtitle scale sent to the engine: the user's size, a step up in portrait. */
+export const subtitleScaleFor = (scale: number, portrait: boolean) =>
+  portrait ? scale * PORTRAIT_SUBTITLE_SCALE : scale;
 const PULL_CLOSE_VELOCITY = 800;
 /** A flick only counts once the pull has really started. */
 const FLICK_MIN_DISTANCE = 30;
