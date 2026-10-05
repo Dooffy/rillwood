@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { SymbolView } from 'expo-symbols';
 import { useRef } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { backdrop, radii, spacing, useColors } from '@/theme';
@@ -10,6 +10,8 @@ import { Text } from './Text';
 
 /** Row height of the sheet's actions and Cancel (iOS action sheet). */
 const ROW_HEIGHT = 56;
+/** Landscape / wide screens: centred, no wider than the iOS action sheet. */
+const MAX_WIDTH = 500;
 
 export type SheetAction = {
   label: string;
@@ -56,50 +58,67 @@ export function ActionSheet({ visible, title, actions, onClose }: ActionSheetPro
       onDismiss={runPending}
     >
       <Pressable accessibilityLabel="Close" accessibilityRole="button" style={styles.backdrop} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.sm }]}>
-        <View accessibilityRole="menu" style={[styles.group, { backgroundColor: c.elevated }]}>
+      {/* Never past the safe area: a long list (subtitles in landscape) scrolls instead. */}
+      <View
+        style={[
+          styles.sheet,
+          {
+            paddingTop: insets.top + spacing.sm,
+            paddingBottom: insets.bottom + spacing.sm,
+            paddingLeft: insets.left + spacing.sm,
+            paddingRight: insets.right + spacing.sm,
+          },
+        ]}
+      >
+        <View
+          accessibilityRole="menu"
+          style={[styles.group, styles.width, styles.menu, { backgroundColor: c.elevated }]}
+        >
           {title !== undefined && (
             <Text variant="caption" secondary style={styles.title} numberOfLines={2}>
               {title}
             </Text>
           )}
-          {actions.map((action, i) => (
-            <Pressable
-              // Labels can repeat (two tracks named alike).
-              key={`${i}-${action.label}`}
-              accessibilityRole="menuitem"
-              accessibilityLabel={action.detail ? `${action.label}, ${action.detail}` : action.label}
-              accessibilityState={action.selected === undefined ? undefined : { selected: action.selected }}
-              onPress={() => pick(action)}
-              style={({ pressed }) => [
-                styles.action,
-                (i > 0 || title !== undefined) && [styles.divider, { borderTopColor: c.separator }],
-                pressed && { backgroundColor: c.elevated2 },
-              ]}
-            >
-              <View style={styles.check}>
-                {action.selected && (
-                  <SymbolView name={{ ios: 'checkmark', android: 'check' }} tintColor={c.text} size={16} />
-                )}
-              </View>
-              <View style={styles.labels}>
-                <Text>{action.label}</Text>
-                {action.detail !== undefined && (
-                  <Text variant="caption" secondary>
-                    {action.detail}
-                  </Text>
-                )}
-              </View>
-              {/* Same width as the checkmark column, so labels stay centred. */}
-              <View style={styles.check} />
-            </Pressable>
-          ))}
+          <ScrollView testID="action-sheet-list" alwaysBounceVertical={false}>
+            {actions.map((action, i) => (
+              <Pressable
+                // Labels can repeat (two tracks named alike).
+                key={`${i}-${action.label}`}
+                accessibilityRole="menuitem"
+                accessibilityLabel={action.detail ? `${action.label}, ${action.detail}` : action.label}
+                accessibilityState={action.selected === undefined ? undefined : { selected: action.selected }}
+                onPress={() => pick(action)}
+                style={({ pressed }) => [
+                  styles.action,
+                  (i > 0 || title !== undefined) && [styles.divider, { borderTopColor: c.separator }],
+                  pressed && { backgroundColor: c.elevated2 },
+                ]}
+              >
+                <View style={styles.check}>
+                  {action.selected && (
+                    <SymbolView name={{ ios: 'checkmark', android: 'check' }} tintColor={c.text} size={16} />
+                  )}
+                </View>
+                <View style={styles.labels}>
+                  <Text>{action.label}</Text>
+                  {action.detail !== undefined && (
+                    <Text variant="caption" secondary>
+                      {action.detail}
+                    </Text>
+                  )}
+                </View>
+                {/* Same width as the checkmark column, so labels stay centred. */}
+                <View style={styles.check} />
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
         <Pressable
           accessibilityRole="button"
           onPress={onClose}
           style={({ pressed }) => [
             styles.group,
+            styles.width,
             styles.cancel,
             { backgroundColor: pressed ? c.elevated2 : c.elevated },
           ]}
@@ -113,8 +132,18 @@ export function ActionSheet({ visible, title, actions, onClose }: ActionSheetPro
 
 const styles = StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: backdrop },
-  sheet: { position: 'absolute', left: spacing.sm, right: spacing.sm, bottom: 0, gap: spacing.sm },
+  // box-none: taps outside the groups reach the backdrop.
+  sheet: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: spacing.sm,
+    pointerEvents: 'box-none',
+  },
   group: { borderRadius: radii.card, overflow: 'hidden' },
+  width: { width: '100%', maxWidth: MAX_WIDTH },
+  // Shrinks below its content when the screen is short; the actions scroll, the title stays.
+  menu: { flexShrink: 1 },
   title: { textAlign: 'center', paddingTop: spacing.md, paddingBottom: spacing.sm, paddingHorizontal: spacing.md },
   action: {
     minHeight: ROW_HEIGHT,

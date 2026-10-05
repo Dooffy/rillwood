@@ -63,6 +63,8 @@ struct VideoLoadConfig {
 class MpvPlayerView: ExpoView {
 	private let engine = MPVPlayerEngine()
 	private var videoContainer: UIView!
+	/// Rillwood: display aspect of the current video (0 = unknown).
+	private var videoAspect: Double = 0
 	let onLoad = EventDispatcher()
 	let onPlaybackStateChange = EventDispatcher()
 	let onProgress = EventDispatcher()
@@ -87,7 +89,7 @@ class MpvPlayerView: ExpoView {
 
 		engine.delegate = self
 		engine.displayLayer.frame = bounds
-		engine.displayLayer.contentsScale = contentScaleFactor
+		engine.displayLayer.contentsScale = screenScale
 		videoContainer.layer.addSublayer(engine.displayLayer)
 
 		NSLayoutConstraint.activate([
@@ -110,11 +112,34 @@ class MpvPlayerView: ExpoView {
 		super.layoutSubviews()
 		CATransaction.begin()
 		CATransaction.setDisableActions(true)
-		engine.displayLayer.frame = videoContainer.bounds
-		engine.displayLayer.contentsScale = contentScaleFactor
+		engine.displayLayer.frame = displayFrame()
+		engine.displayLayer.contentsScale = screenScale
 		engine.displayLayer.isHidden = false
 		engine.displayLayer.opacity = 1.0
+		// Rillwood: the non-composited subtitle layer (Simulator / tvOS) keeps its old frame on resize / rotation.
+		engine.syncSubtitleLayerFrame()
 		CATransaction.commit()
+	}
+
+	/// Rillwood: the screen's pixel scale. `contentScaleFactor` can stay 1 for a view that doesn't draw itself, and mpv
+	/// sizes its subtitle canvas from the display layer's `contentsScale` (1 = a third of the pixels on a 3x screen, blurry).
+	private var screenScale: CGFloat {
+		let scale = window?.screen.scale ?? traitCollection.displayScale
+		return scale > 0 ? scale : contentScaleFactor  // 0 = unknown before the view joins a window
+	}
+
+	/// Rillwood: without composite OSD (Simulator / tvOS) mpv draws subtitles on a canvas the size of the display layer
+	/// and treats it all as picture, so a full-screen layer puts them in the letterbox (portrait). There the layer is sized
+	/// to the picture; with composite OSD (iOS device) subtitles are drawn into the frames and the layer stays full size.
+	private func displayFrame() -> CGRect {
+		let bounds = videoContainer.bounds
+		#if os(tvOS) || targetEnvironment(simulator)
+		guard videoAspect > 0, bounds.width > 0, bounds.height > 0 else { return bounds }
+		// Whole points: a fractional size / origin makes mpv's subtitle canvas resample (blurry text).
+		return AVMakeRect(aspectRatio: CGSize(width: videoAspect, height: 1), insideRect: bounds).integral
+		#else
+		return bounds
+		#endif
 	}
 
 	override func didMoveToWindow() {
@@ -357,6 +382,12 @@ extension MpvPlayerView: MPVPlayerEngineDelegate {
 
 	func engine(_ engine: MPVPlayerEngine, didFailWithError message: String) {
 		onError(["error": message])
+	}
+
+	func engine(_ engine: MPVPlayerEngine, didChangeVideoAspect aspect: Double) {
+		guard aspect != videoAspect else { return }
+		videoAspect = aspect
+		setNeedsLayout()
 	}
 
 	func engine(_ engine: MPVPlayerEngine, didDetectHDRMode mode: HDRMode, fps: Double) {

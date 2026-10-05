@@ -24,6 +24,8 @@ protocol MPVLayerRendererDelegate: AnyObject {
     /// Fired only for a genuine end-of-file (MPV_END_FILE_REASON_EOF) — never
     /// for stop/quit during teardown, which would emit spurious end events.
     func rendererDidReachEnd(_ renderer: MPVLayerRenderer)
+    /// Rillwood: display aspect of the current video (0 = unknown), for sizing the display layer to the picture.
+    func renderer(_ renderer: MPVLayerRenderer, didChangeVideoAspect aspect: Double)
 }
 
 /// MPV player using vo_avfoundation for video output.
@@ -780,7 +782,8 @@ final class MPVLayerRenderer {
             ("track-list/count", MPV_FORMAT_INT64),
             ("paused-for-cache", MPV_FORMAT_FLAG),
             ("demuxer-cache-duration", MPV_FORMAT_DOUBLE),
-            ("current-ao", MPV_FORMAT_STRING)
+            ("current-ao", MPV_FORMAT_STRING),
+            ("video-params/aspect", MPV_FORMAT_DOUBLE)
         ]
         for (name, format) in properties {
             mpv_observe_property(handle, 0, name, format)
@@ -1068,6 +1071,13 @@ final class MPVLayerRenderer {
                     guard let self else { return }
                     self.delegate?.renderer(self, didSelectAudioOutput: aoName)
                 }
+            }
+        case "video-params/aspect":
+            var aspect = Double(0)
+            if getProperty(handle: handle, name: name, format: MPV_FORMAT_DOUBLE, value: &aspect) < 0 { aspect = 0 }
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.delegate?.renderer(self, didChangeVideoAspect: aspect)
             }
         default:
             break

@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, Dimensions } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import {
   createGestureController,
@@ -382,7 +382,23 @@ describe('Player screen', () => {
 
   it('starts with the server defaults (as mpv ids): audio 1, subtitles off', async () => {
     await renderPlaying();
-    expect(lastPlayer()).toMatchObject({ audioTrack: 1, subtitleTrack: -1, speed: 1, subtitleScale: 1 });
+    // The test window is portrait: subtitles a step larger.
+    expect(lastPlayer()).toMatchObject({ audioTrack: 1, subtitleTrack: -1, speed: 1, subtitleScale: 1.25 });
+  });
+
+  it('subtitle size: a step larger in portrait, as chosen in landscape', async () => {
+    const portrait = Dimensions.get('window');
+    try {
+      await renderPlaying();
+      expect(lastPlayer().subtitleScale).toBe(1.25);
+      await act(() => Dimensions.set({ window: { ...portrait, width: portrait.height, height: portrait.width } }));
+      await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
+      await fireEvent.press(screen.getByText('Subtitle size'));
+      await fireEvent.press(screen.getByText('Large'));
+      expect(lastPlayer().subtitleScale).toBe(1.25);
+    } finally {
+      await act(() => Dimensions.set({ window: portrait }));
+    }
   });
 
   it('tracks menu: current values, pick a subtitle, change speed; controls stay up while it is open', async () => {

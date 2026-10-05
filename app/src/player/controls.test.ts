@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from '@jest/globals';
 
-import { positionAt, seekTarget, shouldClose } from './controls';
+import { positionAt, seekTarget, shouldClose, subtitleScaleFor } from './controls';
 import { createProgress } from './progress';
 
 describe('shouldClose', () => {
@@ -52,5 +52,13 @@ describe('createProgress', () => {
     store.subscribe(() => calls++);
     store.set({ position: 5 });
     expect(calls).toBe(0);
+  });
+});
+
+describe('subtitleScaleFor', () => {
+  it('a step larger in portrait, as chosen in landscape', () => {
+    expect(subtitleScaleFor(1, true)).toBe(1.25);
+    expect(subtitleScaleFor(1.5, true)).toBe(1.875);
+    expect(subtitleScaleFor(1.5, false)).toBe(1.5);
   });
 });

@@ -21,6 +21,8 @@ protocol MPVPlayerEngineDelegate: AnyObject {
 	func engine(_ engine: MPVPlayerEngine, didFailWithError message: String)
 	func engine(_ engine: MPVPlayerEngine, didDetectHDRMode mode: HDRMode, fps: Double)
 	func engineDidReachEnd(_ engine: MPVPlayerEngine)
+	/// Rillwood: display aspect of the current video (0 = unknown).
+	func engine(_ engine: MPVPlayerEngine, didChangeVideoAspect aspect: Double)
 	/// Seeks the engine receives from the system — lock screen, Control
 	/// Center, PiP. A host that keeps its own position bookkeeping performs
 	/// the seek itself so it is treated like every other seek; the engine only
@@ -688,6 +690,10 @@ extension MPVPlayerEngine: MPVLayerRendererDelegate {
 			guard let self else { return }
 			self.delegate?.engine(self, didDetectHDRMode: mode, fps: fps)
 		}
+	}
+
+	func renderer(_: MPVLayerRenderer, didChangeVideoAspect aspect: Double) {
+		delegate?.engine(self, didChangeVideoAspect: aspect)
 	}
 
 	func renderer(_: MPVLayerRenderer, didSelectAudioOutput audioOutput: String) {
