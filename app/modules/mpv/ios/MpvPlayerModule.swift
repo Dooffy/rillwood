@@ -103,7 +103,8 @@ public class MpvPlayerModule: Module {
           demuxerMaxBackBytes: self.parseInteger(cacheConfig?["maxBackBytes"])
         )
 
-        view.loadVideo(config: config)
+        // Rillwood (I11): `reload` loads the same URL again (on the same mpv).
+        view.loadVideo(config: config, force: (source["reload"] as? Bool) ?? false)
       }
 
       // Now Playing metadata for iOS Control Center and Lock Screen

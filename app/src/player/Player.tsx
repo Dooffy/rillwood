@@ -27,6 +27,8 @@ export type PlayerProps = {
    * from the start; after a seek it plays from there.
    */
   onEnd?(): void;
+  /** Waiting for data (stalled stream, seek, reload after an early end): true until frames flow again. */
+  onBuffering?(buffering: boolean): void;
   onError?(msg: string): void;
 };
 

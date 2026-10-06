@@ -274,7 +274,8 @@ class MpvPlayerView(context: Context, appContext: AppContext) : ExpoView(context
 
     fun loadVideo(config: VideoLoadConfig) {
         // Skip reload if same URL and loop flag are already playing
-        if (currentUrl == config.url && currentLoop == config.loop) {
+        // (Rillwood I11: unless the source asks for a reload).
+        if (!config.reload && currentUrl == config.url && currentLoop == config.loop) {
             return
         }
 

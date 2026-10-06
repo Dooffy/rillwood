@@ -38,6 +38,7 @@ import {
   SEEK_STEP,
   seekTarget,
   shouldClose,
+  STALL_SPINNER_MS,
   subtitleScaleFor,
 } from '@/player/controls';
 import { Player, type PlayerRef } from '@/player/Player';
@@ -45,6 +46,7 @@ import { createProgress } from '@/player/progress';
 import { useReporting } from '@/player/useReporting';
 import { connectionFor, getSession, useSession } from '@/session';
 import { ColorsContext, palettes, radii, spacing } from '@/theme';
+import { useDebounced } from '@/useDebounced';
 import { useFetch } from '@/useFetch';
 
 type State =
@@ -79,6 +81,10 @@ export default function PlayerScreen() {
   const [choice, setChoice] = useState<Partial<TracksValue>>({});
   // Bumped on ±10 s: restarts the auto-hide timer (pause and scrubbing are timer deps already).
   const [touched, setTouched] = useState(0);
+  // The engine waiting for data after playback started (stalled stream, reload): spinner over the video after a moment,
+  // gone as soon as frames flow.
+  const [waiting, setWaiting] = useState(false);
+  const stalled = useDebounced(waiting, STALL_SPINNER_MS) && waiting;
   const screenReader = useScreenReader();
   // Pull-down distance (UI thread) + whether a release now would close (drives the hint).
   const pull = useSharedValue(0);
@@ -157,6 +163,7 @@ export default function PlayerScreen() {
   // The menu closes with the failed load; it mustn't reopen once the retry plays.
   const retry = () => {
     setMenu(null);
+    setWaiting(false);
     setAttempt((n) => n + 1);
   };
   const touch = () => setTouched((n) => n + 1);
@@ -270,10 +277,14 @@ export default function PlayerScreen() {
                   setPaused(true);
                   setShown(true);
                 }}
-                onError={() => setLoaded({ key, state: { status: 'error', message: PLAYBACK_FAILED } })}
+                onBuffering={setWaiting}
+                onError={() => {
+                  setWaiting(false);
+                  setLoaded({ key, state: { status: 'error', message: PLAYBACK_FAILED } });
+                }}
               />
             )}
-            {state.status !== 'error' && !playing && <Spinner fill />}
+            {state.status !== 'error' && (!playing || stalled) && <Spinner fill />}
             {state.status === 'error' && <Message fill text={state.message} retry={retry} />}
           </Animated.View>
         </GestureDetector>

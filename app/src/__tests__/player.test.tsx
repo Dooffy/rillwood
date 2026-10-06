@@ -397,6 +397,47 @@ describe('Player screen', () => {
     }
   });
 
+  // I11: a stalled stream (or a reload after an early end) froze the picture with no sign of life.
+  it('waiting for data while playing: spinner after a moment, gone when frames flow', async () => {
+    jest.useFakeTimers();
+    try {
+      await renderPlaying();
+      await act(() => lastPlayer().onBuffering?.(true));
+      await act(() => jest.advanceTimersByTime(400));
+      expect(screen.queryByLabelText('Loading')).toBeNull();
+      await act(() => jest.advanceTimersByTime(100));
+      expect(screen.getByLabelText('Loading')).toBeOnTheScreen();
+      await act(() => lastPlayer().onBuffering?.(false));
+      expect(screen.queryByLabelText('Loading')).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  // Regression: an error mid-stall left the stall state on, so the retried video showed the spinner at once.
+  it('an error ends the wait: after Retry the video plays without the stall spinner', async () => {
+    await renderPlaying();
+    await act(() => lastPlayer().onBuffering?.(true));
+    await act(() => lastPlayer().onError?.('Stream ended early'));
+    await act(() => fireEvent.press(screen.getByRole('button', { name: 'Retry' })));
+    await act(() => lastPlayer().onLoad?.({ duration: 9000, audio: [], subs: [] }));
+    expect(screen.queryByLabelText('Loading')).toBeNull();
+  });
+
+  it('a quick seek does not flash the spinner', async () => {
+    jest.useFakeTimers();
+    try {
+      await renderPlaying();
+      await act(() => lastPlayer().onBuffering?.(true));
+      await act(() => jest.advanceTimersByTime(200));
+      await act(() => lastPlayer().onBuffering?.(false));
+      await act(() => jest.advanceTimersByTime(1000));
+      expect(screen.queryByLabelText('Loading')).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('starts with the server defaults (as mpv ids): audio 1, subtitles off', async () => {
     await renderPlaying();
     // The test window is portrait: subtitles a step larger.

@@ -23,6 +23,8 @@ data class VideoLoadConfig(
     val cacheSeconds: Int? = null,
     val demuxerMaxBytes: Int? = null,
     val demuxerMaxBackBytes: Int? = null,
+    /** Rillwood (I11): load even when the URL is the one already loaded. */
+    val reload: Boolean = false,
 )
 
 /**

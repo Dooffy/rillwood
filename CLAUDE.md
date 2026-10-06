@@ -202,6 +202,7 @@ Keep non-route code out of `src/app/`. `app/` and `web/` are independent project
 | M2 | Auth + accounts | 2 servers × 2 users, switch without restart, Quick Connect, 401 handled |
 | M3 | Browse | Home, library (browse + search, paging/sort/filter), movie + series detail |
 | M4 | Playback | Resume, tracks, progress visible in Jellyfin dashboard, autoplay next |
+| M4S | UI cleanup | Dev previews gone, every screen has empty + error states (Retry) |
 | M5 | Downloads | 20GB file survives kill, season download, reconcile works |
 | M6 | Offline + offload + sync | Flight mode browse/play, auto-delete, progress syncs |
 | M7 | Hardening + release | TestFlight + Play internal track |

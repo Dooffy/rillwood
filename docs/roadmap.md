@@ -51,7 +51,7 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [x] Series detail (season picker, episodes with progress + download state)
 - [x] Search inside the Library (one tab: browse + search, debounced, type capsules, shared filter sheet + tags, paged one-type lists)
 - [x] Mark watched / favourite (detail ✓ / ♥, episode menu, Mark Season n as Watched in the season menu, confirm before unwatching a season / show)
-- [ ] Skeleton, empty, error states pass (detail + series load with a spinner today)
+- [ ] Skeleton, empty, error states pass - moved to M4S
 - [ ] Long press on any poster (Home, Library, More Like This): Play / Mark as Watched / Add to Favourites / Download
 
 ## M4 - Playback
@@ -75,9 +75,20 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
   - I6 iOS subtitle fonts: bundle Noto (Latin, Arabic, Hebrew; CJK per `docs/open-items.md`) via `expo-font` `ios.fonts`, OFL-1.1 in `THIRD_PARTY_NOTICES.md`
   - [x] I15 no error event for a failed open: `onError` from `END_FILE` (iOS reason error, Android an END_FILE of the current load that isn't EOF / our stop), same stale-load guard as I8; 30 s JS load timeout dropped
   - [x] I8 no EOF event: `onPlaybackEnd` view event on both platforms, unify `keep-open` first, ignore stale EOF from the previous file, don't gate auto-advance on `isPlaying`
-- [ ] mpv options on both platforms (I11): `network-timeout=15`, `stream-lavf-o=reconnect=1,reconnect_on_network_error=1,reconnect_delay_max=30` (~26 s window - a lower max shortens it; mpv default today ~11 s); `PlayerEngine` reloads at the saved position when EOF arrives with position < duration (with I8). Demuxer caps (`demuxer-max-bytes` 64-100 MiB, `demuxer-max-back-bytes` 32 MiB) for 4K remux memory
+- [x] mpv options on both platforms (I11): `network-timeout=15`, `stream-lavf-o=reconnect=1,reconnect_on_network_error=1,reconnect_delay_max=10` (~55 s window, back within ~7 s); buffering spinner (after 0.5 s); an early end (> 5 s before the duration) reloads at the stopped position (`reload: true`, same view), again there = error. Demuxer caps 100 / 32 MiB via `cacheConfig`. B9 passed on iPhone (2026-10-06), Android pending
 - [ ] I13: mpv verbose log prints the auth header - lower mpv log level or redact `Token=` in the module's log forwarding
 - [ ] Exact seeks for scrubber / resume (`hr-seek` is off - ±10s snaps to keyframes); SRT size on wide video in the landscape player
+- [ ] Video zoom: fit (default, black bars, clear of the notch / Dynamic Island) or fill (cover the screen edge to edge, crops the picture) - player control (button or pinch), choice kept per user. Both native modules have `setZoomedToFill`
+
+## M4S - UI cleanup
+
+Before M5: every screen handles no data and failure the same way.
+
+- [ ] Remove the dev primitives preview from Home (`src/dev/PrimitivesPreview.tsx`, `__DEV__` block in `(tabs)/home.tsx`) - and its test
+- [ ] Empty state on every screen that lists something (Home rows, Library + search, series seasons / episodes, More Like This, cast, Downloads, Accounts): one shared `Message` look, copy that says what to do next
+- [ ] Error handling on every screen that loads (Home, Library, item + series detail, player, Settings / account, auth screens): error `Message` + Retry, no blank or stuck-spinner screens; 401 / offline per `docs/context/api.md`
+- [ ] Loading: skeletons / placeholders instead of a bare spinner where layout is known (detail + series load with a spinner today)
+- [ ] Render tests per screen for the empty and error paths
 
 ## M5 - Downloads
 
