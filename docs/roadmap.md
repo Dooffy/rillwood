@@ -73,7 +73,7 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
   - [x] I3 stale first progress: gate progress on the current load generation (`src/player/mpv.tsx`)
   - [x] I4 same URL ignored: `PlayerEngine` does `seek(0)` + `play()` (or a load id)
   - I6 iOS subtitle fonts: bundle Noto (Latin, Arabic, Hebrew; CJK per `docs/open-items.md`) via `expo-font` `ios.fonts`, OFL-1.1 in `THIRD_PARTY_NOTICES.md`
-  - I15 no error event for a failed open: emit `onError` on `END_FILE` reason error (both platforms, with I8); drop the 30 s JS load timeout once it lands
+  - [x] I15 no error event for a failed open: `onError` from `END_FILE` (iOS reason error, Android an END_FILE of the current load that isn't EOF / our stop), same stale-load guard as I8; 30 s JS load timeout dropped
   - [x] I8 no EOF event: `onPlaybackEnd` view event on both platforms, unify `keep-open` first, ignore stale EOF from the previous file, don't gate auto-advance on `isPlaying`
 - [ ] mpv options on both platforms (I11): `network-timeout=15`, `stream-lavf-o=reconnect=1,reconnect_on_network_error=1,reconnect_delay_max=30` (~26 s window - a lower max shortens it; mpv default today ~11 s); `PlayerEngine` reloads at the saved position when EOF arrives with position < duration (with I8). Demuxer caps (`demuxer-max-bytes` 64-100 MiB, `demuxer-max-back-bytes` 32 MiB) for 4K remux memory
 - [ ] I13: mpv verbose log prints the auth header - lower mpv log level or redact `Token=` in the module's log forwarding

@@ -16,6 +16,7 @@ import expo.modules.mpvplayer.nativeplayer.engine.VideoLoadConfig
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
+import java.util.concurrent.ConcurrentLinkedQueue
 
 internal fun normalizeVideoDimensions(width: Int, height: Int, rotation: Int): Pair<Int, Int> {
     val normalizedRotation = ((rotation % 360) + 360) % 360
@@ -123,6 +124,15 @@ class MPVLayerRenderer(
     private var _playbackSpeed: Double = 1.0
     // Rillwood: volatile - also read on main for the stale-EOF check (I8).
     @Volatile private var isReadyToSeek: Boolean = false
+    // Rillwood (I15): load identities, as on iOS. load() / stop() bump the
+    // generation (main), load() queues it, START_FILE takes it (event thread):
+    // an END_FILE then belongs to a known load. The libmpv wrapper passes no
+    // END_FILE reason, so an END_FILE of the current load that we didn't cause
+    // (replace / stop bump first) and that isn't the EOF is an error.
+    @Volatile private var loadGeneration: Long = 0
+    private val pendingLoadGenerations = ConcurrentLinkedQueue<Long>()
+    private var activeLoadGeneration: Long = 0
+    private var eofReached: Boolean = false
 
     // Progress update throttling - CRITICAL for performance!
     // DO NOT REMOVE THIS THROTTLE - it is essential for battery life and CPU efficiency.
@@ -391,6 +401,9 @@ class MPVLayerRenderer(
         val m = mpv
         mpv = null
         isRunning = false
+        // Rillwood (I15): the teardown "stop" below is not a failed load.
+        loadGeneration++
+        pendingLoadGenerations.clear()
 
         // Clear cached media state on the main thread so the next player
         // screen doesn't observe stale position/duration values during the
@@ -633,6 +646,8 @@ class MPVLayerRenderer(
 
         _isLoading = true
         isReadyToSeek = false
+        // Rillwood (I15): before "stop" - its END_FILE belongs to the previous load.
+        val generation = ++loadGeneration
         mainHandler.post { delegate?.onLoadingChanged(true) }
 
         // Stop previous playback
@@ -681,7 +696,11 @@ class MPVLayerRenderer(
         }
 
         // Load the file
-        mpv?.command(arrayOf("loadfile", url, "replace"))
+        mpv?.let {
+            // Rillwood (I15): only a sent loadfile gets a START_FILE to take it.
+            pendingLoadGenerations.add(generation)
+            it.command(arrayOf("loadfile", url, "replace"))
+        }
     }
 
     override fun reloadCurrentItem() {
@@ -1185,6 +1204,7 @@ class MPVLayerRenderer(
                 // Rillwood (I8): until the new file's FILE_LOADED an EOF belongs
                 // to the previous file - checked here and again on main (a load
                 // may start before the post runs).
+                eofReached = value
                 if (value && isReadyToSeek) {
                     Log.i(TAG, "EOF reached (property)")
                     mainHandler.post { if (isReadyToSeek) delegate?.onPlaybackEnded() }
@@ -1221,6 +1241,10 @@ class MPVLayerRenderer(
     
     override fun event(eventId: Int) {
         when (eventId) {
+            MPVLib.MPV_EVENT_START_FILE -> {
+                pendingLoadGenerations.poll()?.let { activeLoadGeneration = it }
+                eofReached = false
+            }
             MPVLib.MPV_EVENT_FILE_LOADED -> {
                 // Add external subtitles now that file is loaded
                 if (pendingExternalSubtitles.isNotEmpty()) {
@@ -1277,6 +1301,16 @@ class MPVLayerRenderer(
             MPVLib.MPV_EVENT_END_FILE -> {
                 // Rillwood (I8): not the end of playback - see eof-reached.
                 Log.i(TAG, "Playback ended (MPV_EVENT_END_FILE)")
+                // Rillwood (I15): stop / replace bumped the generation first, so
+                // an END_FILE of the current load is an error (open failed: 404 /
+                // 403, unsupported file, network gone). Checked again on main.
+                val generation = activeLoadGeneration
+                if (generation == loadGeneration && !eofReached) {
+                    Log.w(TAG, "Playback failed (END_FILE of the current load)")
+                    mainHandler.post {
+                        if (generation == loadGeneration) delegate?.onError("Playback failed")
+                    }
+                }
             }
             MPVLib.MPV_EVENT_SHUTDOWN -> {
                 Log.w(TAG, "MPV shutdown")

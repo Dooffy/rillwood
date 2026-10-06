@@ -124,28 +124,24 @@ describe('Player screen', () => {
     expect(screen.queryByLabelText('Loading')).toBeNull();
   });
 
-  // mpv sends no error when a file fails to open (I15): a load that never starts must not leave a black screen.
-  it('no load within 30 s → playback error + Retry', async () => {
-    jest.useFakeTimers();
-    try {
-      await render(<PlayerScreen />);
-      await act(() => jest.advanceTimersByTime(29_000));
-      expect(screen.queryByText("Couldn't play this video.")).toBeNull();
-      await act(() => jest.advanceTimersByTime(1_000));
-      expect(screen.getByText("Couldn't play this video.")).toBeOnTheScreen();
-      expect(screen.getByRole('button', { name: 'Retry' })).toBeOnTheScreen();
-    } finally {
-      jest.useRealTimers();
-    }
+  // I15: a file mpv can't open (404, unsupported) shows the error at once, not after a load timeout.
+  it('a file that fails to open → playback error + Retry right away', async () => {
+    await render(<PlayerScreen />);
+    expect(screen.getByLabelText('Loading')).toBeOnTheScreen();
+    await act(() => lastPlayer().onError?.('loading failed'));
+    expect(screen.getByText("Couldn't play this video.")).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeOnTheScreen();
+    expect(screen.queryByLabelText('Loading')).toBeNull();
   });
 
-  it('a started load never times out', async () => {
+  // The 30 s load timeout is gone (I15): a slow server keeps the spinner, mpv's own error ends the wait.
+  it('a slow load keeps the spinner', async () => {
     jest.useFakeTimers();
     try {
       await render(<PlayerScreen />);
-      await act(() => lastPlayer().onLoad?.({ duration: 888, audio: [], subs: [] }));
       await act(() => jest.advanceTimersByTime(60_000));
       expect(screen.queryByText("Couldn't play this video.")).toBeNull();
+      expect(screen.getByLabelText('Loading')).toBeOnTheScreen();
     } finally {
       jest.useRealTimers();
     }
