@@ -723,6 +723,12 @@ extension MPVPlayerEngine: MPVLayerRendererDelegate {
 		pause()
 		delegate?.engineDidReachEnd(self)
 	}
+
+	func renderer(_: MPVLayerRenderer, didFailLoad loadGeneration: UInt, message: String) {
+		// Rillwood (I15): same stale-load guard as the end (I8).
+		guard loadGeneration == self.loadGeneration else { return }
+		delegate?.engine(self, didFailWithError: "Playback failed: \(message)")
+	}
 }
 
 // MARK: - PiPControllerDelegate

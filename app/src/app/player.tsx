@@ -51,8 +51,6 @@ type State =
   { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; play: PlaySource; start: number };
 
 const PLAYBACK_FAILED = "Couldn't play this video.";
-// mpv sends no error when a file fails to open (docs/test-plans/mpv.md I15): no load in this long = failed.
-const LOAD_TIMEOUT_MS = 30_000;
 
 // Always dark, whatever the Appearance setting. Loads the play source (docs/context/player.md), then plays it full
 // screen, Apple TV style: no chrome until a tap; tap toggles the controls (auto-hide), double-tap left / right seeks
@@ -136,15 +134,6 @@ export default function PlayerScreen() {
       });
     return () => controller.abort();
   }, [key, accountId, id, progress]);
-
-  useEffect(() => {
-    if (!ready || started === key) return;
-    const timer = setTimeout(
-      () => setLoaded({ key, state: { status: 'error', message: PLAYBACK_FAILED } }),
-      LOAD_TIMEOUT_MS,
-    );
-    return () => clearTimeout(timer);
-  }, [ready, started, key]);
 
   // Auto-hide while playing; paused, scrubbing, the tracks menu or VoiceOver keep the controls up.
   const menuOpen = menu !== null;

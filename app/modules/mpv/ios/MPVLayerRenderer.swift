@@ -25,6 +25,9 @@ protocol MPVLayerRendererDelegate: AnyObject {
     /// on the last frame), tagged with the load it belongs to so the engine can
     /// drop a stale EOF from the previous file (I8).
     func rendererDidReachEnd(_ renderer: MPVLayerRenderer, loadGeneration: UInt)
+    /// Rillwood: END_FILE with reason error (open failed: 404 / 403, unsupported
+    /// file, network gone), tagged with its load like the end above (I15).
+    func renderer(_ renderer: MPVLayerRenderer, didFailLoad loadGeneration: UInt, message: String)
     /// Rillwood: display aspect of the current video (0 = unknown), for sizing the display layer to the picture.
     func renderer(_ renderer: MPVLayerRenderer, didChangeVideoAspect aspect: Double)
 }
@@ -951,6 +954,20 @@ final class MPVLayerRenderer {
                     self.delegate?.renderer(self, didChangeLoading: false)
                 }
             }
+        case MPV_EVENT_END_FILE:
+            // Rillwood (I15): with keep-open=always END_FILE is stop / replace /
+            // error only - the error reaches JS, the rest stays silent.
+            if let endFile = event.data?.assumingMemoryBound(to: mpv_event_end_file.self).pointee,
+               endFile.reason == MPV_END_FILE_REASON_ERROR {
+                let generation = activeLoadGeneration
+                let message = String(cString: mpv_error_string(endFile.error))
+                Logger.shared.log("mpv end-file error: \(message)", type: "Error")
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    self.delegate?.renderer(self, didFailLoad: generation, message: message)
+                }
+            }
+
         case MPV_EVENT_PROPERTY_CHANGE:
             if let property = event.data?.assumingMemoryBound(to: mpv_event_property.self).pointee.name {
                 let name = String(cString: property)
