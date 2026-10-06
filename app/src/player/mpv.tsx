@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // mpv engine behind the PlayerEngine contract - the only file that imports modules/mpv (docs/context/player.md).
-// Engine issues handled here (docs/test-plans/mpv.md): I3 stale first progress after a new load, I4 same URL ignored.
-// Not yet: I8 end event (needs the native onPlaybackEnd), so `onEnd` never fires.
+// Engine issues handled here (docs/test-plans/mpv.md): I3 stale first progress after a new load, I4 same URL ignored,
+// I8 end of file (mpv stays paused on the last frame; a seek alone doesn't resume it).
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { StyleSheet } from 'react-native';
 
@@ -25,6 +25,23 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
   // mpv fires tracks-ready several times per load (each track-list change, again after the file loaded): one onLoad.
   const loadedFor = useRef(-1);
   const lastUrl = useRef<string | undefined>(undefined);
+  // At the end of the file (I8): mpv sits paused on the last frame; a seek moves away from it.
+  const ended = useRef(false);
+  // Of the current load: from its tracks-ready, then progress.
+  const fileDuration = useRef(0);
+
+  // Play at the end replays from the start.
+  const play = () => {
+    if (ended.current) {
+      ended.current = false;
+      view.current?.seekTo(0).catch(ignore);
+    }
+    view.current?.play().catch(ignore);
+  };
+  const seek = (s: number) => {
+    ended.current = false;
+    view.current?.seekTo(s).catch(ignore);
+  };
 
   // A new `source` object = a new load (only that). Start, autoplay, sidecar subs and first tracks come from the props
   // at that moment.
@@ -49,6 +66,8 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
 
   useEffect(() => {
     load.current++;
+    ended.current = false;
+    fileDuration.current = 0;
     // I4: the native view ignores a source with the URL it already plays - restart it ourselves (the file and its
     // sidecar subs stay loaded) and report the load again.
     const player = view.current;
@@ -62,6 +81,7 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
       }
       tracksReady();
     } else {
+      // Progress and the end wait for this load's tracks (an EOF of the previous file can still arrive).
       ready.current = false;
     }
     lastUrl.current = videoSource.url;
@@ -71,7 +91,8 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
   const mounted = useRef(false);
   useEffect(() => {
     if (!mounted.current) return;
-    (paused ? view.current?.pause() : view.current?.play())?.catch(ignore);
+    if (paused) view.current?.pause().catch(ignore);
+    else play();
   }, [paused]);
   useEffect(() => {
     if (!mounted.current || audioTrack === undefined) return;
@@ -100,10 +121,11 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
   useImperativeHandle(
     ref,
     () => ({
-      seek: (s) => view.current?.seekTo(s).catch(ignore),
-      play: () => view.current?.play().catch(ignore),
+      seek,
+      play,
       pause: () => view.current?.pause().catch(ignore),
     }),
+    // `play` / `seek` only read refs.
     [],
   );
 
@@ -120,6 +142,7 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
       if (mine !== load.current || loadedFor.current === mine) return;
       ready.current = true;
       loadedFor.current = mine;
+      fileDuration.current = duration;
       // Again per load: Android creates its renderer only now, so the calls from the effects above may have gone nowhere.
       const { speed: s = 1, subtitleScale: scale = 1 } = latest.current;
       player.setSpeed(s).catch(ignore);
@@ -137,9 +160,22 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
       style={StyleSheet.absoluteFill}
       onTracksReady={tracksReady}
       onProgress={({ nativeEvent: { position, duration } }) => {
-        if (ready.current) latest.current.onProgress?.({ position, duration });
+        if (!ready.current) return;
+        fileDuration.current = duration;
+        // Moved off the end without us (lock screen, Control Center): play is a plain play again.
+        if (position < duration - 1) ended.current = false;
+        latest.current.onProgress?.({ position, duration });
       }}
       onError={({ nativeEvent }) => latest.current.onError?.(nativeEvent.error)}
+      onPlaybackEnd={() => {
+        // Not gated on playing: mpv pauses itself at EOF. Once per end (a native reload at the end fires it again).
+        if (!ready.current || ended.current) return;
+        ended.current = true;
+        // Progress is throttled (~1 s): the end lands on the duration.
+        const d = fileDuration.current;
+        if (d > 0) latest.current.onProgress?.({ position: d, duration: d });
+        latest.current.onEnd?.();
+      }}
     />
   );
 });

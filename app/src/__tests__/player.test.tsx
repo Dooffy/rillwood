@@ -380,6 +380,27 @@ describe('Player screen', () => {
     expect(stopped).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ PositionTicks: 1_100_000_000 }));
   });
 
+  // I8: mpv pauses on the last frame at EOF - the screen shows it paused, controls up, and reports the end.
+  it('end of file: paused with the controls up, reported at the end', async () => {
+    jest.useFakeTimers();
+    try {
+      await renderPlaying(8990);
+      await act(() => jest.advanceTimersByTime(3000));
+      expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
+      // The engine sends a last progress at the duration, then the end.
+      await act(() => lastPlayer().onProgress?.({ position: 9000, duration: 9000 }));
+      await act(() => lastPlayer().onEnd?.());
+      expect(lastPlayer().paused).toBe(true);
+      expect(screen.getByRole('button', { name: 'Play' })).toBeOnTheScreen();
+      expect(progressed).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({ IsPaused: true, PositionTicks: 90_000_000_000 }),
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('starts with the server defaults (as mpv ids): audio 1, subtitles off', async () => {
     await renderPlaying();
     // The test window is portrait: subtitles a step larger.

@@ -71,6 +71,8 @@ class MpvPlayerView: ExpoView {
 	let onError = EventDispatcher()
 	let onTracksReady = EventDispatcher()
 	let onPictureInPictureChange = EventDispatcher()
+	/// Rillwood: end of file (I8).
+	let onPlaybackEnd = EventDispatcher()
 
 	required init(appContext: AppContext? = nil) {
 		super.init(appContext: appContext)
@@ -397,9 +399,8 @@ extension MpvPlayerView: MPVPlayerEngineDelegate {
 	}
 
 	func engineDidReachEnd(_ engine: MPVPlayerEngine) {
-		// EOF is only consumed by the presented native player (auto-advance /
-		// auto-close). The RN-embedded player's JS layer derives end-of-video
-		// from onProgress, so this is intentionally a no-op here.
+		// Rillwood (I8): JS gets the end; mpv stays paused on the last frame.
+		onPlaybackEnd([:])
 	}
 }
 

@@ -161,6 +161,88 @@ describe('MpvPlayer', () => {
     expect(mockNative.play).toHaveBeenCalledTimes(1);
   });
 
+  const end = () => act(() => mockViewProps.onPlaybackEnd?.({ nativeEvent: {} }));
+
+  it('passes the end on once the load is ready, though mpv paused itself (I8)', async () => {
+    const onEnd = jest.fn();
+    const onProgress = jest.fn<NonNullable<PlayerProps['onProgress']>>();
+    await render(<MpvPlayer source={source} onEnd={onEnd} onProgress={onProgress} />);
+    await end(); // EOF of the previous file
+    expect(onEnd).not.toHaveBeenCalled();
+    await tracksReady();
+    await progress(886); // throttled: the last one before the end
+    await end();
+    expect(onEnd).toHaveBeenCalledTimes(1);
+    // The end lands on the duration.
+    expect(onProgress).toHaveBeenLastCalledWith({ position: 888, duration: 888 });
+  });
+
+  it('drops an EOF of the previous file after a new source (I8)', async () => {
+    const onEnd = jest.fn();
+    const { rerender } = await render(<MpvPlayer source={source} onEnd={onEnd} />);
+    await tracksReady();
+    await rerender(<MpvPlayer source={{ uri: 'https://jf.example.com/other' }} onEnd={onEnd} />);
+    await end();
+    expect(onEnd).not.toHaveBeenCalled();
+  });
+
+  it('play after the end replays from the start (I8)', async () => {
+    const { rerender } = await render(<MpvPlayer source={source} />);
+    await tracksReady();
+    await end();
+    await rerender(<MpvPlayer source={source} paused />);
+    await rerender(<MpvPlayer source={source} paused={false} />);
+    expect(mockNative.seekTo).toHaveBeenCalledWith(0);
+    expect(mockNative.play).toHaveBeenCalledTimes(1);
+    // Only once: a later pause / play is a plain one.
+    await rerender(<MpvPlayer source={source} paused />);
+    await rerender(<MpvPlayer source={source} paused={false} />);
+    expect(mockNative.seekTo).toHaveBeenCalledTimes(1);
+  });
+
+  it('after a seek away from the end, play resumes there (I8)', async () => {
+    const ref = createRef<PlayerRef>();
+    await render(<MpvPlayer ref={ref} source={source} />);
+    await tracksReady();
+    await end();
+    ref.current?.seek(50);
+    ref.current?.play();
+    expect(mockNative.seekTo).toHaveBeenLastCalledWith(50);
+    expect(mockNative.seekTo).toHaveBeenCalledTimes(1);
+  });
+
+  it('a seek made outside the app (lock screen) also leaves the end (I8)', async () => {
+    const ref = createRef<PlayerRef>();
+    await render(<MpvPlayer ref={ref} source={source} />);
+    await tracksReady();
+    await end();
+    await progress(300);
+    ref.current?.play();
+    expect(mockNative.seekTo).not.toHaveBeenCalled();
+  });
+
+  it('one end per end: a native reload at the end does not repeat it (I8)', async () => {
+    const onEnd = jest.fn();
+    await render(<MpvPlayer source={source} onEnd={onEnd} />);
+    await tracksReady();
+    await end();
+    await end();
+    expect(onEnd).toHaveBeenCalledTimes(1);
+  });
+
+  // Regression: the end used the previous file's duration until the new one sent progress.
+  it('the end lands on the duration of this load (I8)', async () => {
+    const onProgress = jest.fn<NonNullable<PlayerProps['onProgress']>>();
+    const { rerender } = await render(<MpvPlayer source={source} onProgress={onProgress} />);
+    await tracksReady();
+    await progress(5);
+    mockNative.getDuration.mockResolvedValueOnce(30);
+    await rerender(<MpvPlayer source={{ uri: 'https://jf.example.com/other' }} onProgress={onProgress} />);
+    await tracksReady();
+    await end();
+    expect(onProgress).toHaveBeenLastCalledWith({ position: 30, duration: 30 });
+  });
+
   it('passes errors on', async () => {
     const onError = jest.fn();
     await render(<MpvPlayer source={source} onError={onError} />);

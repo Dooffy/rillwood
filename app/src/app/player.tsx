@@ -275,6 +275,12 @@ export default function PlayerScreen() {
                   setStarted(key);
                 }}
                 onProgress={progress.set}
+                // The engine holds the last frame paused: show it as paused (the pause reports the end - played),
+                // controls up; Play replays from the start.
+                onEnd={() => {
+                  setPaused(true);
+                  setShown(true);
+                }}
                 onError={() => setLoaded({ key, state: { status: 'error', message: PLAYBACK_FAILED } })}
               />
             )}

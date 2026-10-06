@@ -21,9 +21,10 @@ protocol MPVLayerRendererDelegate: AnyObject {
     func renderer(_ renderer: MPVLayerRenderer, didDetectHDRMode mode: HDRMode, fps: Double)
     func renderer(_ renderer: MPVLayerRenderer, didSelectAudioOutput audioOutput: String)
     func rendererPlaybackDidRestart(_ renderer: MPVLayerRenderer, loadGeneration: UInt)
-    /// Fired only for a genuine end-of-file (MPV_END_FILE_REASON_EOF) — never
-    /// for stop/quit during teardown, which would emit spurious end events.
-    func rendererDidReachEnd(_ renderer: MPVLayerRenderer)
+    /// Rillwood: fired when `eof-reached` turns true (keep-open=always pauses
+    /// on the last frame), tagged with the load it belongs to so the engine can
+    /// drop a stale EOF from the previous file (I8).
+    func rendererDidReachEnd(_ renderer: MPVLayerRenderer, loadGeneration: UInt)
     /// Rillwood: display aspect of the current video (0 = unknown), for sizing the display layer to the picture.
     func renderer(_ renderer: MPVLayerRenderer, didChangeVideoAspect aspect: Double)
 }
@@ -370,6 +371,11 @@ final class MPVLayerRenderer {
         checkError(mpv_set_option_string(mpv, "subs-match-os-language", "yes"))
         checkError(mpv_set_option_string(mpv, "subs-fallback", "yes"))
         checkError(mpv_set_option_string(mpv, "sub-vsfilter-bidi-compat", "yes"))
+
+        // Rillwood: same as Android - stay paused on the last frame at EOF
+        // (seek back works, `eof-reached` signals the end) instead of
+        // unloading the file. END_FILE then only means stop / replace / error (I8).
+        checkError(mpv_set_option_string(mpv, "keep-open", "always"))
 
         // Bundled fallback fonts. Must run before mpv_initialize() — libass is
         // configured once, from the config dir mpv resolves at init time.
@@ -783,7 +789,8 @@ final class MPVLayerRenderer {
             ("paused-for-cache", MPV_FORMAT_FLAG),
             ("demuxer-cache-duration", MPV_FORMAT_DOUBLE),
             ("current-ao", MPV_FORMAT_STRING),
-            ("video-params/aspect", MPV_FORMAT_DOUBLE)
+            ("video-params/aspect", MPV_FORMAT_DOUBLE),
+            ("eof-reached", MPV_FORMAT_FLAG)
         ]
         for (name, format) in properties {
             mpv_observe_property(handle, 0, name, format)
@@ -944,19 +951,6 @@ final class MPVLayerRenderer {
                     self.delegate?.renderer(self, didChangeLoading: false)
                 }
             }
-        case MPV_EVENT_END_FILE:
-            // Only a real EOF counts as "playback ended". The other reasons
-            // (stop, quit, error, redirect) fire during teardown and stream
-            // replacement, where an end event would incorrectly trigger the
-            // native player's auto-advance/auto-close.
-            if let endFile = event.data?.assumingMemoryBound(to: mpv_event_end_file.self).pointee,
-               endFile.reason == MPV_END_FILE_REASON_EOF {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self else { return }
-                    self.delegate?.rendererDidReachEnd(self)
-                }
-            }
-
         case MPV_EVENT_PROPERTY_CHANGE:
             if let property = event.data?.assumingMemoryBound(to: mpv_event_property.self).pointee.name {
                 let name = String(cString: property)
@@ -1038,6 +1032,18 @@ final class MPVLayerRenderer {
                         guard let self else { return }
                         self.delegate?.renderer(self, didChangePause: self.isPaused)
                     }
+                }
+            }
+        case "eof-reached":
+            // Rillwood (I8): the load is read here, on the queue, where an EOF
+            // of the previous file still carries its own generation.
+            var flag: Int32 = 0
+            let status = getProperty(handle: handle, name: name, format: MPV_FORMAT_FLAG, value: &flag)
+            if status >= 0 && flag != 0 {
+                let generation = activeLoadGeneration
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    self.delegate?.rendererDidReachEnd(self, loadGeneration: generation)
                 }
             }
         case "paused-for-cache":
