@@ -25,6 +25,8 @@ export type OnErrorEventPayload = {
 
 export type OnTracksReadyEventPayload = Record<string, never>;
 
+export type OnPlaybackEndPayload = Record<string, never>;
+
 export type OnPictureInPictureChangePayload = {
   isActive: boolean;
 };
@@ -96,6 +98,8 @@ export type MpvPlayerViewProps = {
   onPictureInPictureChange?: (event: {
     nativeEvent: OnPictureInPictureChangePayload;
   }) => void;
+  /** Rillwood: end of file - mpv stays paused on the last frame (keep-open=always). */
+  onPlaybackEnd?: (event: { nativeEvent: OnPlaybackEndPayload }) => void;
 };
 
 export interface SubtitleStyleConfig {

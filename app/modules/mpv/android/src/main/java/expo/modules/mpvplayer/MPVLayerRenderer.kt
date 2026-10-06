@@ -121,7 +121,8 @@ class MPVLayerRenderer(
     // user's intent (resume) instead of assuming paused.
     override var playbackResumeIntent: Boolean = false
     private var _playbackSpeed: Double = 1.0
-    private var isReadyToSeek: Boolean = false
+    // Rillwood: volatile - also read on main for the stale-EOF check (I8).
+    @Volatile private var isReadyToSeek: Boolean = false
 
     // Progress update throttling - CRITICAL for performance!
     // DO NOT REMOVE THIS THROTTLE - it is essential for battery life and CPU efficiency.
@@ -1181,9 +1182,12 @@ class MPVLayerRenderer(
                 }
             }
             "eof-reached" -> {
-                if (value) {
+                // Rillwood (I8): until the new file's FILE_LOADED an EOF belongs
+                // to the previous file - checked here and again on main (a load
+                // may start before the post runs).
+                if (value && isReadyToSeek) {
                     Log.i(TAG, "EOF reached (property)")
-                    mainHandler.post { delegate?.onPlaybackEnded() }
+                    mainHandler.post { if (isReadyToSeek) delegate?.onPlaybackEnded() }
                 }
             }
         }
@@ -1271,11 +1275,8 @@ class MPVLayerRenderer(
                 }
             }
             MPVLib.MPV_EVENT_END_FILE -> {
+                // Rillwood (I8): not the end of playback - see eof-reached.
                 Log.i(TAG, "Playback ended (MPV_EVENT_END_FILE)")
-                val eof = mpv?.getPropertyBoolean("eof-reached") ?: false
-                if (eof) {
-                    mainHandler.post { delegate?.onPlaybackEnded() }
-                }
             }
             MPVLib.MPV_EVENT_SHUTDOWN -> {
                 Log.w(TAG, "MPV shutdown")

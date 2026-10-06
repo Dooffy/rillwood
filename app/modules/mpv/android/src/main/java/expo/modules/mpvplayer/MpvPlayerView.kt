@@ -54,6 +54,8 @@ class MpvPlayerView(context: Context, appContext: AppContext) : ExpoView(context
     val onError by EventDispatcher()
     val onTracksReady by EventDispatcher()
     val onPictureInPictureChange by EventDispatcher()
+    // Rillwood: end of file (I8).
+    val onPlaybackEnd by EventDispatcher()
 
     private var surfaceView: SurfaceView
     private var renderer: MPVLayerRenderer? = null
@@ -560,6 +562,11 @@ class MpvPlayerView(context: Context, appContext: AppContext) : ExpoView(context
 
     override fun onError(message: String) {
         onError(mapOf("error" to message))
+    }
+
+    // Rillwood (I8): JS gets the end; mpv stays paused on the last frame.
+    override fun onPlaybackEnded() {
+        onPlaybackEnd(emptyMap<String, Any>())
     }
 
     // MARK: - Resume Recovery

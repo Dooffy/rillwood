@@ -716,11 +716,12 @@ extension MPVPlayerEngine: MPVLayerRendererDelegate {
 		#endif
 	}
 
-	func rendererDidReachEnd(_: MPVLayerRenderer) {
-		DispatchQueue.main.async { [weak self] in
-			guard let self else { return }
-			self.delegate?.engineDidReachEnd(self)
-		}
+	func rendererDidReachEnd(_: MPVLayerRenderer, loadGeneration: UInt) {
+		// Rillwood (I8): an EOF of the file before the current load is stale.
+		guard loadGeneration == self.loadGeneration else { return }
+		// mpv paused itself: bring play intent, PiP and Now Playing along.
+		pause()
+		delegate?.engineDidReachEnd(self)
 	}
 }
 

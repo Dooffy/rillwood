@@ -11,5 +11,5 @@ Read before working on `modules/mpv/` (native player code, `app.plugin.js`, bina
 - Release builds keep the JNI classes via libmpv's consumer rule (`-keep class dev.jdtech.mpv.MPVLib { *; }`); verify playback on a release build after bumps.
 - Logs: mpv's verbose log prints `http-header-fields` incl. the token (I13) - never ship that log level; redact `Token=` in log forwarding.
 - Network options planned for M4 (I11): `network-timeout=15`, `stream-lavf-o=reconnect=1,reconnect_on_network_error=1,reconnect_delay_max=30` (a lower max shortens the retry window). Demuxer caps 64-100 / 32 MiB for 4K remuxes.
-- `keep-open` differs today (unset on iOS, `always` on Android) - unify before adding the end event (I8).
+- `keep-open=always` on both platforms: at EOF mpv pauses on the last frame (seek back works). The end is the `eof-reached` property -> `onPlaybackEnd` view event, dropped while a new load is pending (iOS load generation, Android `isReadyToSeek` - false from `load()` to `FILE_LOADED`); on iOS the engine also takes its own pause state along (PiP, Now Playing). `END_FILE` only means stop / replace / error (I8, I15).
 - iOS background: VideoToolbox is invalidated in background (I2) - `vid=no` on scene background, `vid=auto` on foreground.

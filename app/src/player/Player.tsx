@@ -22,6 +22,10 @@ export type PlayerProps = {
   externalSubs?: { uri: string; lang?: string; title?: string }[];
   onLoad?(e: { duration: number; audio: Track[]; subs: Track[] }): void;
   onProgress?(e: { position: number; duration: number }): void;
+  /**
+   * End of file, after a last `onProgress` at the duration: the engine holds the last frame, paused. Play then replays
+   * from the start; after a seek it plays from there.
+   */
   onEnd?(): void;
   onError?(msg: string): void;
 };
