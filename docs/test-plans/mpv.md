@@ -28,18 +28,19 @@ Record per run: date, commit, device + OS, MPVKit / libmpv versions, pass / fail
 
 ## Behaviour
 
-| #   | Test                                                                           | Pass when                                                                   |
-| --- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
-| B1  | Seek forward / back, scrub to end                                              | Position correct within 1s, no freeze                                       |
-| B2  | Switch audio track during playback                                             | Switches without restart                                                    |
-| B3  | Switch / disable subtitle track                                                | Switches; off hides subs                                                    |
-| B4  | Background app, wait 30s, foreground                                           | Resumes or stays paused, video not black                                    |
-| B5  | Lock screen during playback                                                    | No crash on unlock                                                          |
-| B6  | 4K remux, 10 min playback                                                      | No memory warning / OS kill, smooth playback                                |
-| B7  | Leave player screen mid-playback, open another item                            | Previous instance torn down, new one plays                                  |
-| B8  | Play to end                                                                    | End event fires once                                                        |
-| B9  | Server unreachable 10s / 30s / 90s mid-stream                                  | Resumes (reload at the stop point, I11) or error + Retry - never an end     |
-| B10 | Open a broken source: 404 stream, non-video file, Wi-Fi off after PlaybackInfo | Error + Retry within seconds (I15), no black screen; Retry plays once fixed |
+| #   | Test                                                                           | Pass when                                                                           |
+| --- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| B1  | Seek forward / back, scrub to end                                              | Position correct within 1s, no freeze                                               |
+| B2  | Switch audio track during playback                                             | Switches without restart                                                            |
+| B3  | Switch / disable subtitle track                                                | Switches; off hides subs                                                            |
+| B4  | Background app, wait 30s, foreground                                           | Resumes or stays paused, video not black                                            |
+| B5  | Lock screen during playback                                                    | No crash on unlock                                                                  |
+| B6  | 4K remux, 10 min playback                                                      | No memory warning / OS kill, smooth playback                                        |
+| B7  | Leave player screen mid-playback, open another item                            | Previous instance torn down, new one plays                                          |
+| B8  | Play to end                                                                    | End event fires once                                                                |
+| B9  | Server unreachable 10s / 30s / 90s mid-stream                                  | Resumes (reload at the stop point, I11) or error + Retry - never an end             |
+| B10 | Open a broken source: 404 stream, non-video file, Wi-Fi off after PlaybackInfo | Error + Retry within seconds (I15), no black screen; Retry plays once fixed         |
+| B11 | Scrub to a point (note the time), close, reopen (resume); also ±10s, 4K remux  | Scrub + resume land at the chosen second, not a keyframe before; ±10s stays instant |
 
 ## Platform
 
@@ -150,7 +151,7 @@ Not run on the emulator: C6 (spike screen has no sidecar subs) - phone run.
 
 After playing to EOF (`keep-open`), mpv stays paused: a seek back doesn't resume, an explicit `play()` does. Handle with I8 in M4.
 
-Also for M4 (run 3): seeks are keyframe-snapped (`hr-seek no`) - fine for ±10s, scrubber / resume may want exact seeks. SRT renders small in the letterbox on 2.39:1 video (`sub-scale-with-window=no`) - check sizing in the landscape player.
+Also for M4 (run 3): seeks are keyframe-snapped (`hr-seek no`) - fine for ±10s, scrubber / resume may want exact seeks (done: `hr-seek=absolute`, B11). SRT renders small in the letterbox on 2.39:1 video (`sub-scale-with-window=no`) - check sizing in the landscape player.
 
 | #   | Issue                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Impact                                                                                                           | Fix direction                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

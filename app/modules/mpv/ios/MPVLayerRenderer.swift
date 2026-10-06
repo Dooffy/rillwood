@@ -380,6 +380,11 @@ final class MPVLayerRenderer {
         // unloading the file. END_FILE then only means stop / replace / error (I8).
         checkError(mpv_set_option_string(mpv, "keep-open", "always"))
 
+        // Rillwood: same as Android - exact absolute seeks (scrubber, lock
+        // screen, `start` resume point); relative ±10 s skips stay keyframe-fast.
+        checkError(mpv_set_option_string(mpv, "hr-seek", "absolute"))
+        checkError(mpv_set_option_string(mpv, "hr-seek-framedrop", "yes"))
+
         // Rillwood (I11): ride out longer network drops. FFmpeg 8 waits 0, 1, 3,
         // 7 s between attempts (the next, 15, is over the max of 10), and each
         // attempt retries the connect the same way: ~55 s in all, back within

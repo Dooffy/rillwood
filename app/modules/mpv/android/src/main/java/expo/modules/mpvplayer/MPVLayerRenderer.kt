@@ -306,9 +306,9 @@ class MPVLayerRenderer(
                 else -> mpv?.setOptionString("hwdec", "mediacodec-copy")
             }
             
-            // Seeking optimization - faster seeking at the cost of less precision
-            // Use keyframe seeking by default (much faster for network streams)
-            mpv?.setOptionString("hr-seek", "no")
+            // Rillwood: exact absolute seeks (scrubber, lock screen, `start`
+            // resume point); relative ±10 s skips stay keyframe-fast.
+            mpv?.setOptionString("hr-seek", "absolute")
             // Drop frames during seeking for faster response
             mpv?.setOptionString("hr-seek-framedrop", "yes")
             
