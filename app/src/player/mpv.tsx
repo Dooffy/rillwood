@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // mpv engine behind the PlayerEngine contract - the only file that imports modules/mpv (docs/context/player.md).
 // Engine issues handled here (docs/test-plans/mpv.md): I3 stale first progress after a new load, I4 same URL ignored,
-// I8 end of file (mpv stays paused on the last frame; a seek alone doesn't resume it).
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+// I8 end of file (mpv stays paused on the last frame; a seek alone doesn't resume it), I11 early end of a stream after a
+// long network drop (reloaded at that position).
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
 import { MpvPlayerView, type MpvPlayerViewRef, type VideoSource } from '../../modules/mpv';
@@ -10,6 +11,11 @@ import type { PlayerProps, PlayerRef, Track } from './Player';
 
 // Native calls reject when the view is gone or mpv is reloading - nothing to do about it here.
 const ignore = () => {};
+
+// An end further than this before the duration is an early end (I11): the stream gave up, not the file.
+const EARLY_END_SECONDS = 5;
+// Demuxer cache caps (MiB) - mpv's 150 / 50 default is too much memory for 4K remuxes.
+const CACHE = { maxBytes: 100, maxBackBytes: 32 };
 
 const track = ({ id, lang, title, codec }: Track): Track => ({ id, lang, title, codec });
 
@@ -29,17 +35,26 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
   const ended = useRef(false);
   // Of the current load: from its tracks-ready, then progress.
   const fileDuration = useRef(0);
+  // Where the current load started playing: its start, then our last seek (I11: an early end right there is no progress).
+  const startedAt = useRef(0);
+  // The end is being checked (async position): a second end event meanwhile is the same end.
+  const checkingEnd = useRef(false);
+  // I11: an early end reloads the source at that position (`reload: true` - the native view skips a source with the URL
+  // it already has).
+  const [reload, setReload] = useState<{ source: PlayerProps['source']; at: number }>();
 
   // Play at the end replays from the start.
   const play = () => {
     if (ended.current) {
       ended.current = false;
+      startedAt.current = 0;
       view.current?.seekTo(0).catch(ignore);
     }
     view.current?.play().catch(ignore);
   };
   const seek = (s: number) => {
     ended.current = false;
+    startedAt.current = s;
     view.current?.seekTo(s).catch(ignore);
   };
 
@@ -53,21 +68,25 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
       subtitleTrack: sub,
       externalSubs,
     } = latest.current;
+    const resume = reload?.source === source ? reload.at : undefined;
     return {
       url: source.uri,
       headers: source.headers,
       externalSubtitles: externalSubs?.map((s) => s.uri),
-      startPosition: start,
+      startPosition: resume ?? start,
       autoplay: !p,
       initialAudioId: audio,
       initialSubtitleId: sub,
+      cacheConfig: CACHE,
+      ...(resume !== undefined && { reload: true }),
     };
-  }, [source]);
+  }, [source, reload]);
 
   useEffect(() => {
     load.current++;
     ended.current = false;
     fileDuration.current = 0;
+    startedAt.current = videoSource.startPosition ?? 0;
     // I4: the native view ignores a source with the URL it already plays - restart it ourselves (the file and its
     // sidecar subs stay loaded) and report the load again.
     const player = view.current;
@@ -147,6 +166,8 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
       const { speed: s = 1, subtitleScale: scale = 1 } = latest.current;
       player.setSpeed(s).catch(ignore);
       player.setSubtitleScale(scale).catch(ignore);
+      // A pause made while this load started (autoplay was fixed at the source) still holds.
+      if (latest.current.paused) player.pause().catch(ignore);
       latest.current.onLoad?.({ duration, audio: audio.map(track), subs: subs.map(track) });
     } catch {
       if (mine === load.current) ready.current = true;
@@ -166,13 +187,38 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
         if (position < duration - 1) ended.current = false;
         latest.current.onProgress?.({ position, duration });
       }}
+      // mpv's loading state: load, seek, paused for cache. The view only sends changes, in order, so the last one holds.
+      onPlaybackStateChange={({ nativeEvent: { isLoading } }) => {
+        if (isLoading !== undefined) latest.current.onBuffering?.(isLoading);
+      }}
       onError={({ nativeEvent }) => latest.current.onError?.(nativeEvent.error)}
-      onPlaybackEnd={() => {
+      onPlaybackEnd={async () => {
         // Not gated on playing: mpv pauses itself at EOF. Once per end (a native reload at the end fires it again).
-        if (!ready.current || ended.current) return;
+        if (!ready.current || ended.current || checkingEnd.current) return;
+        checkingEnd.current = true;
+        const mine = load.current;
+        // mpv's own position: progress is throttled and misses seeks made outside the app (lock screen).
+        const at = await view.current?.getCurrentPosition().catch(() => undefined);
+        checkingEnd.current = false;
+        if (mine !== load.current || !ready.current || ended.current) return;
+        const d = fileDuration.current;
+        // I11: a stream that ended early reloads where it stopped; ending early again with no progress there is an error
+        // (network still gone, or a file cut short), not an end - an end would mark it played.
+        if (at !== undefined && at < d - EARLY_END_SECONDS) {
+          if (reload?.source === source && at <= startedAt.current + EARLY_END_SECONDS) {
+            latest.current.onError?.('Stream ended early');
+            return;
+          }
+          // Until the reload's tracks are ready: no progress, no second end. The effect must not take the reload for
+          // the same URL again (I4).
+          ready.current = false;
+          lastUrl.current = undefined;
+          latest.current.onBuffering?.(true);
+          setReload({ source, at });
+          return;
+        }
         ended.current = true;
         // Progress is throttled (~1 s): the end lands on the duration.
-        const d = fileDuration.current;
         if (d > 0) latest.current.onProgress?.({ position: d, duration: d });
         latest.current.onEnd?.();
       }}

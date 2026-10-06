@@ -12,7 +12,9 @@ const mockNative = {
   play: jest.fn(async () => {}),
   pause: jest.fn(async () => {}),
   destroy: jest.fn(async () => {}),
-  seekTo: jest.fn(async (_s: number) => {}),
+  seekTo: jest.fn(async (s: number) => {
+    mockPosition = s;
+  }),
   setAudioTrack: jest.fn(async (_id: number) => {}),
   setSubtitleTrack: jest.fn(async (_id: number) => {}),
   disableSubtitles: jest.fn(async () => {}),
@@ -21,7 +23,10 @@ const mockNative = {
   getDuration: jest.fn(async () => 888),
   setSpeed: jest.fn(async (_speed: number) => {}),
   setSubtitleScale: jest.fn(async (_scale: number) => {}),
+  // mpv's position: progress and seeks move it.
+  getCurrentPosition: jest.fn(async () => mockPosition),
 };
+let mockPosition = 0;
 let mockViewProps: MpvPlayerViewProps;
 
 jest.mock('../../modules/mpv', () => {
@@ -38,12 +43,17 @@ jest.mock('../../modules/mpv', () => {
 const source = { uri: 'https://jf.example.com/Videos/i/stream?static=true&mediaSourceId=ms', headers: { A: 'b' } };
 const subs = [{ uri: 'https://jf.example.com/Videos/i/ms/Subtitles/3/Stream.srt', lang: 'ger' }];
 
-const progress = (position: number) =>
-  act(() => mockViewProps.onProgress?.({ nativeEvent: { position, duration: 888, progress: 0, cacheSeconds: 0 } }));
+const progress = (position: number) => {
+  mockPosition = position;
+  return act(() =>
+    mockViewProps.onProgress?.({ nativeEvent: { position, duration: 888, progress: 0, cacheSeconds: 0 } }),
+  );
+};
 const tracksReady = () => act(async () => mockViewProps.onTracksReady?.({ nativeEvent: {} }));
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockPosition = 0;
 });
 
 describe('MpvPlayer', () => {
@@ -57,6 +67,7 @@ describe('MpvPlayer', () => {
       autoplay: true,
       initialAudioId: undefined,
       initialSubtitleId: -1,
+      cacheConfig: { maxBytes: 100, maxBackBytes: 32 },
     });
   });
 
@@ -161,7 +172,10 @@ describe('MpvPlayer', () => {
     expect(mockNative.play).toHaveBeenCalledTimes(1);
   });
 
-  const end = () => act(() => mockViewProps.onPlaybackEnd?.({ nativeEvent: {} }));
+  const end = () =>
+    act(async () => {
+      await mockViewProps.onPlaybackEnd?.({ nativeEvent: {} });
+    });
 
   it('passes the end on once the load is ready, though mpv paused itself (I8)', async () => {
     const onEnd = jest.fn();
@@ -189,6 +203,7 @@ describe('MpvPlayer', () => {
   it('play after the end replays from the start (I8)', async () => {
     const { rerender } = await render(<MpvPlayer source={source} />);
     await tracksReady();
+    await progress(886);
     await end();
     await rerender(<MpvPlayer source={source} paused />);
     await rerender(<MpvPlayer source={source} paused={false} />);
@@ -204,6 +219,7 @@ describe('MpvPlayer', () => {
     const ref = createRef<PlayerRef>();
     await render(<MpvPlayer ref={ref} source={source} />);
     await tracksReady();
+    await progress(886);
     await end();
     ref.current?.seek(50);
     ref.current?.play();
@@ -215,6 +231,7 @@ describe('MpvPlayer', () => {
     const ref = createRef<PlayerRef>();
     await render(<MpvPlayer ref={ref} source={source} />);
     await tracksReady();
+    await progress(886);
     await end();
     await progress(300);
     ref.current?.play();
@@ -225,6 +242,7 @@ describe('MpvPlayer', () => {
     const onEnd = jest.fn();
     await render(<MpvPlayer source={source} onEnd={onEnd} />);
     await tracksReady();
+    await progress(886);
     await end();
     await end();
     expect(onEnd).toHaveBeenCalledTimes(1);
@@ -237,10 +255,167 @@ describe('MpvPlayer', () => {
     await tracksReady();
     await progress(5);
     mockNative.getDuration.mockResolvedValueOnce(30);
-    await rerender(<MpvPlayer source={{ uri: 'https://jf.example.com/other' }} onProgress={onProgress} />);
+    await rerender(
+      <MpvPlayer source={{ uri: 'https://jf.example.com/other' }} startSeconds={28} onProgress={onProgress} />,
+    );
     await tracksReady();
+    mockPosition = 29.9;
     await end();
     expect(onProgress).toHaveBeenLastCalledWith({ position: 30, duration: 30 });
+  });
+
+  it('an early end reloads the stream where it stopped, with the current tracks, and is no end (I11)', async () => {
+    const onEnd = jest.fn();
+    const onLoad = jest.fn();
+    const onBuffering = jest.fn();
+    const props = { source, startSeconds: 40, onEnd, onLoad, onBuffering };
+    const { rerender } = await render(<MpvPlayer {...props} />);
+    await tracksReady();
+    await rerender(<MpvPlayer {...props} audioTrack={2} subtitleTrack={-1} />);
+    await progress(300);
+    await end();
+    expect(onEnd).not.toHaveBeenCalled();
+    expect(mockViewProps.source).toMatchObject({
+      url: source.uri,
+      startPosition: 300,
+      autoplay: true,
+      initialAudioId: 2,
+      initialSubtitleId: -1,
+      reload: true,
+    });
+    expect(onBuffering).toHaveBeenLastCalledWith(true);
+    // The native view loads it again (`reload`): no same-URL restart (I4), progress waits for the reload's tracks.
+    expect(mockNative.seekTo).not.toHaveBeenCalled();
+    const onProgress = jest.fn();
+    await rerender(<MpvPlayer {...props} audioTrack={2} subtitleTrack={-1} onProgress={onProgress} />);
+    await progress(301);
+    expect(onProgress).not.toHaveBeenCalled();
+    await tracksReady();
+    expect(onLoad).toHaveBeenCalledTimes(2);
+  });
+
+  it('a reloaded stream that plays on and ends early again reloads again (I11)', async () => {
+    const onError = jest.fn();
+    await render(<MpvPlayer source={source} onError={onError} />);
+    await tracksReady();
+    await progress(300);
+    await end();
+    await tracksReady();
+    await progress(600);
+    await end();
+    expect(mockViewProps.source?.startPosition).toBe(600);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('ending early again where it was reloaded is an error, not an end (I11)', async () => {
+    const onEnd = jest.fn();
+    const onError = jest.fn();
+    await render(<MpvPlayer source={source} onEnd={onEnd} onError={onError} />);
+    await tracksReady();
+    await progress(300);
+    await end();
+    await tracksReady();
+    await progress(302);
+    await end();
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onEnd).not.toHaveBeenCalled();
+  });
+
+  it('an end within a few seconds of the duration is the end (I11)', async () => {
+    const onEnd = jest.fn();
+    await render(<MpvPlayer source={source} onEnd={onEnd} />);
+    await tracksReady();
+    await progress(884);
+    await end();
+    expect(onEnd).toHaveBeenCalledTimes(1);
+    expect(mockViewProps.source?.startPosition).toBe(0);
+  });
+
+  // Regression: the end after a lock-screen seek near the end came before any progress and looked early.
+  it("judges the end by mpv's own position, not the last progress (I11)", async () => {
+    const onEnd = jest.fn();
+    await render(<MpvPlayer source={source} onEnd={onEnd} />);
+    await tracksReady();
+    await progress(300);
+    mockPosition = 887.9;
+    await end();
+    expect(onEnd).toHaveBeenCalledTimes(1);
+    expect(mockViewProps.source?.reload).toBeUndefined();
+  });
+
+  it('a second end event while the first is checked is the same end (I11)', async () => {
+    const onBuffering = jest.fn();
+    await render(<MpvPlayer source={source} onBuffering={onBuffering} />);
+    await tracksReady();
+    await progress(300);
+    const first = mockViewProps.source;
+    await act(async () => {
+      await Promise.all([
+        mockViewProps.onPlaybackEnd?.({ nativeEvent: {} }),
+        mockViewProps.onPlaybackEnd?.({ nativeEvent: {} }),
+      ]);
+    });
+    expect(mockViewProps.source).not.toBe(first);
+    expect(onBuffering).toHaveBeenCalledTimes(1);
+    const reloaded = mockViewProps.source;
+    await end(); // the old load's end again, before the reload's tracks are ready
+    expect(mockViewProps.source).toBe(reloaded);
+  });
+
+  it('after a reload, seeking back and playing on, an early end reloads again (I11)', async () => {
+    const ref = createRef<PlayerRef>();
+    const onError = jest.fn();
+    await render(<MpvPlayer ref={ref} source={source} onError={onError} />);
+    await tracksReady();
+    await progress(300);
+    await end();
+    await tracksReady();
+    ref.current?.seek(100);
+    await progress(290);
+    await end();
+    expect(onError).not.toHaveBeenCalled();
+    expect(mockViewProps.source?.startPosition).toBe(290);
+  });
+
+  it('a pause made while the reload loads holds once it is ready (I11)', async () => {
+    const { rerender } = await render(<MpvPlayer source={source} />);
+    await tracksReady();
+    await progress(300);
+    await end();
+    await rerender(<MpvPlayer source={source} paused />);
+    mockNative.pause.mockClear();
+    await tracksReady();
+    expect(mockNative.pause).toHaveBeenCalled();
+  });
+
+  // Regression: progress is throttled, so the end after a seek near the end looked early and reloaded the old spot.
+  it('an end right after a seek near the end is the end (I11)', async () => {
+    const ref = createRef<PlayerRef>();
+    const onEnd = jest.fn();
+    await render(<MpvPlayer ref={ref} source={source} onEnd={onEnd} />);
+    await tracksReady();
+    await progress(300);
+    ref.current?.seek(886);
+    await end();
+    expect(onEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it('a new source after a reload starts at its own start (I11)', async () => {
+    const { rerender } = await render(<MpvPlayer source={source} />);
+    await tracksReady();
+    await progress(300);
+    await end();
+    await rerender(<MpvPlayer source={{ uri: 'https://jf.example.com/other' }} startSeconds={10} />);
+    expect(mockViewProps.source?.startPosition).toBe(10);
+  });
+
+  it("passes mpv's waiting for data on (load, seek, paused for cache)", async () => {
+    const onBuffering = jest.fn();
+    await render(<MpvPlayer source={source} onBuffering={onBuffering} />);
+    await act(() => mockViewProps.onPlaybackStateChange?.({ nativeEvent: { isLoading: true } }));
+    await act(() => mockViewProps.onPlaybackStateChange?.({ nativeEvent: { isPaused: false, isPlaying: true } }));
+    await act(() => mockViewProps.onPlaybackStateChange?.({ nativeEvent: { isLoading: false } }));
+    expect(onBuffering.mock.calls).toEqual([[true], [false]]);
   });
 
   it('passes errors on', async () => {

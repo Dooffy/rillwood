@@ -324,6 +324,13 @@ class MPVLayerRenderer(
             mpv?.setOptionString("force-window", "no")
             mpv?.setOptionString("keep-open", "always")
 
+            // Rillwood (I11): ride out longer network drops. FFmpeg 8 waits 0, 1, 3,
+            // 7 s between attempts (the next, 15, is over the max of 10), and each
+            // attempt retries the connect the same way: ~55 s in all, back within
+            // ~7 s of the server. A dead connection gives up after 15 s, not 60.
+            mpv?.setOptionString("network-timeout", "15")
+            mpv?.setOptionString("stream-lavf-o", "reconnect=1,reconnect_on_network_error=1,reconnect_delay_max=10")
+
             mpv.initialize()
 
             // Re-apply the retained mute flag: a fresh instance always starts

@@ -81,6 +81,8 @@ export type VideoSource = {
   };
   /** MPV video output driver (Android only) */
   voDriver?: "gpu-next" | "gpu";
+  /** Rillwood (I11): load even when the URL is the one already loaded (reload at a position). */
+  reload?: boolean;
 };
 
 export type MpvPlayerViewProps = {

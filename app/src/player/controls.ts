@@ -4,6 +4,8 @@
 export const SEEK_STEP = 10;
 /** Controls hide after this long without a touch (not while paused, scrubbing or with VoiceOver on). */
 export const HIDE_AFTER_MS = 3000;
+/** The engine waits for data this long before the spinner shows (quick seeks don't flash it). */
+export const STALL_SPINNER_MS = 500;
 /** Pull down further than this, or flick down faster, to close the player. */
 export const PULL_CLOSE_DISTANCE = 120;
 /** Portrait shows the picture small and mpv sizes text to the picture: subtitles a step larger there. */

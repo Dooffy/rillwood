@@ -155,8 +155,10 @@ class MpvPlayerView: ExpoView {
 		engine.setNowPlayingMetadata(metadata, artworkHeaders: artworkHeaders)
 	}
 
-	func loadVideo(config: VideoLoadConfig) {
-		engine.loadVideo(config: config)
+	/// Rillwood (I11): `force` loads the URL even when it is the one already loaded
+	/// (reload at a position after the stream ended early).
+	func loadVideo(config: VideoLoadConfig, force: Bool = false) {
+		engine.loadVideo(config: config, force: force)
 	}
 
 	// Convenience method for simple loads
