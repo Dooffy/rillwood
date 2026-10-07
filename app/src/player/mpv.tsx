@@ -6,7 +6,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
-import { MpvPlayerView, type MpvPlayerViewRef, type VideoSource } from '../../modules/mpv';
+import { MpvPlayerView, type MpvPlayerViewRef, type SubtitleTrack, type VideoSource } from '../../modules/mpv';
 import type { PlayerProps, PlayerRef, Track } from './Player';
 
 // Native calls reject when the view is gone or mpv is reloading - nothing to do about it here.
@@ -18,6 +18,11 @@ const EARLY_END_SECONDS = 5;
 const CACHE = { maxBytes: 100, maxBackBytes: 32 };
 
 const track = ({ id, lang, title, codec }: Track): Track => ({ id, lang, title, codec });
+const subTrack = ({ external, externalFilename, ...t }: SubtitleTrack): Track => ({
+  ...track(t),
+  // A sidecar mpv gave no filename can't be matched, but it isn't one of the file's own tracks either.
+  ...(external && { external: externalFilename ?? '' }),
+});
 
 export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(props, ref) {
   const { source, paused = false, audioTrack, subtitleTrack, speed = 1, subtitleScale = 1 } = props;
@@ -30,6 +35,10 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
   const ready = useRef(false);
   // mpv fires tracks-ready several times per load (each track-list change, again after the file loaded): one onLoad.
   const loadedFor = useRef(-1);
+  // The load whose file is open (native ready-to-seek, after the sidecars were added): its track list is final. And the
+  // load whose final list went out (`onTracks`, once).
+  const openFor = useRef(-1);
+  const tracksFor = useRef(-1);
   const lastUrl = useRef<string | undefined>(undefined);
   // At the end of the file (I8): mpv sits paused on the last frame; a seek moves away from it.
   const ended = useRef(false);
@@ -98,6 +107,8 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
       if (initialSubtitleId !== undefined) {
         (initialSubtitleId < 0 ? player.disableSubtitles() : player.setSubtitleTrack(initialSubtitleId)).catch(ignore);
       }
+      // Same file, its sidecars long added.
+      openFor.current = load.current;
       tracksReady();
     } else {
       // Progress and the end wait for this load's tracks (an EOF of the previous file can still arrive).
@@ -150,15 +161,24 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
 
   async function tracksReady() {
     const mine = load.current;
+    // Only a read started after the file opened has the full list.
+    const final = openFor.current === mine;
     const player = view.current;
     if (!player) return;
+    if (loadedFor.current === mine && (!final || tracksFor.current === mine)) return;
     try {
       const [audio, subs, duration] = await Promise.all([
         player.getAudioTracks(),
         player.getSubtitleTracks(),
         player.getDuration(),
       ]);
-      if (mine !== load.current || loadedFor.current === mine) return;
+      if (mine !== load.current) return;
+      const lists = { audio: audio.map(track), subs: subs.map(subTrack) };
+      if (final && tracksFor.current !== mine) {
+        tracksFor.current = mine;
+        latest.current.onTracks?.(lists);
+      }
+      if (loadedFor.current === mine) return;
       ready.current = true;
       loadedFor.current = mine;
       fileDuration.current = duration;
@@ -168,7 +188,7 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
       player.setSubtitleScale(scale).catch(ignore);
       // A pause made while this load started (autoplay was fixed at the source) still holds.
       if (latest.current.paused) player.pause().catch(ignore);
-      latest.current.onLoad?.({ duration, audio: audio.map(track), subs: subs.map(track) });
+      latest.current.onLoad?.({ duration, ...lists });
     } catch {
       if (mine === load.current) ready.current = true;
     }
@@ -188,8 +208,13 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
         latest.current.onProgress?.({ position, duration });
       }}
       // mpv's loading state: load, seek, paused for cache. The view only sends changes, in order, so the last one holds.
-      onPlaybackStateChange={({ nativeEvent: { isLoading } }) => {
+      onPlaybackStateChange={({ nativeEvent: { isLoading, isReadyToSeek } }) => {
         if (isLoading !== undefined) latest.current.onBuffering?.(isLoading);
+        // Once per native load, after the file opened and its sidecars were added (or failed): read the full list.
+        if (isReadyToSeek) {
+          openFor.current = load.current;
+          tracksReady();
+        }
       }}
       onError={({ nativeEvent }) => latest.current.onError?.(nativeEvent.error)}
       onPlaybackEnd={async () => {

@@ -6,6 +6,8 @@ export type Track = {
   lang?: string;
   title?: string;
   codec?: string;
+  /** Sidecar subtitle: the URI it was loaded from (one of `externalSubs`). */
+  external?: string;
 };
 
 export type PlayerProps = {
@@ -20,7 +22,10 @@ export type PlayerProps = {
   subtitleScale?: number;
   paused?: boolean;
   externalSubs?: { uri: string; lang?: string; title?: string }[];
+  /** Once per load, when it can play. Sidecar subs may not be listed yet. */
   onLoad?(e: { duration: number; audio: Track[]; subs: Track[] }): void;
+  /** Once per load, the full track list: every sidecar added (or failed to load). */
+  onTracks?(e: { audio: Track[]; subs: Track[] }): void;
   onProgress?(e: { position: number; duration: number }): void;
   /**
    * End of file, after a last `onProgress` at the duration: the engine holds the last frame, paused. Play then replays

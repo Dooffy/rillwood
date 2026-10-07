@@ -28,19 +28,22 @@ Record per run: date, commit, device + OS, MPVKit / libmpv versions, pass / fail
 
 ## Behaviour
 
-| #   | Test                                                                           | Pass when                                                                           |
-| --- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| B1  | Seek forward / back, scrub to end                                              | Position correct within 1s, no freeze                                               |
-| B2  | Switch audio track during playback                                             | Switches without restart                                                            |
-| B3  | Switch / disable subtitle track                                                | Switches; off hides subs                                                            |
-| B4  | Background app, wait 30s, foreground                                           | Resumes or stays paused, video not black                                            |
-| B5  | Lock screen during playback                                                    | No crash on unlock                                                                  |
-| B6  | 4K remux, 10 min playback                                                      | No memory warning / OS kill, smooth playback                                        |
-| B7  | Leave player screen mid-playback, open another item                            | Previous instance torn down, new one plays                                          |
-| B8  | Play to end                                                                    | End event fires once                                                                |
-| B9  | Server unreachable 10s / 30s / 90s mid-stream                                  | Resumes (reload at the stop point, I11) or error + Retry - never an end             |
-| B10 | Open a broken source: 404 stream, non-video file, Wi-Fi off after PlaybackInfo | Error + Retry within seconds (I15), no black screen; Retry plays once fixed         |
-| B11 | Scrub to a point (note the time), close, reopen (resume); also ±10s, 4K remux  | Scrub + resume land at the chosen second, not a keyframe before; ±10s stays instant |
+| #   | Test                                                                                                                  | Pass when                                                                                                                                                      |
+| --- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B1  | Seek forward / back, scrub to end                                                                                     | Position correct within 1s, no freeze                                                                                                                          |
+| B2  | Switch audio track during playback                                                                                    | Switches without restart                                                                                                                                       |
+| B3  | Switch / disable subtitle track                                                                                       | Switches; off hides subs                                                                                                                                       |
+| B4  | Background app, wait 30s, foreground                                                                                  | Resumes or stays paused, video not black                                                                                                                       |
+| B5  | Lock screen during playback                                                                                           | No crash on unlock                                                                                                                                             |
+| B6  | 4K remux, 10 min playback                                                                                             | No memory warning / OS kill, smooth playback                                                                                                                   |
+| B7  | Leave player screen mid-playback, open another item                                                                   | Previous instance torn down, new one plays                                                                                                                     |
+| B8  | Play to end                                                                                                           | End event fires once                                                                                                                                           |
+| B9  | Server unreachable 10s / 30s / 90s mid-stream                                                                         | Resumes (reload at the stop point, I11) or error + Retry - never an end                                                                                        |
+| B10 | Open a broken source: 404 stream, non-video file, Wi-Fi off after PlaybackInfo                                        | Error + Retry within seconds (I15), no black screen; Retry plays once fixed                                                                                    |
+| B11 | Scrub to a point (note the time), close, reopen (resume); also ±10s, 4K remux                                         | Scrub + resume land at the chosen second, not a keyframe before; ±10s stays instant                                                                            |
+| B12 | "Sidecar Subs": tracks menu → each of English / German / French, then Off                                             | Each shows its own text ("English - embedded", "Deutsch - sidecar", "Français - sidecar"); Off hides it                                                        |
+| B13 | "Missing Sidecar" (German deleted after the scan, see below): open the tracks menu after playback starts, pick French | Menu lists English + French only (no German); French shows "Français - sidecar" (mpv id 2, not the predicted 3)                                                |
+| B14 | "Missing Sidecar", user subtitle settings at Jellyfin's defaults (mode Default, no language): play                    | Starts with no subtitles - never French. Jellyfin's Default mode picks the first sidecar (German `#0`, missing) as the default; French took its predicted id 2 |
 
 ## Platform
 
@@ -55,6 +58,7 @@ Record per run: date, commit, device + OS, MPVKit / libmpv versions, pass / fail
 - Dev build on the device, `dev/jellyfin` reachable on the LAN (`RILLWOOD_BIND=0.0.0.0`, see `dev/jellyfin/README.md`).
 - Test screen: the M0 spike screen is throwaway and not in `main`. It is `__DEV__`-guarded, so release-build runs need an unguarded test route (`docs/research/expo-router-rn088.md`). Any test screen needs: login to `dev/jellyfin`, per item Stream / Download / Play local, seek, pause, audio and subtitle track pickers, and a technical info dump (`getTechnicalInfo`: codec, `hwdec`, dropped frames).
 - Android emulator: `adb reverse tcp:<metro port> tcp:<metro port>` and `adb reverse tcp:8096 tcp:8096`, then use `localhost` for Metro and the server (`10.0.2.2` timed out here). Debug builds ask for "Nearby devices" at launch - that's RN's debug-only `ACCESS_LOCAL_NETWORK` for Metro, not in release.
+- B13 / B14 need the server to list a sidecar that 404s: after `make-test-media.sh` + the library scan, delete it - `rm "$RILLWOOD_MEDIA/movies/Missing Sidecar (2026)/Missing Sidecar (2026).de.srt"` (default `~/rillwood-media`). The server keeps listing it until the next scan (checked on 12.1 + 10.11: German `#0` 404, French `#1` 200). To restore: delete the folder, re-run the script, scan, delete the file again.
 - Logs: subscribe to the module's `onNativeLog` event (mpv warnings / errors) plus `AppState` changes. Metro drops while the app is backgrounded, so also append to a file in `Documents` and pull it over USB:
   ```bash
   xcrun devicectl device copy from --device <udid> --domain-type appDataContainer \
@@ -166,3 +170,11 @@ Also for M4 (run 3): seeks are keyframe-snapped (`hr-seek no`) - fine for ±10s,
 | I16 | iOS Simulator / tvOS: subtitles in the letterbox below the picture in portrait, oversized, drifting on rotation. Without composite OSD the vendored `vo_avfoundation` draws subtitles on a canvas the size of the display layer and treats it all as picture; the subtitle sublayer also kept its old frame on resize                                                                                                                                                                                                                 | Subtitles unreadable / off the picture (dev builds; device uses composite OSD - subtitles drawn into the frames) | Fixed: the display layer is sized to the picture (`video-params/aspect`, whole points) at the screen's pixel scale (`contentScaleFactor` could stay 1: blurry text), `layoutSubviews()` calls `syncSubtitleLayerFrame()` (`UPSTREAM.md`). Re-test: SRT + ASS movie, portrait -> landscape -> portrait, subtitles on the picture at normal size. Check on a device too                                                                                            |
 
 Gate after Android: **0 open player blockers** (I9 fixed). I12 blocks release builds - config fix, not a player issue.
+
+### 2026-10-07 - iPhone, Rillwood dev build (feat/tracks-id-check)
+
+| #   | Test            | Result | Notes                                                                                                                                                                      |
+| --- | --------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B12 | Sidecar Subs    | ✅     | English / German / French / Off. French first showed `Fran├žais`: Jellyfin guesses the charset of short sidecars (12.1 + 10.11) - fixed in the test media with a UTF-8 BOM |
+| B13 | Missing Sidecar | ✅     | No German in the menu, French shows (mpv id 2, predicted 3)                                                                                                                |
+| B14 | Missing Sidecar | ✅     | Starts with subtitles off (server default = the missing German), no French                                                                                                 |

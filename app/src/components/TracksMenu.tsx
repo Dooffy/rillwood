@@ -7,7 +7,7 @@ import type { TrackOption } from '@/playback';
 export type TracksPage = 'main' | 'audio' | 'subtitles' | 'speed' | 'size';
 
 export type TracksValue = {
-  /** mpv ids; subtitle -1 = off. */
+  /** Jellyfin stream indexes (the engine's ids can change once the file loaded); subtitle -1 = off. */
   audio?: number;
   subtitle: number;
   speed: number;
@@ -40,14 +40,14 @@ export function TracksMenu({
   onChange: (next: Partial<TracksValue>) => void;
 }) {
   const subtitleChoices = [{ id: -1, index: -1, label: 'Off' }, ...subtitles];
-  const label = (options: TrackOption[], id: number | undefined) => options.find((t) => t.id === id)?.label;
+  const label = (options: TrackOption[], index: number | undefined) => options.find((t) => t.index === index)?.label;
   const size = SUBTITLE_SIZES.find(([, scale]) => scale === value.subtitleScale)?.[0];
 
   const pick = (options: TrackOption[], current: number | undefined, key: 'audio' | 'subtitle') =>
     options.map((t): SheetAction => ({
       label: t.label,
-      selected: t.id === current,
-      onPress: () => onChange({ [key]: t.id }),
+      selected: t.index === current,
+      onPress: () => onChange({ [key]: t.index }),
     }));
 
   const pages: Record<TracksPage, { title: string; actions: SheetAction[] }> = {

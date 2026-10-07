@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, render } from '@testing-library/react-native';
 import { createRef } from 'react';
 
-import type { MpvPlayerViewProps } from '../../modules/mpv';
+import type { MpvPlayerViewProps, SubtitleTrack } from '../../modules/mpv';
 import { MpvPlayer } from './mpv';
 import type { PlayerProps, PlayerRef } from './Player';
 
@@ -19,7 +19,9 @@ const mockNative = {
   setSubtitleTrack: jest.fn(async (_id: number) => {}),
   disableSubtitles: jest.fn(async () => {}),
   getAudioTracks: jest.fn(async () => [{ id: 1, lang: 'eng', title: 'Stereo', codec: 'aac', channels: 2 }]),
-  getSubtitleTracks: jest.fn(async () => [{ id: 1, lang: 'ger', codec: 'subrip', external: true }]),
+  getSubtitleTracks: jest.fn(async (): Promise<SubtitleTrack[]> => [
+    { id: 1, lang: 'ger', codec: 'subrip', external: true },
+  ]),
   getDuration: jest.fn(async () => 888),
   setSpeed: jest.fn(async (_speed: number) => {}),
   setSubtitleScale: jest.fn(async (_scale: number) => {}),
@@ -50,6 +52,8 @@ const progress = (position: number) => {
   );
 };
 const tracksReady = () => act(async () => mockViewProps.onTracksReady?.({ nativeEvent: {} }));
+const readyToSeek = () =>
+  act(async () => mockViewProps.onPlaybackStateChange?.({ nativeEvent: { isReadyToSeek: true } }));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -91,7 +95,8 @@ describe('MpvPlayer', () => {
     expect(onLoad).toHaveBeenCalledWith({
       duration: 888,
       audio: [{ id: 1, lang: 'eng', title: 'Stereo', codec: 'aac' }],
-      subs: [{ id: 1, lang: 'ger', title: undefined, codec: 'subrip' }],
+      // A sidecar without mpv's filename: still external (no URI to match by).
+      subs: [{ id: 1, lang: 'ger', title: undefined, codec: 'subrip', external: '' }],
     });
     await progress(5);
     expect(onProgress).toHaveBeenCalledWith({ position: 5, duration: 888 });
@@ -104,6 +109,43 @@ describe('MpvPlayer', () => {
     await tracksReady();
     await tracksReady();
     expect(onLoad).toHaveBeenCalledTimes(1);
+  });
+
+  it('the full track list once the file opened (sidecars added), once per load, sidecars with their URI', async () => {
+    const onTracks = jest.fn<NonNullable<PlayerProps['onTracks']>>();
+    const onLoad = jest.fn();
+    await render(<MpvPlayer source={source} externalSubs={subs} onLoad={onLoad} onTracks={onTracks} />);
+    await tracksReady();
+    // Before the file opened the sidecars may be missing: no full list yet.
+    expect(onLoad).toHaveBeenCalledTimes(1);
+    expect(onTracks).not.toHaveBeenCalled();
+    mockNative.getSubtitleTracks.mockResolvedValueOnce([
+      { id: 1, lang: 'eng', codec: 'subrip', external: false },
+      { id: 2, lang: 'ger', codec: 'subrip', external: true, externalFilename: subs[0].uri },
+    ]);
+    await readyToSeek();
+    expect(onTracks).toHaveBeenCalledWith({
+      audio: [{ id: 1, lang: 'eng', title: 'Stereo', codec: 'aac' }],
+      subs: [
+        { id: 1, lang: 'eng', title: undefined, codec: 'subrip' },
+        { id: 2, lang: 'ger', title: undefined, codec: 'subrip', external: subs[0].uri },
+      ],
+    });
+    await tracksReady();
+    expect(onTracks).toHaveBeenCalledTimes(1);
+    expect(onLoad).toHaveBeenCalledTimes(1);
+  });
+
+  it('a read started before the file opened is not the full list', async () => {
+    const onTracks = jest.fn();
+    await render(<MpvPlayer source={source} onTracks={onTracks} />);
+    // The file opens while the first read is still waiting for mpv.
+    await act(async () => {
+      mockViewProps.onTracksReady?.({ nativeEvent: {} });
+      mockViewProps.onPlaybackStateChange?.({ nativeEvent: { isReadyToSeek: true } });
+    });
+    expect(onTracks).toHaveBeenCalledTimes(1);
+    expect(mockNative.getSubtitleTracks).toHaveBeenCalledTimes(2);
   });
 
   it('a new externalSubs array alone is not a new load', async () => {
@@ -125,14 +167,17 @@ describe('MpvPlayer', () => {
 
   it('a new source with the same URL restarts at its start and reports the load again (I4)', async () => {
     const onLoad = jest.fn();
-    const { rerender } = await render(<MpvPlayer source={source} onLoad={onLoad} />);
+    const onTracks = jest.fn();
+    const { rerender } = await render(<MpvPlayer source={source} onLoad={onLoad} onTracks={onTracks} />);
     await tracksReady();
     await act(async () => {
-      await rerender(<MpvPlayer source={{ ...source }} startSeconds={0} onLoad={onLoad} />);
+      await rerender(<MpvPlayer source={{ ...source }} startSeconds={0} onLoad={onLoad} onTracks={onTracks} />);
     });
     expect(mockNative.seekTo).toHaveBeenCalledWith(0);
     expect(mockNative.play).toHaveBeenCalledTimes(1);
     expect(onLoad).toHaveBeenCalledTimes(2);
+    // Same file, sidecars long added: the full list right away (no native open follows).
+    expect(onTracks).toHaveBeenCalledTimes(1);
   });
 
   it('same URL, paused, with tracks: pauses and applies them', async () => {

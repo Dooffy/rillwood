@@ -104,6 +104,24 @@ movie "Multi Script Subs" "${SRC[@]}" "${TONE[@]}" \
   -metadata:s:s:0 language=jpn -metadata:s:s:1 language=zho -metadata:s:s:2 language=kor \
   -metadata:s:s:3 language=ara -metadata:s:s:4 language=heb
 
+# Sidecar track ids (mpv numbers sidecars after the embedded subs, in the order they're added): an embedded English
+# SRT + German and French sidecars, each with its own text so the screen shows which one loaded. "Missing Sidecar" is
+# the same; delete its German file after the library scan (test plan T2) so the server lists a sidecar that 404s.
+srt en-embedded.srt "English - embedded"
+srt de.srt "Deutsch - sidecar"
+srt fr.srt "Français - sidecar"
+for title in "Sidecar Subs" "Missing Sidecar"; do
+  dir="$MOVIES/$title (2026)"
+  [[ -f "$dir/$title (2026).mkv" ]] && { echo "skip  $title"; continue; }
+  movie "$title" "${SRC[@]}" "${TONE[@]}" -i "$TMP/en-embedded.srt" \
+    -map 0:v -map 1:a -map 2:s -c:v libx264 -preset veryfast -crf 23 -c:a aac -b:a 160k -c:s srt \
+    -metadata:s:a:0 language=eng -metadata:s:s:0 language=eng
+  # UTF-8 BOM: without one Jellyfin guesses the charset of a short sidecar and serves "Français" as "Fran├žais"
+  for lang in de fr; do
+    { printf '\xef\xbb\xbf'; cat "$TMP/$lang.srt"; } >"$dir/$title (2026).$lang.srt"
+  done
+done
+
 movie "4K HEVC 10bit" -f lavfi -i "testsrc2=size=3840x2160:rate=24:duration=$SECS" "${TONE[@]}" \
   -map 0:v -map 1:a -c:v libx265 -preset ultrafast -crf 28 -pix_fmt yuv420p10le -tag:v hvc1 -x265-params log-level=error -c:a aac -b:a 160k
 

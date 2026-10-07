@@ -4,6 +4,7 @@ import { describe, expect, it } from '@jest/globals';
 import { ApiError, type Connection, type MediaSourceDto, type PlaybackInfoResponse } from './api';
 import {
   externalSubs,
+  matchTracks,
   trackOptions,
   playbackInfoBody,
   playbackReport,
@@ -87,12 +88,12 @@ describe('playSource', () => {
         audio: [{ id: 1, index: 1, label: 'Track 1' }],
         subtitles: [
           { id: 1, index: 2, label: 'subrip' },
-          { id: 2, index: 3, label: 'English' },
+          { id: 2, index: 3, label: 'English', lang: 'eng' },
           { id: 3, index: 4, label: 'Signs' },
         ],
-        // Server defaults (Jellyfin indexes 1 / 3) as mpv ids.
+        // Server defaults, as Jellyfin indexes.
         defaultAudio: 1,
-        defaultSubtitle: 2,
+        defaultSubtitle: 3,
       },
     });
   });
@@ -221,5 +222,61 @@ describe('trackOptions', () => {
     );
     expect(result.ok && result.play.defaultAudio).toBe(1);
     expect(result.ok && result.play.defaultSubtitle).toBe(-1);
+  });
+});
+
+describe('matchTracks', () => {
+  // Embedded: audio eng + fre, subtitle eng; sidecars: ger (index 0), fre (index 5).
+  const play = {
+    audio: [
+      { id: 1, index: 2, label: 'English', lang: 'eng' },
+      { id: 2, index: 3, label: 'French', lang: 'fre' },
+    ],
+    subtitles: [
+      { id: 1, index: 4, label: 'English', lang: 'eng' },
+      { id: 2, index: 0, label: 'German', lang: 'ger' },
+      { id: 3, index: 5, label: 'French', lang: 'fre' },
+    ],
+    externalSubs: [
+      { uri: 'https://jf/0.srt', index: 0 },
+      { uri: 'https://jf/5.srt', index: 5 },
+    ],
+  };
+  const embedded = [{ id: 1, lang: 'eng' }];
+  const audio = [
+    { id: 1, lang: 'eng' },
+    { id: 2, lang: 'fre' },
+  ];
+
+  it('everything loaded: the predicted ids hold', () => {
+    const subs = [...embedded, { id: 2, external: 'https://jf/0.srt' }, { id: 3, external: 'https://jf/5.srt' }];
+    expect(matchTracks(play, { audio, subs })).toEqual({ audio: play.audio, subtitles: play.subtitles });
+  });
+
+  it('a sidecar that failed to load is left out; the next one gets its real id', () => {
+    const subs = [...embedded, { id: 2, external: 'https://jf/5.srt' }];
+    expect(matchTracks(play, { audio, subs }).subtitles).toEqual([
+      { id: 1, index: 4, label: 'English', lang: 'eng' },
+      { id: 2, index: 5, label: 'French', lang: 'fre' },
+    ]);
+  });
+
+  it('a stream mpv dropped: the rest match in order by language', () => {
+    expect(matchTracks(play, { audio: [{ id: 1, lang: 'fre' }], subs: [] }).audio).toEqual([
+      { id: 1, index: 3, label: 'French', lang: 'fre' },
+    ]);
+    // No language on either side matches any.
+    const unnamed = [
+      { id: 1, index: 2, label: 'Track 2' },
+      { id: 2, index: 3, label: 'Track 3' },
+    ];
+    expect(matchTracks({ ...play, audio: unnamed }, { audio: [{ id: 1 }], subs: [] }).audio).toEqual([
+      { id: 1, index: 2, label: 'Track 2' },
+    ]);
+  });
+
+  it('und matches any language; no language lining up falls back to position, never an empty menu', () => {
+    expect(matchTracks(play, { audio: [{ id: 1, lang: 'und' }], subs: [] }).audio).toEqual([play.audio[0]]);
+    expect(matchTracks(play, { audio: [{ id: 1, lang: 'ger' }], subs: [] }).audio).toEqual([play.audio[0]]);
   });
 });
