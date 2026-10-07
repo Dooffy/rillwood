@@ -510,6 +510,20 @@ describe('Player screen', () => {
       await fireEvent.press(screen.getByText('Subtitles'));
       expect(screen.queryByText('German - SRT')).toBeNull();
     });
+
+    // Regression (review): the fallback went to the server as a track change, which then remembered "off" for the item.
+    it('a default sidecar that failed to load: subtitles off on screen, the server still hears the default', async () => {
+      reply = () =>
+        Promise.resolve({ MediaSources: [{ ...source, DefaultSubtitleStreamIndex: 2 }], PlaySessionId: 'ps' });
+      await renderPlaying();
+      await act(() => lastPlayer().onTracks?.({ audio, subs: [] }));
+      expect(lastPlayer().subtitleTrack).toBe(-1);
+      expect(progressed).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ EventName: 'SubtitleTrackChange' }),
+      );
+      expect(started).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ SubtitleStreamIndex: 2 }));
+    });
   });
 });
 
@@ -549,7 +563,7 @@ describe('Up Next', () => {
   it('shows in the last 30 s with the countdown, then the end plays the next episode in the same player', async () => {
     const { rerender } = await playAt(1300);
     expect(screen.queryByText('S1, E2 · Second')).toBeNull();
-    // Speed stays for the next episode; a subtitle pick (a track of this file) doesn't.
+    // Speed stays for the next episode; a subtitle pick carries by its language (same file layout here).
     await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
     await fireEvent.press(screen.getByText('Speed'));
     await fireEvent.press(screen.getByText('1.5×'));
@@ -574,8 +588,90 @@ describe('Up Next', () => {
     );
     expect(request).toHaveBeenLastCalledWith(expect.anything(), EP2, expect.anything(), expect.any(AbortSignal));
     await act(async () => {});
-    expect(lastPlayer()).toMatchObject({ startSeconds: 0, paused: false, speed: 1.5, subtitleTrack: -1 });
+    expect(lastPlayer()).toMatchObject({ startSeconds: 0, paused: false, speed: 1.5, subtitleTrack: 1 });
     expect(screen.queryByText('S1, E2 · Second')).toBeNull();
+  });
+
+  describe('audio / subtitle picks carry to the next episode by language', () => {
+    const stream = (Type: 'Audio' | 'Subtitle', Index: number, Language: string) => ({
+      Type,
+      Index,
+      Language,
+      DisplayTitle: `${Language === 'eng' ? 'English' : 'Ukrainian'} ${Type}`,
+    });
+    // The next episode lists Ukrainian first: its indexes (and mpv ids) differ from the first one's.
+    const sources: Record<string, MediaSourceDto> = {
+      [EP1]: {
+        Id: 'ms1',
+        SupportsDirectPlay: true,
+        DefaultAudioStreamIndex: 1,
+        DefaultSubtitleStreamIndex: 3,
+        MediaStreams: [
+          stream('Audio', 1, 'eng'),
+          stream('Audio', 2, 'ukr'),
+          stream('Subtitle', 3, 'eng'),
+          stream('Subtitle', 4, 'ukr'),
+        ],
+      },
+      [EP2]: {
+        Id: 'ms2',
+        SupportsDirectPlay: true,
+        DefaultAudioStreamIndex: 2,
+        DefaultSubtitleStreamIndex: 4,
+        MediaStreams: [
+          stream('Audio', 1, 'ukr'),
+          stream('Audio', 2, 'eng'),
+          stream('Subtitle', 3, 'ukr'),
+          stream('Subtitle', 4, 'eng'),
+        ],
+      },
+    };
+    beforeEach(() => {
+      request.mockImplementation(
+        (_conn, itemId) =>
+          Promise.resolve({ MediaSources: [sources[itemId]], PlaySessionId: itemId }) as ReturnType<
+            typeof api.getPlaybackInfo
+          >,
+      );
+    });
+
+    async function pick(row: string, label: string) {
+      await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
+      await fireEvent.press(screen.getByText(row));
+      await fireEvent.press(screen.getByText(label));
+    }
+
+    async function playNext(rerender: (ui: React.ReactElement) => Promise<void>) {
+      await act(() => lastPlayer().onProgress?.({ position: 1400, duration: 1400 }));
+      await act(() => lastPlayer().onEnd?.());
+      await rerender(<PlayerScreen />);
+      await act(async () => {});
+      await act(() => lastPlayer().onLoad?.({ duration: 1400, audio: [], subs: [] }));
+    }
+
+    it('Ukrainian audio + subtitles on E1 stay Ukrainian on E2, over its server defaults', async () => {
+      const { rerender } = await playAt(1300);
+      expect(lastPlayer()).toMatchObject({ audioTrack: 1, subtitleTrack: 1 });
+      await pick('Audio', 'Ukrainian Audio');
+      await pick('Subtitles', 'Ukrainian Subtitle');
+      expect(lastPlayer()).toMatchObject({ audioTrack: 2, subtitleTrack: 2 });
+      await playNext(rerender);
+      expect(lastPlayer()).toMatchObject({ audioTrack: 1, subtitleTrack: 1 });
+      // Reported as E2's own indexes: the server remembers them for that episode.
+      expect(started).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({ ItemId: EP2, AudioStreamIndex: 1, SubtitleStreamIndex: 3 }),
+      );
+    });
+
+    it("subtitles turned off stay off; audio never picked keeps the next one's default", async () => {
+      const { rerender } = await playAt(1300);
+      await pick('Subtitles', 'Off');
+      expect(lastPlayer().subtitleTrack).toBe(-1);
+      await playNext(rerender);
+      // E2's default audio (index 2, English) is mpv's second track.
+      expect(lastPlayer()).toMatchObject({ audioTrack: 2, subtitleTrack: -1 });
+    });
   });
 
   it('a tap on the tile plays the next episode right away', async () => {

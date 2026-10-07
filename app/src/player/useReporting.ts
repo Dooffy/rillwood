@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Playback reporting (docs/context/player.md): `Sessions/Playing` once the file has loaded, `Progress` every 10 s (paused
-// too) + on pause / unpause / seek / leaving the app, `Stopped` with the last position when the load ends (close,
-// Retry, error). Best effort: a failed report is dropped (offline progress is M6, docs/context/sync.md); a 401 signs
-// out through the API layer as everywhere else.
+// too) + on pause / unpause / seek / track change / leaving the app, `Stopped` with the last position when the load
+// ends (close, Retry, error). Every report carries the audio / subtitle playing - the server remembers them per item.
+// Best effort: a failed report is dropped (offline progress is M6, docs/context/sync.md); a 401 signs out through the
+// API layer as everywhere else.
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
 import { reportPlaybackProgress, reportPlaybackStart, reportPlaybackStopped, type PlaybackReport } from '@/api';
-import { playbackReport, type PlaySource } from '@/playback';
+import { playbackReport, type PlaySource, type TrackChoice } from '@/playback';
 import type { ProgressStore } from '@/player/progress';
 import { connectionFor, getSession } from '@/session';
 import { invalidate } from '@/useFetch';
@@ -26,6 +27,7 @@ export function useReporting({
   play,
   started,
   paused,
+  tracks,
   progress,
 }: {
   accountId: string | undefined;
@@ -33,18 +35,37 @@ export function useReporting({
   play: PlaySource | undefined;
   started: boolean;
   paused: boolean;
+  /** Audio / subtitle playing. */
+  tracks: TrackChoice;
   progress: ProgressStore;
 }): { seeked: () => void } {
   // The running session's progress sender; null when nothing is being reported.
   const report = useRef<((extra: Extra) => void) | null>(null);
   // Latest `paused`, for the timer and the reports (kept in the pause effect below).
   const pausedNow = useRef(paused);
+  // Latest tracks, for the reports. Kept before the session effect runs, so a start carries the tracks of its render.
+  const { audio, subtitle } = tracks;
+  const tracksNow = useRef<TrackChoice>({ audio, subtitle });
+
+  // Track change of a running session: Progress with the change, so the server has it even if no Stopped follows.
+  useEffect(() => {
+    const before = tracksNow.current;
+    tracksNow.current = { audio, subtitle };
+    const event =
+      before.audio !== audio ? 'AudioTrackChange' : before.subtitle !== subtitle ? 'SubtitleTrackChange' : undefined;
+    if (event) report.current?.({ IsPaused: pausedNow.current, EventName: event });
+  }, [audio, subtitle]);
 
   useEffect(() => {
     const account = getSession().active;
     const conn = account && account.id === accountId ? connectionFor(account) : null;
     if (!conn || !itemId || !play || !started) return;
-    const body = (extra: Extra) => playbackReport(itemId, play, progress.get().position, extra);
+    const body = (extra: Extra) =>
+      playbackReport(itemId, play, progress.get().position, {
+        ...extra,
+        AudioStreamIndex: tracksNow.current.audio,
+        SubtitleStreamIndex: tracksNow.current.subtitle,
+      });
     const ignore = () => {};
     // One queue per session: reports reach the server in order, so a late Progress never lands after Stopped (that
     // would revive the session on the dashboard and rewrite the final position). Bodies are taken when queued.

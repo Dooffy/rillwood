@@ -144,6 +144,30 @@ for ep in 1 2 3; do
     -metadata title="Episode $ep" -f matroska "$out.part" && mv "$out.part" "$out"
 done
 
+# Language Show: English + Ukrainian audio and subtitles in every episode, for remembered track languages. E02 lists
+# them in the other order (Ukrainian first), so carrying a choice by language and by stream index give different tracks.
+# Plain SRT for Ukrainian: converting uk.ass to SRT keeps only empty style tags (blank subtitles)
+srt uk.srt "Українські субтитри (SRT)"
+LANG_SHOW="$SHOWS/Language Show (2026)/Season 01"
+mkdir -p "$LANG_SHOW"
+for ep in 1 2 3; do
+  out="$LANG_SHOW/Language Show S01E0$ep.mkv"
+  [[ -f "$out" ]] && { echo "skip  Language Show S01E0$ep"; continue; }
+  echo "make  Language Show S01E0$ep"
+  if [[ $ep == 2 ]]; then order=(uk en); else order=(en uk); fi
+  inputs=() meta=()
+  for i in 0 1; do # per language: its tone + subtitle as inputs, its stream metadata
+    case ${order[$i]} in
+      en) lang=eng title="English 440Hz" inputs+=("${TONE[@]}" -i "$TMP/en.srt") ;;
+      uk) lang=ukr title="Ukrainian 880Hz" inputs+=("${TONE2[@]}" -i "$TMP/uk.srt") ;;
+    esac
+    meta+=(-metadata:s:a:$i language=$lang -metadata:s:a:$i title="$title" -metadata:s:s:$i language=$lang)
+  done
+  ffmpeg "${Q[@]}" "${SRC[@]}" "${inputs[@]}" \
+    -map 0:v -map 1:a -map 3:a -map 2:s -map 4:s -c:v libx264 -preset veryfast -crf 26 -c:a aac -b:a 128k -c:s srt \
+    "${meta[@]}" -metadata title="Episode $ep" -f matroska "$out.part" && mv "$out.part" "$out"
+done
+
 echo
 echo "Done: $MEDIA"
 echo "Add real files for DV P8 and PGS to $MEDIA/real/ (see README.md)."

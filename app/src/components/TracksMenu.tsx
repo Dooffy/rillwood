@@ -2,14 +2,11 @@
 // Player tracks menu on the shared ActionSheet: a main page (audio, subtitles, speed, subtitle size with their current
 // value) that opens one list per setting. The screen owns the page so a pick can close one sheet and open the next.
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
-import type { TrackOption } from '@/playback';
+import type { TrackChoice, TrackOption } from '@/playback';
 
 export type TracksPage = 'main' | 'audio' | 'subtitles' | 'speed' | 'size';
 
-export type TracksValue = {
-  /** Jellyfin stream indexes (the engine's ids can change once the file loaded); subtitle -1 = off. */
-  audio?: number;
-  subtitle: number;
+export type TracksValue = TrackChoice & {
   speed: number;
   subtitleScale: number;
 };
