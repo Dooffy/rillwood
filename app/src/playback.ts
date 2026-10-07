@@ -3,6 +3,7 @@
 // sidecar subtitle URLs. URLs are built here, never taken from the server (`DeliveryUrl` carries `ApiKey=<token>`).
 // Pure (type-only imports), so `npm run check:home` loads it with plain Node.
 import type { ApiError, Connection, MediaSourceDto, MediaStreamDto, PlaybackInfoResponse, PlaybackReport } from '@/api';
+import type { Track } from '@/player/Player';
 
 // Sidecar text formats the server converts (srt / subrip / vtt / ass checked on 10.11 + 12.1). ASS keeps its styling.
 const SUB_EXTENSION: Record<string, string> = {
@@ -56,16 +57,19 @@ export type PlaySource = {
   playSessionId?: string;
   source: { uri: string; headers: Record<string, string> };
   externalSubs: ExternalSub[];
-  /** What the tracks menu offers, with mpv track ids. */
+  /** What the tracks menu offers, with predicted mpv track ids (`matchTracks` checks them once the file loaded). */
   audio: TrackOption[];
   subtitles: TrackOption[];
-  /** mpv ids to start with (the server's defaults, i.e. the user's language preferences); subtitle -1 = off. */
+  /** Jellyfin indexes to start with (the server's defaults, i.e. the user's language preferences); subtitle -1 = off. */
   defaultAudio?: number;
   defaultSubtitle: number;
 };
 
 /** A track the player can switch to: `id` is mpv's (1-based per type), `index` Jellyfin's stream index. */
-export type TrackOption = { id: number; index: number; label: string };
+export type TrackOption = { id: number; index: number; label: string; lang?: string };
+
+/** A track as the engine lists it: sidecars carry the URI they were loaded from. */
+export type EngineTrack = Pick<Track, 'id' | 'lang' | 'external'>;
 
 /**
  * - `none`: no media source (or not the requested one)
@@ -102,13 +106,64 @@ export function trackOptions(
 ): { audio: TrackOption[]; subtitles: TrackOption[] } {
   const streams = source.MediaStreams ?? [];
   const inFile = (type: string) => streams.filter((s) => s.Type === type && !s.IsExternal);
-  const option = (s: MediaStreamDto, i: number): TrackOption => ({ id: i + 1, index: s.Index, label: trackLabel(s) });
+  const option = (s: MediaStreamDto, i: number): TrackOption => ({
+    id: i + 1,
+    index: s.Index,
+    label: trackLabel(s),
+    lang: s.Language,
+  });
   const embeddedSubs = inFile('Subtitle').map(option);
   const sidecarSubs = sidecars.flatMap((sub, i) => {
     const stream = streams.find((s) => s.Index === sub.index);
     return stream ? [option(stream, embeddedSubs.length + i)] : [];
   });
   return { audio: inFile('Audio').map(option), subtitles: [...embeddedSubs, ...sidecarSubs] };
+}
+
+/**
+ * The menu's tracks with the ids the engine really gave them (its full list, `onTracks`): a stream mpv dropped or a
+ * sidecar that failed to load would shift the predicted ones. Sidecars match by URI; a type's embedded tracks by
+ * position when the counts agree (the prediction holds), else in order by language - best effort (several tracks in one
+ * language, or codes that differ like `ger` / `deu`, can pair wrong). Options with no track are left out.
+ */
+export function matchTracks(
+  play: Pick<PlaySource, 'audio' | 'subtitles' | 'externalSubs'>,
+  engine: { audio: EngineTrack[]; subs: EngineTrack[] },
+): { audio: TrackOption[]; subtitles: TrackOption[] } {
+  const sidecarUri = new Map(play.externalSubs.map((s) => [s.index, s.uri]));
+  const embedded = play.subtitles.filter((o) => !sidecarUri.has(o.index));
+  const sidecars = play.subtitles.flatMap((o) => {
+    const uri = sidecarUri.get(o.index);
+    const track = uri !== undefined && engine.subs.find((t) => t.external === uri);
+    return track ? [{ ...o, id: track.id }] : [];
+  });
+  return {
+    audio: matchInFile(play.audio, engine.audio),
+    subtitles: [
+      ...matchInFile(
+        embedded,
+        engine.subs.filter((t) => t.external === undefined),
+      ),
+      ...sidecars,
+    ],
+  };
+}
+
+function matchInFile(options: TrackOption[], tracks: EngineTrack[]): TrackOption[] {
+  if (options.length === tracks.length) return options.map((o, i) => ({ ...o, id: tracks[i].id }));
+  // A track without a language (or `und`) matches any.
+  const known = (lang?: string) => (lang && lang.toLowerCase() !== 'und' ? lang.toLowerCase() : undefined);
+  const sameLang = (a?: string, b?: string) => !known(a) || !known(b) || known(a) === known(b);
+  let next = 0;
+  const matched = options.flatMap((o) => {
+    const at = tracks.findIndex((t, i) => i >= next && sameLang(o.lang, t.lang));
+    if (at < 0) return [];
+    next = at + 1;
+    return [{ ...o, id: tracks[at].id }];
+  });
+  // No language lines up (codes that differ, like `ger` / `deu`): by position, so the menu keeps what mpv has.
+  if (matched.length === 0) return options.slice(0, tracks.length).map((o, i) => ({ ...o, id: tracks[i].id }));
+  return matched;
 }
 
 /** Sidecar subtitle files of a source (embedded ones are in the file - mpv finds those itself). */
@@ -148,8 +203,9 @@ export function playSource(
       },
       externalSubs: subs,
       ...tracks,
-      defaultAudio: tracks.audio.find((t) => t.index === source.DefaultAudioStreamIndex)?.id ?? tracks.audio[0]?.id,
-      defaultSubtitle: tracks.subtitles.find((t) => t.index === source.DefaultSubtitleStreamIndex)?.id ?? -1,
+      defaultAudio:
+        tracks.audio.find((t) => t.index === source.DefaultAudioStreamIndex)?.index ?? tracks.audio[0]?.index,
+      defaultSubtitle: tracks.subtitles.find((t) => t.index === source.DefaultSubtitleStreamIndex)?.index ?? -1,
     },
   };
 }

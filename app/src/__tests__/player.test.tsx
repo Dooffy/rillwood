@@ -441,7 +441,7 @@ describe('Player screen', () => {
     }
   });
 
-  it('starts with the server defaults (as mpv ids): audio 1, subtitles off', async () => {
+  it('starts with the server defaults (as predicted mpv ids): audio 1, subtitles off', async () => {
     await renderPlaying();
     // The test window is portrait: subtitles a step larger.
     expect(lastPlayer()).toMatchObject({ audioTrack: 1, subtitleTrack: -1, speed: 1, subtitleScale: 1.25 });
@@ -484,6 +484,33 @@ describe('Player screen', () => {
       jest.useRealTimers();
     }
   });
+  describe('tracks the engine really has', () => {
+    const SIDECAR = `https://jf.example.com/Videos/${ID}/ms/Subtitles/2/Stream.srt`;
+    const audio = [{ id: 1, lang: 'eng' }];
+
+    it('a picked subtitle goes to the id mpv gave it, not the predicted one', async () => {
+      await renderPlaying();
+      await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
+      await fireEvent.press(screen.getByText('Subtitles'));
+      await fireEvent.press(screen.getByText('German - SRT'));
+      expect(lastPlayer().subtitleTrack).toBe(1);
+      // mpv lists an embedded subtitle the server didn't: the sidecar is 2.
+      await act(() => lastPlayer().onTracks?.({ audio, subs: [{ id: 1 }, { id: 2, external: SIDECAR }] }));
+      expect(lastPlayer().subtitleTrack).toBe(2);
+    });
+
+    it('a sidecar that failed to load leaves the menu; picked, subtitles go off', async () => {
+      await renderPlaying();
+      await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
+      await fireEvent.press(screen.getByText('Subtitles'));
+      await fireEvent.press(screen.getByText('German - SRT'));
+      await act(() => lastPlayer().onTracks?.({ audio, subs: [] }));
+      expect(lastPlayer()).toMatchObject({ audioTrack: 1, subtitleTrack: -1 });
+      await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
+      await fireEvent.press(screen.getByText('Subtitles'));
+      expect(screen.queryByText('German - SRT')).toBeNull();
+    });
+  });
 });
 
 describe('Up Next', () => {
@@ -522,7 +549,7 @@ describe('Up Next', () => {
   it('shows in the last 30 s with the countdown, then the end plays the next episode in the same player', async () => {
     const { rerender } = await playAt(1300);
     expect(screen.queryByText('S1, E2 · Second')).toBeNull();
-    // Speed stays for the next episode; a subtitle pick (an mpv id of this file) doesn't.
+    // Speed stays for the next episode; a subtitle pick (a track of this file) doesn't.
     await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
     await fireEvent.press(screen.getByText('Speed'));
     await fireEvent.press(screen.getByText('1.5×'));

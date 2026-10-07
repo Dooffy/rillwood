@@ -32,7 +32,14 @@ import { Text } from '@/components/Text';
 import { TracksMenu, type TracksPage, type TracksValue } from '@/components/TracksMenu';
 import { UpNext } from '@/components/UpNext';
 import { cardTitles, isItemId, itemDetail, nextEpisode, nextEpisodes, playback } from '@/items';
-import { playbackInfoBody, playErrorMessage, playSource, type PlaySource } from '@/playback';
+import {
+  matchTracks,
+  playbackInfoBody,
+  playErrorMessage,
+  playSource,
+  type EngineTrack,
+  type PlaySource,
+} from '@/playback';
 import {
   HIDE_AFTER_MS,
   PULL_CLOSE_DISTANCE,
@@ -74,12 +81,15 @@ export default function PlayerScreen() {
   const [started, setStarted] = useState<string>();
   const player = useRef<PlayerRef>(null);
   const [paused, setPaused] = useState(false);
+  // The engine's full track list of the load with this key: the real mpv ids (`matchTracks`), else the predicted ones.
+  const [engineTracks, setEngineTracks] = useState<{ key: string; audio: EngineTrack[]; subs: EngineTrack[] }>();
   const [shown, setShown] = useState(true);
   const [scrubbing, setScrubbing] = useState(false);
   // Tracks menu page (null = closed) and the choices made in it; until a choice, the server's defaults. Choices outlive
   // a Retry (same item); speed and subtitle size apply to whatever plays.
   const [menu, setMenu] = useState<TracksPage | null>(null);
-  // Audio / subtitle are mpv ids of one file: kept with the id of the item they were picked on, ignored for any other.
+  // Audio / subtitle are Jellyfin indexes of one file: kept with the id of the item they were picked on, ignored for any
+  // other.
   const [choice, setChoice] = useState<Partial<TracksValue> & { id?: string }>({});
   const picked = choice.id === id ? choice : {};
   // Bumped on ±10 s: restarts the auto-hide timer (pause and scrubbing are timer deps already).
@@ -112,9 +122,15 @@ export default function PlayerScreen() {
   const ready = state.status === 'ready';
   const playing = ready && started === key;
   const play = state.status === 'ready' ? state.play : undefined;
+  const options = play && engineTracks?.key === key ? matchTracks(play, engineTracks) : play;
+  // A choice the file doesn't have (a sidecar that failed to load, a stream mpv dropped): first audio, subtitles off.
+  const audio = picked.audio ?? play?.defaultAudio;
+  const subtitle = picked.subtitle ?? play?.defaultSubtitle ?? -1;
+  const audioTrack = options?.audio.find((t) => t.index === audio) ?? options?.audio[0];
+  const subtitleTrack = options?.subtitles.find((t) => t.index === subtitle);
   const tracks: TracksValue = {
-    audio: picked.audio ?? play?.defaultAudio,
-    subtitle: picked.subtitle ?? play?.defaultSubtitle ?? -1,
+    audio: audioTrack?.index,
+    subtitle: subtitleTrack?.index ?? -1,
     speed: choice.speed ?? 1,
     subtitleScale: choice.subtitleScale ?? 1,
   };
@@ -309,14 +325,15 @@ export default function PlayerScreen() {
                 externalSubs={state.play.externalSubs}
                 startSeconds={state.start}
                 paused={paused}
-                audioTrack={tracks.audio}
-                subtitleTrack={tracks.subtitle}
+                audioTrack={audioTrack?.id}
+                subtitleTrack={subtitleTrack?.id ?? -1}
                 speed={tracks.speed}
                 subtitleScale={subtitleScaleFor(tracks.subtitleScale, height > width)}
                 onLoad={(e) => {
                   progress.set({ duration: e.duration });
                   setStarted(key);
                 }}
+                onTracks={(e) => setEngineTracks({ key, ...e })}
                 onProgress={progress.set}
                 // The next episode, if any; else the engine holds the last frame paused: show it as paused (the pause
                 // reports the end - played), controls up; Play replays from the start.
@@ -363,12 +380,12 @@ export default function PlayerScreen() {
             {controlsUp && <PlayerScrubber progress={progress} onSeek={seek} onSeekBy={skip} onScrub={setScrubbing} />}
           </PlayerBottom>
         )}
-        {play && (
+        {options && (
           <TracksMenu
             page={menu}
             onPage={setMenu}
-            audio={play.audio}
-            subtitles={play.subtitles}
+            audio={options.audio}
+            subtitles={options.subtitles}
             value={tracks}
             onChange={(next) =>
               setChoice(({ speed, subtitleScale, ...tracksOf }) => ({
