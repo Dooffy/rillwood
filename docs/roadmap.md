@@ -65,7 +65,7 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [x] Tracks sheet (audio, subs incl. external, speed, sub size); starts with the server defaults as mpv ids (`trackOptions`)
 - [ ] Tracks: check the predicted mpv ids against the engine's track list from `onLoad` (a stream mpv drops or a sidecar that fails to load would shift ids)
 - [ ] Subtitle timing (offset) in the tracks menu: needs `setSubtitleDelay` in the Android module (iOS has it) - native change, `UPSTREAM.md`
-- [ ] Resume prompt when the item has a resume point (server keeps 5-90%, items ≥ 5 min only)
+- [x] Resume prompt: not needed - every entry point says resume or start over (detail + series buttons, episode card ▶ + ⋯ menu, autoplay from the resume point); decided 2026-10-07
 - [x] Reporting start/progress/stop with PlaySessionId (`useReporting`; verified on 12.1 + 10.11 by `check:home`)
 - [x] Autoplay next + Up Next tile (last 30 s, smooth countdown ring, tap = play now, ✕ hides), same player screen, next episode from its resume point. iPhone tested (2026-10-07) before the review fixes (bottom stack, pull, resume, drag) - re-check those
 - [ ] Remember audio / subtitle language per user (carry the choice to the next episode by language)
