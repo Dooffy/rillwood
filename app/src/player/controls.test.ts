@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from '@jest/globals';
 
-import { positionAt, seekTarget, shouldClose, subtitleScaleFor } from './controls';
+import { positionAt, seekTarget, shouldClose, subtitleScaleFor, upNextCountdown } from './controls';
 import { createProgress } from './progress';
 
 describe('shouldClose', () => {
@@ -60,5 +60,17 @@ describe('subtitleScaleFor', () => {
     expect(subtitleScaleFor(1, true)).toBe(1.25);
     expect(subtitleScaleFor(1.5, true)).toBe(1.875);
     expect(subtitleScaleFor(1.5, false)).toBe(1.5);
+  });
+});
+
+describe('upNextCountdown', () => {
+  it('in the last 30 s: whole seconds left and the ring fill; nothing before or without a duration', () => {
+    expect(upNextCountdown(1369, 1400)).toBeUndefined();
+    expect(upNextCountdown(1370, 1400)).toEqual({ left: 30, fill: 0 });
+    expect(upNextCountdown(1388.2, 1400)).toEqual({ left: 12, fill: expect.closeTo(0.607) });
+    expect(upNextCountdown(1385, 1400)?.fill).toBeCloseTo(0.5);
+    expect(upNextCountdown(1400, 1400)).toEqual({ left: 0, fill: 1 });
+    expect(upNextCountdown(1405, 1400)).toEqual({ left: 0, fill: 1 });
+    expect(upNextCountdown(0, 0)).toBeUndefined();
   });
 });

@@ -17,7 +17,10 @@ import type { PlayerProps } from '@/player/Player';
 import * as session from '@/session';
 import { palettes } from '@/theme';
 
-jest.mock('expo-router', () => ({ router: { back: jest.fn() }, useLocalSearchParams: jest.fn() }));
+jest.mock('expo-router', () => ({
+  router: { back: jest.fn(), setParams: jest.fn() },
+  useLocalSearchParams: jest.fn(),
+}));
 jest.mock('expo-status-bar', () => ({ StatusBar: jest.fn(() => null) }));
 // The engine is tested on its own (src/player/mpv.test.tsx); here it records what the screen hands it and its ref calls.
 const mockSeek = jest.fn();
@@ -31,7 +34,7 @@ jest.mock('@/player/Player', () => {
 });
 
 const { router, useLocalSearchParams } = jest.requireMock<{
-  router: { back: jest.Mock };
+  router: { back: jest.Mock; setParams: jest.Mock };
   useLocalSearchParams: jest.Mock;
 }>('expo-router');
 const { StatusBar } = jest.requireMock<{ StatusBar: jest.Mock }>('expo-status-bar');
@@ -480,5 +483,176 @@ describe('Player screen', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+});
+
+describe('Up Next', () => {
+  const [EP1, EP2] = ['e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1', 'e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2'];
+  const episode = (Id: string, n: number): BaseItemDto => ({
+    Id,
+    Name: n === 1 ? 'Pilot' : 'Second',
+    Type: 'Episode',
+    SeriesId: 'show',
+    SeriesName: 'Test Show',
+    ParentIndexNumber: 1,
+    IndexNumber: n,
+  });
+  // Item detail + `/Shows/{id}/Episodes?startItemId=`: this episode and the next (only itself for the last one).
+  const episodes = [episode(EP1, 1), episode(EP2, 2)];
+
+  beforeEach(() => {
+    useLocalSearchParams.mockReturnValue({ id: EP1, start: '0' });
+    itemRequest.mockImplementation(((_conn: unknown, path: string, opts?: { query?: { startItemId?: string } }) => {
+      if (path === '/Shows/show/Episodes') {
+        const at = episodes.findIndex((e) => e.Id === opts?.query?.startItemId);
+        return Promise.resolve({ Items: episodes.slice(at, at + 2), TotalRecordCount: episodes.length - at });
+      }
+      return Promise.resolve(episodes.find((e) => path === `/Items/${e.Id}`));
+    }) as never);
+    router.setParams.mockImplementation((params) => useLocalSearchParams.mockReturnValue(params));
+  });
+
+  async function playAt(position: number) {
+    const view = await render(<PlayerScreen />);
+    await act(() => lastPlayer().onLoad?.({ duration: 1400, audio: [], subs: [] }));
+    await act(() => lastPlayer().onProgress?.({ position, duration: 1400 }));
+    return view;
+  }
+
+  it('shows in the last 30 s with the countdown, then the end plays the next episode in the same player', async () => {
+    const { rerender } = await playAt(1300);
+    expect(screen.queryByText('S1, E2 · Second')).toBeNull();
+    // Speed stays for the next episode; a subtitle pick (an mpv id of this file) doesn't.
+    await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
+    await fireEvent.press(screen.getByText('Speed'));
+    await fireEvent.press(screen.getByText('1.5×'));
+    await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
+    await fireEvent.press(screen.getByText('Subtitles'));
+    await fireEvent.press(screen.getByText('German - SRT'));
+    expect(lastPlayer().subtitleTrack).toBe(1);
+
+    await act(() => lastPlayer().onProgress?.({ position: 1388.2, duration: 1400 }));
+    expect(screen.getByText('S1, E2 · Second')).toBeOnTheScreen();
+    expect(screen.getByText('Up Next · 12s')).toBeOnTheScreen();
+    expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith('Up next: S1, E2 · Second');
+
+    await act(() => lastPlayer().onProgress?.({ position: 1400, duration: 1400 }));
+    await act(() => lastPlayer().onEnd?.());
+    expect(router.setParams).toHaveBeenCalledWith({ id: EP2, start: '0' });
+    await rerender(<PlayerScreen />);
+    // The finished episode is stopped at its end (played), the next one loads from its start.
+    expect(stopped).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ ItemId: EP1, PositionTicks: 14_000_000_000 }),
+    );
+    expect(request).toHaveBeenLastCalledWith(expect.anything(), EP2, expect.anything(), expect.any(AbortSignal));
+    await act(async () => {});
+    expect(lastPlayer()).toMatchObject({ startSeconds: 0, paused: false, speed: 1.5, subtitleTrack: -1 });
+    expect(screen.queryByText('S1, E2 · Second')).toBeNull();
+  });
+
+  it('a tap on the tile plays the next episode right away', async () => {
+    await playAt(1380);
+    await fireEvent.press(screen.getByRole('button', { name: 'Play next episode, S1, E2 · Second' }));
+    expect(router.setParams).toHaveBeenCalledWith({ id: EP2, start: '0' });
+  });
+
+  it('Hide: the card goes, the end pauses as without a next episode', async () => {
+    await playAt(1380);
+    await fireEvent.press(screen.getByRole('button', { name: 'Hide Up Next' }));
+    expect(screen.queryByText('S1, E2 · Second')).toBeNull();
+    await act(() => lastPlayer().onProgress?.({ position: 1400, duration: 1400 }));
+    await act(() => lastPlayer().onEnd?.());
+    expect(router.setParams).not.toHaveBeenCalled();
+    expect(lastPlayer().paused).toBe(true);
+  });
+
+  // The tile stays mounted while the controls come and go: the ring keeps running, VoiceOver hears it once.
+  it('stays up, without remounting, when the controls hide', async () => {
+    jest.useFakeTimers();
+    try {
+      await playAt(1380);
+      await act(() => jest.advanceTimersByTime(3000));
+      expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
+      expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: 'Play next episode, S1, E2 · Second' })).toBeOnTheScreen();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('the last episode has no Up Next and pauses at the end', async () => {
+    useLocalSearchParams.mockReturnValue({ id: EP2, start: '0' });
+    await playAt(1390);
+    expect(screen.queryByRole('button', { name: 'Play next episode, S1, E2 · Second' })).toBeNull();
+    await act(() => lastPlayer().onEnd?.());
+    expect(router.setParams).not.toHaveBeenCalled();
+    expect(lastPlayer().paused).toBe(true);
+  });
+
+  it('a movie has no Up Next', async () => {
+    itemRequest.mockImplementation(() => Promise.resolve(movie) as Promise<never>);
+    useLocalSearchParams.mockReturnValue({ id: ID, start: '0' });
+    await playAt(1390);
+    expect(screen.queryByRole('button', { name: 'Play next episode, S1, E2 · Second' })).toBeNull();
+    expect(itemRequest).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.stringContaining('/Shows/'),
+      expect.anything(),
+    );
+  });
+
+  it('a next episode started before resumes at its saved position', async () => {
+    episodes[1] = {
+      ...episode(EP2, 2),
+      RunTimeTicks: 14_000_000_000,
+      UserData: { Played: false, PlaybackPositionTicks: 6_005_000_000 },
+    };
+    try {
+      await playAt(1380);
+      await fireEvent.press(screen.getByRole('button', { name: 'Play next episode, S1, E2 · Second' }));
+      expect(router.setParams).toHaveBeenCalledWith({ id: EP2, start: '600' });
+    } finally {
+      episodes[1] = episode(EP2, 2);
+    }
+  });
+
+  // Review fix: the scrubber unmounts with the finished episode mid-drag, so its release never reports.
+  it('an end during a drag: the next episode hides its controls as usual', async () => {
+    jest.useFakeTimers();
+    try {
+      const { rerender } = await playAt(1380);
+      const scrubber = screen.getByTestId('scrubber');
+      await fireEvent(scrubber, 'layout', { nativeEvent: { layout: { width: 300 } } });
+      await fireEvent(scrubber, 'responderGrant', { nativeEvent: { locationX: 299 } });
+      await act(() => lastPlayer().onEnd?.());
+      await rerender(<PlayerScreen />);
+      await act(async () => {});
+      await act(() => lastPlayer().onLoad?.({ duration: 1400, audio: [], subs: [] }));
+      expect(screen.getByRole('button', { name: 'Close' })).toBeOnTheScreen();
+      await act(() => jest.advanceTimersByTime(3000));
+      expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('steps aside while the video is pulled down, back when it springs back', async () => {
+    await playAt(1380);
+    const pull = createGestureController(getByGestureTestId('player-pull'));
+    await act(() => pull.begin({ translationY: 0 }));
+    await act(() => pull.activate({ translationY: 20 }));
+    expect(screen.queryByText('S1, E2 · Second')).toBeNull();
+    await act(() => pull.end({ translationY: 40, velocityY: 0 }));
+    expect(screen.getByText('S1, E2 · Second')).toBeOnTheScreen();
+  });
+
+  it('VoiceOver hears it once, even when a seek leaves the last 30 s and comes back', async () => {
+    await playAt(1380);
+    await act(() => lastPlayer().onProgress?.({ position: 1300, duration: 1400 }));
+    expect(screen.queryByText('S1, E2 · Second')).toBeNull();
+    await act(() => lastPlayer().onProgress?.({ position: 1385, duration: 1400 }));
+    expect(screen.getByText('S1, E2 · Second')).toBeOnTheScreen();
+    expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledTimes(1);
   });
 });

@@ -38,6 +38,8 @@ import {
   latest,
   logoImage,
   mediaRows,
+  nextEpisode,
+  nextEpisodes,
   nextUp,
   PEOPLE_LIMIT,
   personImage,
@@ -545,6 +547,28 @@ describe('series', () => {
       query: { seriesId: 'series-1', limit: 1, enableResumable: true, fields: 'Overview' },
     });
     expect(similar('a/b')).toEqual({ path: '/Items/a%2Fb/Similar', query: { limit: 20 } });
+  });
+
+  it('asks for an episode and the one after it, across seasons - episodes only', () => {
+    const ep: BaseItemDto = { ...episode(2), Id: 'ep-2', SeriesId: 'a/b' };
+    expect(nextEpisodes(ep)).toEqual({
+      path: '/Shows/a%2Fb/Episodes',
+      query: { startItemId: 'ep-2', limit: 2, isMissing: false },
+    });
+    expect(nextEpisodes({ ...ep, SeriesId: undefined })).toBeUndefined();
+    expect(nextEpisodes({ Id: 'm', Name: 'Sintel', Type: 'Movie' })).toBeUndefined();
+  });
+
+  it('picks the episode after this one; none after the last or for a list without it', () => {
+    const [a, b] = [
+      { ...episode(1), Id: 'a' },
+      { ...episode(2), Id: 'b' },
+    ];
+    expect(nextEpisode([a, b], 'a')).toBe(b);
+    expect(nextEpisode([b], 'b')).toBeUndefined();
+    expect(nextEpisode([a, b], 'other')).toBeUndefined();
+    expect(nextEpisode(undefined, 'a')).toBeUndefined();
+    expect(nextEpisode([a, { ...b, LocationType: 'Virtual' }], 'a')).toBeUndefined();
   });
 
   it('opens the season of the next episode, else the first real season', () => {

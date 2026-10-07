@@ -30,6 +30,8 @@ import {
   listItems,
   mergePage,
   nextPageStart,
+  nextEpisode as episodeAfter,
+  nextEpisodes,
   defaultSeasonId,
   episodes,
   episodeTitle,
@@ -164,6 +166,16 @@ try {
   check(
     target?.episode.Id === showEpisodes[1].Id && !target.resume && seasonEpisodes[0]?.UserData?.Played === true,
     `Series ${seriesItem.Name} (${yearRange(seriesItem)}, ${seasonList.length} season(s)): opens ${seasonList.find((x) => x.Id === seasonId)?.Name}, ${seasonEpisodes.map(episodeTitle).join(' / ')}; Play → ${target?.episode.Name}`,
+  );
+  // Up Next in the player: the episode after each one, from its own detail; none after the last.
+  const after = [];
+  for (const ep of showEpisodes) {
+    const detail = await get(itemDetail(ep.Id));
+    after.push(episodeAfter((await get(nextEpisodes(detail))).Items, ep.Id)?.Id);
+  }
+  check(
+    after.every((id, i) => id === showEpisodes[i + 1]?.Id),
+    `Up Next: ${showEpisodes.map(episodeTitle).join(' → ')} → none`,
   );
   const similarItems = await get(similar(movie.Id));
   check(Array.isArray(similarItems.Items), `Similar to ${movie.Name}: ${similarItems.Items.length} item(s)`);

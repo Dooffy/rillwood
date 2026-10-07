@@ -8,6 +8,8 @@ export const HIDE_AFTER_MS = 3000;
 export const STALL_SPINNER_MS = 500;
 /** Pull down further than this, or flick down faster, to close the player. */
 export const PULL_CLOSE_DISTANCE = 120;
+/** The Up Next card shows for this long before the end of an episode that has a next one. */
+export const UP_NEXT_SECONDS = 30;
 /** Portrait shows the picture small and mpv sizes text to the picture: subtitles a step larger there. */
 export const PORTRAIT_SUBTITLE_SCALE = 1.25;
 
@@ -33,4 +35,14 @@ export function seekTarget(seconds: number, duration: number): number {
 export function positionAt(x: number, width: number, duration: number): number {
   if (width <= 0 || duration <= 0) return 0;
   return Math.min(Math.max(x / width, 0), 1) * duration;
+}
+
+/**
+ * Up Next countdown in its last `UP_NEXT_SECONDS`: whole seconds `left` (the label) and how far the ring is filled
+ * (`fill`, 0-1, from the exact position). Undefined before then, or without a duration yet.
+ */
+export function upNextCountdown(position: number, duration: number): { left: number; fill: number } | undefined {
+  const left = duration - position;
+  if (duration <= 0 || left > UP_NEXT_SECONDS) return undefined;
+  return { left: Math.max(0, Math.ceil(left)), fill: Math.min(1, Math.max(0, 1 - left / UP_NEXT_SECONDS)) };
 }

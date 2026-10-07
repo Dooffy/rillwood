@@ -163,6 +163,28 @@ export function seriesNextUp(seriesId: string): Endpoint {
   return { path: '/Shows/NextUp', query: { seriesId, limit: 1, enableResumable: true, fields: 'Overview' } };
 }
 
+/**
+ * The episode and the one after it, in series order across seasons (`startItemId`, same on 10.11 + 12.1), without
+ * missing (virtual) episodes. Episodes of a series only - movies have no next.
+ */
+export function nextEpisodes(item: BaseItemDto): Endpoint | undefined {
+  if (item.Type !== 'Episode' || !item.SeriesId) return undefined;
+  return {
+    path: `/Shows/${encodeURIComponent(item.SeriesId)}/Episodes`,
+    query: { startItemId: item.Id, limit: 2, isMissing: false },
+  };
+}
+
+/**
+ * The episode after `id` in a `nextEpisodes` answer; none after the last one, or when the next has no file (`Virtual`:
+ * `isMissing=false` may still let a not yet aired one through).
+ */
+export function nextEpisode(list: BaseItemDto[] | undefined, id: string): BaseItemDto | undefined {
+  const at = list?.findIndex((ep) => ep.Id === id) ?? -1;
+  const next = at < 0 ? undefined : list?.[at + 1];
+  return next?.LocationType === 'Virtual' ? undefined : next;
+}
+
 /** "More Like This" for a movie or series: `{Items}`, often empty on sparse metadata. */
 export function similar(id: string): Endpoint {
   return { path: `/Items/${encodeURIComponent(id)}/Similar`, query: { limit: ROW_LIMIT } };

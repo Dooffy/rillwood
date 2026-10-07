@@ -3,7 +3,10 @@ import { StyleSheet, View } from 'react-native';
 
 import { onArtwork, radii, useColors } from '@/theme';
 
-export const clamp01 = (n: number) => Math.min(1, Math.max(0, Number.isFinite(n) ? n : 0));
+export function clamp01(n: number): number {
+  'worklet'; // Animated rings call it on the UI thread.
+  return Math.min(1, Math.max(0, Number.isFinite(n) ? n : 0));
+}
 
 /** Started but not finished: the bar (and "x% watched") only show then. */
 export function isInProgress(progress: number | undefined, played = false): progress is number {

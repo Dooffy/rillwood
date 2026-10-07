@@ -282,6 +282,8 @@ export type BaseItemDto = {
   /** Season number of an episode. */
   ParentIndexNumber?: number;
   SeriesId?: string;
+  /** `Virtual` = no file (a missing or not yet aired episode); `FileSystem` otherwise. */
+  LocationType?: string;
   SeriesName?: string;
   SeasonId?: string;
   SeasonName?: string;
