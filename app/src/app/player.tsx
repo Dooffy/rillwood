@@ -56,6 +56,7 @@ import { Player, type PlayerRef } from '@/player/Player';
 import { createProgress } from '@/player/progress';
 import { useReporting } from '@/player/useReporting';
 import { connectionFor, getSession, useSession } from '@/session';
+import { useSubtitleScale } from '@/settings';
 import { ColorsContext, palettes, radii, spacing } from '@/theme';
 import { useDebounced } from '@/useDebounced';
 import { useFetch } from '@/useFetch';
@@ -94,9 +95,10 @@ export default function PlayerScreen() {
   const [shown, setShown] = useState(true);
   const [scrubbing, setScrubbing] = useState(false);
   // Tracks menu page (null = closed) and the choices made in it; until a choice, the server's defaults. Choices outlive
-  // a Retry (same item); speed and subtitle size apply to whatever plays.
+  // a Retry (same item); speed applies to whatever plays. Subtitle size is remembered on the phone.
   const [menu, setMenu] = useState<TracksPage | null>(null);
   const [choice, setChoice] = useState<Choice>({ picks: {} });
+  const subtitleScale = useSubtitleScale();
   const picked: Partial<TracksValue> = choice.id === id ? choice : {};
   // Bumped on ±10 s: restarts the auto-hide timer (pause and scrubbing are timer deps already).
   const [touched, setTouched] = useState(0);
@@ -141,7 +143,6 @@ export default function PlayerScreen() {
     audio: audioTrack?.index,
     subtitle: subtitleTrack?.index ?? -1,
     speed: choice.speed ?? 1,
-    subtitleScale: choice.subtitleScale ?? 1,
   };
 
   // The only screen that rotates: unlocked while open, back to upright portrait on leave.
@@ -339,7 +340,7 @@ export default function PlayerScreen() {
                 audioTrack={audioTrack?.id}
                 subtitleTrack={subtitleTrack?.id ?? -1}
                 speed={tracks.speed}
-                subtitleScale={subtitleScaleFor(tracks.subtitleScale, height > width)}
+                subtitleScale={subtitleScaleFor(subtitleScale, height > width)}
                 onLoad={(e) => {
                   progress.set({ duration: e.duration });
                   setStarted(key);
@@ -399,9 +400,8 @@ export default function PlayerScreen() {
             subtitles={options.subtitles}
             value={tracks}
             onChange={(next) =>
-              setChoice(({ speed, subtitleScale, picks, ...tracksOf }) => ({
+              setChoice(({ speed, picks, ...tracksOf }) => ({
                 speed,
-                subtitleScale,
                 ...(tracksOf.id === id ? tracksOf : {}),
                 ...next,
                 id,
