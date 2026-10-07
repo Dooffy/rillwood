@@ -4,7 +4,7 @@ import { act, renderHook } from '@testing-library/react-native';
 import { Storage } from 'expo-sqlite/kv-store';
 import { Appearance as RNAppearance } from 'react-native';
 
-import { setAppearance, useAppearance } from './settings';
+import { setAppearance, setSubtitleScale, useAppearance, useSubtitleScale } from './settings';
 
 type Settings = typeof import('./settings');
 
@@ -66,5 +66,43 @@ describe('appearance setting', () => {
     expect(result.current).toBe('system');
     await act(() => setAppearance('dark'));
     expect(result.current).toBe('dark');
+  });
+});
+
+describe('subtitle size setting', () => {
+  beforeEach(() => {
+    Storage.clearSync();
+  });
+
+  it('defaults to medium (1)', () => {
+    expect(load().getSubtitleScale()).toBe(1);
+  });
+
+  it('reads the stored value', () => {
+    Storage.setItemSync('settings.subtitleScale', '1.25');
+    expect(load().getSubtitleScale()).toBe(1.25);
+  });
+
+  it('falls back to medium for unknown stored values', () => {
+    Storage.setItemSync('settings.subtitleScale', '3');
+    expect(load().getSubtitleScale()).toBe(1);
+    Storage.setItemSync('settings.subtitleScale', 'large');
+    expect(load().getSubtitleScale()).toBe(1);
+  });
+
+  it('persists', () => {
+    const { getSubtitleScale, setSubtitleScale } = load();
+    setSubtitleScale(0.8);
+    expect(getSubtitleScale()).toBe(0.8);
+    expect(Storage.getItemSync('settings.subtitleScale')).toBe('0.8');
+    expect(load().getSubtitleScale()).toBe(0.8);
+  });
+
+  it('re-renders useSubtitleScale subscribers on change', async () => {
+    setSubtitleScale(1);
+    const { result } = await renderHook(() => useSubtitleScale());
+    expect(result.current).toBe(1);
+    await act(() => setSubtitleScale(1.5));
+    expect(result.current).toBe(1.5);
   });
 });

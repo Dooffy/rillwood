@@ -15,6 +15,7 @@ import { ApiError, type BaseItemDto, type MediaSourceDto, type PlaybackInfoRespo
 import PlayerScreen from '@/app/player';
 import type { PlayerProps } from '@/player/Player';
 import * as session from '@/session';
+import * as settings from '@/settings';
 import { palettes } from '@/theme';
 
 jest.mock('expo-router', () => ({
@@ -86,6 +87,8 @@ beforeEach(() => {
   request.mockImplementation(() => reply() as ReturnType<typeof api.getPlaybackInfo>);
   itemRequest.mockImplementation(() => Promise.resolve(movie) as Promise<never>);
   jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(false);
+  // Subtitle size is a phone setting, kept in memory across tests.
+  settings.setSubtitleScale(1);
 });
 // Reporting is tested on its own (src/player/useReporting.test.ts); here only that the screen drives it.
 const started = jest.spyOn(api, 'reportPlaybackStart').mockResolvedValue();
@@ -460,6 +463,19 @@ describe('Player screen', () => {
     } finally {
       await act(() => Dimensions.set({ window: portrait }));
     }
+  });
+
+  it('subtitle size: starts with the saved size, a menu change saves it', async () => {
+    settings.setSubtitleScale(0.8);
+    await renderPlaying();
+    // Portrait: a step larger than the saved Small.
+    expect(lastPlayer().subtitleScale).toBe(1);
+    await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
+    expect(screen.getByText('Small')).toBeOnTheScreen(); // Subtitle size row
+    await fireEvent.press(screen.getByText('Subtitle size'));
+    await fireEvent.press(screen.getByText('Extra large'));
+    expect(settings.getSubtitleScale()).toBe(1.5);
+    expect(lastPlayer().subtitleScale).toBe(1.875);
   });
 
   it('tracks menu: current values, pick a subtitle, change speed; controls stay up while it is open', async () => {

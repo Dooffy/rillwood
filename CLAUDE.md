@@ -134,7 +134,7 @@ src/detail.ts            detailView: everything the detail screen shows, from on
 src/playback.ts          PlaybackInfo → play source (pure): device profile, direct play check, stream + sidecar subtitle URLs, track options + `matchTracks` (real mpv ids) + `carryTracks` (picks to the next episode by language)
 src/downloads.ts         store, queue, reconcile, cleanup, storage
 src/sync.ts              offline progress queue replay
-src/settings.ts          user settings in kv-store (appearance; downloads + offload later)
+src/settings.ts          user settings in kv-store (appearance, player subtitle size; downloads + offload later)
 src/player/Player.tsx    PlayerEngine interface + re-export of active engine
 src/player/mpv.tsx       mpv adapter
 src/player/controls.ts   player controls logic (pure): seek clamp, pull-to-close threshold, scrubber maths

@@ -3,21 +3,16 @@
 // value) that opens one list per setting. The screen owns the page so a pick can close one sheet and open the next.
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
 import type { TrackChoice, TrackOption } from '@/playback';
+import { setSubtitleScale, SUBTITLE_SIZES, useSubtitleScale } from '@/settings';
 
 export type TracksPage = 'main' | 'audio' | 'subtitles' | 'speed' | 'size';
 
+// Choices for this screen. Subtitle size is a phone setting (`src/settings.ts`): the size page reads and saves it.
 export type TracksValue = TrackChoice & {
   speed: number;
-  subtitleScale: number;
 };
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
-const SUBTITLE_SIZES: [label: string, scale: number][] = [
-  ['Small', 0.8],
-  ['Medium', 1],
-  ['Large', 1.25],
-  ['Extra large', 1.5],
-];
 
 const speedLabel = (speed: number) => (speed === 1 ? 'Normal' : `${speed}×`);
 
@@ -38,7 +33,8 @@ export function TracksMenu({
 }) {
   const subtitleChoices = [{ id: -1, index: -1, label: 'Off' }, ...subtitles];
   const label = (options: TrackOption[], index: number | undefined) => options.find((t) => t.index === index)?.label;
-  const size = SUBTITLE_SIZES.find(([, scale]) => scale === value.subtitleScale)?.[0];
+  const subtitleScale = useSubtitleScale();
+  const size = SUBTITLE_SIZES.find((o) => o.value === subtitleScale)?.label;
 
   const pick = (options: TrackOption[], current: number | undefined, key: 'audio' | 'subtitle') =>
     options.map((t): SheetAction => ({
@@ -75,10 +71,10 @@ export function TracksMenu({
     },
     size: {
       title: 'Subtitle size',
-      actions: SUBTITLE_SIZES.map(([sizeLabel, subtitleScale]) => ({
-        label: sizeLabel,
-        selected: subtitleScale === value.subtitleScale,
-        onPress: () => onChange({ subtitleScale }),
+      actions: SUBTITLE_SIZES.map((o) => ({
+        label: o.label,
+        selected: o.value === subtitleScale,
+        onPress: () => setSubtitleScale(o.value),
       })),
     },
   };

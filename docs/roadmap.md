@@ -69,7 +69,7 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [x] Reporting start/progress/stop with PlaySessionId (`useReporting`; verified on 12.1 + 10.11 by `check:home`)
 - [x] Autoplay next + Up Next tile (last 30 s, smooth countdown ring, tap = play now, ✕ hides), same player screen, next episode from its resume point. iPhone tested (2026-10-07) before the review fixes (bottom stack, pull, resume, drag) - re-check those
 - [x] Remember audio / subtitle per user: reports carry `AudioStreamIndex` / `SubtitleStreamIndex` (the server keeps them per item); a pick carries to the next episode by language (`carryTracks`). Device test B16 pending
-- [ ] Remember subtitle size on the phone (`src/settings.ts`, same for all accounts): the player starts with it, a menu change saves it. Speed is not remembered (resets to 1× on every open, carries only to the next episode)
+- [x] Remember subtitle size on the phone (`src/settings.ts`, same for all accounts): the player starts with it, a menu change saves it. Speed is not remembered (resets to 1× on every open, carries only to the next episode). Device test B17 pending
 - [ ] Player fixes from the M0 spike (`docs/test-plans/mpv.md`):
   - I2 iOS hwdec lost in background: `vid=no` on scene background, `vid=auto` on foreground (keep bounded decoder reset as fallback); pause or keep audio per `docs/open-items.md` decision
   - [x] I3 stale first progress: gate progress on the current load generation (`src/player/mpv.tsx`)

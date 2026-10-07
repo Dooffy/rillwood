@@ -12,9 +12,21 @@ export const APPEARANCE_OPTIONS = [
 
 export type Appearance = (typeof APPEARANCE_OPTIONS)[number]['value'];
 
+// Player subtitle size (mpv `sub-scale`), same for every account. Speed isn't remembered (1× on every open).
+export const SUBTITLE_SIZES = [
+  { value: 0.8, label: 'Small' },
+  { value: 1, label: 'Medium' },
+  { value: 1.25, label: 'Large' },
+  { value: 1.5, label: 'Extra large' },
+] as const;
+
+export type SubtitleScale = (typeof SUBTITLE_SIZES)[number]['value'];
+
 const APPEARANCE_KEY = 'settings.appearance';
+const SUBTITLE_SCALE_KEY = 'settings.subtitleScale';
 
 let appearance: Appearance | undefined;
+let subtitleScale: SubtitleScale | undefined;
 const listeners = new Set<() => void>();
 
 export function getAppearance(): Appearance {
@@ -39,6 +51,24 @@ function subscribe(listener: () => void) {
 
 export function useAppearance(): Appearance {
   return useSyncExternalStore(subscribe, getAppearance);
+}
+
+export function getSubtitleScale(): SubtitleScale {
+  if (subtitleScale === undefined) {
+    const stored = Number(Storage.getItemSync(SUBTITLE_SCALE_KEY));
+    subtitleScale = SUBTITLE_SIZES.find((o) => o.value === stored)?.value ?? 1;
+  }
+  return subtitleScale;
+}
+
+export function setSubtitleScale(value: SubtitleScale): void {
+  Storage.setItemSync(SUBTITLE_SCALE_KEY, String(value));
+  subtitleScale = value;
+  listeners.forEach((l) => l());
+}
+
+export function useSubtitleScale(): SubtitleScale {
+  return useSyncExternalStore(subscribe, getSubtitleScale);
 }
 
 /**
