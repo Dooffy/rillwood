@@ -726,16 +726,21 @@ class MPVLayerRenderer(
         // mpv properties survive a loadfile, so headers set for a previous
         // item would otherwise be sent to the next one (possibly a remote
         // stream that must not see the proxy credentials).
-        mpv?.setPropertyString("http-header-fields", "")
+        // Set through the option API, not as a property: mpv logs every property
+        // set with its value at "v" ("Set property: http-header-fields=...
+        // Token=..."), an option set only at "debug". libmpv requests "v" and
+        // prints every message to logcat itself, so this is the only place to
+        // keep the token out (I13).
+        mpv?.setOptionString("http-header-fields", "")
         if (headers.isNullOrEmpty()) return
 
-        // http-header-fields is an mpv string *list*, and through the property
+        // http-header-fields is an mpv string *list*, and through the string
         // interface only the plain comma-separated form is understood: the
         // %<len>% escape arrives at the server as part of the field name, and
         // the -append modifier is ignored outright. A header value containing a
         // comma therefore cannot be expressed here (it would split into two).
         val headerString = headers.entries.joinToString(",") { "${it.key}: ${it.value}" }
-        mpv?.setPropertyString("http-header-fields", headerString)
+        mpv?.setOptionString("http-header-fields", headerString)
     }
     
     private fun observeProperties() {

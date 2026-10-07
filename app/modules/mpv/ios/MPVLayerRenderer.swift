@@ -778,12 +778,15 @@ final class MPVLayerRenderer {
     }
     
     private func updateHTTPHeaders(_ headers: [String: String]?) {
+        // Set through the option API, not as a property: mpv logs every property
+        // set with its value at "v" ("Set property: http-header-fields=...
+        // Token=..."), an option set only at "debug" (I13). Runs on the queue.
         // Emptying the list is what clears it; MPV_FORMAT_NONE is rejected for a
         // string list, which would leave the previous item's headers in place.
-        setProperty(name: "http-header-fields", value: "")
+        setOption(name: "http-header-fields", value: "")
         guard let headers, !headers.isEmpty else { return }
 
-        // http-header-fields is an mpv string *list*, and through the property
+        // http-header-fields is an mpv string *list*, and through the string
         // interface only the plain comma-separated form is understood: the
         // %<len>% escape arrives at the server as part of the field name, and
         // the -append modifier is ignored outright. A header value containing a
@@ -791,7 +794,8 @@ final class MPVLayerRenderer {
         let headerString = headers
             .map { key, value in "\(key): \(value)" }
             .joined(separator: ",")
-        setProperty(name: "http-header-fields", value: headerString)
+        // checkError logs the error only, never the value.
+        setOption(name: "http-header-fields", value: headerString)
     }
     
     private func observeProperties() {
@@ -992,8 +996,10 @@ final class MPVLayerRenderer {
         case MPV_EVENT_LOG_MESSAGE:
             if let logMessagePointer = event.data?.assumingMemoryBound(to: mpv_event_log_message.self) {
                 let component = String(cString: logMessagePointer.pointee.prefix)
-                let text = String(cString: logMessagePointer.pointee.text)
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                // Redacted before anything is forwarded: the app log ends up in a
+                // file and the JS log (I13).
+                let text = Self.redactTokens(String(cString: logMessagePointer.pointee.text)
+                    .trimmingCharacters(in: .whitespacesAndNewlines))
                 // Route on mpv's own level, not on the message text: CoreAudio
                 // failures read "unable to ... (what/-10879)" and contain
                 // neither "error" nor "warn", so the old substring match
@@ -1128,6 +1134,16 @@ final class MPVLayerRenderer {
     private static func isDiagnosticInfoLine(component: String, text: String) -> Bool {
         if component == "ao" || component.hasPrefix("ao/") { return true }
         return text.hasPrefix("AO: ") || text.hasPrefix("VO: ")
+    }
+
+    /// `Token="abc"` / `Token=\"abc\"` (mpv list print) / `Token=abc` ->
+    /// `Token=<redacted>` (Jellyfin auth header).
+    private static func redactTokens(_ text: String) -> String {
+        text.replacingOccurrences(
+            of: #"(?i)(token=)(\\?"[^"\\]*\\?"|[^\s,"\\&]+)"#,
+            with: "$1<redacted>",
+            options: .regularExpression
+        )
     }
 
     /// One line describing the AVAudioSession output route, written to the app

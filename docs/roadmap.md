@@ -77,7 +77,7 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
   - [x] I15 no error event for a failed open: `onError` from `END_FILE` (iOS reason error, Android an END_FILE of the current load that isn't EOF / our stop), same stale-load guard as I8; 30 s JS load timeout dropped
   - [x] I8 no EOF event: `onPlaybackEnd` view event on both platforms, unify `keep-open` first, ignore stale EOF from the previous file, don't gate auto-advance on `isPlaying`
 - [x] mpv options on both platforms (I11): `network-timeout=15`, `stream-lavf-o=reconnect=1,reconnect_on_network_error=1,reconnect_delay_max=10` (~55 s window, back within ~7 s); buffering spinner (after 0.5 s); an early end (> 5 s before the duration) reloads at the stopped position (`reload: true`, same view), again there = error. Demuxer caps 100 / 32 MiB via `cacheConfig`. B9 passed on iPhone (2026-10-06), Android pending
-- [ ] I13: mpv verbose log prints the auth header - lower mpv log level or redact `Token=` in the module's log forwarding
+- [x] I13: mpv verbose log printed the auth header - `http-header-fields` set via the option API (property sets are logged with their value at `v`), iOS log forwarding redacts `Token=`. B15 passed on iPhone + Android (2026-10-07)
 - [x] Exact seeks for scrubber / resume: `hr-seek=absolute` on both platforms (absolute seeks + `start` exact, ±10s stays keyframe). B11 passed on iPhone (2026-10-06), Android pending
 - [ ] SRT size on wide video in the landscape player
 - [ ] Video zoom: fit (default, black bars, clear of the notch / Dynamic Island) or fill (cover the screen edge to edge, crops the picture) - player control (button or pinch), choice kept per user. Both native modules have `setZoomedToFill`
