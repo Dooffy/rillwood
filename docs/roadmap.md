@@ -67,7 +67,8 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [ ] Subtitle timing (offset) in the tracks menu: needs `setSubtitleDelay` in the Android module (iOS has it) - native change, `UPSTREAM.md`
 - [ ] Resume prompt when the item has a resume point (server keeps 5-90%, items ≥ 5 min only)
 - [x] Reporting start/progress/stop with PlaySessionId (`useReporting`; verified on 12.1 + 10.11 by `check:home`)
-- [ ] Autoplay next + up-next overlay (last 30s); remember audio/sub language per user
+- [x] Autoplay next + Up Next tile (last 30 s, smooth countdown ring, tap = play now, ✕ hides), same player screen, next episode from its resume point. iPhone tested (2026-10-07) before the review fixes (bottom stack, pull, resume, drag) - re-check those
+- [ ] Remember audio / subtitle language per user (carry the choice to the next episode by language)
 - [ ] Player fixes from the M0 spike (`docs/test-plans/mpv.md`):
   - I2 iOS hwdec lost in background: `vid=no` on scene background, `vid=auto` on foreground (keep bounded decoder reset as fallback); pause or keep audio per `docs/open-items.md` decision
   - [x] I3 stale first progress: gate progress on the current load generation (`src/player/mpv.tsx`)

@@ -23,14 +23,15 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { ApiError, getPlaybackInfo, type BaseItemDto } from '@/api';
+import { ApiError, getPlaybackInfo, type BaseItemDto, type ItemsResult } from '@/api';
 import { Glass } from '@/components/Glass';
 import { Message } from '@/components/Message';
-import { PlayerControls } from '@/components/PlayerControls';
+import { PlayerBottom, PlayerControls, PlayerScrubber } from '@/components/PlayerControls';
 import { Spinner } from '@/components/Spinner';
 import { Text } from '@/components/Text';
 import { TracksMenu, type TracksPage, type TracksValue } from '@/components/TracksMenu';
-import { cardTitles, isItemId, itemDetail } from '@/items';
+import { UpNext } from '@/components/UpNext';
+import { cardTitles, isItemId, itemDetail, nextEpisode, nextEpisodes, playback } from '@/items';
 import { playbackInfoBody, playErrorMessage, playSource, type PlaySource } from '@/playback';
 import {
   HIDE_AFTER_MS,
@@ -56,8 +57,8 @@ const PLAYBACK_FAILED = "Couldn't play this video.";
 
 // Always dark, whatever the Appearance setting. Loads the play source (docs/context/player.md), then plays it full
 // screen, Apple TV style: no chrome until a tap; tap toggles the controls (auto-hide), double-tap left / right seeks
-// ±10s, pull down closes (the video follows the finger and the screen below shows through). Rotates freely (the rest of
-// the app is portrait).
+// ±10s, pull down closes (the video follows the finger and the screen below shows through). Episodes go on to the next
+// one at the end (Up Next card in the last 30 s, unless hidden). Rotates freely (the rest of the app is portrait).
 export default function PlayerScreen() {
   const { id, start } = useLocalSearchParams<{ id?: string; start?: string }>();
   const accountId = useSession().active?.id;
@@ -78,7 +79,9 @@ export default function PlayerScreen() {
   // Tracks menu page (null = closed) and the choices made in it; until a choice, the server's defaults. Choices outlive
   // a Retry (same item); speed and subtitle size apply to whatever plays.
   const [menu, setMenu] = useState<TracksPage | null>(null);
-  const [choice, setChoice] = useState<Partial<TracksValue>>({});
+  // Audio / subtitle are mpv ids of one file: kept with the id of the item they were picked on, ignored for any other.
+  const [choice, setChoice] = useState<Partial<TracksValue> & { id?: string }>({});
+  const picked = choice.id === id ? choice : {};
   // Bumped on ±10 s: restarts the auto-hide timer (pause and scrubbing are timer deps already).
   const [touched, setTouched] = useState(0);
   // The engine waiting for data after playback started (stalled stream, reload): spinner over the video after a moment,
@@ -90,9 +93,16 @@ export default function PlayerScreen() {
   const pull = useSharedValue(0);
   const pastClose = useSharedValue(false);
   const [releaseHint, setReleaseHint] = useState(false);
+  // A pull is on: the Up Next tile steps aside (glass can't fade with the video).
+  const [pulling, setPulling] = useState(false);
 
   const item = useFetch<BaseItemDto>(isItemId(id) ? itemDetail(id).path : null).data;
   const titles = item ? cardTitles(item) : undefined;
+  // The episode after this one, played at the end unless its Up Next card was hidden (id of the episode it was hidden on).
+  const nextRequest = item ? nextEpisodes(item) : undefined;
+  const nextList = useFetch<ItemsResult>(nextRequest?.path ?? null, { query: nextRequest?.query }).data;
+  const [hiddenOn, setHiddenOn] = useState<string>();
+  const next = id && hiddenOn !== id ? nextEpisode(nextList?.Items, id) : undefined;
 
   const state: State = !isItemId(id)
     ? { status: 'error', message: playErrorMessage('none') }
@@ -103,8 +113,8 @@ export default function PlayerScreen() {
   const playing = ready && started === key;
   const play = state.status === 'ready' ? state.play : undefined;
   const tracks: TracksValue = {
-    audio: choice.audio ?? play?.defaultAudio,
-    subtitle: choice.subtitle ?? play?.defaultSubtitle ?? -1,
+    audio: picked.audio ?? play?.defaultAudio,
+    subtitle: picked.subtitle ?? play?.defaultSubtitle ?? -1,
     speed: choice.speed ?? 1,
     subtitleScale: choice.subtitleScale ?? 1,
   };
@@ -116,6 +126,15 @@ export default function PlayerScreen() {
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
     };
   }, []);
+
+  // The next episode starts at its own start. Runs after the reporting cleanup (every cleanup runs before any setup),
+  // so the finished episode's Stopped still carries its end position.
+  const loadedId = useRef(id);
+  useEffect(() => {
+    if (loadedId.current === id) return;
+    loadedId.current = id;
+    progress.set({ position: Number(start) || 0, duration: 0 });
+  }, [id, start, progress]);
 
   useEffect(() => {
     const account = getSession().active;
@@ -166,6 +185,16 @@ export default function PlayerScreen() {
     setWaiting(false);
     setAttempt((n) => n + 1);
   };
+  // Same screen, next item: the reporting hook stops the finished one, the load effect loads this one.
+  const playNext = (episode: BaseItemDto) => {
+    setMenu(null);
+    setWaiting(false);
+    setPaused(false);
+    // The scrubber goes with the load: a drag cut short this way never reports its end.
+    setScrubbing(false);
+    // From its own resume point if it was started before.
+    router.setParams({ id: episode.Id, start: String(Math.floor(playback(episode).resumeSeconds ?? 0)) });
+  };
   const touch = () => setTouched((n) => n + 1);
   const seek = (seconds: number) => {
     const to = seekTarget(seconds, progress.get().duration);
@@ -174,6 +203,11 @@ export default function PlayerScreen() {
     seeked();
   };
   const seekBy = (delta: number) => seek(progress.get().position + delta);
+  // ±10 s from the controls: also restarts their auto-hide.
+  const skip = (delta: number) => {
+    touch();
+    seekBy(delta);
+  };
 
   // Only while playing: before that the top bar is always up, and a tap here would swallow Retry's press.
   const tap = useTapGesture({
@@ -198,6 +232,7 @@ export default function PlayerScreen() {
     onActivate: () => {
       'worklet';
       scheduleOnRN(setShown, false);
+      scheduleOnRN(setPulling, true);
     },
     onUpdate: (e) => {
       'worklet';
@@ -219,6 +254,7 @@ export default function PlayerScreen() {
         pull.value = withTiming(height, { duration: 180 }, () => scheduleOnRN(close));
       } else {
         pull.value = withSpring(0, { damping: 22, stiffness: 220 });
+        scheduleOnRN(setPulling, false);
       }
     },
   });
@@ -239,6 +275,17 @@ export default function PlayerScreen() {
     opacity: interpolate(pull.value, [0, PULL_CLOSE_DISTANCE * 2.5], [1, 0], Extrapolation.CLAMP),
   }));
   const controlsUp = shown || !playing;
+  const upNext =
+    playing && next ? (
+      <UpNext
+        next={next}
+        progress={progress}
+        rate={paused || waiting ? 0 : tracks.speed}
+        hidden={pulling}
+        onPlay={() => playNext(next)}
+        onHide={() => setHiddenOn(id)}
+      />
+    ) : null;
 
   return (
     // Own root: gestures in a native modal need one (Android).
@@ -271,9 +318,10 @@ export default function PlayerScreen() {
                   setStarted(key);
                 }}
                 onProgress={progress.set}
-                // The engine holds the last frame paused: show it as paused (the pause reports the end - played),
-                // controls up; Play replays from the start.
+                // The next episode, if any; else the engine holds the last frame paused: show it as paused (the pause
+                // reports the end - played), controls up; Play replays from the start.
                 onEnd={() => {
+                  if (next) return playNext(next);
                   setPaused(true);
                   setShown(true);
                 }}
@@ -301,17 +349,19 @@ export default function PlayerScreen() {
             subtitle={titles?.subtitle}
             started={playing}
             paused={paused}
-            progress={progress}
             onClose={close}
             onTracks={() => setMenu('main')}
             onTogglePause={() => setPaused((p) => !p)}
-            onSeekBy={(delta) => {
-              touch();
-              seekBy(delta);
-            }}
-            onSeek={seek}
-            onScrub={setScrubbing}
+            onSeekBy={skip}
           />
+        )}
+        {/* Up Next stays mounted while the controls come and go (the ring keeps running, announced once); the
+            scrubber shows with the controls, under it. */}
+        {playing && (controlsUp || upNext) && (
+          <PlayerBottom>
+            {upNext}
+            {controlsUp && <PlayerScrubber progress={progress} onSeek={seek} onSeekBy={skip} onScrub={setScrubbing} />}
+          </PlayerBottom>
         )}
         {play && (
           <TracksMenu
@@ -320,7 +370,15 @@ export default function PlayerScreen() {
             audio={play.audio}
             subtitles={play.subtitles}
             value={tracks}
-            onChange={(next) => setChoice((c) => ({ ...c, ...next }))}
+            onChange={(next) =>
+              setChoice(({ speed, subtitleScale, ...tracksOf }) => ({
+                speed,
+                subtitleScale,
+                ...(tracksOf.id === id ? tracksOf : {}),
+                ...next,
+                id,
+              }))
+            }
           />
         )}
       </ColorsContext.Provider>

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Player overlay, Apple TV style, on glass (`Glass`): close + title on top, ⟲10 / play-pause / 10⟳ in the middle,
-// scrubber at the bottom. No dimming layer - the glass keeps the controls readable over the video.
-// The screen decides when it shows; before playback starts (loading, error) only the top bar is there.
-import { useRef, useState } from 'react';
+// scrubber at the bottom (`PlayerScrubber` in `PlayerBottom`, placed by the screen: the bottom stack also holds the Up
+// Next card, which stays mounted while the controls come and go). No dimming layer - the glass keeps the controls
+// readable over the video. The screen decides when they show; before playback starts (loading, error) only the top bar.
+import { useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, View, type GestureResponderEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,21 +22,17 @@ export type PlayerControlsProps = {
   /** False while loading / on error: top bar only. */
   started: boolean;
   paused: boolean;
-  progress: ProgressStore;
   onClose: () => void;
   /** Opens the audio / subtitles / speed menu (shown once playing). */
   onTracks: () => void;
   onTogglePause: () => void;
   onSeekBy: (seconds: number) => void;
-  onSeek: (seconds: number) => void;
-  /** Scrubbing keeps the controls up. */
-  onScrub: (active: boolean) => void;
 };
 
 export function PlayerControls(props: PlayerControlsProps) {
   const { title, subtitle, started, paused, onClose, onTracks, onTogglePause, onSeekBy } = props;
   const insets = useSafeAreaInsets();
-  const sides = { paddingLeft: insets.left + spacing.md, paddingRight: insets.right + spacing.md };
+  const sides = sidePadding(insets);
   return (
     // box-none: touches between the controls reach the video (tap to hide, pull down to close).
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
@@ -73,41 +70,69 @@ export function PlayerControls(props: PlayerControlsProps) {
         )}
       </View>
       {started && (
-        <>
-          <View style={styles.center} pointerEvents="box-none">
-            <IconButton
-              icon={{ ios: 'gobackward.10', android: 'replay_10' }}
-              label={`Back ${SEEK_STEP} seconds`}
-              variant="glass"
-              onPress={() => onSeekBy(-SEEK_STEP)}
-            />
-            <IconButton
-              icon={paused ? { ios: 'play.fill', android: 'play_arrow' } : { ios: 'pause.fill', android: 'pause' }}
-              label={paused ? 'Play' : 'Pause'}
-              variant="glass"
-              large
-              onPress={onTogglePause}
-            />
-            <IconButton
-              icon={{ ios: 'goforward.10', android: 'forward_10' }}
-              label={`Forward ${SEEK_STEP} seconds`}
-              variant="glass"
-              onPress={() => onSeekBy(SEEK_STEP)}
-            />
-          </View>
-          <View style={[styles.bottom, sides, { paddingBottom: insets.bottom + spacing.md }]} pointerEvents="box-none">
-            <Glass style={styles.panel}>
-              <Scrubber {...props} />
-            </Glass>
-          </View>
-        </>
+        <View style={styles.center} pointerEvents="box-none">
+          <IconButton
+            icon={{ ios: 'gobackward.10', android: 'replay_10' }}
+            label={`Back ${SEEK_STEP} seconds`}
+            variant="glass"
+            onPress={() => onSeekBy(-SEEK_STEP)}
+          />
+          <IconButton
+            icon={paused ? { ios: 'play.fill', android: 'play_arrow' } : { ios: 'pause.fill', android: 'pause' }}
+            label={paused ? 'Play' : 'Pause'}
+            variant="glass"
+            large
+            onPress={onTogglePause}
+          />
+          <IconButton
+            icon={{ ios: 'goforward.10', android: 'forward_10' }}
+            label={`Forward ${SEEK_STEP} seconds`}
+            variant="glass"
+            onPress={() => onSeekBy(SEEK_STEP)}
+          />
+        </View>
       )}
     </View>
   );
 }
 
+const sidePadding = (insets: { left: number; right: number }) => ({
+  paddingLeft: insets.left + spacing.md,
+  paddingRight: insets.right + spacing.md,
+});
+
+/** Bottom edge of the player, clear of the safe area: the Up Next card over the scrubber panel. */
+export function PlayerBottom({ children }: { children: ReactNode }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View
+      style={[styles.bottom, sidePadding(insets), { paddingBottom: insets.bottom + spacing.md }]}
+      pointerEvents="box-none"
+    >
+      {children}
+    </View>
+  );
+}
+
+export type PlayerScrubberProps = {
+  progress: ProgressStore;
+  onSeek: (seconds: number) => void;
+  onSeekBy: (seconds: number) => void;
+  /** Scrubbing keeps the controls up. */
+  onScrub: (active: boolean) => void;
+};
+
+/** Scrubber panel on glass with elapsed / remaining, shown with the controls (inside `PlayerBottom`). */
+export function PlayerScrubber(props: PlayerScrubberProps) {
+  return (
+    <Glass style={styles.panel}>
+      <Scrubber {...props} />
+    </Glass>
+  );
+}
+
 /** Track; drag or tap to seek, VoiceOver swipes up / down for ±10s. Seeks on release. */
-function Scrubber({ progress, onSeek, onScrub, onSeekBy }: PlayerControlsProps) {
+function Scrubber({ progress, onSeek, onScrub, onSeekBy }: PlayerScrubberProps) {
   const { position, duration } = useProgress(progress);
   const width = useRef(0);
   const [dragging, setDragging] = useState<number | null>(null);
@@ -181,7 +206,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.lg * 2,
   },
-  bottom: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, gap: spacing.sm },
   panel: { paddingHorizontal: spacing.md, paddingBottom: spacing.sm, borderRadius: radii.cardLarge },
   // Full touch height around a thin bar.
   track: { height: minTouch, justifyContent: 'center' },
