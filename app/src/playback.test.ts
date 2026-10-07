@@ -3,6 +3,8 @@ import { describe, expect, it } from '@jest/globals';
 
 import { ApiError, type Connection, type MediaSourceDto, type PlaybackInfoResponse } from './api';
 import {
+  carryTracks,
+  picksOf,
   externalSubs,
   matchTracks,
   trackOptions,
@@ -222,6 +224,100 @@ describe('trackOptions', () => {
     );
     expect(result.ok && result.play.defaultAudio).toBe(1);
     expect(result.ok && result.play.defaultSubtitle).toBe(-1);
+  });
+});
+
+describe('picksOf', () => {
+  const options = {
+    audio: [{ id: 1, index: 1, label: 'Ukrainian - AAC', lang: 'ukr' }],
+    subtitles: [{ id: 1, index: 3, label: 'English - SUBRIP', lang: 'eng' }],
+  };
+
+  it('language + label of the chosen options; subtitles off = null; untouched types left out', () => {
+    expect(picksOf(options, { audio: 1, subtitle: 3 })).toEqual({
+      audio: { lang: 'ukr', label: 'Ukrainian - AAC' },
+      subtitle: { lang: 'eng', label: 'English - SUBRIP' },
+    });
+    expect(picksOf(options, { subtitle: -1 })).toEqual({ subtitle: null });
+    expect(picksOf(options, { speed: 2 } as never)).toEqual({});
+  });
+
+  it('an index not in the options leaves the earlier pick alone (no key)', () => {
+    expect(picksOf(options, { audio: 9, subtitle: 9 })).toEqual({});
+  });
+});
+
+describe('carryTracks', () => {
+  // The next episode lists Ukrainian first (Jellyfin indexes differ from the episode the picks were made on).
+  const next = {
+    audio: [
+      { id: 1, index: 1, label: 'Ukrainian - AAC - Stereo', lang: 'ukr' },
+      { id: 2, index: 2, label: 'English - AAC - Stereo', lang: 'eng' },
+      { id: 3, index: 3, label: 'English - Commentary', lang: 'eng' },
+    ],
+    subtitles: [
+      { id: 1, index: 4, label: 'Ukrainian - SUBRIP', lang: 'ukr' },
+      { id: 2, index: 5, label: 'English - Forced - SUBRIP', lang: 'eng' },
+      { id: 3, index: 6, label: 'English - SUBRIP', lang: 'ENG' },
+    ],
+  };
+
+  it('finds the same language, the same label first', () => {
+    expect(
+      carryTracks(next, {
+        audio: { label: 'English - Commentary', lang: 'eng' },
+        subtitle: { label: 'English - SUBRIP', lang: 'eng' },
+      }),
+    ).toEqual({ audio: 3, subtitle: 6 });
+  });
+
+  it('another label: the first track in that language', () => {
+    expect(
+      carryTracks(next, {
+        audio: { label: 'English - AC3 - 5.1', lang: 'eng' },
+        subtitle: { label: 'Ukrainian - ASS', lang: 'ukr' },
+      }),
+    ).toEqual({ audio: 2, subtitle: 4 });
+  });
+
+  // Regression (review): full English subtitles became the forced-only track listed first when labels differed.
+  it('another label: full subtitles stay full, forced stay forced', () => {
+    const forcedFirst = {
+      audio: [],
+      subtitles: [
+        { id: 1, index: 3, label: 'English - Forced - SUBRIP', lang: 'eng', forced: true },
+        { id: 2, index: 4, label: 'English - SRT', lang: 'eng' },
+      ],
+    };
+    expect(carryTracks(forcedFirst, { subtitle: { label: 'English - SUBRIP', lang: 'eng' } }).subtitle).toBe(4);
+    expect(carryTracks(forcedFirst, { subtitle: { label: 'Forced', lang: 'eng', forced: true } }).subtitle).toBe(3);
+    // Only forced ones in the language: still that language.
+    expect(
+      carryTracks({ audio: [], subtitles: [forcedFirst.subtitles[0]] }, { subtitle: { label: 'X', lang: 'eng' } }),
+    ).toEqual({ audio: undefined, subtitle: 3 });
+  });
+
+  it('subtitles off stay off; nothing picked keeps the defaults', () => {
+    expect(carryTracks(next, { subtitle: null })).toEqual({ audio: undefined, subtitle: -1 });
+    expect(carryTracks(next, {})).toEqual({ audio: undefined, subtitle: undefined });
+  });
+
+  it('a language the next episode lacks keeps its default', () => {
+    expect(
+      carryTracks(next, { audio: { label: 'French', lang: 'fre' }, subtitle: { label: 'French', lang: 'fre' } }),
+    ).toEqual({ audio: undefined, subtitle: undefined });
+  });
+
+  it('a pick without a language (or `und`) carries only by its label', () => {
+    const plain = {
+      audio: [
+        { id: 1, index: 1, label: 'Track 1' },
+        { id: 2, index: 2, label: 'Track 2' },
+      ],
+      subtitles: [],
+    };
+    expect(carryTracks(plain, { audio: { label: 'Track 2', lang: 'und' } }).audio).toBe(2);
+    expect(carryTracks(plain, { audio: { label: 'Stereo' } }).audio).toBeUndefined();
   });
 });
 

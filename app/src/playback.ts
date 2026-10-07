@@ -66,7 +66,7 @@ export type PlaySource = {
 };
 
 /** A track the player can switch to: `id` is mpv's (1-based per type), `index` Jellyfin's stream index. */
-export type TrackOption = { id: number; index: number; label: string; lang?: string };
+export type TrackOption = { id: number; index: number; label: string; lang?: string; forced?: boolean };
 
 /** A track as the engine lists it: sidecars carry the URI they were loaded from. */
 export type EngineTrack = Pick<Track, 'id' | 'lang' | 'external'>;
@@ -111,6 +111,7 @@ export function trackOptions(
     index: s.Index,
     label: trackLabel(s),
     lang: s.Language,
+    forced: s.IsForced,
   });
   const embeddedSubs = inFile('Subtitle').map(option);
   const sidecarSubs = sidecars.flatMap((sub, i) => {
@@ -149,11 +150,13 @@ export function matchTracks(
   };
 }
 
+// A language code that says something: `und` (undetermined) and none are unknown.
+const knownLang = (lang?: string) => (lang && lang.toLowerCase() !== 'und' ? lang.toLowerCase() : undefined);
+
 function matchInFile(options: TrackOption[], tracks: EngineTrack[]): TrackOption[] {
   if (options.length === tracks.length) return options.map((o, i) => ({ ...o, id: tracks[i].id }));
   // A track without a language (or `und`) matches any.
-  const known = (lang?: string) => (lang && lang.toLowerCase() !== 'und' ? lang.toLowerCase() : undefined);
-  const sameLang = (a?: string, b?: string) => !known(a) || !known(b) || known(a) === known(b);
+  const sameLang = (a?: string, b?: string) => !knownLang(a) || !knownLang(b) || knownLang(a) === knownLang(b);
   let next = 0;
   const matched = options.flatMap((o) => {
     const at = tracks.findIndex((t, i) => i >= next && sameLang(o.lang, t.lang));
@@ -164,6 +167,66 @@ function matchInFile(options: TrackOption[], tracks: EngineTrack[]): TrackOption
   // No language lines up (codes that differ, like `ger` / `deu`): by position, so the menu keeps what mpv has.
   if (matched.length === 0) return options.slice(0, tracks.length).map((o, i) => ({ ...o, id: tracks[i].id }));
   return matched;
+}
+
+/** Audio / subtitle as Jellyfin stream indexes (the engine's ids can change once the file loaded); subtitle -1 = off. */
+export type TrackChoice = { audio?: number; subtitle: number };
+
+/** What a track picked on one item carries to the next: its language, label and whether it's forced-only. */
+export type TrackPick = Pick<TrackOption, 'lang' | 'label' | 'forced'>;
+
+/** Picks to carry to the next episode, keyed like `carryTracks` takes them. Subtitle `null` = off. */
+export type TrackPicks = { audio?: TrackPick; subtitle?: TrackPick | null };
+
+/**
+ * The picks behind a menu choice (only the types it sets and finds): language + label of the chosen option, subtitles
+ * off = null.
+ */
+export function picksOf(
+  options: { audio: TrackOption[]; subtitles: TrackOption[] },
+  choice: Partial<TrackChoice>,
+): TrackPicks {
+  const pick = (list: TrackOption[], index: number): TrackPick | undefined => {
+    const option = list.find((t) => t.index === index);
+    return option && { lang: option.lang, label: option.label, forced: option.forced };
+  };
+  const audio = choice.audio === undefined ? undefined : pick(options.audio, choice.audio);
+  const subtitle =
+    choice.subtitle === undefined
+      ? undefined
+      : choice.subtitle === -1
+        ? null
+        : pick(options.subtitles, choice.subtitle);
+  // An index not found leaves the earlier pick as it was.
+  return { ...(audio && { audio }), ...(subtitle !== undefined && { subtitle }) };
+}
+
+/**
+ * Picks made on one episode, found again in the next one's options (Jellyfin indexes; undefined = no match, keep the
+ * server's default). By language - the same label first (`English - AAC - Stereo` over a commentary track), else the
+ * first track in that language that is forced-only as the pick was (full subtitles never become forced ones while the
+ * language has full ones), else the first; a pick without a language only by its label. Subtitles off (`null`) stay off. Best
+ * effort: codes that differ between files (`ger` / `deu`) don't match.
+ */
+export function carryTracks(
+  options: { audio: TrackOption[]; subtitles: TrackOption[] },
+  picks: TrackPicks,
+): { audio?: number; subtitle?: number } {
+  return {
+    audio: picks.audio && sameTrack(options.audio, picks.audio)?.index,
+    subtitle: picks.subtitle === null ? -1 : picks.subtitle && sameTrack(options.subtitles, picks.subtitle)?.index,
+  };
+}
+
+function sameTrack(options: TrackOption[], pick: TrackPick): TrackOption | undefined {
+  const lang = knownLang(pick.lang);
+  const candidates = lang ? options.filter((o) => knownLang(o.lang) === lang) : options;
+  if (!lang) return candidates.find((o) => o.label === pick.label);
+  return (
+    candidates.find((o) => o.label === pick.label) ??
+    candidates.find((o) => Boolean(o.forced) === Boolean(pick.forced)) ??
+    candidates[0]
+  );
 }
 
 /** Sidecar subtitle files of a source (embedded ones are in the file - mpv finds those itself). */
@@ -218,7 +281,7 @@ export function playbackReport(
   itemId: string,
   play: Pick<PlaySource, 'mediaSourceId' | 'playSessionId'>,
   seconds: number,
-  extra: Pick<PlaybackReport, 'IsPaused' | 'EventName'> = {},
+  extra: Pick<PlaybackReport, 'IsPaused' | 'EventName' | 'AudioStreamIndex' | 'SubtitleStreamIndex'> = {},
 ): PlaybackReport {
   return {
     ItemId: itemId,

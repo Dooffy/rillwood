@@ -33,12 +33,15 @@ import { TracksMenu, type TracksPage, type TracksValue } from '@/components/Trac
 import { UpNext } from '@/components/UpNext';
 import { cardTitles, isItemId, itemDetail, nextEpisode, nextEpisodes, playback } from '@/items';
 import {
+  carryTracks,
   matchTracks,
+  picksOf,
   playbackInfoBody,
   playErrorMessage,
   playSource,
   type EngineTrack,
   type PlaySource,
+  type TrackPicks,
 } from '@/playback';
 import {
   HIDE_AFTER_MS,
@@ -56,6 +59,11 @@ import { connectionFor, getSession, useSession } from '@/session';
 import { ColorsContext, palettes, radii, spacing } from '@/theme';
 import { useDebounced } from '@/useDebounced';
 import { useFetch } from '@/useFetch';
+
+// Tracks menu choices. Audio / subtitle are Jellyfin indexes of one file: kept with the id of the item they were picked
+// on, ignored for any other. `picks` is what carries to the next episode: the picked tracks' language + label (subtitle
+// null = off).
+type Choice = Partial<TracksValue> & { id?: string; picks: TrackPicks };
 
 type State =
   { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; play: PlaySource; start: number };
@@ -88,10 +96,8 @@ export default function PlayerScreen() {
   // Tracks menu page (null = closed) and the choices made in it; until a choice, the server's defaults. Choices outlive
   // a Retry (same item); speed and subtitle size apply to whatever plays.
   const [menu, setMenu] = useState<TracksPage | null>(null);
-  // Audio / subtitle are Jellyfin indexes of one file: kept with the id of the item they were picked on, ignored for any
-  // other.
-  const [choice, setChoice] = useState<Partial<TracksValue> & { id?: string }>({});
-  const picked = choice.id === id ? choice : {};
+  const [choice, setChoice] = useState<Choice>({ picks: {} });
+  const picked: Partial<TracksValue> = choice.id === id ? choice : {};
   // Bumped on ±10 s: restarts the auto-hide timer (pause and scrubbing are timer deps already).
   const [touched, setTouched] = useState(0);
   // The engine waiting for data after playback started (stalled stream, reload): spinner over the video after a moment,
@@ -123,9 +129,12 @@ export default function PlayerScreen() {
   const playing = ready && started === key;
   const play = state.status === 'ready' ? state.play : undefined;
   const options = play && engineTracks?.key === key ? matchTracks(play, engineTracks) : play;
+  // Picks made on an earlier episode, found again here by language (in the server's list: stable for the load, unlike
+  // `options`); else the server's defaults (the user's language preferences, or what was last played on this item).
+  const carried = play ? carryTracks(play, choice.picks) : {};
   // A choice the file doesn't have (a sidecar that failed to load, a stream mpv dropped): first audio, subtitles off.
-  const audio = picked.audio ?? play?.defaultAudio;
-  const subtitle = picked.subtitle ?? play?.defaultSubtitle ?? -1;
+  const audio = picked.audio ?? carried.audio ?? play?.defaultAudio;
+  const subtitle = picked.subtitle ?? carried.subtitle ?? play?.defaultSubtitle ?? -1;
   const audioTrack = options?.audio.find((t) => t.index === audio) ?? options?.audio[0];
   const subtitleTrack = options?.subtitles.find((t) => t.index === subtitle);
   const tracks: TracksValue = {
@@ -191,6 +200,8 @@ export default function PlayerScreen() {
     play,
     started: playing,
     paused,
+    // What the user chose (or the defaults), not a fallback for a track that failed to load: the server remembers it.
+    tracks: { audio, subtitle },
     progress,
   });
 
@@ -388,12 +399,13 @@ export default function PlayerScreen() {
             subtitles={options.subtitles}
             value={tracks}
             onChange={(next) =>
-              setChoice(({ speed, subtitleScale, ...tracksOf }) => ({
+              setChoice(({ speed, subtitleScale, picks, ...tracksOf }) => ({
                 speed,
                 subtitleScale,
                 ...(tracksOf.id === id ? tracksOf : {}),
                 ...next,
                 id,
+                picks: { ...picks, ...picksOf(options, next) },
               }))
             }
           />

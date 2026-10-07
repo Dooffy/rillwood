@@ -403,8 +403,14 @@ export type PlaybackReport = {
   PlayMethod: 'DirectPlay';
   CanSeek: boolean;
   IsPaused?: boolean;
-  /** Progress only: `TimeUpdate`, `Pause`, `Unpause`. */
-  EventName?: 'TimeUpdate' | 'Pause' | 'Unpause';
+  /** Progress only. */
+  EventName?: 'TimeUpdate' | 'Pause' | 'Unpause' | 'AudioTrackChange' | 'SubtitleTrackChange';
+  /**
+   * The tracks playing (Jellyfin indexes, subtitle -1 = off). Playing / Progress store them per user + item (with the
+   * user's "remember selections" settings on, the default) - the next PlaybackInfo of the item starts with them.
+   */
+  AudioStreamIndex?: number;
+  SubtitleStreamIndex?: number;
 };
 
 /** Session start: sets LastPlayedDate + PlayCount (only here). 204. */

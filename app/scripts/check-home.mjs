@@ -2,7 +2,7 @@
 // Checks the Home + detail data layer (src/items.ts) against a dev server: rows, Recently Added shaping, time left,
 // detail facts / tracks / cast, series, library paging / sorts / unwatched, search + filters, image URLs, and
 // playback sources (src/playback.ts): every movie + an episode direct plays, stream + sidecar subtitle URLs answer,
-// and playback reporting (Playing / Progress / Stopped bodies) lands as resume point / watched.
+// and playback reporting (Playing / Progress / Stopped bodies) lands as resume point / watched / remembered tracks.
 // Sets a resume point on a movie >= 6 min and marks Test Show S01E01 played as the dev user `test`, then restores both.
 // Usage (from app/): npm run check:home [-- --server http://localhost:8097]. Needs dev/jellyfin running.
 // Dev-only credentials - never use them on a real server.
@@ -340,29 +340,57 @@ try {
   // Reporting (playbackReport): on the movie >= 6 min (resume points need >= 5 min), a session stopped at 2:00 leaves a
   // resume point; one stopped at 95% marks it watched. `keep` restores it first in finally.
   await keep(movie.Id);
-  const session = async (stopAt) => {
-    const answer = await call('POST', `/Items/${movie.Id}/PlaybackInfo`, { body: playbackInfoBody() });
-    const result = playSource({ baseUrl: server, token }, movie.Id, answer);
-    if (!result.ok) throw new Error(`${movie.Name}: no direct play (${result.problem})`);
-    const report = (seconds, extra) => ({ body: playbackReport(movie.Id, result.play, seconds, extra) });
+  // One playback session of `item` stopped at `stopAt`, every report with `tracks`: its play source + user data after.
+  const session = async (item, stopAt, tracks = {}) => {
+    const answer = await call('POST', `/Items/${item.Id}/PlaybackInfo`, { body: playbackInfoBody() });
+    const result = playSource({ baseUrl: server, token }, item.Id, answer);
+    if (!result.ok) throw new Error(`${item.Name}: no direct play (${result.problem})`);
+    const report = (seconds, extra) => ({
+      body: playbackReport(item.Id, result.play, seconds, { ...tracks, ...extra }),
+    });
     await call('POST', '/Sessions/Playing', report(0, { IsPaused: false }));
     await call('POST', '/Sessions/Playing/Progress', report(stopAt, { IsPaused: false, EventName: 'TimeUpdate' }));
     await call('POST', '/Sessions/Playing/Stopped', report(stopAt));
-    return userData(movie.Id);
+    return { play: result.play, data: await userData(item.Id) };
   };
   await call('DELETE', `/UserPlayedItems/${movie.Id}`);
-  const afterResume = await session(120);
+  const afterResume = (await session(movie, 120)).data;
   check(
     afterResume.PlaybackPositionTicks === 120 * TICKS_PER_SECOND &&
       !afterResume.Played &&
       Boolean(afterResume.LastPlayedDate),
     `Reporting ${movie.Name}: stopped at 2:00 → resume point ${afterResume.PlaybackPositionTicks / TICKS_PER_SECOND} s, LastPlayedDate set`,
   );
-  const afterWatched = await session(Math.round((movie.RunTimeTicks / TICKS_PER_SECOND) * 0.95));
+  const afterWatched = (await session(movie, Math.round((movie.RunTimeTicks / TICKS_PER_SECOND) * 0.95))).data;
   check(
     afterWatched.Played && afterWatched.PlaybackPositionTicks === 0,
     'Reporting: stopped at 95% → watched, no resume',
   );
+  // Tracks (AudioStreamIndex / SubtitleStreamIndex in the reports): the server keeps them per item, the next
+  // PlaybackInfo starts with them. Reported back to the server's own defaults afterwards (UserData can't clear them).
+  const multi = movies.find((m) => m.Name.startsWith('Multi Audio Multi Subs'));
+  if (multi) {
+    await keep(multi.Id);
+    const tracksSession = async (AudioStreamIndex, SubtitleStreamIndex) =>
+      (await session(multi, 10, { AudioStreamIndex, SubtitleStreamIndex })).play;
+    const first = await tracksSession(undefined, undefined);
+    const other = first.audio.find((t) => t.index !== first.defaultAudio)?.index;
+    // The session that reads the remembered tracks reports the defaults again; if anything before it throws, the
+    // defaults go back here instead (a later manual test must not start with the other audio).
+    let remembered;
+    try {
+      await tracksSession(other, -1);
+      remembered = await tracksSession(first.defaultAudio, first.defaultSubtitle);
+    } finally {
+      if (!remembered) await tracksSession(first.defaultAudio, first.defaultSubtitle);
+    }
+    check(
+      other !== undefined && remembered.defaultAudio === other && remembered.defaultSubtitle === -1,
+      `Reporting ${multi.Name}: picked audio ${other} + subtitles off → next PlaybackInfo starts with them (${remembered.defaultAudio}, ${remembered.defaultSubtitle})`,
+    );
+  } else {
+    check(false, 'No "Multi Audio Multi Subs" movie - run dev/jellyfin/make-test-media.sh');
+  }
 } finally {
   // UserData can't clear LastPlayedDate (null is ignored); marking unplayed resets it, then the old state goes back.
   // Best effort per step: one failure must not leave the other item changed or the session open.

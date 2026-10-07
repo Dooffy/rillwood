@@ -58,7 +58,15 @@ afterEach(() => {
 
 type Props = Parameters<typeof useReporting>[0];
 const progress = createProgress(40);
-const base: Props = { accountId: 'srv.a', itemId: 'i', play, started: true, paused: false, progress };
+const base: Props = {
+  accountId: 'srv.a',
+  itemId: 'i',
+  play,
+  started: true,
+  paused: false,
+  tracks: { audio: 1, subtitle: -1 },
+  progress,
+};
 const mount = (props: Partial<Props> = {}) =>
   renderHook((p: Props) => useReporting(p), { initialProps: { ...base, ...props } });
 const ticks = (s: number) => s * 10_000_000;
@@ -97,6 +105,37 @@ describe('useReporting', () => {
     );
     await act(async () => rerender({ ...base, paused: false }));
     expect(progressed).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ EventName: 'Unpause' }));
+  });
+
+  it('every report carries the tracks; a change is reported at once (the server remembers them per item)', async () => {
+    const { rerender, unmount } = await mount({ started: false, tracks: { audio: 2, subtitle: 4 } });
+    // A change before the session starts sends nothing; the start carries the latest.
+    await act(async () => rerender({ ...base, started: false, tracks: { audio: 2, subtitle: 3 } }));
+    expect(progressed).not.toHaveBeenCalled();
+    await act(async () => rerender({ ...base, tracks: { audio: 2, subtitle: 3 } }));
+    expect(start).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ AudioStreamIndex: 2, SubtitleStreamIndex: 3 }),
+    );
+    await act(async () => rerender({ ...base, tracks: { audio: 1, subtitle: 3 } }));
+    expect(progressed).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ EventName: 'AudioTrackChange', AudioStreamIndex: 1, SubtitleStreamIndex: 3 }),
+    );
+    await act(async () => rerender({ ...base, tracks: { audio: 1, subtitle: -1 } }));
+    expect(progressed).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ EventName: 'SubtitleTrackChange', SubtitleStreamIndex: -1 }),
+    );
+    // Same values in a new object: no report.
+    const calls = progressed.mock.calls.length;
+    await act(async () => rerender({ ...base, tracks: { audio: 1, subtitle: -1 } }));
+    expect(progressed).toHaveBeenCalledTimes(calls);
+    await unmount();
+    expect(stopped).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ AudioStreamIndex: 1, SubtitleStreamIndex: -1 }),
+    );
   });
 
   it('paused before the file loaded: the start says so, no extra pause report', async () => {
