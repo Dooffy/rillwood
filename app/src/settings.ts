@@ -4,6 +4,8 @@ import { Storage } from 'expo-sqlite/kv-store';
 import { useSyncExternalStore } from 'react';
 import { Appearance as RNAppearance } from 'react-native';
 
+import type { VideoZoom } from '@/player/Player';
+
 export const APPEARANCE_OPTIONS = [
   { value: 'system', label: 'System' },
   { value: 'dark', label: 'Dark' },
@@ -24,9 +26,11 @@ export type SubtitleScale = (typeof SUBTITLE_SIZES)[number]['value'];
 
 const APPEARANCE_KEY = 'settings.appearance';
 const SUBTITLE_SCALE_KEY = 'settings.subtitleScale';
+const VIDEO_ZOOM_KEY = 'settings.videoZoom';
 
 let appearance: Appearance | undefined;
 let subtitleScale: SubtitleScale | undefined;
+let videoZoom: VideoZoom | undefined;
 const listeners = new Set<() => void>();
 
 export function getAppearance(): Appearance {
@@ -69,6 +73,24 @@ export function setSubtitleScale(value: SubtitleScale): void {
 
 export function useSubtitleScale(): SubtitleScale {
   return useSyncExternalStore(subscribe, getSubtitleScale);
+}
+
+// Player video zoom in landscape, same for every account.
+export function getVideoZoom(): VideoZoom {
+  if (videoZoom === undefined) {
+    videoZoom = Storage.getItemSync(VIDEO_ZOOM_KEY) === 'fill' ? 'fill' : 'fit';
+  }
+  return videoZoom;
+}
+
+export function setVideoZoom(value: VideoZoom): void {
+  Storage.setItemSync(VIDEO_ZOOM_KEY, value);
+  videoZoom = value;
+  listeners.forEach((l) => l());
+}
+
+export function useVideoZoom(): VideoZoom {
+  return useSyncExternalStore(subscribe, getVideoZoom);
 }
 
 /**

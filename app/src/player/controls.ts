@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Player controls logic (pure): seek steps, pull-down to close, scrubber maths.
+// Player controls logic (pure): seek steps, pull-down to close, scrubber maths, zoom.
+import type { EdgeInsets } from 'react-native-safe-area-context';
+
+import type { VideoZoom } from './Player';
 
 export const SEEK_STEP = 10;
 /** Controls hide after this long without a touch (not while paused, scrubbing or with VoiceOver on). */
@@ -16,6 +19,33 @@ export const PORTRAIT_SUBTITLE_SCALE = 1.25;
 /** Subtitle scale sent to the engine: the user's size, a step up in portrait. */
 export const subtitleScaleFor = (scale: number, portrait: boolean) =>
   portrait ? scale * PORTRAIT_SUBTITLE_SCALE : scale;
+/** A pinch past these scales switches the zoom: apart = fill, together = fit. */
+const PINCH_FILL_SCALE = 1.1;
+const PINCH_FIT_SCALE = 0.9;
+
+/** Zoom after a pinch that ended at `scale`; a small pinch keeps the current one. */
+export function zoomAfterPinch(scale: number, current: VideoZoom): VideoZoom {
+  if (scale >= PINCH_FILL_SCALE) return 'fill';
+  if (scale <= PINCH_FIT_SCALE) return 'fit';
+  return current;
+}
+
+/**
+ * Where the video sits. Fill covers the whole screen. Fit keeps the picture clear of the notch / Dynamic Island: inset by
+ * the safe area on the long sides (landscape: left / right, portrait: top / bottom), the same on both so the picture
+ * stays centred. Landscape keeps the full height (the home indicator may sit over the picture's bottom edge, as in
+ * other players); a one-sided inset (Android nav bar) narrows both sides.
+ */
+export function videoFrame(insets: EdgeInsets, landscape: boolean, zoom: VideoZoom): EdgeInsets {
+  if (zoom === 'fill') return { top: 0, bottom: 0, left: 0, right: 0 };
+  if (landscape) {
+    const side = Math.max(insets.left, insets.right);
+    return { top: 0, bottom: 0, left: side, right: side };
+  }
+  const end = Math.max(insets.top, insets.bottom);
+  return { top: end, bottom: end, left: 0, right: 0 };
+}
+
 const PULL_CLOSE_VELOCITY = 800;
 /** A flick only counts once the pull has really started. */
 const FLICK_MIN_DISTANCE = 30;

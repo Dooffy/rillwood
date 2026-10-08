@@ -14,6 +14,7 @@ import { Text } from '@/components/Text';
 import { formatClock } from '@/format';
 import { positionAt, SEEK_STEP } from '@/player/controls';
 import { useProgress, type ProgressStore } from '@/player/progress';
+import type { VideoZoom } from '@/player/Player';
 import { minTouch, onArtwork, radii, spacing } from '@/theme';
 
 export type PlayerControlsProps = {
@@ -25,14 +26,18 @@ export type PlayerControlsProps = {
   onClose: () => void;
   /** Opens the audio / subtitles / speed menu (shown once playing). */
   onTracks: () => void;
+  /** Current video zoom; with `onToggleZoom`, a button switches it (landscape only - portrait always fits). */
+  zoom?: VideoZoom;
+  onToggleZoom?: () => void;
   onTogglePause: () => void;
   onSeekBy: (seconds: number) => void;
 };
 
 export function PlayerControls(props: PlayerControlsProps) {
-  const { title, subtitle, started, paused, onClose, onTracks, onTogglePause, onSeekBy } = props;
+  const { title, subtitle, started, paused, onClose, onTracks, zoom, onToggleZoom, onTogglePause, onSeekBy } = props;
   const insets = useSafeAreaInsets();
   const sides = sidePadding(insets);
+  const filled = zoom === 'fill';
   return (
     // box-none: touches between the controls reach the video (tap to hide, pull down to close).
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
@@ -60,6 +65,18 @@ export function PlayerControls(props: PlayerControlsProps) {
         {started && (
           // Right edge, past the title pill.
           <View style={styles.trailing}>
+            {onToggleZoom && (
+              <IconButton
+                icon={
+                  filled
+                    ? { ios: 'arrow.down.right.and.arrow.up.left', android: 'close_fullscreen' }
+                    : { ios: 'arrow.up.left.and.arrow.down.right', android: 'open_in_full' }
+                }
+                label={filled ? 'Fit to screen' : 'Fill screen'}
+                variant="glass"
+                onPress={onToggleZoom}
+              />
+            )}
             <IconButton
               icon={{ ios: 'ellipsis', android: 'more_horiz' }}
               label="Audio, subtitles and speed"
@@ -191,7 +208,7 @@ const THUMB = 14;
 const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   // Title pill: as wide as its text, never past the screen edge.
-  trailing: { marginLeft: 'auto' },
+  trailing: { marginLeft: 'auto', flexDirection: 'row', gap: spacing.sm },
   titles: {
     flexShrink: 1,
     minHeight: minTouch,

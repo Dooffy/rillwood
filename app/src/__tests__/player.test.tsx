@@ -87,8 +87,9 @@ beforeEach(() => {
   request.mockImplementation(() => reply() as ReturnType<typeof api.getPlaybackInfo>);
   itemRequest.mockImplementation(() => Promise.resolve(movie) as Promise<never>);
   jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(false);
-  // Subtitle size is a phone setting, kept in memory across tests.
+  // Subtitle size and zoom are phone settings, kept in memory across tests.
   settings.setSubtitleScale(1);
+  settings.setVideoZoom('fit');
 });
 // Reporting is tested on its own (src/player/useReporting.test.ts); here only that the screen drives it.
 const started = jest.spyOn(api, 'reportPlaybackStart').mockResolvedValue();
@@ -328,6 +329,19 @@ describe('Player screen', () => {
     expect(router.back).toHaveBeenCalledTimes(1);
   });
 
+  // Regression: a second finger (a pinch) fails the one-finger pull - it must spring back, not close.
+  it('a pull that fails springs back, however far it went', async () => {
+    await renderPlaying();
+    await act(() =>
+      fireGestureHandler(getByGestureTestId('player-pull'), [
+        { state: State.BEGAN, translationY: 0, velocityY: 0 },
+        { state: State.ACTIVE, translationY: 200, velocityY: 1200 },
+        { state: State.FAILED, translationY: 200, velocityY: 1200 },
+      ]),
+    );
+    expect(router.back).not.toHaveBeenCalled();
+  });
+
   it('pulling past the threshold shows "Release to close"; pulling back up hides it and springs back', async () => {
     await renderPlaying();
     const pull = createGestureController(getByGestureTestId('player-pull'));
@@ -476,6 +490,73 @@ describe('Player screen', () => {
     await fireEvent.press(screen.getByText('Extra large'));
     expect(settings.getSubtitleScale()).toBe(1.5);
     expect(lastPlayer().subtitleScale).toBe(1.875);
+  });
+
+  const pinchTo = (scale: number) =>
+    fireGestureHandler(getByGestureTestId('player-pinch'), [
+      { state: State.BEGAN, scale: 1 },
+      { state: State.ACTIVE, scale },
+      { state: State.END, scale },
+    ]);
+
+  /** Runs `test` with the window turned to landscape. */
+  async function inLandscape(test: () => Promise<void>) {
+    const portrait = Dimensions.get('window');
+    try {
+      await act(() => Dimensions.set({ window: { ...portrait, width: portrait.height, height: portrait.width } }));
+      await test();
+    } finally {
+      await act(() => Dimensions.set({ window: { ...portrait } }));
+    }
+  }
+
+  it('zoom: fit by default; the top-bar button fills in landscape and saves it', () =>
+    inLandscape(async () => {
+      await renderPlaying();
+      expect(lastPlayer().zoom).toBe('fit');
+      await fireEvent.press(screen.getByRole('button', { name: 'Fill screen' }));
+      expect(lastPlayer().zoom).toBe('fill');
+      expect(settings.getVideoZoom()).toBe('fill');
+      await fireEvent.press(screen.getByRole('button', { name: 'Fit to screen' }));
+      expect(lastPlayer().zoom).toBe('fit');
+      expect(settings.getVideoZoom()).toBe('fit');
+    }));
+
+  it('zoom: a pinch apart fills, together fits, a small one keeps it', () =>
+    inLandscape(async () => {
+      await renderPlaying();
+      await act(() => pinchTo(1.05));
+      expect(lastPlayer().zoom).toBe('fit');
+      await act(() => pinchTo(1.5));
+      expect(lastPlayer().zoom).toBe('fill');
+      expect(settings.getVideoZoom()).toBe('fill');
+      await act(() => pinchTo(0.6));
+      expect(lastPlayer().zoom).toBe('fit');
+    }));
+
+  it('zoom: a cancelled pinch keeps the zoom', () =>
+    inLandscape(async () => {
+      await renderPlaying();
+      await act(() =>
+        fireGestureHandler(getByGestureTestId('player-pinch'), [
+          { state: State.BEGAN, scale: 1 },
+          { state: State.ACTIVE, scale: 1.5 },
+          { state: State.CANCELLED, scale: 1.5 },
+        ]),
+      );
+      expect(lastPlayer().zoom).toBe('fit');
+      expect(settings.getVideoZoom()).toBe('fit');
+    }));
+
+  it('zoom: portrait always fits, no button; the saved fill comes back in landscape', async () => {
+    settings.setVideoZoom('fill');
+    await renderPlaying();
+    expect(lastPlayer().zoom).toBe('fit');
+    expect(screen.queryByRole('button', { name: 'Fit to screen' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Fill screen' })).toBeNull();
+    await inLandscape(async () => {
+      expect(lastPlayer().zoom).toBe('fill');
+    });
   });
 
   it('tracks menu: current values, pick a subtitle, change speed; controls stay up while it is open', async () => {

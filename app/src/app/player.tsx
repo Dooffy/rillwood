@@ -7,8 +7,10 @@ import { AccessibilityInfo, StyleSheet, useWindowDimensions, View } from 'react-
 import {
   GestureDetector,
   GestureHandlerRootView,
+  useCompetingGestures,
   useExclusiveGestures,
   usePanGesture,
+  usePinchGesture,
   useTapGesture,
 } from 'react-native-gesture-handler';
 
@@ -51,12 +53,14 @@ import {
   shouldClose,
   STALL_SPINNER_MS,
   subtitleScaleFor,
+  videoFrame,
+  zoomAfterPinch,
 } from '@/player/controls';
-import { Player, type PlayerRef } from '@/player/Player';
+import { Player, type PlayerRef, type VideoZoom } from '@/player/Player';
 import { createProgress } from '@/player/progress';
 import { useReporting } from '@/player/useReporting';
 import { connectionFor, getSession, useSession } from '@/session';
-import { useSubtitleScale } from '@/settings';
+import { setVideoZoom, useSubtitleScale, useVideoZoom } from '@/settings';
 import { ColorsContext, palettes, radii, spacing } from '@/theme';
 import { useDebounced } from '@/useDebounced';
 import { useFetch } from '@/useFetch';
@@ -99,6 +103,10 @@ export default function PlayerScreen() {
   const [menu, setMenu] = useState<TracksPage | null>(null);
   const [choice, setChoice] = useState<Choice>({ picks: {} });
   const subtitleScale = useSubtitleScale();
+  // Fit or fill, remembered on the phone; only landscape zooms (a filled portrait screen would crop most of the picture).
+  const zoomSetting = useVideoZoom();
+  const landscape = width > height;
+  const zoom: VideoZoom = landscape ? zoomSetting : 'fit';
   const picked: Partial<TracksValue> = choice.id === id ? choice : {};
   // Bumped on ±10 s: restarts the auto-hide timer (pause and scrubbing are timer deps already).
   const [touched, setTouched] = useState(0);
@@ -236,6 +244,11 @@ export default function PlayerScreen() {
     touch();
     seekBy(delta);
   };
+  // From the button: also restarts the controls' auto-hide.
+  const toggleZoom = () => {
+    touch();
+    setVideoZoom(zoom === 'fill' ? 'fit' : 'fill');
+  };
 
   // Only while playing: before that the top bar is always up, and a tap here would swallow Retry's press.
   const tap = useTapGesture({
@@ -254,6 +267,8 @@ export default function PlayerScreen() {
   // Runs on the UI thread: the video tracks the finger without a JS round trip.
   const pullDown = usePanGesture({
     testID: 'player-pull',
+    // Two fingers pinch (zoom), never pull.
+    maxPointers: 1,
     // Down only; a sideways drag fails it (the scrubber, later horizontal gestures).
     activeOffsetY: 15,
     failOffsetX: [-20, 20],
@@ -277,7 +292,8 @@ export default function PlayerScreen() {
         pastClose.value = false;
         scheduleOnRN(setReleaseHint, false);
       }
-      if (shouldClose(e.translationY, e.velocityY)) {
+      // A failed pull (a second finger landed: a pinch) springs back, however far or fast it went.
+      if (!e.canceled && shouldClose(e.translationY, e.velocityY)) {
         // Finish the slide-out, then leave (the modal is already see-through by then).
         pull.value = withTiming(height, { duration: 180 }, () => scheduleOnRN(close));
       } else {
@@ -286,8 +302,21 @@ export default function PlayerScreen() {
       }
     },
   });
-  // Pull first, then a double tap, then a single tap (which waits for the double to fail).
-  const gestures = useExclusiveGestures(pullDown, doubleTap, tap);
+  // Pinch apart = fill, together = fit (landscape only), on release.
+  const pinch = usePinchGesture({
+    testID: 'player-pinch',
+    runOnJS: true,
+    enabled: playing && landscape,
+    onDeactivate: (e) => {
+      // A pinch the system took over (Control Center, a call) changes nothing.
+      if (e.canceled) return;
+      const next = zoomAfterPinch(e.scale, zoom);
+      if (next !== zoom) setVideoZoom(next);
+    },
+  });
+  // Pull first, then a double tap, then a single tap (which waits for the double to fail); a pinch races them all.
+  const taps = useExclusiveGestures(pullDown, doubleTap, tap);
+  const gestures = useCompetingGestures(pinch, taps);
 
   // The video shrinks, fades and rounds its corners as it follows the finger - a card lifting off, not a black slab
   // (mpv's view is black around the picture); the black behind it fades out to show the screen below.
@@ -331,35 +360,39 @@ export default function PlayerScreen() {
             onAccessibilityEscape={close}
           >
             {state.status === 'ready' && (
-              <Player
-                ref={player}
-                source={state.play.source}
-                externalSubs={state.play.externalSubs}
-                startSeconds={state.start}
-                paused={paused}
-                audioTrack={audioTrack?.id}
-                subtitleTrack={subtitleTrack?.id ?? -1}
-                speed={tracks.speed}
-                subtitleScale={subtitleScaleFor(subtitleScale, height > width)}
-                onLoad={(e) => {
-                  progress.set({ duration: e.duration });
-                  setStarted(key);
-                }}
-                onTracks={(e) => setEngineTracks({ key, ...e })}
-                onProgress={progress.set}
-                // The next episode, if any; else the engine holds the last frame paused: show it as paused (the pause
-                // reports the end - played), controls up; Play replays from the start.
-                onEnd={() => {
-                  if (next) return playNext(next);
-                  setPaused(true);
-                  setShown(true);
-                }}
-                onBuffering={setWaiting}
-                onError={() => {
-                  setWaiting(false);
-                  setLoaded({ key, state: { status: 'error', message: PLAYBACK_FAILED } });
-                }}
-              />
+              // Fit keeps the picture clear of the notch / Dynamic Island; fill covers the screen.
+              <View style={[StyleSheet.absoluteFill, videoFrame(insets, landscape, zoom)]}>
+                <Player
+                  ref={player}
+                  source={state.play.source}
+                  externalSubs={state.play.externalSubs}
+                  startSeconds={state.start}
+                  paused={paused}
+                  audioTrack={audioTrack?.id}
+                  subtitleTrack={subtitleTrack?.id ?? -1}
+                  speed={tracks.speed}
+                  subtitleScale={subtitleScaleFor(subtitleScale, !landscape)}
+                  zoom={zoom}
+                  onLoad={(e) => {
+                    progress.set({ duration: e.duration });
+                    setStarted(key);
+                  }}
+                  onTracks={(e) => setEngineTracks({ key, ...e })}
+                  onProgress={progress.set}
+                  // The next episode, if any; else the engine holds the last frame paused: show it as paused (the pause
+                  // reports the end - played), controls up; Play replays from the start.
+                  onEnd={() => {
+                    if (next) return playNext(next);
+                    setPaused(true);
+                    setShown(true);
+                  }}
+                  onBuffering={setWaiting}
+                  onError={() => {
+                    setWaiting(false);
+                    setLoaded({ key, state: { status: 'error', message: PLAYBACK_FAILED } });
+                  }}
+                />
+              </View>
             )}
             {state.status !== 'error' && (!playing || stalled) && <Spinner fill />}
             {state.status === 'error' && <Message fill text={state.message} retry={retry} />}
@@ -380,6 +413,8 @@ export default function PlayerScreen() {
             paused={paused}
             onClose={close}
             onTracks={() => setMenu('main')}
+            zoom={zoom}
+            onToggleZoom={landscape ? toggleZoom : undefined}
             onTogglePause={() => setPaused((p) => !p)}
             onSeekBy={skip}
           />
