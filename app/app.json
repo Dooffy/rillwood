@@ -45,7 +45,21 @@
           }
         }
       ],
-      "expo-font",
+      [
+        "expo-font",
+        {
+          "ios": {
+            "fonts": [
+              "./assets/fonts/NotoSans-Regular.ttf",
+              "./assets/fonts/NotoSerif-Regular.ttf",
+              "./assets/fonts/NotoSansMono-Regular.ttf",
+              "./assets/fonts/NotoSansArabic-Regular.ttf",
+              "./assets/fonts/NotoSansHebrew-Regular.ttf",
+              "./assets/fonts/NotoSansCJKsc-Regular.otf"
+            ]
+          }
+        }
+      ],
       "expo-image",
       "expo-status-bar",
       "./modules/mpv/app.plugin.js"

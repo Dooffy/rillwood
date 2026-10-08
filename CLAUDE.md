@@ -115,6 +115,7 @@ src/app/                 expo-router
   series/[id].tsx
   player.tsx
   settings.tsx
+  subtitles.tsx          Settings → Subtitles: size, font, colour, edge + live preview
 src/theme.ts             design tokens
 src/format.ts            display formatting (time left, clock, subtitle timing)
 src/api.ts               fetch client + endpoints + DTO types
@@ -135,13 +136,13 @@ src/detail.ts            detailView: everything the detail screen shows, from on
 src/playback.ts          PlaybackInfo → play source (pure): device profile, direct play check, stream + sidecar subtitle URLs, track options + `matchTracks` (real mpv ids) + `carryTracks` (picks to the next episode by language)
 src/downloads.ts         store, queue, reconcile, cleanup, storage
 src/sync.ts              offline progress queue replay
-src/settings.ts          user settings in kv-store (appearance, player subtitle size + video zoom; downloads + offload later)
+src/settings.ts          user settings in kv-store (appearance, subtitle size + style, video zoom; downloads + offload later)
 src/player/Player.tsx    PlayerEngine interface + re-export of active engine
 src/player/mpv.tsx       mpv adapter
 src/player/controls.ts   player controls logic (pure): seek clamp, pull-to-close threshold, scrubber maths, zoom (pinch, fit inset)
 src/player/progress.ts   position + duration store outside React state (only the controls re-render)
 src/player/useReporting.ts  Sessions/Playing, Progress (10 s, pause, seek, track change, background), Stopped + refetch; reports carry the tracks
-src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List, StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message, DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing (+ AnimatedProgressRing), SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing, PlayerControls (+ PlayerBottom, PlayerScrubber), Glass, TracksMenu, TimingSlider, UpNext
+src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List, StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message, DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing (+ AnimatedProgressRing), SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing, PlayerControls (+ PlayerBottom, PlayerScrubber), Glass, TracksMenu, TimingSlider, UpNext, SubtitlePreview, ColorSwatches
 src/dev/                 dev-only previews, rendered behind `__DEV__` (never in release)
 modules/mpv/             vendored native module (+ UPSTREAM.md: upstream repo + commit)
 modules/downloads/       own native background downloader (iOS + Android)

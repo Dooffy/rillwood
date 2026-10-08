@@ -112,6 +112,8 @@ export interface SubtitleStyleConfig {
   font?: string;
   background?: string; // hex color with alpha
   backgroundPadding?: number;
+  /** Rillwood: text edge - outline (mpv default), drop shadow, or a box behind the lines. Overrides `background`. */
+  edge?: "outline" | "shadow" | "box";
 }
 
 export interface MpvPlayerViewRef {

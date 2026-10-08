@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Player tracks menu on the shared ActionSheet: a main page (audio, subtitles, speed, subtitle size with their current
-// value) that opens one list per setting (subtitle timing: a slider, only while subtitles are on). The screen owns the
-// page so a pick can close one sheet and open the next.
+// Player tracks menu on the shared ActionSheet: a main page (audio, subtitles, speed with their current value) that opens
+// one list per setting (subtitle timing: a slider, only while subtitles are on). The screen owns the page so a pick can
+// close one sheet and open the next. How subtitles look is set in Settings → Subtitles.
 import type { ReactNode } from 'react';
 
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
 import { TimingSlider } from '@/components/TimingSlider';
 import { formatDelay } from '@/format';
 import type { TrackChoice, TrackOption } from '@/playback';
-import { setSubtitleScale, SUBTITLE_SIZES, useSubtitleScale } from '@/settings';
 
-export type TracksPage = 'main' | 'audio' | 'subtitles' | 'speed' | 'size' | 'timing';
+export type TracksPage = 'main' | 'audio' | 'subtitles' | 'speed' | 'timing';
 
-// Choices for this screen. Subtitle size is a phone setting (`src/settings.ts`): the size page reads and saves it.
+// Choices for this screen.
 export type TracksValue = TrackChoice & {
   speed: number;
   /** Subtitle timing in seconds (mpv `sub-delay`): negative = earlier, positive = later. */
@@ -43,8 +42,6 @@ export function TracksMenu({
 }) {
   const subtitleChoices = [{ id: -1, index: -1, label: 'Off' }, ...subtitles];
   const label = (options: TrackOption[], index: number | undefined) => options.find((t) => t.index === index)?.label;
-  const subtitleScale = useSubtitleScale();
-  const size = SUBTITLE_SIZES.find((o) => o.value === subtitleScale)?.label;
 
   const pick = (options: TrackOption[], current: number | undefined, key: 'audio' | 'subtitle') =>
     options.map((t): SheetAction => ({
@@ -66,7 +63,6 @@ export function TracksMenu({
           onPress: () => onPage('subtitles'),
         },
         { label: 'Speed', detail: speedLabel(value.speed), onPress: () => onPage('speed') },
-        { label: 'Subtitle size', detail: size, onPress: () => onPage('size') },
         ...(value.subtitle !== -1
           ? [{ label: 'Subtitle timing', detail: formatDelay(value.subtitleDelay), onPress: () => onPage('timing') }]
           : []),
@@ -80,14 +76,6 @@ export function TracksMenu({
         label: speedLabel(speed),
         selected: speed === value.speed,
         onPress: () => onChange({ speed }),
-      })),
-    },
-    size: {
-      title: 'Subtitle size',
-      actions: SUBTITLE_SIZES.map((o) => ({
-        label: o.label,
-        selected: o.value === subtitleScale,
-        onPress: () => setSubtitleScale(o.value),
       })),
     },
     // A slider instead of a list: applied as it changes, the sheet closes with Done.

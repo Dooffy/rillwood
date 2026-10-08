@@ -27,6 +27,7 @@ const mockNative = {
   setSpeed: jest.fn(async (_speed: number) => {}),
   setSubtitleScale: jest.fn(async (_scale: number) => {}),
   setSubtitleDelay: jest.fn(async (_seconds: number) => {}),
+  setSubtitleStyle: jest.fn(async (_style: object) => {}),
   setZoomedToFill: jest.fn(async (_zoomed: boolean) => {}),
   // mpv's position: progress and seeks move it.
   getCurrentPosition: jest.fn(async () => mockPosition),
@@ -480,28 +481,52 @@ describe('MpvPlayer', () => {
     expect(mockNative.destroy).not.toHaveBeenCalled();
   });
 
-  it('speed, subtitle size, subtitle timing and zoom go to mpv on every change', async () => {
+  it('speed, subtitle size, style, timing and zoom go to mpv on every change', async () => {
     const { rerender } = await render(<MpvPlayer source={source} />);
     expect(mockNative.setSpeed).toHaveBeenLastCalledWith(1);
+    // No style given: mpv keeps its own look.
+    expect(mockNative.setSubtitleStyle).not.toHaveBeenCalled();
     expect(mockNative.setSubtitleDelay).toHaveBeenLastCalledWith(0);
     expect(mockNative.setZoomedToFill).toHaveBeenLastCalledWith(false);
-    await rerender(<MpvPlayer source={source} speed={1.5} subtitleScale={1.25} subtitleDelay={-0.5} zoom="fill" />);
+    await rerender(
+      <MpvPlayer
+        source={source}
+        speed={1.5}
+        subtitleScale={1.25}
+        subtitleStyle={{ font: 'serif', color: '#FFEB3B', edge: 'box' }}
+        subtitleDelay={-0.5}
+        zoom="fill"
+      />,
+    );
     expect(mockNative.setSpeed).toHaveBeenLastCalledWith(1.5);
     expect(mockNative.setSubtitleScale).toHaveBeenLastCalledWith(1.25);
+    expect(mockNative.setSubtitleStyle).toHaveBeenLastCalledWith({ font: 'serif', color: '#FFEB3B', edge: 'box' });
     expect(mockNative.setSubtitleDelay).toHaveBeenLastCalledWith(-0.5);
     expect(mockNative.setZoomedToFill).toHaveBeenLastCalledWith(true);
   });
 
   // Regression: Android has no renderer before the file loads, so speed / size set at mount went nowhere (Retry).
-  it('speed, subtitle size, subtitle timing and zoom are sent again once the load is ready', async () => {
-    await render(<MpvPlayer source={source} speed={1.5} subtitleScale={1.25} subtitleDelay={2} zoom="fill" />);
+  it('speed, subtitle size, style, timing and zoom are sent again once the load is ready', async () => {
+    const style = { font: 'monospace', color: '#4DD0E1', edge: 'shadow' } as const;
+    await render(
+      <MpvPlayer
+        source={source}
+        speed={1.5}
+        subtitleScale={1.25}
+        subtitleStyle={style}
+        subtitleDelay={2}
+        zoom="fill"
+      />,
+    );
     mockNative.setSpeed.mockClear();
     mockNative.setSubtitleScale.mockClear();
+    mockNative.setSubtitleStyle.mockClear();
     mockNative.setSubtitleDelay.mockClear();
     mockNative.setZoomedToFill.mockClear();
     await tracksReady();
     expect(mockNative.setSpeed).toHaveBeenCalledWith(1.5);
     expect(mockNative.setSubtitleScale).toHaveBeenCalledWith(1.25);
+    expect(mockNative.setSubtitleStyle).toHaveBeenCalledWith(style);
     expect(mockNative.setSubtitleDelay).toHaveBeenCalledWith(2);
     expect(mockNative.setZoomedToFill).toHaveBeenCalledWith(true);
   });

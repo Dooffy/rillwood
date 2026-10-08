@@ -13,6 +13,13 @@ export type Track = {
 /** fit (default): the whole picture, bars around it. fill: covers the view edge to edge, cropping the picture. */
 export type VideoZoom = 'fit' | 'fill';
 
+/** Subtitle typeface: generic families, each engine maps them to fonts it has. */
+export type SubtitleFont = 'sans-serif' | 'serif' | 'monospace';
+/** Around the text: an outline, a drop shadow or a box behind it. */
+export type SubtitleEdge = 'outline' | 'shadow' | 'box';
+/** Text subtitles only (SRT, VTT): ASS keeps its own style, picture subtitles (PGS) can't be styled. */
+export type SubtitleStyle = { font: SubtitleFont; color: string; edge: SubtitleEdge };
+
 export type PlayerProps = {
   /** A new object loads the file again, even with the same URI (replay). */
   source: { uri: string; headers?: Record<string, string> };
@@ -23,6 +30,8 @@ export type PlayerProps = {
   speed?: number;
   /** Subtitle size, 1 = normal. */
   subtitleScale?: number;
+  /** Not given: nothing is sent, mpv keeps the style it has (its own default at first). */
+  subtitleStyle?: SubtitleStyle;
   /** Subtitle timing in seconds, 0 = as in the file; positive shows them later. */
   subtitleDelay?: number;
   zoom?: VideoZoom;

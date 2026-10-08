@@ -968,6 +968,30 @@ class MPVLayerRenderer(
                 mpv?.setPropertyString("sub-border-size", "0")
             }
         }
+
+        // Rillwood: edge style (Settings → Subtitles). Sets every part it touches, so switching back undoes the others.
+        (config["edge"] as? String)?.let { edge ->
+            when (edge) {
+                "shadow" -> {
+                    mpv?.setPropertyString("sub-border-style", "outline-and-shadow")
+                    mpv?.setPropertyString("sub-border-size", "0")
+                    mpv?.setPropertyString("sub-shadow-offset", "2")
+                    mpv?.setPropertyString("sub-shadow-color", "#C0000000")
+                }
+                "box" -> {
+                    mpv?.setPropertyString("sub-border-style", "background-box")
+                    mpv?.setPropertyString("sub-back-color", "#99000000")
+                    mpv?.setPropertyString("sub-border-size", "0")
+                    mpv?.setPropertyString("sub-shadow-offset", "12")
+                }
+                else -> {
+                    mpv?.setPropertyString("sub-border-style", "outline-and-shadow")
+                    mpv?.setPropertyString("sub-border-size", "3")
+                    mpv?.setPropertyString("sub-border-color", "#000000")
+                    mpv?.setPropertyString("sub-shadow-offset", "0")
+                }
+            }
+        }
     }
 
     override fun setSubtitleFontSize(size: Int) {

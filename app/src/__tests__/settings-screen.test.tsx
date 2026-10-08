@@ -6,7 +6,7 @@ import { Appearance as RNAppearance } from 'react-native';
 
 import Settings from '@/app/settings';
 import { useSession, type Account } from '@/session';
-import { setAppearance } from '@/settings';
+import { setAppearance, setSubtitleScale } from '@/settings';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 jest.mock('@/session', () => ({ useSession: jest.fn() }));
@@ -33,6 +33,7 @@ describe('Settings screen', () => {
     Storage.clearSync();
     jest.spyOn(RNAppearance, 'setColorScheme').mockImplementation(() => {});
     setAppearance('system');
+    setSubtitleScale(1);
   });
 
   it('shows the current appearance', async () => {
@@ -65,6 +66,14 @@ describe('Settings screen', () => {
     expect(screen.getByText('Add a Jellyfin server')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/server', params: { onboarding: '1' } });
+  });
+
+  it('shows the subtitle size and opens Subtitles', async () => {
+    setSubtitleScale(1.25);
+    await render(<Settings />);
+    expect(screen.getByText('Large')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Subtitles' }));
+    expect(router.push).toHaveBeenCalledWith('/subtitles');
   });
 
   it('shows the download defaults and app version', async () => {

@@ -66,6 +66,16 @@ export const onArtwork = {
 /** Glass controls over video where Liquid Glass isn't available (Android, iOS < 26): see-through, no blur. */
 export const glassFallback = 'rgba(255, 255, 255, 0.18)';
 
+/** Stand-in picture behind the subtitle preview (Settings → Subtitles): a dim scene, the same in both themes. */
+export const subtitlePreviewScene = 'linear-gradient(to bottom, #4A5A6E 0%, #26303C 55%, #0E1116 100%)';
+
+/** Subtitle preview edges, as the player draws them (native `setSubtitleStyle` in modules/mpv, docs/context/mpv.md). */
+export const subtitleEdge = {
+  outline: '#000000',
+  shadow: 'rgba(0, 0, 0, 0.75)', // mpv #C0000000
+  box: 'rgba(0, 0, 0, 0.6)', // mpv #99000000
+} as const;
+
 /** Dims the screen behind a sheet or menu, in both themes. */
 export const backdrop = 'rgba(0, 0, 0, 0.5)';
 

@@ -509,6 +509,9 @@ final class MPVLayerRenderer {
         "NotoSans-Regular.ttf",
         "NotoSansArabic-Regular.ttf",
         "NotoSansHebrew-Regular.ttf",
+        // Rillwood: the Serif / Mono typeface choices (bundled - iOS system font files can't be read).
+        "NotoSerif-Regular.ttf",
+        "NotoSansMono-Regular.ttf",
     ]
 
     /// Face linked to `<config-dir>/subfont.ttf`, libass' unconditional last resort.
@@ -523,14 +526,13 @@ final class MPVLayerRenderer {
     /// through CoreText glyph by glyph, which is the #1789 tofu path.
     static func mpvSubtitleFont(_ font: String) -> String {
         switch font {
-        case "System":
+        // Rillwood: bundled Noto faces instead of system fonts libass can't open.
+        case "System", "sans-serif":
             return subtitleFontFamily
-        case "sans-serif":
-            return "Helvetica"
         case "serif":
-            return "Georgia"
+            return "Noto Serif"
         case "monospace":
-            return "Menlo"
+            return "Noto Sans Mono"
         case "opendyslexic":
             return "OpenDyslexic"
         default:
@@ -1535,6 +1537,27 @@ final class MPVLayerRenderer {
                 let finalPadding = isDyslexic ? padding / 2 : padding
                 setProperty(name: "sub-shadow-offset", value: String(finalPadding))
                 setProperty(name: "sub-border-size", value: "0")
+            }
+        }
+
+        // Rillwood: edge style (Settings → Subtitles). Sets every part it touches, so switching back undoes the others.
+        if let edge = config["edge"] as? String {
+            switch edge {
+            case "shadow":
+                setProperty(name: "sub-border-style", value: "outline-and-shadow")
+                setProperty(name: "sub-border-size", value: "0")
+                setProperty(name: "sub-shadow-offset", value: "2")
+                setProperty(name: "sub-shadow-color", value: "#C0000000")
+            case "box":
+                setProperty(name: "sub-border-style", value: "background-box")
+                setProperty(name: "sub-back-color", value: "#99000000")
+                setProperty(name: "sub-border-size", value: "0")
+                setProperty(name: "sub-shadow-offset", value: "12")
+            default:
+                setProperty(name: "sub-border-style", value: "outline-and-shadow")
+                setProperty(name: "sub-border-size", value: "3")
+                setProperty(name: "sub-border-color", value: "#000000")
+                setProperty(name: "sub-shadow-offset", value: "0")
             }
         }
     }

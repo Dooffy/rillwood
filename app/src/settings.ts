@@ -4,7 +4,7 @@ import { Storage } from 'expo-sqlite/kv-store';
 import { useSyncExternalStore } from 'react';
 import { Appearance as RNAppearance } from 'react-native';
 
-import type { VideoZoom } from '@/player/Player';
+import type { SubtitleEdge, SubtitleFont, SubtitleStyle, VideoZoom } from '@/player/Player';
 
 export const APPEARANCE_OPTIONS = [
   { value: 'system', label: 'System' },
@@ -14,7 +14,8 @@ export const APPEARANCE_OPTIONS = [
 
 export type Appearance = (typeof APPEARANCE_OPTIONS)[number]['value'];
 
-// Player subtitle size (mpv `sub-scale`), same for every account. Speed isn't remembered (1× on every open).
+// Subtitle appearance (Settings → Subtitles), same for every account. Speed isn't remembered (1× on every open).
+// Size = mpv `sub-scale`.
 export const SUBTITLE_SIZES = [
   { value: 0.8, label: 'Small' },
   { value: 1, label: 'Medium' },
@@ -24,12 +25,37 @@ export const SUBTITLE_SIZES = [
 
 export type SubtitleScale = (typeof SUBTITLE_SIZES)[number]['value'];
 
+// Typeface: bundled Noto on iOS, Roboto / Noto Serif / Droid Sans Mono on Android (`modules/mpv` maps them).
+export const SUBTITLE_FONTS = [
+  { value: 'sans-serif', label: 'Sans' },
+  { value: 'serif', label: 'Serif' },
+  { value: 'monospace', label: 'Mono' },
+] as const satisfies readonly { value: SubtitleFont; label: string }[];
+
+// Presets only, no free picker.
+export const SUBTITLE_COLORS = [
+  { value: '#FFFFFF', label: 'White' },
+  { value: '#FFEB3B', label: 'Yellow' },
+  { value: '#4DD0E1', label: 'Cyan' },
+  { value: '#69F0AE', label: 'Green' },
+] as const;
+
+export const SUBTITLE_EDGES = [
+  { value: 'outline', label: 'Outline' },
+  { value: 'shadow', label: 'Shadow' },
+  { value: 'box', label: 'Box' },
+] as const satisfies readonly { value: SubtitleEdge; label: string }[];
+
+export const DEFAULT_SUBTITLE_STYLE: SubtitleStyle = { font: 'sans-serif', color: '#FFFFFF', edge: 'outline' };
+
 const APPEARANCE_KEY = 'settings.appearance';
 const SUBTITLE_SCALE_KEY = 'settings.subtitleScale';
+const SUBTITLE_STYLE_KEY = 'settings.subtitleStyle';
 const VIDEO_ZOOM_KEY = 'settings.videoZoom';
 
 let appearance: Appearance | undefined;
 let subtitleScale: SubtitleScale | undefined;
+let subtitleStyle: SubtitleStyle | undefined;
 let videoZoom: VideoZoom | undefined;
 const listeners = new Set<() => void>();
 
@@ -73,6 +99,38 @@ export function setSubtitleScale(value: SubtitleScale): void {
 
 export function useSubtitleScale(): SubtitleScale {
   return useSyncExternalStore(subscribe, getSubtitleScale);
+}
+
+/** Saved style; each part falls back to its default on its own (unknown or missing value). */
+export function getSubtitleStyle(): SubtitleStyle {
+  if (subtitleStyle === undefined) {
+    let stored: Partial<Record<keyof SubtitleStyle, unknown>> = {};
+    try {
+      stored = JSON.parse(Storage.getItemSync(SUBTITLE_STYLE_KEY) ?? '{}') ?? {};
+    } catch {}
+    const d = DEFAULT_SUBTITLE_STYLE;
+    subtitleStyle = {
+      font: SUBTITLE_FONTS.find((o) => o.value === stored.font)?.value ?? d.font,
+      color: SUBTITLE_COLORS.find((o) => o.value === stored.color)?.value ?? d.color,
+      edge: SUBTITLE_EDGES.find((o) => o.value === stored.edge)?.value ?? d.edge,
+    };
+  }
+  return subtitleStyle;
+}
+
+export function setSubtitleStyle(change: Partial<SubtitleStyle>): void {
+  const current = getSubtitleStyle();
+  // An `undefined` part keeps the current one.
+  const parts = Object.entries(change).filter(([, v]) => v !== undefined);
+  if (parts.every(([k, v]) => current[k as keyof SubtitleStyle] === v)) return;
+  const next: SubtitleStyle = { ...current, ...Object.fromEntries(parts) };
+  Storage.setItemSync(SUBTITLE_STYLE_KEY, JSON.stringify(next));
+  subtitleStyle = next;
+  listeners.forEach((l) => l());
+}
+
+export function useSubtitleStyle(): SubtitleStyle {
+  return useSyncExternalStore(subscribe, getSubtitleStyle);
 }
 
 // Player video zoom in landscape, same for every account.
