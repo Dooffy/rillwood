@@ -21,6 +21,7 @@ const pages = {
   accounts: page('Accounts'),
   account: page('Account'),
   settings: page('Settings'),
+  subtitles: page('Subtitles'),
 };
 
 export default function RootLayout() {
@@ -65,6 +66,7 @@ export default function RootLayout() {
           <Stack.Screen name="item/[id]" options={detailOptions} />
           <Stack.Screen name="series/[id]" options={detailOptions} />
           <Stack.Screen name="settings" options={pages.settings} />
+          <Stack.Screen name="subtitles" options={pages.subtitles} />
           <Stack.Screen
             name="player"
             options={{

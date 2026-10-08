@@ -7,9 +7,11 @@ import { Appearance as RNAppearance } from 'react-native';
 import {
   setAppearance,
   setSubtitleScale,
+  setSubtitleStyle,
   setVideoZoom,
   useAppearance,
   useSubtitleScale,
+  useSubtitleStyle,
   useVideoZoom,
 } from './settings';
 
@@ -139,5 +141,49 @@ describe('video zoom setting', () => {
     expect(result.current).toBe('fit');
     await act(() => setVideoZoom('fill'));
     expect(result.current).toBe('fill');
+  });
+});
+
+describe('subtitle style setting', () => {
+  beforeEach(() => {
+    Storage.clearSync();
+  });
+
+  it('defaults to white sans with an outline', () => {
+    expect(load().getSubtitleStyle()).toEqual({ font: 'sans-serif', color: '#FFFFFF', edge: 'outline' });
+  });
+
+  it('keeps the known parts of a stored value, defaults the rest', () => {
+    Storage.setItemSync('settings.subtitleStyle', JSON.stringify({ font: 'serif', color: '#123456', edge: 'box' }));
+    expect(load().getSubtitleStyle()).toEqual({ font: 'serif', color: '#FFFFFF', edge: 'box' });
+  });
+
+  it('falls back to the default for a broken stored value', () => {
+    Storage.setItemSync('settings.subtitleStyle', '{oops');
+    expect(load().getSubtitleStyle()).toEqual({ font: 'sans-serif', color: '#FFFFFF', edge: 'outline' });
+    Storage.setItemSync('settings.subtitleStyle', 'null');
+    expect(load().getSubtitleStyle()).toEqual({ font: 'sans-serif', color: '#FFFFFF', edge: 'outline' });
+  });
+
+  it('persists a change, keeping the other parts', () => {
+    const { getSubtitleStyle, setSubtitleStyle: set } = load();
+    set({ color: '#FFEB3B' });
+    set({ edge: 'shadow' });
+    expect(getSubtitleStyle()).toEqual({ font: 'sans-serif', color: '#FFEB3B', edge: 'shadow' });
+    expect(load().getSubtitleStyle()).toEqual({ font: 'sans-serif', color: '#FFEB3B', edge: 'shadow' });
+  });
+
+  it('ignores undefined parts', () => {
+    const { getSubtitleStyle, setSubtitleStyle: set } = load();
+    set({ font: undefined, color: '#FFEB3B' });
+    expect(getSubtitleStyle()).toEqual({ font: 'sans-serif', color: '#FFEB3B', edge: 'outline' });
+  });
+
+  it('re-renders useSubtitleStyle subscribers on change', async () => {
+    setSubtitleStyle({ font: 'sans-serif' });
+    const { result } = await renderHook(() => useSubtitleStyle());
+    expect(result.current.font).toBe('sans-serif');
+    await act(() => setSubtitleStyle({ font: 'monospace' }));
+    expect(result.current.font).toBe('monospace');
   });
 });

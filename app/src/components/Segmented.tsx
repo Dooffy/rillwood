@@ -5,13 +5,13 @@ import { minTouch, radii, spacing, useColors } from '@/theme';
 
 import { Text } from './Text';
 
-export type SegmentedProps<T extends string> = {
+export type SegmentedProps<T extends string | number> = {
   options: readonly { value: T; label: string }[];
   value: T;
   onChange: (value: T) => void;
 };
 
-export function Segmented<T extends string>({ options, value, onChange }: SegmentedProps<T>) {
+export function Segmented<T extends string | number>({ options, value, onChange }: SegmentedProps<T>) {
   const c = useColors();
   return (
     <View accessibilityRole="radiogroup" style={[styles.track, { backgroundColor: c.elevated }]}>
@@ -19,14 +19,17 @@ export function Segmented<T extends string>({ options, value, onChange }: Segmen
         const selected = o.value === value;
         return (
           <Pressable
-            key={o.value}
+            key={String(o.value)}
             accessibilityRole="radio"
             accessibilityLabel={o.label}
             accessibilityState={{ checked: selected }}
             onPress={() => onChange(o.value)}
             style={[styles.segment, selected && { backgroundColor: c.elevated2 }]}
           >
-            <Text variant="label">{o.label}</Text>
+            {/* A long label wraps inside the segment rather than shrinking below Dynamic Type. */}
+            <Text variant="label" style={styles.label}>
+              {o.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -44,4 +47,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
   },
+  label: { textAlign: 'center' },
 });

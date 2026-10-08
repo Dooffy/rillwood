@@ -50,6 +50,7 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
     speed = 1,
     subtitleScale = 1,
     subtitleDelay = 0,
+    subtitleStyle,
     zoom = 'fit',
     aspect,
   } = props;
@@ -172,7 +173,7 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
   useEffect(() => {
     mounted.current = true;
   }, []);
-  // Speed, subtitle size, subtitle timing and zoom are mpv-wide (they survive a new load): applied on every change, the
+  // Speed, subtitle size, style, timing and zoom are mpv-wide (they survive a new load): applied on every change, the
   // first one included.
   useEffect(() => {
     view.current?.setSpeed(speed).catch(ignore);
@@ -180,6 +181,9 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
   useEffect(() => {
     view.current?.setSubtitleScale(textScale).catch(ignore);
   }, [textScale]);
+  useEffect(() => {
+    if (subtitleStyle) view.current?.setSubtitleStyle(subtitleStyle).catch(ignore);
+  }, [subtitleStyle]);
   useEffect(() => {
     view.current?.setSubtitleDelay(subtitleDelay).catch(ignore);
   }, [subtitleDelay]);
@@ -222,9 +226,10 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
       loadedFor.current = mine;
       fileDuration.current = duration;
       // Again per load: Android creates its renderer only now, so the calls from the effects above may have gone nowhere.
-      const { speed: s = 1, subtitleDelay: d = 0, zoom: z } = latest.current;
+      const { speed: s = 1, subtitleDelay: d = 0, subtitleStyle: st, zoom: z } = latest.current;
       player.setSpeed(s).catch(ignore);
       player.setSubtitleScale(latestTextScale.current).catch(ignore);
+      if (st) player.setSubtitleStyle(st).catch(ignore);
       player.setSubtitleDelay(d).catch(ignore);
       player.setZoomedToFill(z === 'fill').catch(ignore);
       // A pause made while this load started (autoplay was fixed at the source) still holds.

@@ -87,8 +87,9 @@ beforeEach(() => {
   request.mockImplementation(() => reply() as ReturnType<typeof api.getPlaybackInfo>);
   itemRequest.mockImplementation(() => Promise.resolve(movie) as Promise<never>);
   jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(false);
-  // Subtitle size and zoom are phone settings, kept in memory across tests.
+  // Subtitle size, style and zoom are phone settings, kept in memory across tests.
   settings.setSubtitleScale(1);
+  settings.setSubtitleStyle(settings.DEFAULT_SUBTITLE_STYLE);
   settings.setVideoZoom('fit');
 });
 // Reporting is tested on its own (src/player/useReporting.test.ts); here only that the screen drives it.
@@ -189,11 +190,11 @@ describe('Player screen', () => {
   it('a playback error with the tracks menu open: Retry plays without the menu', async () => {
     await renderPlaying();
     await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
-    expect(screen.getByText('Subtitle size')).toBeOnTheScreen();
+    expect(screen.getByText('Speed')).toBeOnTheScreen();
     await act(() => lastPlayer().onError?.('Failed to open'));
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
     await act(() => lastPlayer().onLoad?.({ duration: 9000, audio: [], subs: [] }));
-    expect(screen.queryByText('Subtitle size')).toBeNull();
+    expect(screen.queryByText('Speed')).toBeNull();
   });
 
   it('an empty / zero id never asks the server', async () => {
@@ -464,32 +465,30 @@ describe('Player screen', () => {
     expect(lastPlayer()).toMatchObject({ audioTrack: 1, subtitleTrack: -1, speed: 1, subtitleScale: 1.25 });
   });
 
-  it('subtitle size: a step larger in portrait, as chosen in landscape', async () => {
+  it('subtitle size: a step larger in portrait, as saved in landscape', async () => {
     const portrait = Dimensions.get('window');
     try {
+      settings.setSubtitleScale(1.25);
       await renderPlaying();
-      expect(lastPlayer().subtitleScale).toBe(1.25);
+      expect(lastPlayer().subtitleScale).toBe(1.5625);
       await act(() => Dimensions.set({ window: { ...portrait, width: portrait.height, height: portrait.width } }));
-      await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
-      await fireEvent.press(screen.getByText('Subtitle size'));
-      await fireEvent.press(screen.getByText('Large'));
       expect(lastPlayer().subtitleScale).toBe(1.25);
     } finally {
       await act(() => Dimensions.set({ window: portrait }));
     }
   });
 
-  it('subtitle size: starts with the saved size, a menu change saves it', async () => {
-    settings.setSubtitleScale(0.8);
+  it('subtitle size and style follow Settings, also while playing; the menu has no size', async () => {
     await renderPlaying();
-    // Portrait: a step larger than the saved Small.
-    expect(lastPlayer().subtitleScale).toBe(1);
-    await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
-    expect(screen.getByText('Small')).toBeOnTheScreen(); // Subtitle size row
-    await fireEvent.press(screen.getByText('Subtitle size'));
-    await fireEvent.press(screen.getByText('Extra large'));
-    expect(settings.getSubtitleScale()).toBe(1.5);
+    expect(lastPlayer().subtitleStyle).toEqual({ font: 'sans-serif', color: '#FFFFFF', edge: 'outline' });
+    await act(() => {
+      settings.setSubtitleScale(1.5);
+      settings.setSubtitleStyle({ color: '#FFEB3B', edge: 'box' });
+    });
     expect(lastPlayer().subtitleScale).toBe(1.875);
+    expect(lastPlayer().subtitleStyle).toEqual({ font: 'sans-serif', color: '#FFEB3B', edge: 'box' });
+    await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
+    expect(screen.queryByText('Subtitle size')).toBeNull();
   });
 
   const pinchTo = (scale: number) =>

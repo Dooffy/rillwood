@@ -60,7 +60,7 @@ import { Player, type PlayerRef, type VideoZoom } from '@/player/Player';
 import { createProgress } from '@/player/progress';
 import { useReporting } from '@/player/useReporting';
 import { connectionFor, getSession, useSession } from '@/session';
-import { setVideoZoom, useSubtitleScale, useVideoZoom } from '@/settings';
+import { setVideoZoom, useSubtitleScale, useSubtitleStyle, useVideoZoom } from '@/settings';
 import { ColorsContext, palettes, radii, spacing } from '@/theme';
 import { useDebounced } from '@/useDebounced';
 import { useFetch } from '@/useFetch';
@@ -100,10 +100,11 @@ export default function PlayerScreen() {
   const [scrubbing, setScrubbing] = useState(false);
   // Tracks menu page (null = closed) and the choices made in it; until a choice, the server's defaults. Choices outlive
   // a Retry (same item); speed applies to whatever plays, subtitle timing only to this item and subtitle track (each file
-  // is off by its own amount). Subtitle size is remembered on the phone.
+  // is off by its own amount). Subtitle size and style are phone settings (Settings → Subtitles).
   const [menu, setMenu] = useState<TracksPage | null>(null);
   const [choice, setChoice] = useState<Choice>({ picks: {} });
   const subtitleScale = useSubtitleScale();
+  const subtitleStyle = useSubtitleStyle();
   // Fit or fill, remembered on the phone; only landscape zooms (a filled portrait screen would crop most of the picture).
   const zoomSetting = useVideoZoom();
   const landscape = width > height;
@@ -385,6 +386,7 @@ export default function PlayerScreen() {
                   subtitleTrack={subtitleTrack?.id ?? -1}
                   speed={tracks.speed}
                   subtitleScale={subtitleScaleFor(subtitleScale, !landscape)}
+                  subtitleStyle={subtitleStyle}
                   subtitleDelay={tracks.subtitleDelay}
                   zoom={zoom}
                   aspect={state.play.aspect}
