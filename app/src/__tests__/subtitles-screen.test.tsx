@@ -1,76 +1,50 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { beforeEach, describe, expect, it } from '@jest/globals';
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Storage } from 'expo-sqlite/kv-store';
-import { StyleSheet } from 'react-native';
 
 import Subtitles from '@/app/subtitles';
-import {
-  DEFAULT_SUBTITLE_STYLE,
-  getSubtitleScale,
-  getSubtitleStyle,
-  setSubtitleScale,
-  setSubtitleStyle,
-} from '@/settings';
+import { DEFAULT_SUBTITLE_STYLE, setSubtitleSample, setSubtitleScale, setSubtitleStyle } from '@/settings';
 
-const previewText = (text: RegExp = /Subtitles look like this/) =>
-  StyleSheet.flatten(screen.getByText(text).props.style);
+jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 
-/** The preview only draws its text once it knows its height. */
-async function renderLaidOut() {
-  await render(<Subtitles />);
-  await fireEvent(screen.getByTestId('subtitle-preview'), 'layout', {
-    nativeEvent: { layout: { x: 0, y: 0, width: 320, height: 180 } },
-  });
-}
+const { router } = jest.requireMock<{ router: { push: jest.Mock } }>('expo-router');
+
+const row = (name: string) => screen.getByRole('button', { name });
 
 describe('Subtitles screen', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     Storage.clearSync();
     setSubtitleScale(1);
     setSubtitleStyle(DEFAULT_SUBTITLE_STYLE);
+    setSubtitleSample('en');
   });
 
-  it('shows the saved choices', async () => {
+  it('shows the preview and each option with its saved value', async () => {
     setSubtitleScale(1.5);
     setSubtitleStyle({ font: 'serif', color: '#4DD0E1', edge: 'shadow' });
-    await renderLaidOut();
-    expect(screen.getByRole('radio', { name: 'Extra large' })).toBeChecked();
-    expect(screen.getByRole('radio', { name: 'Serif' })).toBeChecked();
-    expect(screen.getByRole('radio', { name: 'Cyan' })).toBeChecked();
-    expect(screen.getByRole('radio', { name: 'Shadow' })).toBeChecked();
-    expect(screen.getByRole('radio', { name: 'White' })).not.toBeChecked();
+    setSubtitleSample('ja');
+    await render(<Subtitles />);
+    expect(screen.getByTestId('subtitle-preview')).toBeOnTheScreen();
+    expect(row('Size')).toHaveAccessibilityValue({ text: 'Extra large' });
+    expect(row('Font')).toHaveAccessibilityValue({ text: 'Serif' });
+    expect(row('Colour')).toHaveAccessibilityValue({ text: 'Cyan' });
+    expect(row('Edge')).toHaveAccessibilityValue({ text: 'Shadow' });
+    expect(row('Preview text')).toHaveAccessibilityValue({ text: '日本語' });
   });
 
-  it('saves each change and shows it in the preview', async () => {
-    await renderLaidOut();
-    // mpv's 55 at 720 px, on a 180 pt tall preview.
-    expect(previewText()).toMatchObject({ fontSize: 13.75, color: '#FFFFFF' });
-
-    await fireEvent.press(screen.getByRole('radio', { name: 'Large' }));
-    await fireEvent.press(screen.getByRole('radio', { name: 'Mono' }));
-    await fireEvent.press(screen.getByRole('radio', { name: 'Yellow' }));
-    await fireEvent.press(screen.getByRole('radio', { name: 'Box' }));
-
-    expect(getSubtitleScale()).toBe(1.25);
-    expect(getSubtitleStyle()).toEqual({ font: 'monospace', color: '#FFEB3B', edge: 'box' });
-    expect(previewText()).toMatchObject({ fontSize: 17.1875, color: '#FFEB3B' });
-    expect(screen.getByRole('radio', { name: 'Box' })).toBeChecked();
-  });
-
-  it('previews other scripts without saving them; iOS uses the bundled face for that script', async () => {
-    setSubtitleStyle({ font: 'serif' });
-    await renderLaidOut();
-    expect(previewText()).toMatchObject({ fontFamily: 'NotoSerif-Regular' });
-    await fireEvent.press(screen.getByRole('button', { name: '日本語' }));
-    expect(screen.getByRole('button', { name: '日本語' })).toBeSelected();
-    expect(previewText(/字幕はこのように/)).toMatchObject({ fontFamily: 'NotoSansCJKsc-Regular' });
-    await fireEvent.press(screen.getByRole('button', { name: 'العربية' }));
-    expect(previewText(/هكذا تبدو الترجمة/)).toMatchObject({
-      fontFamily: 'NotoSansArabic-Regular',
-      writingDirection: 'rtl',
-    });
-    // Style choices still apply to the sample; the language isn't a setting.
-    expect(getSubtitleStyle()).toEqual({ font: 'serif', color: '#FFFFFF', edge: 'outline' });
+  it('opens each option list', async () => {
+    await render(<Subtitles />);
+    for (const [name, key] of [
+      ['Size', 'subtitle-size'],
+      ['Font', 'subtitle-font'],
+      ['Colour', 'subtitle-colour'],
+      ['Edge', 'subtitle-edge'],
+      ['Preview text', 'subtitle-sample'],
+    ]) {
+      await fireEvent.press(row(name));
+      expect(router.push).toHaveBeenLastCalledWith({ pathname: '/option/[key]', params: { key } });
+    }
   });
 });

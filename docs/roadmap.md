@@ -91,7 +91,7 @@ Before M5: every screen handles no data and failure the same way.
 - [ ] Error handling on every screen that loads (Home, Library, item + series detail, player, Settings / account, auth screens): error `Message` + Retry, no blank or stuck-spinner screens; 401 / offline per `docs/context/api.md`
 - [ ] Loading: skeletons / placeholders instead of a bare spinner where layout is known (detail + series load with a spinner today)
 - [ ] Render tests per screen for the empty and error paths
-- [ ] Settings pickers rethink (after the subtitle appearance task): the segmented controls for Appearance (System / Dark / Light) and Settings → Subtitles (size, font, edge) don't feel right. Review every option picker in Settings (incl. colour swatches, sample-language chips) and pick one pattern: e.g. a row with the value that opens a native menu or a list with checkmarks (iOS Settings style), segmented only for 2-3 short options, or the `ActionSheet` the player menu uses. Same pattern on every picker; mock up options before building
+- [x] Settings pickers rethink: iOS Settings value rows (`OptionRow`) that open a checkmark list (`/option/[key]`, `src/pickers.ts`); Appearance + every subtitle option incl. preview language; subtitle lists keep the preview on top; `ColorSwatches` and the sample chips removed, `Segmented` no longer used in Settings. Download rows move to the same pattern in M5 / M6
 
 ## M5 - Downloads
 

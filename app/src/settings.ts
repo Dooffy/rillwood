@@ -2,7 +2,7 @@
 // User settings in kv-store (CLAUDE.md §2). Read once (sync) on first use, then served from memory.
 import { Storage } from 'expo-sqlite/kv-store';
 import { useSyncExternalStore } from 'react';
-import { Appearance as RNAppearance } from 'react-native';
+import { Platform, Appearance as RNAppearance } from 'react-native';
 
 import type { SubtitleEdge, SubtitleFont, SubtitleStyle, VideoZoom } from '@/player/Player';
 
@@ -46,6 +46,30 @@ export const SUBTITLE_EDGES = [
   { value: 'box', label: 'Box' },
 ] as const satisfies readonly { value: SubtitleEdge; label: string }[];
 
+// The faces the player uses: bundled Noto on iOS (`app.json`), system families on Android.
+const FAMILIES: Record<SubtitleFont, string> = Platform.select({
+  ios: { 'sans-serif': 'NotoSans-Regular', serif: 'NotoSerif-Regular', monospace: 'NotoSansMono-Regular' },
+  default: { 'sans-serif': 'sans-serif', serif: 'serif', monospace: 'monospace' },
+});
+
+/** Sample lines per language. `face`: the bundled iOS font libass falls back to for that script (no Serif / Mono). */
+export const SUBTITLE_SAMPLES = [
+  { value: 'en', label: 'English', text: 'Subtitles look like this,\non every video.' },
+  { value: 'es', label: 'Español', text: 'Así se ven los subtítulos\nen cada vídeo.' },
+  { value: 'de', label: 'Deutsch', text: 'So sehen Untertitel aus,\nin jedem Video.' },
+  { value: 'fr', label: 'Français', text: 'Voici à quoi ressemblent\nles sous-titres.' },
+  { value: 'uk', label: 'Українська', text: 'Так виглядають субтитри\nу кожному відео.' },
+  { value: 'ar', label: 'العربية', text: 'هكذا تبدو الترجمة\nفي كل فيديو.', face: 'NotoSansArabic-Regular', rtl: true },
+  { value: 'he', label: 'עברית', text: 'כך נראות הכתוביות\nבכל סרטון.', face: 'NotoSansHebrew-Regular', rtl: true },
+  { value: 'zh', label: '中文', text: '字幕看起来是这样的，\n每个视频都一样。', face: 'NotoSansCJKsc-Regular' },
+  { value: 'ja', label: '日本語', text: '字幕はこのように\n表示されます。', face: 'NotoSansCJKsc-Regular' },
+  { value: 'ko', label: '한국어', text: '자막은 이렇게\n표시됩니다.', face: 'NotoSansCJKsc-Regular' },
+] as const satisfies readonly { value: string; label: string; text: string; face?: string; rtl?: boolean }[];
+
+export type SubtitleSample = (typeof SUBTITLE_SAMPLES)[number]['value'];
+/** Font family that draws a subtitle typeface as the player does (option labels, preview). */
+export const subtitleFontFamily = (font: SubtitleFont) => FAMILIES[font];
+
 export const DEFAULT_SUBTITLE_STYLE: SubtitleStyle = { font: 'sans-serif', color: '#FFFFFF', edge: 'outline' };
 
 const APPEARANCE_KEY = 'settings.appearance';
@@ -57,6 +81,8 @@ let appearance: Appearance | undefined;
 let subtitleScale: SubtitleScale | undefined;
 let subtitleStyle: SubtitleStyle | undefined;
 let videoZoom: VideoZoom | undefined;
+// Preview only, for this session: not saved.
+let subtitleSample: SubtitleSample = 'en';
 const listeners = new Set<() => void>();
 
 export function getAppearance(): Appearance {
@@ -74,13 +100,14 @@ export function setAppearance(value: Appearance): void {
   listeners.forEach((l) => l());
 }
 
-function subscribe(listener: () => void) {
+/** Every setting change; for `useSyncExternalStore` over any getter here (option pickers). */
+export function subscribeSettings(listener: () => void) {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
 
 export function useAppearance(): Appearance {
-  return useSyncExternalStore(subscribe, getAppearance);
+  return useSyncExternalStore(subscribeSettings, getAppearance);
 }
 
 export function getSubtitleScale(): SubtitleScale {
@@ -98,7 +125,7 @@ export function setSubtitleScale(value: SubtitleScale): void {
 }
 
 export function useSubtitleScale(): SubtitleScale {
-  return useSyncExternalStore(subscribe, getSubtitleScale);
+  return useSyncExternalStore(subscribeSettings, getSubtitleScale);
 }
 
 /** Saved style; each part falls back to its default on its own (unknown or missing value). */
@@ -130,7 +157,21 @@ export function setSubtitleStyle(change: Partial<SubtitleStyle>): void {
 }
 
 export function useSubtitleStyle(): SubtitleStyle {
-  return useSyncExternalStore(subscribe, getSubtitleStyle);
+  return useSyncExternalStore(subscribeSettings, getSubtitleStyle);
+}
+
+/** Language of the subtitle preview's sample lines (Settings → Subtitles). In memory, not saved. */
+export function getSubtitleSample(): SubtitleSample {
+  return subtitleSample;
+}
+
+export function setSubtitleSample(value: SubtitleSample): void {
+  subtitleSample = value;
+  listeners.forEach((l) => l());
+}
+
+export function useSubtitleSample(): SubtitleSample {
+  return useSyncExternalStore(subscribeSettings, getSubtitleSample);
 }
 
 // Player video zoom in landscape, same for every account.
@@ -148,7 +189,7 @@ export function setVideoZoom(value: VideoZoom): void {
 }
 
 export function useVideoZoom(): VideoZoom {
-  return useSyncExternalStore(subscribe, getVideoZoom);
+  return useSyncExternalStore(subscribeSettings, getVideoZoom);
 }
 
 /**

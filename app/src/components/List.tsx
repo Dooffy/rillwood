@@ -7,8 +7,8 @@ import { minTouch, radii, spacing, useColors } from '@/theme';
 
 import { Text } from './Text';
 
-/** Grouped list section (settings-style): caption title + rounded surface with hairline separators. */
-export function ListSection({ title, children }: { title?: string; children: ReactNode }) {
+/** Grouped list section (settings-style): caption title + rounded surface with hairline separators + caption footer. */
+export function ListSection({ title, footer, children }: { title?: string; footer?: string; children: ReactNode }) {
   const c = useColors();
   const rows = Children.toArray(children);
   return (
@@ -25,6 +25,11 @@ export function ListSection({ title, children }: { title?: string; children: Rea
           </View>
         ))}
       </View>
+      {footer && (
+        <Text variant="caption" secondary style={styles.title}>
+          {footer}
+        </Text>
+      )}
     </View>
   );
 }
@@ -35,16 +40,30 @@ export function Chevron() {
   return <SymbolView name={{ ios: 'chevron.right', android: 'chevron_right' }} tintColor={c.iconInactive} size={14} />;
 }
 
+/** Checkmark on the picked option (option lists, action sheets). */
+export function Checkmark() {
+  const c = useColors();
+  return <SymbolView name={{ ios: 'checkmark', android: 'check' }} tintColor={c.text} size={16} />;
+}
+
+/** Colour dot for a colour preset. */
+export function Swatch({ color }: { color: string }) {
+  const c = useColors();
+  return <View style={[styles.swatch, { backgroundColor: color, borderColor: c.separator }]} />;
+}
+
 export type ListRowProps = {
   label: string;
   value?: string;
   /** Status dot before the value: `active` → green dot + primary text, `muted` → grey dot. */
   dot?: 'active' | 'muted';
+  /** Colour dot before the value (a colour preset). */
+  swatch?: string;
   onPress?: () => void;
 };
 
 /** Tappable rows get a chevron; rows without `onPress` show a read-only value. */
-export function ListRow({ label, value, dot, onPress }: ListRowProps) {
+export function ListRow({ label, value, dot, swatch, onPress }: ListRowProps) {
   const c = useColors();
   const content = (
     <>
@@ -52,6 +71,7 @@ export function ListRow({ label, value, dot, onPress }: ListRowProps) {
       {value !== undefined && (
         <View style={styles.value}>
           {dot && <View style={[styles.dot, { backgroundColor: dot === 'active' ? c.success : c.elevated2 }]} />}
+          {swatch && <Swatch color={swatch} />}
           <Text secondary={dot !== 'active'} numberOfLines={1} style={styles.valueText}>
             {value}
           </Text>
@@ -93,4 +113,5 @@ const styles = StyleSheet.create({
   value: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2, flexShrink: 1 },
   valueText: { flexShrink: 1 },
   dot: { width: 8, height: 8, borderRadius: radii.pill },
+  swatch: { width: 16, height: 16, borderRadius: radii.pill, borderWidth: StyleSheet.hairlineWidth },
 });

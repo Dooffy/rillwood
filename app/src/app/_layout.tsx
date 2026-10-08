@@ -9,6 +9,7 @@ import { useColorScheme } from 'react-native';
 import { ItemMenuProvider } from '@/components/ItemMenu';
 import { ToastProvider } from '@/components/Toast';
 import { SignedOutRedirect, tabsTitle } from '@/navigation';
+import { pickerTitle } from '@/pickers';
 import { applyNativeAppearance, useAppearance } from '@/settings';
 import { ColorsContext, palettes, resolveScheme } from '@/theme';
 
@@ -69,6 +70,19 @@ export default function RootLayout() {
             <Stack.Screen name="series/[id]" options={detailOptions} />
             <Stack.Screen name="settings" options={pages.settings} />
             <Stack.Screen name="subtitles" options={pages.subtitles} />
+            {/* An option's checkmark list: a plain title, as iOS Settings subscreens. */}
+            <Stack.Screen
+              name="option/[key]"
+              options={({ route }) => ({
+                headerShown: true,
+                title: pickerTitle(route.params),
+                // A plain title bar takes the system's own background otherwise (white in the dark palette); large titles
+                // are see-through over the page, so only this screen sets it.
+                headerStyle: { backgroundColor: c.background },
+                headerTitleStyle: { color: c.text },
+                headerShadowVisible: false,
+              })}
+            />
             <Stack.Screen
               name="player"
               options={{

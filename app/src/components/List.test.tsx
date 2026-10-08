@@ -18,6 +18,12 @@ describe('List', () => {
     expect(screen.getByText('Wi-Fi only')).toBeOnTheScreen();
   });
 
+  it('shows a colour dot before the value', async () => {
+    await render(<ListRow label="Colour" value="Yellow" swatch="#FFEB3B" onPress={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Colour' })).toHaveAccessibilityValue({ text: 'Yellow' });
+    expect(JSON.stringify(screen.toJSON())).toContain('#FFEB3B');
+  });
+
   it('makes rows with onPress tappable buttons', async () => {
     const onPress = jest.fn();
     await render(<ListRow label="Accounts" onPress={onPress} />);

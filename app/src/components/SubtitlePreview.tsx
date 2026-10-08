@@ -1,38 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Live preview of the subtitle style (Settings → Subtitles): a 16:9 stand-in picture with two lines of text, sized as
+// Live preview of the saved subtitle style (Settings → Subtitles and its option lists): a 16:9 stand-in picture with two lines of text, sized as
 // mpv sizes them (`sub-font-size` 55 at a 720 px tall picture, times the scale). Outline and shadow are approximations -
-// React Native draws one text shadow. A sample language shows how other scripts render (preview only, not saved).
+// React Native draws one text shadow. The sample language shows how other scripts render (preview only, not saved).
 import { useState } from 'react';
 import { Platform, Text, View, StyleSheet, type TextStyle } from 'react-native';
 
-import type { SubtitleFont, SubtitleStyle } from '@/player/Player';
+import type { SubtitleStyle } from '@/player/Player';
+import {
+  SUBTITLE_SAMPLES,
+  subtitleFontFamily,
+  useSubtitleSample,
+  useSubtitleScale,
+  useSubtitleStyle,
+} from '@/settings';
 import { radii, spacing, subtitleEdge, subtitlePreviewScene } from '@/theme';
 
 // mpv's default `sub-font-size` and the picture height it is relative to.
 const MPV_FONT_SIZE = 55;
 const MPV_HEIGHT = 720;
-
-// The faces the player uses: bundled Noto on iOS (`app.json`), system families on Android.
-const FAMILIES: Record<SubtitleFont, string> = Platform.select({
-  ios: { 'sans-serif': 'NotoSans-Regular', serif: 'NotoSerif-Regular', monospace: 'NotoSansMono-Regular' },
-  default: { 'sans-serif': 'sans-serif', serif: 'serif', monospace: 'monospace' },
-});
-
-/** Sample lines per language. `face`: the bundled iOS font libass falls back to for that script (no Serif / Mono). */
-export const SUBTITLE_SAMPLES = [
-  { value: 'en', label: 'English', text: 'Subtitles look like this,\non every video.' },
-  { value: 'es', label: 'Español', text: 'Así se ven los subtítulos\nen cada vídeo.' },
-  { value: 'de', label: 'Deutsch', text: 'So sehen Untertitel aus,\nin jedem Video.' },
-  { value: 'fr', label: 'Français', text: 'Voici à quoi ressemblent\nles sous-titres.' },
-  { value: 'uk', label: 'Українська', text: 'Так виглядають субтитри\nу кожному відео.' },
-  { value: 'ar', label: 'العربية', text: 'هكذا تبدو الترجمة\nفي كل فيديو.', face: 'NotoSansArabic-Regular', rtl: true },
-  { value: 'he', label: 'עברית', text: 'כך נראות הכתוביות\nבכל סרטון.', face: 'NotoSansHebrew-Regular', rtl: true },
-  { value: 'zh', label: '中文', text: '字幕看起来是这样的，\n每个视频都一样。', face: 'NotoSansCJKsc-Regular' },
-  { value: 'ja', label: '日本語', text: '字幕はこのように\n表示されます。', face: 'NotoSansCJKsc-Regular' },
-  { value: 'ko', label: '한국어', text: '자막은 이렇게\n표시됩니다.', face: 'NotoSansCJKsc-Regular' },
-] as const satisfies readonly { value: string; label: string; text: string; face?: string; rtl?: boolean }[];
-
-export type SubtitleSample = (typeof SUBTITLE_SAMPLES)[number]['value'];
 
 const EDGES: Record<SubtitleStyle['edge'], TextStyle> = {
   outline: { textShadowColor: subtitleEdge.outline, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 3 },
@@ -40,20 +25,15 @@ const EDGES: Record<SubtitleStyle['edge'], TextStyle> = {
   box: {},
 };
 
-export function SubtitlePreview({
-  style,
-  scale,
-  sample,
-}: {
-  style: SubtitleStyle;
-  scale: number;
-  sample: SubtitleSample;
-}) {
+export function SubtitlePreview() {
+  const style = useSubtitleStyle();
+  const scale = useSubtitleScale();
+  const sample = useSubtitleSample();
   const [height, setHeight] = useState(0);
   const fontSize = (height * MPV_FONT_SIZE * scale) / MPV_HEIGHT;
   const lines: { text: string; face?: string; rtl?: boolean } =
     SUBTITLE_SAMPLES.find((s) => s.value === sample) ?? SUBTITLE_SAMPLES[0];
-  const family = (Platform.OS === 'ios' && lines.face) || FAMILIES[style.font];
+  const family = (Platform.OS === 'ios' && lines.face) || subtitleFontFamily(style.font);
   return (
     <View
       testID="subtitle-preview"
