@@ -581,6 +581,31 @@ describe('Player screen', () => {
       jest.useRealTimers();
     }
   });
+  it('subtitle timing: only while subtitles are on, goes to the player', async () => {
+    await renderPlaying();
+    await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
+    expect(screen.queryByText('Subtitle timing')).toBeNull();
+    await fireEvent.press(screen.getByText('Subtitles'));
+    await fireEvent.press(screen.getByText('German - SRT'));
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
+    expect(screen.getByRole('menuitem', { name: 'Subtitle timing, In sync' })).toBeOnTheScreen();
+    await fireEvent.press(screen.getByText('Subtitle timing'));
+    // Applied as it changes; the sheet stays open until Done.
+    await fireEvent.press(screen.getByRole('button', { name: '0.1 s earlier' }));
+    await fireEvent.press(screen.getByRole('button', { name: '0.1 s earlier' }));
+    expect(lastPlayer().subtitleDelay).toBe(-0.2);
+    expect(screen.getByText('0.2 s earlier')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Done' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
+    expect(screen.getByRole('menuitem', { name: 'Subtitle timing, 0.2 s earlier' })).toBeOnTheScreen();
+
+    // Another subtitle track (here: off and back) is another file's timing - back in sync.
+    await fireEvent.press(screen.getByText('Subtitles'));
+    await fireEvent.press(screen.getByText('Off'));
+    expect(lastPlayer().subtitleDelay).toBe(0);
+  });
+
   describe('tracks the engine really has', () => {
     const SIDECAR = `https://jf.example.com/Videos/${ID}/ms/Subtitles/2/Stream.srt`;
     const audio = [{ id: 1, lang: 'eng' }];
@@ -660,7 +685,7 @@ describe('Up Next', () => {
   it('shows in the last 30 s with the countdown, then the end plays the next episode in the same player', async () => {
     const { rerender } = await playAt(1300);
     expect(screen.queryByText('S1, E2 · Second')).toBeNull();
-    // Speed stays for the next episode; a subtitle pick carries by its language (same file layout here).
+    // Speed stays for the next episode; a subtitle pick carries by its language (same file layout here); timing doesn't.
     await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
     await fireEvent.press(screen.getByText('Speed'));
     await fireEvent.press(screen.getByText('1.5×'));
@@ -668,6 +693,12 @@ describe('Up Next', () => {
     await fireEvent.press(screen.getByText('Subtitles'));
     await fireEvent.press(screen.getByText('German - SRT'));
     expect(lastPlayer().subtitleTrack).toBe(1);
+    // Subtitle timing is this file's: the next one starts in sync.
+    await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
+    await fireEvent.press(screen.getByText('Subtitle timing'));
+    await fireEvent.press(screen.getByRole('button', { name: '0.1 s later' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Done' }));
+    expect(lastPlayer().subtitleDelay).toBe(0.1);
 
     await act(() => lastPlayer().onProgress?.({ position: 1388.2, duration: 1400 }));
     expect(screen.getByText('S1, E2 · Second')).toBeOnTheScreen();
@@ -685,7 +716,13 @@ describe('Up Next', () => {
     );
     expect(request).toHaveBeenLastCalledWith(expect.anything(), EP2, expect.anything(), expect.any(AbortSignal));
     await act(async () => {});
-    expect(lastPlayer()).toMatchObject({ startSeconds: 0, paused: false, speed: 1.5, subtitleTrack: 1 });
+    expect(lastPlayer()).toMatchObject({
+      startSeconds: 0,
+      paused: false,
+      speed: 1.5,
+      subtitleTrack: 1,
+      subtitleDelay: 0,
+    });
     expect(screen.queryByText('S1, E2 · Second')).toBeNull();
   });
 

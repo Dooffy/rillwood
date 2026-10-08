@@ -2,6 +2,9 @@
 import { describe, expect, it } from '@jest/globals';
 
 import {
+  clampDelay,
+  delayAt,
+  delayFraction,
   positionAt,
   seekTarget,
   shouldClose,
@@ -104,5 +107,36 @@ describe('videoFrame', () => {
 
   it('fill: edge to edge', () => {
     expect(videoFrame(landscape, true, 'fill')).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
+  });
+});
+
+describe('clampDelay', () => {
+  it('snaps to 0.1 s without float drift, inside ±10 s', () => {
+    expect(clampDelay(0.1 + 0.2)).toBe(0.3);
+    expect(clampDelay(1.26)).toBe(1.3);
+    expect(clampDelay(-0.04)).toBe(0);
+    expect(Object.is(clampDelay(-0.04), -0)).toBe(false);
+    expect(clampDelay(12)).toBe(10);
+    expect(clampDelay(-10.1)).toBe(-10);
+  });
+});
+
+describe('delayAt', () => {
+  it('middle = in sync, left edge = 10 s earlier, right edge = 10 s later', () => {
+    expect(delayAt(150, 300)).toBe(0);
+    expect(delayAt(0, 300)).toBe(-10);
+    expect(delayAt(300, 300)).toBe(10);
+    expect(delayAt(225, 300)).toBe(5);
+    expect(delayAt(-20, 300)).toBe(-10);
+    expect(delayAt(40, 0)).toBe(0);
+  });
+});
+
+describe('delayFraction', () => {
+  it('in sync in the middle, the range ends at the edges, clamped past them', () => {
+    expect(delayFraction(0)).toBe(0.5);
+    expect(delayFraction(-10)).toBe(0);
+    expect(delayFraction(5)).toBe(0.75);
+    expect(delayFraction(20)).toBe(1);
   });
 });

@@ -3,6 +3,7 @@ import { describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 
 import { ActionSheet } from './ActionSheet';
+import { Text } from './Text';
 
 describe('ActionSheet', () => {
   it('shows the title and actions; a pick closes the sheet, then runs once it is gone', async () => {
@@ -28,6 +29,20 @@ describe('ActionSheet', () => {
     expect(onPick).not.toHaveBeenCalled();
     await rerender(sheet(false));
     expect(onPick).toHaveBeenCalledTimes(1);
+  });
+
+  it('content over the actions, with its own close label', async () => {
+    const onClose = jest.fn();
+    await render(
+      <ActionSheet visible title="Subtitle timing" closeLabel="Done" onClose={onClose}>
+        <Text>Slider</Text>
+      </ActionSheet>,
+    );
+    expect(screen.getByText('Slider')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Done' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    expect(screen.queryByTestId('action-sheet-list')).toBeNull();
   });
 
   it('closes on Cancel and on the backdrop', async () => {

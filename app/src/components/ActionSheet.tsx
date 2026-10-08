@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { SymbolView } from 'expo-symbols';
-import { useRef } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -26,12 +26,26 @@ export type ActionSheetProps = {
   visible: boolean;
   /** Small heading over the actions: "S2, E3 · Pilot". */
   title?: string;
-  actions: SheetAction[];
+  actions?: SheetAction[];
+  /** Content over the actions (a control that applies as it changes, rather than a pick). */
+  children?: ReactNode;
+  /** The bottom button: "Cancel" by default, "Done" for a sheet whose content applies as it changes. */
+  closeLabel?: string;
   onClose: () => void;
 };
 
-/** Bottom sheet of actions + Cancel (iOS action sheet look, both platforms). Picking an action closes it first. */
-export function ActionSheet({ visible, title, actions, onClose }: ActionSheetProps) {
+/**
+ * Bottom sheet of optional content, actions + Cancel (or `closeLabel`) - iOS action sheet look, both platforms. Picking an
+ * action closes it first.
+ */
+export function ActionSheet({
+  visible,
+  title,
+  actions = [],
+  children,
+  closeLabel = 'Cancel',
+  onClose,
+}: ActionSheetProps) {
   const c = useColors();
   const insets = useSafeAreaInsets();
   // iOS can't present another screen (the player is a full-screen modal) while this one is still closing: the picked
@@ -79,39 +93,42 @@ export function ActionSheet({ visible, title, actions, onClose }: ActionSheetPro
               {title}
             </Text>
           )}
-          <ScrollView testID="action-sheet-list" alwaysBounceVertical={false}>
-            {actions.map((action, i) => (
-              <Pressable
-                // Labels can repeat (two tracks named alike).
-                key={`${i}-${action.label}`}
-                accessibilityRole="menuitem"
-                accessibilityLabel={action.detail ? `${action.label}, ${action.detail}` : action.label}
-                accessibilityState={action.selected === undefined ? undefined : { selected: action.selected }}
-                onPress={() => pick(action)}
-                style={({ pressed }) => [
-                  styles.action,
-                  (i > 0 || title !== undefined) && [styles.divider, { borderTopColor: c.separator }],
-                  pressed && { backgroundColor: c.elevated2 },
-                ]}
-              >
-                <View style={styles.check}>
-                  {action.selected && (
-                    <SymbolView name={{ ios: 'checkmark', android: 'check' }} tintColor={c.text} size={16} />
-                  )}
-                </View>
-                <View style={styles.labels}>
-                  <Text>{action.label}</Text>
-                  {action.detail !== undefined && (
-                    <Text variant="caption" secondary>
-                      {action.detail}
-                    </Text>
-                  )}
-                </View>
-                {/* Same width as the checkmark column, so labels stay centred. */}
-                <View style={styles.check} />
-              </Pressable>
-            ))}
-          </ScrollView>
+          {children}
+          {actions.length > 0 && (
+            <ScrollView testID="action-sheet-list" alwaysBounceVertical={false}>
+              {actions.map((action, i) => (
+                <Pressable
+                  // Labels can repeat (two tracks named alike).
+                  key={`${i}-${action.label}`}
+                  accessibilityRole="menuitem"
+                  accessibilityLabel={action.detail ? `${action.label}, ${action.detail}` : action.label}
+                  accessibilityState={action.selected === undefined ? undefined : { selected: action.selected }}
+                  onPress={() => pick(action)}
+                  style={({ pressed }) => [
+                    styles.action,
+                    (i > 0 || title !== undefined) && [styles.divider, { borderTopColor: c.separator }],
+                    pressed && { backgroundColor: c.elevated2 },
+                  ]}
+                >
+                  <View style={styles.check}>
+                    {action.selected && (
+                      <SymbolView name={{ ios: 'checkmark', android: 'check' }} tintColor={c.text} size={16} />
+                    )}
+                  </View>
+                  <View style={styles.labels}>
+                    <Text>{action.label}</Text>
+                    {action.detail !== undefined && (
+                      <Text variant="caption" secondary>
+                        {action.detail}
+                      </Text>
+                    )}
+                  </View>
+                  {/* Same width as the checkmark column, so labels stay centred. */}
+                  <View style={styles.check} />
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
         </View>
         <Pressable
           accessibilityRole="button"
@@ -123,7 +140,7 @@ export function ActionSheet({ visible, title, actions, onClose }: ActionSheetPro
             { backgroundColor: pressed ? c.elevated2 : c.elevated },
           ]}
         >
-          <Text variant="button">Cancel</Text>
+          <Text variant="button">{closeLabel}</Text>
         </Pressable>
       </View>
     </Modal>

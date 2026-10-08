@@ -1,16 +1,26 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Player tracks menu on the shared ActionSheet: a main page (audio, subtitles, speed, subtitle size with their current
-// value) that opens one list per setting. The screen owns the page so a pick can close one sheet and open the next.
+// value) that opens one list per setting (subtitle timing: a slider, only while subtitles are on). The screen owns the
+// page so a pick can close one sheet and open the next.
+import type { ReactNode } from 'react';
+
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
+import { TimingSlider } from '@/components/TimingSlider';
+import { formatDelay } from '@/format';
 import type { TrackChoice, TrackOption } from '@/playback';
 import { setSubtitleScale, SUBTITLE_SIZES, useSubtitleScale } from '@/settings';
 
-export type TracksPage = 'main' | 'audio' | 'subtitles' | 'speed' | 'size';
+export type TracksPage = 'main' | 'audio' | 'subtitles' | 'speed' | 'size' | 'timing';
 
 // Choices for this screen. Subtitle size is a phone setting (`src/settings.ts`): the size page reads and saves it.
 export type TracksValue = TrackChoice & {
   speed: number;
+  /** Subtitle timing in seconds (mpv `sub-delay`): negative = earlier, positive = later. */
+  subtitleDelay: number;
 };
+
+// A list of actions, or a control with Done (`closeLabel`) for one that applies as it changes.
+type Page = { title: string; actions?: SheetAction[]; content?: ReactNode; closeLabel?: string };
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
@@ -43,7 +53,7 @@ export function TracksMenu({
       onPress: () => onChange({ [key]: t.index }),
     }));
 
-  const pages: Record<TracksPage, { title: string; actions: SheetAction[] }> = {
+  const pages: Record<TracksPage, Page> = {
     main: {
       title: 'Audio and subtitles',
       actions: [
@@ -57,6 +67,9 @@ export function TracksMenu({
         },
         { label: 'Speed', detail: speedLabel(value.speed), onPress: () => onPage('speed') },
         { label: 'Subtitle size', detail: size, onPress: () => onPage('size') },
+        ...(value.subtitle !== -1
+          ? [{ label: 'Subtitle timing', detail: formatDelay(value.subtitleDelay), onPress: () => onPage('timing') }]
+          : []),
       ],
     },
     audio: { title: 'Audio', actions: pick(audio, value.audio, 'audio') },
@@ -77,9 +90,23 @@ export function TracksMenu({
         onPress: () => setSubtitleScale(o.value),
       })),
     },
+    // A slider instead of a list: applied as it changes, the sheet closes with Done.
+    timing: {
+      title: 'Subtitle timing',
+      content: <TimingSlider value={value.subtitleDelay} onChange={(subtitleDelay) => onChange({ subtitleDelay })} />,
+      closeLabel: 'Done',
+    },
   };
   const shown = pages[page ?? 'main'];
   return (
-    <ActionSheet visible={page !== null} title={shown.title} actions={shown.actions} onClose={() => onPage(null)} />
+    <ActionSheet
+      visible={page !== null}
+      title={shown.title}
+      actions={shown.actions}
+      closeLabel={shown.closeLabel}
+      onClose={() => onPage(null)}
+    >
+      {shown.content}
+    </ActionSheet>
   );
 }
