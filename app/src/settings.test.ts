@@ -4,7 +4,14 @@ import { act, renderHook } from '@testing-library/react-native';
 import { Storage } from 'expo-sqlite/kv-store';
 import { Appearance as RNAppearance } from 'react-native';
 
-import { setAppearance, setSubtitleScale, useAppearance, useSubtitleScale } from './settings';
+import {
+  setAppearance,
+  setSubtitleScale,
+  setVideoZoom,
+  useAppearance,
+  useSubtitleScale,
+  useVideoZoom,
+} from './settings';
 
 type Settings = typeof import('./settings');
 
@@ -104,5 +111,33 @@ describe('subtitle size setting', () => {
     expect(result.current).toBe(1);
     await act(() => setSubtitleScale(1.5));
     expect(result.current).toBe(1.5);
+  });
+});
+
+describe('video zoom setting', () => {
+  beforeEach(() => {
+    Storage.clearSync();
+  });
+
+  it('defaults to fit, also for unknown stored values', () => {
+    expect(load().getVideoZoom()).toBe('fit');
+    Storage.setItemSync('settings.videoZoom', 'zoom');
+    expect(load().getVideoZoom()).toBe('fit');
+  });
+
+  it('persists', () => {
+    const { getVideoZoom, setVideoZoom: set } = load();
+    set('fill');
+    expect(getVideoZoom()).toBe('fill');
+    expect(Storage.getItemSync('settings.videoZoom')).toBe('fill');
+    expect(load().getVideoZoom()).toBe('fill');
+  });
+
+  it('re-renders useVideoZoom subscribers on change', async () => {
+    setVideoZoom('fit');
+    const { result } = await renderHook(() => useVideoZoom());
+    expect(result.current).toBe('fit');
+    await act(() => setVideoZoom('fill'));
+    expect(result.current).toBe('fill');
   });
 });

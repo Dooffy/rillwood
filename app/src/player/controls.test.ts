@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from '@jest/globals';
 
-import { positionAt, seekTarget, shouldClose, subtitleScaleFor, upNextCountdown } from './controls';
+import {
+  positionAt,
+  seekTarget,
+  shouldClose,
+  subtitleScaleFor,
+  upNextCountdown,
+  videoFrame,
+  zoomAfterPinch,
+} from './controls';
 import { createProgress } from './progress';
 
 describe('shouldClose', () => {
@@ -72,5 +80,29 @@ describe('upNextCountdown', () => {
     expect(upNextCountdown(1400, 1400)).toEqual({ left: 0, fill: 1 });
     expect(upNextCountdown(1405, 1400)).toEqual({ left: 0, fill: 1 });
     expect(upNextCountdown(0, 0)).toBeUndefined();
+  });
+});
+
+describe('zoomAfterPinch', () => {
+  it('apart = fill, together = fit, a small pinch keeps the zoom', () => {
+    expect(zoomAfterPinch(1.4, 'fit')).toBe('fill');
+    expect(zoomAfterPinch(0.6, 'fill')).toBe('fit');
+    expect(zoomAfterPinch(1.05, 'fit')).toBe('fit');
+    expect(zoomAfterPinch(0.95, 'fill')).toBe('fill');
+  });
+});
+
+describe('videoFrame', () => {
+  // iPhone with a Dynamic Island, turned left: island on the left, home indicator at the bottom.
+  const landscape = { top: 0, bottom: 21, left: 59, right: 0 };
+  const portrait = { top: 59, bottom: 34, left: 0, right: 0 };
+
+  it('fit: clear of the notch on both long sides, centred', () => {
+    expect(videoFrame(landscape, true, 'fit')).toEqual({ top: 0, bottom: 0, left: 59, right: 59 });
+    expect(videoFrame(portrait, false, 'fit')).toEqual({ top: 59, bottom: 59, left: 0, right: 0 });
+  });
+
+  it('fill: edge to edge', () => {
+    expect(videoFrame(landscape, true, 'fill')).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
   });
 });

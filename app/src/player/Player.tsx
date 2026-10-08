@@ -10,6 +10,9 @@ export type Track = {
   external?: string;
 };
 
+/** fit (default): the whole picture, bars around it. fill: covers the view edge to edge, cropping the picture. */
+export type VideoZoom = 'fit' | 'fill';
+
 export type PlayerProps = {
   /** A new object loads the file again, even with the same URI (replay). */
   source: { uri: string; headers?: Record<string, string> };
@@ -20,6 +23,7 @@ export type PlayerProps = {
   speed?: number;
   /** Subtitle size, 1 = normal. */
   subtitleScale?: number;
+  zoom?: VideoZoom;
   paused?: boolean;
   externalSubs?: { uri: string; lang?: string; title?: string }[];
   /** Once per load, when it can play. Sidecar subs may not be listed yet. */

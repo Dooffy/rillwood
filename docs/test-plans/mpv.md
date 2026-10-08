@@ -47,6 +47,7 @@ Record per run: date, commit, device + OS, MPVKit / libmpv versions, pass / fail
 | B15 | Play any stream; Android: `adb logcat \| grep -i token`, iOS: Console.app on the device, filter `Token`                                             | Stream plays (header auth still works); no `Token=` value anywhere (I13)                                                                                                      |
 | B16 | "Language Show" E01: pick Ukrainian audio (880 Hz) + Ukrainian subs, let it autoplay E02 (or Play Now), then E03; close, reopen E01 from its detail | E02 + E03 play Ukrainian audio + subs (E02 lists them first); a subtitles-Off pick stays off; reopened E01 starts with Ukrainian (server memory). Restore: pick English again |
 | B17 | Any item with subtitles on: Subtitle size → Large; close, open another item; force-quit, reopen; switch account                                     | Every open starts with Large (menu shows Large); speed is back to Normal on each open. Restore: Medium                                                                        |
+| B18 | 2.39:1 movie in landscape: Fill screen button, pinch apart / together, rotate to portrait and back, close + reopen                                  | Fit: whole picture, clear of the island / cutout. Fill: edge to edge, sides cropped. Portrait fits, no button. Choice holds after reopen. Restore: Fit                        |
 
 ## Platform
 

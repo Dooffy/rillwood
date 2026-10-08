@@ -81,7 +81,7 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [x] I13: mpv verbose log printed the auth header - `http-header-fields` set via the option API (property sets are logged with their value at `v`), iOS log forwarding redacts `Token=`. B15 passed on iPhone + Android (2026-10-07)
 - [x] Exact seeks for scrubber / resume: `hr-seek=absolute` on both platforms (absolute seeks + `start` exact, ±10s stays keyframe). B11 passed on iPhone (2026-10-06), Android pending
 - [ ] SRT size on wide video in the landscape player
-- [ ] Video zoom: fit (default, black bars, clear of the notch / Dynamic Island) or fill (cover the screen edge to edge, crops the picture) - player control (button or pinch), choice kept per user. Both native modules have `setZoomedToFill`
+- [x] Video zoom: fit (default, black bars, clear of the notch / Dynamic Island) or fill (cover the screen edge to edge, crops the picture) - top-bar button + pinch, landscape only (portrait always fits), remembered on the phone (`src/settings.ts` `videoZoom`, same for all accounts). Native `setZoomedToFill` on both platforms. Device test B18 pending
 
 ## M4S - UI cleanup
 
@@ -145,6 +145,7 @@ Design + sources: `docs/research/background-downloads.md`.
 ## Post-release
 
 - [ ] Localization: extract UI strings, locale-aware dates / sizes / durations, first extra languages, RTL check
+- [ ] Animated video zoom: the picture follows the pinch live and springs to fit / fill on release (button animates too), like the pull to close. Fill as an own reanimated scale on the fit view instead of native `setZoomedToFill` (no in-between state); cover factor from the engine's video size (`getTechnicalInfo` `videoWidth` / `videoHeight` after load). Trade-offs: subtitles scale + crop with the picture in fill (~1.3x on 2.39:1), Android `SurfaceView` may ignore the scale (check the pull to close there first; else keep the instant switch), anamorphic files zoom slightly off
 
 ## Ideas
 
