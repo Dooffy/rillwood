@@ -80,7 +80,7 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [x] mpv options on both platforms (I11): `network-timeout=15`, `stream-lavf-o=reconnect=1,reconnect_on_network_error=1,reconnect_delay_max=10` (~55 s window, back within ~7 s); buffering spinner (after 0.5 s); an early end (> 5 s before the duration) reloads at the stopped position (`reload: true`, same view), again there = error. Demuxer caps 100 / 32 MiB via `cacheConfig`. B9 passed on iPhone (2026-10-06), Android pending
 - [x] I13: mpv verbose log printed the auth header - `http-header-fields` set via the option API (property sets are logged with their value at `v`), iOS log forwarding redacts `Token=`. B15 passed on iPhone + Android (2026-10-07)
 - [x] Exact seeks for scrubber / resume: `hr-seek=absolute` on both platforms (absolute seeks + `start` exact, ±10s stays keyframe). B11 passed on iPhone (2026-10-06), Android pending
-- [ ] SRT size on wide video in the landscape player
+- [x] Subtitle size on wide video in the landscape player: the same text height on screen whatever the picture's shape. Android sizes subtitles to the view in landscape (upstream); iOS draws them into the picture, so the mpv adapter scales them by view height / picture height (`frameSubtitleScale`, shape from the server's `AspectRatio`). Device test B19 pending
 - [x] Video zoom: fit (default, black bars, clear of the notch / Dynamic Island) or fill (cover the screen edge to edge, crops the picture) - top-bar button + pinch, landscape only (portrait always fits), remembered on the phone (`src/settings.ts` `videoZoom`, same for all accounts). Native `setZoomedToFill` on both platforms. Device test B18 pending
 
 ## M4S - UI cleanup
@@ -146,6 +146,7 @@ Design + sources: `docs/research/background-downloads.md`.
 
 - [ ] Localization: extract UI strings, locale-aware dates / sizes / durations, first extra languages, RTL check
 - [ ] Animated video zoom: the picture follows the pinch live and springs to fit / fill on release (button animates too), like the pull to close. Fill as an own reanimated scale on the fit view instead of native `setZoomedToFill` (no in-between state); cover factor from the engine's video size (`getTechnicalInfo` `videoWidth` / `videoHeight` after load). Trade-offs: subtitles scale + crop with the picture in fill (~1.3x on 2.39:1), Android `SurfaceView` may ignore the scale (check the pull to close there first; else keep the instant switch), anamorphic files zoom slightly off
+- [ ] iOS subtitle size on wide video in native code: move `frameSubtitleScale` from the JS adapter into `MpvPlayerView.swift` (user scale × view height / picture height, from mpv's own `videoAspect` + `layoutSubviews` + zoom, factor 1 in PiP), like Android sizes to the view itself. Drops the `aspect` prop, `pictureAspect`, the wrapper View and the `Platform` check; fixes the PiP limit and the server's shape guess. Vendored change: `UPSTREAM.md` row, B19 on a device
 
 ## Ideas
 

@@ -218,6 +218,8 @@ export type MediaStreamDto = {
   IsExternal?: boolean;
   Width?: number;
   Height?: number;
+  /** Video: display shape (anamorphic files differ from Width / Height), "16:9", "2.40:1". */
+  AspectRatio?: string;
   /** `SDR`, `HDR`. */
   VideoRange?: string;
   /** `SDR`, `HDR10`, `HDR10Plus`, `HLG`, `DOVI`, `DOVIWithHDR10`, ... */

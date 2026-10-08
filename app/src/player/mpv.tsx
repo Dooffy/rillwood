@@ -2,12 +2,12 @@
 // mpv engine behind the PlayerEngine contract - the only file that imports modules/mpv (docs/context/player.md).
 // Engine issues handled here (docs/test-plans/mpv.md): I3 stale first progress after a new load, I4 same URL ignored,
 // I8 end of file (mpv stays paused on the last frame; a seek alone doesn't resume it), I11 early end of a stream after a
-// long network drop (reloaded at that position).
+// long network drop (reloaded at that position), iOS subtitles sized to the picture (`frameSubtitleScale`).
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 import { MpvPlayerView, type MpvPlayerViewRef, type SubtitleTrack, type VideoSource } from '../../modules/mpv';
-import type { PlayerProps, PlayerRef, Track } from './Player';
+import type { PlayerProps, PlayerRef, Track, VideoZoom } from './Player';
 
 // Native calls reject when the view is gone or mpv is reloading - nothing to do about it here.
 const ignore = () => {};
@@ -24,9 +24,40 @@ const subTrack = ({ external, externalFilename, ...t }: SubtitleTrack): Track =>
   ...(external && { external: externalFilename ?? '' }),
 });
 
+/**
+ * iOS draws subtitles into the picture, sized to its height; Android sizes them to the view in landscape. Scale that sizes
+ * the iOS text to the view's height in landscape too: up on a picture shorter than the view (2.39:1 fitted), down on one
+ * taller (fill on a narrower picture). Portrait, unknown shape or size: 1.
+ */
+export function frameSubtitleScale(
+  frame: { width: number; height: number } | undefined,
+  aspect: number | undefined,
+  zoom: VideoZoom,
+): number {
+  if (!frame || !aspect || frame.width <= frame.height) return 1;
+  const widthBound = frame.width / aspect;
+  const picture = zoom === 'fill' ? Math.max(frame.height, widthBound) : Math.min(frame.height, widthBound);
+  // Rounded: a rotation lays the view out a few times on its way.
+  return Math.round(Math.min(2, Math.max(0.5, frame.height / picture)) * 100) / 100;
+}
+
 export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(props, ref) {
-  const { source, paused = false, audioTrack, subtitleTrack, speed = 1, subtitleScale = 1, zoom = 'fit' } = props;
+  const {
+    source,
+    paused = false,
+    audioTrack,
+    subtitleTrack,
+    speed = 1,
+    subtitleScale = 1,
+    zoom = 'fit',
+    aspect,
+  } = props;
   const view = useRef<MpvPlayerViewRef>(null);
+  const [frame, setFrame] = useState<{ width: number; height: number }>();
+  // Measured on iOS only (`frameSubtitleScale`); Android stays at the scale given.
+  const textScale = subtitleScale * frameSubtitleScale(frame, aspect, zoom);
+  const latestTextScale = useRef(textScale);
+  latestTextScale.current = textScale;
   // Latest props for event handlers and loads, without making them effect dependencies.
   const latest = useRef(props);
   latest.current = props;
@@ -145,8 +176,8 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
     view.current?.setSpeed(speed).catch(ignore);
   }, [speed]);
   useEffect(() => {
-    view.current?.setSubtitleScale(subtitleScale).catch(ignore);
-  }, [subtitleScale]);
+    view.current?.setSubtitleScale(textScale).catch(ignore);
+  }, [textScale]);
   useEffect(() => {
     view.current?.setZoomedToFill(zoom === 'fill').catch(ignore);
   }, [zoom]);
@@ -186,9 +217,9 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
       loadedFor.current = mine;
       fileDuration.current = duration;
       // Again per load: Android creates its renderer only now, so the calls from the effects above may have gone nowhere.
-      const { speed: s = 1, subtitleScale: scale = 1, zoom: z } = latest.current;
+      const { speed: s = 1, zoom: z } = latest.current;
       player.setSpeed(s).catch(ignore);
-      player.setSubtitleScale(scale).catch(ignore);
+      player.setSubtitleScale(latestTextScale.current).catch(ignore);
       player.setZoomedToFill(z === 'fill').catch(ignore);
       // A pause made while this load started (autoplay was fixed at the source) still holds.
       if (latest.current.paused) player.pause().catch(ignore);
@@ -199,58 +230,69 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
   }
 
   return (
-    <MpvPlayerView
-      ref={view}
-      source={videoSource}
+    // The view's size, for the subtitle scale (the native view's props have no onLayout).
+    <View
+      testID="player-frame"
       style={StyleSheet.absoluteFill}
-      onTracksReady={tracksReady}
-      onProgress={({ nativeEvent: { position, duration } }) => {
-        if (!ready.current) return;
-        fileDuration.current = duration;
-        // Moved off the end without us (lock screen, Control Center): play is a plain play again.
-        if (position < duration - 1) ended.current = false;
-        latest.current.onProgress?.({ position, duration });
-      }}
-      // mpv's loading state: load, seek, paused for cache. The view only sends changes, in order, so the last one holds.
-      onPlaybackStateChange={({ nativeEvent: { isLoading, isReadyToSeek } }) => {
-        if (isLoading !== undefined) latest.current.onBuffering?.(isLoading);
-        // Once per native load, after the file opened and its sidecars were added (or failed): read the full list.
-        if (isReadyToSeek) {
-          openFor.current = load.current;
-          tracksReady();
-        }
-      }}
-      onError={({ nativeEvent }) => latest.current.onError?.(nativeEvent.error)}
-      onPlaybackEnd={async () => {
-        // Not gated on playing: mpv pauses itself at EOF. Once per end (a native reload at the end fires it again).
-        if (!ready.current || ended.current || checkingEnd.current) return;
-        checkingEnd.current = true;
-        const mine = load.current;
-        // mpv's own position: progress is throttled and misses seeks made outside the app (lock screen).
-        const at = await view.current?.getCurrentPosition().catch(() => undefined);
-        checkingEnd.current = false;
-        if (mine !== load.current || !ready.current || ended.current) return;
-        const d = fileDuration.current;
-        // I11: a stream that ended early reloads where it stopped; ending early again with no progress there is an error
-        // (network still gone, or a file cut short), not an end - an end would mark it played.
-        if (at !== undefined && at < d - EARLY_END_SECONDS) {
-          if (reload?.source === source && at <= startedAt.current + EARLY_END_SECONDS) {
-            latest.current.onError?.('Stream ended early');
+      onLayout={
+        Platform.OS === 'ios'
+          ? ({ nativeEvent: { layout } }) => setFrame({ width: layout.width, height: layout.height })
+          : undefined
+      }
+    >
+      <MpvPlayerView
+        ref={view}
+        source={videoSource}
+        style={StyleSheet.absoluteFill}
+        onTracksReady={tracksReady}
+        onProgress={({ nativeEvent: { position, duration } }) => {
+          if (!ready.current) return;
+          fileDuration.current = duration;
+          // Moved off the end without us (lock screen, Control Center): play is a plain play again.
+          if (position < duration - 1) ended.current = false;
+          latest.current.onProgress?.({ position, duration });
+        }}
+        // mpv's loading state: load, seek, paused for cache. The view only sends changes, in order, so the last one holds.
+        onPlaybackStateChange={({ nativeEvent: { isLoading, isReadyToSeek } }) => {
+          if (isLoading !== undefined) latest.current.onBuffering?.(isLoading);
+          // Once per native load, after the file opened and its sidecars were added (or failed): read the full list.
+          if (isReadyToSeek) {
+            openFor.current = load.current;
+            tracksReady();
+          }
+        }}
+        onError={({ nativeEvent }) => latest.current.onError?.(nativeEvent.error)}
+        onPlaybackEnd={async () => {
+          // Not gated on playing: mpv pauses itself at EOF. Once per end (a native reload at the end fires it again).
+          if (!ready.current || ended.current || checkingEnd.current) return;
+          checkingEnd.current = true;
+          const mine = load.current;
+          // mpv's own position: progress is throttled and misses seeks made outside the app (lock screen).
+          const at = await view.current?.getCurrentPosition().catch(() => undefined);
+          checkingEnd.current = false;
+          if (mine !== load.current || !ready.current || ended.current) return;
+          const d = fileDuration.current;
+          // I11: a stream that ended early reloads where it stopped; ending early again with no progress there is an error
+          // (network still gone, or a file cut short), not an end - an end would mark it played.
+          if (at !== undefined && at < d - EARLY_END_SECONDS) {
+            if (reload?.source === source && at <= startedAt.current + EARLY_END_SECONDS) {
+              latest.current.onError?.('Stream ended early');
+              return;
+            }
+            // Until the reload's tracks are ready: no progress, no second end. The effect must not take the reload for
+            // the same URL again (I4).
+            ready.current = false;
+            lastUrl.current = undefined;
+            latest.current.onBuffering?.(true);
+            setReload({ source, at });
             return;
           }
-          // Until the reload's tracks are ready: no progress, no second end. The effect must not take the reload for
-          // the same URL again (I4).
-          ready.current = false;
-          lastUrl.current = undefined;
-          latest.current.onBuffering?.(true);
-          setReload({ source, at });
-          return;
-        }
-        ended.current = true;
-        // Progress is throttled (~1 s): the end lands on the duration.
-        if (d > 0) latest.current.onProgress?.({ position: d, duration: d });
-        latest.current.onEnd?.();
-      }}
-    />
+          ended.current = true;
+          // Progress is throttled (~1 s): the end lands on the duration.
+          if (d > 0) latest.current.onProgress?.({ position: d, duration: d });
+          latest.current.onEnd?.();
+        }}
+      />
+    </View>
   );
 });

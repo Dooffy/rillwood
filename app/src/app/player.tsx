@@ -373,6 +373,7 @@ export default function PlayerScreen() {
                   speed={tracks.speed}
                   subtitleScale={subtitleScaleFor(subtitleScale, !landscape)}
                   zoom={zoom}
+                  aspect={state.play.aspect}
                   onLoad={(e) => {
                     progress.set({ duration: e.duration });
                     setStarted(key);

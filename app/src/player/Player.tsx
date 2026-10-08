@@ -24,6 +24,8 @@ export type PlayerProps = {
   /** Subtitle size, 1 = normal. */
   subtitleScale?: number;
   zoom?: VideoZoom;
+  /** Picture width / height as shown, if known: subtitles keep their size on a wide (2.39:1) picture. */
+  aspect?: number;
   paused?: boolean;
   externalSubs?: { uri: string; lang?: string; title?: string }[];
   /** Once per load, when it can play. Sidecar subs may not be listed yet. */
