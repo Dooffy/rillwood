@@ -12,6 +12,7 @@ import { usePullToRefresh } from '@/usePullToRefresh';
 import { spacing, useColors } from '@/theme';
 
 import { CardPlaceholder, PosterCard } from './Card';
+import { useItemMenu } from './ItemMenu';
 import { EPISODE_ROW_STILL, EpisodeRow } from './EpisodeRow';
 import { loadErrorMessage, Message } from './Message';
 import { CARD_GAP } from './Row';
@@ -46,6 +47,7 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
   const { refreshing, onRefresh } = usePullToRefresh(list.loading, list.refresh);
   const cardWidth = Math.floor((width - 2 * spacing.md - (COLUMNS - 1) * CARD_GAP) / COLUMNS);
   const posters = layout === 'posters';
+  const menu = useItemMenu();
 
   const renderItem = useCallback(
     ({ item }: { item: BaseItemDto }) => {
@@ -61,6 +63,10 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
             width={cardWidth}
             image={image(posterImage(item), cardWidth)}
             onPress={open}
+            onLongPress={() => {
+              onOpen?.(item);
+              menu(item);
+            }}
           />
         );
       }
@@ -72,10 +78,14 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
           meta={runtime}
           image={image(landscapeImage(item), EPISODE_ROW_STILL)}
           onPress={open}
+          onLongPress={() => {
+            onOpen?.(item);
+            menu(item);
+          }}
         />
       );
     },
-    [posters, cardWidth, image, onOpen],
+    [posters, cardWidth, image, onOpen, menu],
   );
 
   // First page: placeholders, an error with Retry, or what an empty list means.

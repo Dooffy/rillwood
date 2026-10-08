@@ -8,13 +8,13 @@ import { useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import type { BaseItemDto, ItemsResult } from '@/api';
-import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
 import { CastRow } from '@/components/CastRow';
 import { Chips } from '@/components/Chips';
 import { DetailActions } from '@/components/DetailActions';
 import { DetailHeader } from '@/components/DetailHeader';
 import { DetailHero, HERO_ART_SCALE, LOGO_WIDTH } from '@/components/DetailHero';
 import { EPISODE_CARD_WIDTH, EpisodeCard } from '@/components/EpisodeCard';
+import { useItemMenu } from '@/components/ItemMenu';
 import { loadErrorMessage, Message } from '@/components/Message';
 import { MoreLikeThis } from '@/components/MoreLikeThis';
 import { Overview } from '@/components/Overview';
@@ -22,7 +22,6 @@ import { SeasonMenu } from '@/components/SeasonMenu';
 import { CARD_GAP } from '@/components/Row';
 import { Spinner } from '@/components/Spinner';
 import { Text } from '@/components/Text';
-import { SOON, useToast } from '@/components/Toast';
 import { detailView } from '@/detail';
 import {
   defaultSeasonId,
@@ -165,11 +164,9 @@ function SeriesPlay({
 function EpisodeCards({ seriesId, seasonId, startAt }: { seriesId: string; seasonId: string; startAt?: string }) {
   const image = useImage();
   const { width } = useWindowDimensions();
-  const toast = useToast();
-  const mark = useUserFlag();
   const request = episodes(seriesId, seasonId);
   const { data, error, refresh } = useFetch<ItemsResult>(request.path, { query: request.query });
-  const [menuFor, setMenuFor] = useState<BaseItemDto>();
+  const menu = useItemMenu();
 
   if (!data) {
     return error ? (
@@ -199,69 +196,44 @@ function EpisodeCards({ seriesId, seasonId, startAt }: { seriesId: string; seaso
   );
   // No episode has an overview (common on sparse metadata): compact cards, no empty reserved lines.
   const withOverviews = data.Items.some((ep) => !!ep.Overview?.trim());
-  const menu: SheetAction[] = menuFor
-    ? [
-        ...(playback(menuFor).progress !== undefined
-          ? [{ label: 'Play from Start', onPress: () => openPlayer(menuFor, 0) }]
-          : []),
-        {
-          label: menuFor.UserData?.Played ? 'Mark as Unwatched' : 'Mark as Watched',
-          onPress: () => mark(menuFor, 'played', !menuFor.UserData?.Played),
-        },
-        {
-          label: menuFor.UserData?.IsFavorite ? 'Remove from Favourites' : 'Add to Favourites',
-          onPress: () => mark(menuFor, 'favourite', !menuFor.UserData?.IsFavorite),
-        },
-        { label: 'Download Episode', onPress: () => toast(SOON) },
-      ]
-    : [];
-
   return (
-    <>
-      <FlatList
-        horizontal
-        data={data.Items}
-        keyExtractor={(ep) => ep.Id}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.cards}
-        ItemSeparatorComponent={CardGap}
-        initialScrollIndex={start}
-        // About two cards fit on a phone: render a few, not the default 10.
-        initialNumToRender={3}
-        windowSize={5}
-        getItemLayout={(_, index) => ({
-          length: EPISODE_CARD_WIDTH + CARD_GAP,
-          offset: (EPISODE_CARD_WIDTH + CARD_GAP) * index,
-          index,
-        })}
-        renderItem={({ item: ep }) => {
-          const state = playback(ep);
-          return (
-            <EpisodeCard
-              episode={ep.IndexNumber}
-              title={ep.Name}
-              overview={ep.Overview}
-              image={image(landscapeImage(ep), EPISODE_CARD_WIDTH)}
-              progress={state.progress}
-              remainingSeconds={state.remainingSeconds}
-              runtimeSeconds={ep.RunTimeTicks ? ticksToSeconds(ep.RunTimeTicks) : undefined}
-              played={state.played}
-              favourite={ep.UserData?.IsFavorite === true}
-              overviewLines={withOverviews}
-              onPress={() => openItem(ep)}
-              onPlay={() => openPlayer(ep, state.resumeSeconds ?? 0)}
-              onMore={() => setMenuFor(ep)}
-            />
-          );
-        }}
-      />
-      <ActionSheet
-        visible={menuFor !== undefined}
-        title={menuFor && episodeLine(menuFor)}
-        actions={menu}
-        onClose={() => setMenuFor(undefined)}
-      />
-    </>
+    <FlatList
+      horizontal
+      data={data.Items}
+      keyExtractor={(ep) => ep.Id}
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.cards}
+      ItemSeparatorComponent={CardGap}
+      initialScrollIndex={start}
+      // About two cards fit on a phone: render a few, not the default 10.
+      initialNumToRender={3}
+      windowSize={5}
+      getItemLayout={(_, index) => ({
+        length: EPISODE_CARD_WIDTH + CARD_GAP,
+        offset: (EPISODE_CARD_WIDTH + CARD_GAP) * index,
+        index,
+      })}
+      renderItem={({ item: ep }) => {
+        const state = playback(ep);
+        return (
+          <EpisodeCard
+            episode={ep.IndexNumber}
+            title={ep.Name}
+            overview={ep.Overview}
+            image={image(landscapeImage(ep), EPISODE_CARD_WIDTH)}
+            progress={state.progress}
+            remainingSeconds={state.remainingSeconds}
+            runtimeSeconds={ep.RunTimeTicks ? ticksToSeconds(ep.RunTimeTicks) : undefined}
+            played={state.played}
+            favourite={ep.UserData?.IsFavorite === true}
+            overviewLines={withOverviews}
+            onPress={() => openItem(ep)}
+            onPlay={() => openPlayer(ep, state.resumeSeconds ?? 0)}
+            onMore={() => menu(ep, episodeLine(ep))}
+          />
+        );
+      }}
+    />
   );
 }
 

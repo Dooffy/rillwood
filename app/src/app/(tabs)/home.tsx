@@ -8,6 +8,7 @@ import { ApiError, type BaseItemDto, type ItemsResult } from '@/api';
 import { Avatar } from '@/components/Avatar';
 import { CardPlaceholder, LANDSCAPE_WIDTH, LandscapeCard, POSTER_WIDTH, PosterCard } from '@/components/Card';
 import { Hero } from '@/components/Hero';
+import { useItemMenu } from '@/components/ItemMenu';
 import { loadErrorMessage, Message } from '@/components/Message';
 import { CARD_GAP, Row } from '@/components/Row';
 import { Screen } from '@/components/Screen';
@@ -43,6 +44,7 @@ export default function Home() {
   const { active } = useSession();
   const c = useColors();
   const image = useImage();
+  const menu = useItemMenu();
   const { width } = useWindowDimensions();
   const views = useFetch<ItemsResult>(userViews.path, { query: userViews.query });
   const resume = useFetch<ItemsResult>(continueWatching.path, { query: continueWatching.query });
@@ -76,6 +78,7 @@ export default function Home() {
       {...playback(item)}
       image={image(landscapeImage(item), LANDSCAPE_WIDTH)}
       onPress={() => openItem(item)}
+      onLongPress={() => menu(item)}
     />
   );
 
@@ -119,6 +122,7 @@ export default function Home() {
                   {...playback(hero)}
                   image={image(backdropImage(hero), width - 2 * spacing.md)}
                   onPress={() => openItem(hero)}
+                  onLongPress={() => menu(hero)}
                 />
               </View>
             ) : (
@@ -179,6 +183,7 @@ type LatestRowProps = {
 // Memo: Home re-renders on every top-row update; a library's row only changes with its own data.
 const LatestRow = memo(function LatestRow({ library, countKey, onCount }: LatestRowProps) {
   const image = useImage();
+  const menu = useItemMenu();
   const endpoint = latest(library.Id);
   const { data, error, refresh } = useFetch<BaseItemDto[]>(endpoint.path, { query: endpoint.query });
   const items = data && recentlyAdded(data);
@@ -200,6 +205,7 @@ const LatestRow = memo(function LatestRow({ library, countKey, onCount }: Latest
           played={item.UserData?.Played}
           image={image(posterImage(item), POSTER_WIDTH)}
           onPress={() => openItem(item)}
+          onLongPress={() => menu(item)}
         />
       )}
     />

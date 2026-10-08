@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { pressedOpacity, spacing } from '@/theme';
 
 import { Artwork } from './Artwork';
-import { cardLabel, type CardProps } from './Card';
+import { cardLabel, type CardProps, longPressProps } from './Card';
 import { Text } from './Text';
 
 export type HeroProps = Omit<CardProps, 'width'> & {
@@ -14,11 +14,12 @@ export type HeroProps = Omit<CardProps, 'width'> & {
 
 /** Full-width 16:9 card at the top of Home (Up Next): backdrop with progress, then eyebrow, title, subtitle. */
 export function Hero({ eyebrow, ...props }: HeroProps) {
-  const { title, subtitle, image, progress, remainingSeconds, played, onPress } = props;
+  const { title, subtitle, image, progress, remainingSeconds, played, onPress, onLongPress } = props;
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${eyebrow}, ${cardLabel(props)}`}
+      {...longPressProps(onLongPress)}
       onPress={onPress}
       style={({ pressed }) => [styles.hero, pressed && styles.pressed]}
     >

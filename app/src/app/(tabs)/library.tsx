@@ -8,6 +8,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import type { BaseItemDto, Endpoint, ItemsResult } from '@/api';
 import { Button } from '@/components/Button';
 import { LANDSCAPE_WIDTH, LandscapeCard, POSTER_WIDTH, PosterCard } from '@/components/Card';
+import { useItemMenu } from '@/components/ItemMenu';
 import { Chip } from '@/components/Chip';
 import { FilterChips } from '@/components/FilterChips';
 import { FilterButton, FilterSheet } from '@/components/FilterSheet';
@@ -81,6 +82,7 @@ function useItems(endpoint: Endpoint | undefined) {
 export default function Library() {
   const { active } = useSession();
   const image = useImage();
+  const menu = useItemMenu();
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
   const [scope, setScope] = useState<SearchScope>('all');
@@ -131,6 +133,10 @@ export default function Library() {
       {...playback(item)}
       image={image(posterImage(item), POSTER_WIDTH)}
       onPress={() => open(item)}
+      onLongPress={() => {
+        remember();
+        menu(item);
+      }}
     />
   );
 
@@ -206,6 +212,10 @@ export default function Library() {
                   {...playback(ep)}
                   image={image(landscapeImage(ep), LANDSCAPE_WIDTH)}
                   onPress={() => open(ep)}
+                  onLongPress={() => {
+                    remember();
+                    menu(ep);
+                  }}
                 />
               ))}
             </Row>

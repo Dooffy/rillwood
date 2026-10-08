@@ -6,6 +6,7 @@ import * as SystemUI from 'expo-system-ui';
 import { useEffect, useLayoutEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
+import { ItemMenuProvider } from '@/components/ItemMenu';
 import { ToastProvider } from '@/components/Toast';
 import { SignedOutRedirect, tabsTitle } from '@/navigation';
 import { applyNativeAppearance, useAppearance } from '@/settings';
@@ -46,37 +47,39 @@ export default function RootLayout() {
   return (
     <ColorsContext.Provider value={c}>
       <ToastProvider>
-        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-        <SignedOutRedirect />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: c.background },
-            headerTintColor: c.text,
-          }}
-        >
-          <Stack.Screen name="(tabs)" options={({ route }) => ({ title: tabsTitle(route) })} />
-          {/* Header hidden, but the title labels the back button on Add server (else iOS shows the route path). */}
-          <Stack.Screen name="(auth)/welcome" options={{ title: 'Welcome' }} />
-          <Stack.Screen name="(auth)/server" options={pages.server} />
-          <Stack.Screen name="(auth)/login" options={pages.login} />
-          <Stack.Screen name="(auth)/quick-connect" options={pages.quickConnect} />
-          <Stack.Screen name="(auth)/accounts" options={pages.accounts} />
-          <Stack.Screen name="(auth)/account" options={pages.account} />
-          <Stack.Screen name="item/[id]" options={detailOptions} />
-          <Stack.Screen name="series/[id]" options={detailOptions} />
-          <Stack.Screen name="settings" options={pages.settings} />
-          <Stack.Screen name="subtitles" options={pages.subtitles} />
-          <Stack.Screen
-            name="player"
-            options={{
-              // See-through, so pulling the player down shows the screen below (the player draws its own black).
-              presentation: 'transparentModal',
-              animation: 'fade',
-              contentStyle: { backgroundColor: 'transparent' },
+        <ItemMenuProvider>
+          <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+          <SignedOutRedirect />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: c.background },
+              headerTintColor: c.text,
             }}
-          />
-        </Stack>
+          >
+            <Stack.Screen name="(tabs)" options={({ route }) => ({ title: tabsTitle(route) })} />
+            {/* Header hidden, but the title labels the back button on Add server (else iOS shows the route path). */}
+            <Stack.Screen name="(auth)/welcome" options={{ title: 'Welcome' }} />
+            <Stack.Screen name="(auth)/server" options={pages.server} />
+            <Stack.Screen name="(auth)/login" options={pages.login} />
+            <Stack.Screen name="(auth)/quick-connect" options={pages.quickConnect} />
+            <Stack.Screen name="(auth)/accounts" options={pages.accounts} />
+            <Stack.Screen name="(auth)/account" options={pages.account} />
+            <Stack.Screen name="item/[id]" options={detailOptions} />
+            <Stack.Screen name="series/[id]" options={detailOptions} />
+            <Stack.Screen name="settings" options={pages.settings} />
+            <Stack.Screen name="subtitles" options={pages.subtitles} />
+            <Stack.Screen
+              name="player"
+              options={{
+                // See-through, so pulling the player down shows the screen below (the player draws its own black).
+                presentation: 'transparentModal',
+                animation: 'fade',
+                contentStyle: { backgroundColor: 'transparent' },
+              }}
+            />
+          </Stack>
+        </ItemMenuProvider>
       </ToastProvider>
     </ColorsContext.Provider>
   );

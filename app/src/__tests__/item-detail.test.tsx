@@ -6,10 +6,16 @@ import type { ReactElement } from 'react';
 import * as api from '@/api';
 import { ApiError, type BaseItemDto } from '@/api';
 import ItemDetail from '@/app/item/[id]';
+import { ItemMenuProvider } from '@/components/ItemMenu';
 import { ToastProvider } from '@/components/Toast';
 import * as session from '@/session';
 
-const render = (ui: ReactElement) => rtlRender(<ToastProvider>{ui}</ToastProvider>);
+const render = (ui: ReactElement) =>
+  rtlRender(
+    <ToastProvider>
+      <ItemMenuProvider>{ui}</ItemMenuProvider>
+    </ToastProvider>,
+  );
 
 // Stack.Screen renders its headerRight so the header's Download button is testable.
 jest.mock('expo-router', () => ({
@@ -198,6 +204,10 @@ describe('ItemDetail', () => {
     expect(await screen.findByText('More Like This')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Tears of Steel, 2012' }));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/item/[id]', params: { id: 'tears' } });
+    // Long press: the item's menu.
+    await fireEvent(screen.getByRole('button', { name: 'Tears of Steel, 2012' }), 'longPress');
+    expect(screen.getByText('Tears of Steel · 2012')).toBeOnTheScreen();
+    expect(screen.getByRole('menuitem', { name: 'Play' })).toBeOnTheScreen();
   });
 
   it('hides More Like This when there is nothing similar', async () => {
