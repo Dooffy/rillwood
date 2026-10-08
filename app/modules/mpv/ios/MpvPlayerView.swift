@@ -73,6 +73,8 @@ class MpvPlayerView: ExpoView {
 	let onPictureInPictureChange = EventDispatcher()
 	/// Rillwood: end of file (I8).
 	let onPlaybackEnd = EventDispatcher()
+	/// Rillwood: paused / playing from outside the app (lock screen, headphones, a call).
+	let onOutsidePause = EventDispatcher()
 
 	required init(appContext: AppContext? = nil) {
 		super.init(appContext: appContext)
@@ -386,6 +388,10 @@ extension MpvPlayerView: MPVPlayerEngineDelegate {
 
 	func engine(_ engine: MPVPlayerEngine, didFailWithError message: String) {
 		onError(["error": message])
+	}
+
+	func engine(_ engine: MPVPlayerEngine, didPauseFromOutside isPaused: Bool) {
+		onOutsidePause(["isPaused": isPaused])
 	}
 
 	func engine(_ engine: MPVPlayerEngine, didChangeVideoAspect aspect: Double) {

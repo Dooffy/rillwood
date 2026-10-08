@@ -40,6 +40,8 @@ export type PlayerProps = {
    * from the start; after a seek it plays from there.
    */
   onEnd?(): void;
+  /** Paused or playing again from outside the app's controls (lock screen, headphones, a call): the screen follows. */
+  onPausedChange?(paused: boolean): void;
   /** Waiting for data (stalled stream, seek, reload after an early end): true until frames flow again. */
   onBuffering?(buffering: boolean): void;
   onError?(msg: string): void;

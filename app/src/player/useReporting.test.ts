@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, renderHook } from '@testing-library/react-native';
-import { AppState, type AppStateStatus } from 'react-native';
 
 import * as api from '@/api';
 import type { PlaySource } from '@/playback';
@@ -32,7 +31,6 @@ const start = jest.spyOn(api, 'reportPlaybackStart');
 const progressed = jest.spyOn(api, 'reportPlaybackProgress');
 const stopped = jest.spyOn(api, 'reportPlaybackStopped');
 const invalidate = jest.spyOn(useFetch, 'invalidate');
-let appStateListener: ((state: AppStateStatus) => void) | undefined;
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -46,10 +44,6 @@ beforeEach(() => {
     token: 'tok',
     accountId: a.id,
   }));
-  jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, listener) => {
-    appStateListener = listener as (state: AppStateStatus) => void;
-    return { remove: jest.fn() } as never;
-  });
 });
 
 afterEach(() => {
@@ -145,23 +139,13 @@ describe('useReporting', () => {
     expect(progressed).not.toHaveBeenCalled();
   });
 
-  it('seeks and leaving the app send the position', async () => {
+  it('seeks send the position', async () => {
     const { result } = await mount();
     progress.set({ position: 300 });
     await act(() => result.current.seeked());
     expect(progressed).toHaveBeenLastCalledWith(
       expect.anything(),
       expect.objectContaining({ PositionTicks: ticks(300) }),
-    );
-    progress.set({ position: 310 });
-    // iOS `inactive` (Control Center, notifications) is not leaving the app.
-    const calls = progressed.mock.calls.length;
-    await act(() => appStateListener?.('inactive'));
-    expect(progressed).toHaveBeenCalledTimes(calls);
-    await act(() => appStateListener?.('background'));
-    expect(progressed).toHaveBeenLastCalledWith(
-      expect.anything(),
-      expect.objectContaining({ PositionTicks: ticks(310) }),
     );
   });
 

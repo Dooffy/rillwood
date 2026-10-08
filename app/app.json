@@ -10,7 +10,10 @@
     "backgroundColor": "#000000",
     "ios": {
       "bundleIdentifier": "app.rillwood.client",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"]
+      }
     },
     "android": {
       "package": "app.rillwood.client",
