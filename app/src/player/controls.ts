@@ -76,3 +76,25 @@ export function upNextCountdown(position: number, duration: number): { left: num
   if (duration <= 0 || left > UP_NEXT_SECONDS) return undefined;
   return { left: Math.max(0, Math.ceil(left)), fill: Math.min(1, Math.max(0, 1 - left / UP_NEXT_SECONDS)) };
 }
+
+/** Subtitle timing range (seconds either way) and its step: the slider snaps to it, − / + move by it. */
+export const SUBTITLE_DELAY_MAX = 10;
+export const SUBTITLE_DELAY_STEP = 0.1;
+
+/** A subtitle delay inside the range, on a step (no float drift: 0.1 + 0.2 = 0.3). */
+export function clampDelay(seconds: number): number {
+  const steps = 1 / SUBTITLE_DELAY_STEP;
+  const clamped = Math.min(Math.max(seconds, -SUBTITLE_DELAY_MAX), SUBTITLE_DELAY_MAX);
+  // Divided by a whole number of steps, so the result is an exact decimal - and never -0.
+  return Math.round(clamped * steps) / steps || 0;
+}
+
+/** Subtitle delay under a touch at `x` on a slider `width` wide: the middle is in sync, left earlier, right later. */
+export function delayAt(x: number, width: number): number {
+  if (width <= 0) return 0;
+  return clampDelay(positionAt(x, width, 2 * SUBTITLE_DELAY_MAX) - SUBTITLE_DELAY_MAX);
+}
+
+/** Where a subtitle delay sits along the slider, 0-1 (the reverse of `delayAt`). */
+export const delayFraction = (seconds: number) =>
+  Math.min(Math.max((seconds + SUBTITLE_DELAY_MAX) / (2 * SUBTITLE_DELAY_MAX), 0), 1);

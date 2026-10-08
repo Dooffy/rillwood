@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from '@jest/globals';
 
-import { formatClock, formatEndsAt, formatRemaining, spokenRemaining } from './format';
+import { formatClock, formatDelay, formatEndsAt, formatRemaining, spokenRemaining } from './format';
 
 describe('formatRemaining / spokenRemaining', () => {
   it.each([
@@ -44,5 +44,13 @@ describe('formatClock', () => {
     [Number.NaN, '0:00'],
   ])('%d s → %s', (seconds, text) => {
     expect(formatClock(seconds)).toBe(text);
+  });
+});
+
+describe('formatDelay', () => {
+  it('reads in sync, earlier or later', () => {
+    expect(formatDelay(0)).toBe('In sync');
+    expect(formatDelay(-0.3)).toBe('0.3 s earlier');
+    expect(formatDelay(2)).toBe('2 s later');
   });
 });

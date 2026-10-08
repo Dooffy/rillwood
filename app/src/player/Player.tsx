@@ -23,6 +23,8 @@ export type PlayerProps = {
   speed?: number;
   /** Subtitle size, 1 = normal. */
   subtitleScale?: number;
+  /** Subtitle timing in seconds, 0 = as in the file; positive shows them later. */
+  subtitleDelay?: number;
   zoom?: VideoZoom;
   /** Picture width / height as shown, if known: subtitles keep their size on a wide (2.39:1) picture. */
   aspect?: number;

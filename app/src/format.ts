@@ -40,3 +40,7 @@ export function formatEndsAt(seconds: number, now: Date = new Date()): string | 
   const end = new Date(now.getTime() + seconds * 1000);
   return `Ends at ${end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
 }
+
+/** Subtitle timing: "In sync", "0.3 s earlier", "2 s later". */
+export const formatDelay = (seconds: number) =>
+  seconds === 0 ? 'In sync' : `${Math.abs(seconds)} s ${seconds < 0 ? 'earlier' : 'later'}`;

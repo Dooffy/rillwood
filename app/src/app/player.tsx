@@ -99,7 +99,8 @@ export default function PlayerScreen() {
   const [shown, setShown] = useState(true);
   const [scrubbing, setScrubbing] = useState(false);
   // Tracks menu page (null = closed) and the choices made in it; until a choice, the server's defaults. Choices outlive
-  // a Retry (same item); speed applies to whatever plays. Subtitle size is remembered on the phone.
+  // a Retry (same item); speed applies to whatever plays, subtitle timing only to this item and subtitle track (each file
+  // is off by its own amount). Subtitle size is remembered on the phone.
   const [menu, setMenu] = useState<TracksPage | null>(null);
   const [choice, setChoice] = useState<Choice>({ picks: {} });
   const subtitleScale = useSubtitleScale();
@@ -151,6 +152,7 @@ export default function PlayerScreen() {
     audio: audioTrack?.index,
     subtitle: subtitleTrack?.index ?? -1,
     speed: choice.speed ?? 1,
+    subtitleDelay: picked.subtitleDelay ?? 0,
   };
 
   // The only screen that rotates: unlocked while open, back to upright portrait on leave.
@@ -372,6 +374,7 @@ export default function PlayerScreen() {
                   subtitleTrack={subtitleTrack?.id ?? -1}
                   speed={tracks.speed}
                   subtitleScale={subtitleScaleFor(subtitleScale, !landscape)}
+                  subtitleDelay={tracks.subtitleDelay}
                   zoom={zoom}
                   aspect={state.play.aspect}
                   onLoad={(e) => {
@@ -440,6 +443,8 @@ export default function PlayerScreen() {
                 speed,
                 ...(tracksOf.id === id ? tracksOf : {}),
                 ...next,
+                // Another subtitle track (or off) is another file's timing: back in sync.
+                ...(next.subtitle !== undefined && next.subtitle !== tracks.subtitle && { subtitleDelay: 0 }),
                 id,
                 picks: { ...picks, ...picksOf(options, next) },
               }))
