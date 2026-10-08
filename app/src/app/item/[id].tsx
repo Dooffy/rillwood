@@ -15,7 +15,7 @@ import { loadErrorMessage, Message } from '@/components/Message';
 import { MoreLikeThis } from '@/components/MoreLikeThis';
 import { Overview } from '@/components/Overview';
 import { ProgressBar } from '@/components/ProgressBar';
-import { Spinner } from '@/components/Spinner';
+import { DetailPlaceholder } from '@/components/Skeleton';
 import { Text } from '@/components/Text';
 import { detailView } from '@/detail';
 import { formatRemaining } from '@/format';
@@ -24,7 +24,7 @@ import { openItem, openPlayer } from '@/navigation';
 import { useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
 import { useUserFlag } from '@/useUserFlag';
-import { spacing } from '@/theme';
+import { scrollList, spacing } from '@/theme';
 
 export default function ItemDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -34,7 +34,7 @@ export default function ItemDetail() {
   if (!valid || error?.status === 404) return <Message fill text="This item isn't available." />;
   if (data) return <Detail item={data} />;
   if (error) return <Message fill text={loadErrorMessage(error)} retry={refresh} />;
-  return <Spinner fill />;
+  return <DetailPlaceholder />;
 }
 
 function Detail({ item }: { item: BaseItemDto }) {
@@ -52,7 +52,7 @@ function Detail({ item }: { item: BaseItemDto }) {
     <>
       <DetailHeader />
       {/* The hero runs under the transparent header (back + download over the art). */}
-      <ScrollView contentInsetAdjustmentBehavior="never" contentContainerStyle={styles.scroll}>
+      <ScrollView {...scrollList} contentInsetAdjustmentBehavior="never" contentContainerStyle={styles.scroll}>
         <DetailHero
           art={image(view.art, width * HERO_ART_SCALE)}
           logo={image(view.logo, LOGO_WIDTH)}

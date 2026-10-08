@@ -69,7 +69,7 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [x] Remember audio / subtitle per user: reports carry `AudioStreamIndex` / `SubtitleStreamIndex` (the server keeps them per item); a pick carries to the next episode by language (`carryTracks`). Device test B16 pending
 - [x] Remember subtitle size on the phone (`src/settings.ts`, same for all accounts): the player starts with it, a menu change saves it. Speed is not remembered (resets to 1× on every open, carries only to the next episode). Device test B17 pending
 - [x] Subtitle appearance in Settings → Subtitles (decided 2026-10-08: the player menu keeps only Audio, Subtitles, Speed, Subtitle timing): size (moves out of the player menu), font (typeface choice + script coverage incl. CJK, I6), colour presets (no free picker), outline / shadow / background box, live preview. Phone-wide, all accounts (`src/settings.ts`). Text subtitles only (ASS keeps its own style unless overridden, PGS can't be styled). Done: `src/app/subtitles.tsx` - size, font Sans / Serif / Mono, colour White / Yellow / Cyan / Green, edge Outline / Shadow / Box, preview with a sample-language picker; native `edge` in `setSubtitleStyle`. Device tests B17, B22 pending
-- [ ] Player fixes from the M0 spike (`docs/test-plans/mpv.md`):
+- [x] Player fixes from the M0 spike (`docs/test-plans/mpv.md`):
   - [x] I2 iOS hwdec lost in background: the player pauses when the app goes to the background (both platforms, JS `AppState`; decided 2026-10-08); iOS lock-screen / headphones Play carries on with audio in the background (`UIBackgroundModes: audio`), the screen follows engine pauses / plays from outside the app (`onPausedChange`); iOS takes the video track off (`vid=no`) in the background and back on (`vid=auto`) on foreground, so the decoder restarts with hwdec. Bounded decoder reset kept as fallback. Device test B21 pending
   - [x] I3 stale first progress: gate progress on the current load generation (`src/player/mpv.tsx`)
   - [x] I4 same URL ignored: `PlayerEngine` does `seek(0)` + `play()` (or a load id)
@@ -86,11 +86,11 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 
 Before M5: every screen handles no data and failure the same way.
 
-- [ ] Remove the dev primitives preview from Home (`src/dev/PrimitivesPreview.tsx`, `__DEV__` block in `(tabs)/home.tsx`) - and its test
-- [ ] Empty state on every screen that lists something (Home rows, Library + search, series seasons / episodes, More Like This, cast, Downloads, Accounts): one shared `Message` look, copy that says what to do next
-- [ ] Error handling on every screen that loads (Home, Library, item + series detail, player, Settings / account, auth screens): error `Message` + Retry, no blank or stuck-spinner screens; 401 / offline per `docs/context/api.md`
-- [ ] Loading: skeletons / placeholders instead of a bare spinner where layout is known (detail + series load with a spinner today)
-- [ ] Render tests per screen for the empty and error paths
+- [x] Remove the dev primitives preview from Home (`src/dev/PrimitivesPreview.tsx`, `__DEV__` block in `(tabs)/home.tsx`) - and its test
+- [x] Empty state on every screen that lists something (Home rows, Library + search, series seasons / episodes, More Like This, cast, Downloads, Accounts): one shared `Message` look, copy that says what to do next
+- [x] Error handling on every screen that loads (Home, Library, item + series detail, player, Settings / account, auth screens): error `Message` + Retry, no blank or stuck-spinner screens; 401 / offline per `docs/context/api.md`
+- [x] Loading: skeletons / placeholders instead of a bare spinner where layout is known (detail + series load with a spinner today)
+- [x] Render tests per screen for the empty and error paths
 - [x] Settings pickers rethink: iOS Settings value rows (`OptionRow`) that open a checkmark list (`/option/[key]`, `src/pickers.ts`); Appearance + every subtitle option incl. preview language; subtitle lists keep the preview on top; `ColorSwatches` and the sample chips removed, `Segmented` no longer used in Settings. Download rows move to the same pattern in M5 / M6
 
 ## M5 - Downloads

@@ -18,8 +18,6 @@ const render = (ui: ReactElement) =>
     </ToastProvider>,
   );
 jest.mock('expo-router', () => ({ router: { push: jest.fn(), back: jest.fn() } }));
-// Dev-only primitives preview (sample cards) renders under __DEV__ in tests too.
-jest.mock('@/dev/PrimitivesPreview', () => ({ PrimitivesPreview: () => null }));
 const { router } = jest.requireMock<{ router: { push: jest.Mock } }>('expo-router');
 
 const server = { id: 'srv', url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' };
@@ -152,6 +150,13 @@ describe('Home', () => {
     expect(screen.queryByRole('menuitem', { name: 'Play' })).toBeNull();
   });
 
+  // Regression: the last row sat under the iOS tab bar (native tabs inset only a screen's first scroll view).
+  it('keeps the list clear of the tab bar; the profile button is the header button size', async () => {
+    await render(<Home />);
+    expect(screen.getByTestId('home-scroll')).toHaveProp('contentInsetAdjustmentBehavior', 'automatic');
+    expect(screen.getByRole('button', { name: 'Settings' })).toHaveStyle({ width: 44, height: 44 });
+  });
+
   it('shows Recently Added for movie and TV libraries only', async () => {
     await render(<Home />);
     expect(await screen.findByText('Recently Added in Movies')).toBeOnTheScreen();
@@ -199,7 +204,7 @@ describe('Home', () => {
   it('retries a failed row on its own', async () => {
     routes['/Shows/NextUp'] = new ApiError('http', 500);
     await render(<Home />);
-    expect(await screen.findByText("Couldn't load this.")).toBeOnTheScreen();
+    expect(await screen.findByText('The server ran into a problem. Try again in a moment.')).toBeOnTheScreen();
     routes['/Shows/NextUp'] = items(episode(2));
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByRole('button', { name: 'Test Show, S1:E2 · Episode 2' })).toBeOnTheScreen();
@@ -211,7 +216,9 @@ describe('Home', () => {
     const offline = new ApiError('network');
     routes = { '/UserViews': offline, '/UserItems/Resume': offline, '/Shows/NextUp': offline };
     await render(<Home />);
-    expect(await screen.findByText("Couldn't reach the server.")).toBeOnTheScreen();
+    expect(
+      await screen.findByText("Couldn't reach the server. Check your connection and try again."),
+    ).toBeOnTheScreen();
     expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(1);
     fullServer();
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));

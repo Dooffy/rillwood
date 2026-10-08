@@ -2,7 +2,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { Keyboard, ScrollView, StyleSheet, View } from 'react-native';
 
-import { spacing } from '@/theme';
+import { scrollList, spacing } from '@/theme';
 
 type PageProps = {
   /** Lets taps reach inputs and drags dismiss the keyboard. */
@@ -20,6 +20,7 @@ export function Page({ form = false, busy = false, children }: PageProps) {
 
   return (
     <ScrollView
+      {...scrollList}
       contentInsetAdjustmentBehavior="automatic"
       keyboardDismissMode={form ? 'interactive' : 'none'}
       keyboardShouldPersistTaps={form ? 'handled' : 'never'}

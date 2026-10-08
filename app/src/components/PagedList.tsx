@@ -9,13 +9,14 @@ import { openItem } from '@/navigation';
 import type { PagedItems } from '@/usePagedItems';
 import { useImage } from '@/useImage';
 import { usePullToRefresh } from '@/usePullToRefresh';
-import { spacing, useColors } from '@/theme';
+import { spacing, tabList, useColors } from '@/theme';
 
-import { CardPlaceholder, PosterCard } from './Card';
-import { useItemMenu } from './ItemMenu';
+import { PosterCard } from './Card';
 import { EPISODE_ROW_STILL, EpisodeRow } from './EpisodeRow';
+import { useItemMenu } from './ItemMenu';
 import { loadErrorMessage, Message } from './Message';
 import { CARD_GAP } from './Row';
+import { EpisodeRowsPlaceholder, PosterGridPlaceholder } from './Skeleton';
 import { Spinner } from './Spinner';
 
 const COLUMNS = 3;
@@ -91,13 +92,9 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
   // First page: placeholders, an error with Retry, or what an empty list means.
   const empty = list.loading ? (
     posters ? (
-      <View accessible accessibilityLabel="Loading" style={styles.grid}>
-        {Array.from({ length: COLUMNS * 3 }, (_, i) => (
-          <CardPlaceholder key={i} shape="poster" width={cardWidth} />
-        ))}
-      </View>
+      <PosterGridPlaceholder columns={COLUMNS} width={cardWidth} />
     ) : (
-      <Spinner />
+      <EpisodeRowsPlaceholder />
     )
   ) : list.error ? (
     <Message text={loadErrorMessage(list.error)} retry={list.retry} />
@@ -119,6 +116,7 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
 
   return (
     <FlatList
+      {...tabList}
       key={`${layout}|${listKey}`}
       testID={testID}
       data={list.items}
@@ -144,6 +142,5 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
 const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.md, paddingBottom: spacing.lg, gap: spacing.md },
   columns: { gap: CARD_GAP },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: CARD_GAP },
   footer: { paddingVertical: spacing.md },
 });

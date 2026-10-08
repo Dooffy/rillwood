@@ -73,7 +73,7 @@ type Choice = Partial<TracksValue> & { id?: string; picks: TrackPicks };
 type State =
   { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; play: PlaySource; start: number };
 
-const PLAYBACK_FAILED = "Couldn't play this video.";
+const PLAYBACK_FAILED = "Couldn't play this video. Try again.";
 
 // Always dark, whatever the Appearance setting. Loads the play source (docs/context/player.md), then plays it full
 // screen, Apple TV style: no chrome until a tap; tap toggles the controls (auto-hide), double-tap left / right seeks

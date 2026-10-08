@@ -3,7 +3,7 @@ import { useRef, type ReactNode } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { backdrop, radii, spacing, useColors } from '@/theme';
+import { backdrop, radii, scrollList, spacing, useColors } from '@/theme';
 
 import { Checkmark } from './List';
 import { Text } from './Text';
@@ -95,7 +95,7 @@ export function ActionSheet({
           )}
           {children}
           {actions.length > 0 && (
-            <ScrollView testID="action-sheet-list" alwaysBounceVertical={false}>
+            <ScrollView {...scrollList} testID="action-sheet-list" alwaysBounceVertical={false}>
               {actions.map((action, i) => (
                 <Pressable
                   // Labels can repeat (two tracks named alike).

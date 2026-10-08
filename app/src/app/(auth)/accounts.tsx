@@ -5,8 +5,8 @@ import { Alert } from 'react-native';
 import { removeAccount, signOut, switchAccount, useSession, type Account } from '@/session';
 import { Button } from '@/components/Button';
 import { ListRow, ListSection, type ListRowProps } from '@/components/List';
+import { Message } from '@/components/Message';
 import { Page } from '@/components/Page';
-import { Text } from '@/components/Text';
 import { resetTo } from '@/navigation';
 
 /** Accounts grouped by server, in the order they were added. */
@@ -58,7 +58,7 @@ export default function Accounts() {
 
   return (
     <Page>
-      {accounts.length === 0 && <Text secondary>No accounts yet.</Text>}
+      {accounts.length === 0 && <Message text="No accounts yet. Add a Jellyfin server to sign in." />}
       {groupByServer(accounts).map((list) => (
         <ListSection key={list[0].server.url} title={list[0].server.name}>
           {list.map((a) => (

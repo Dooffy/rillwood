@@ -7,7 +7,7 @@ import type { Endpoint, ItemsResult } from '@/api';
 import { activeFilters, DECADES, MIN_RATINGS, NO_FILTERS, SHOW_STATES, type Filters } from '@/items';
 import { useDebounced } from '@/useDebounced';
 import { useFetch } from '@/useFetch';
-import { backdrop, minTouch, palettes, radii, spacing, type, useColors } from '@/theme';
+import { backdrop, minTouch, palettes, radii, scrollList, spacing, type, useColors } from '@/theme';
 
 import { Button } from './Button';
 import { Chip } from './Chip';
@@ -80,7 +80,7 @@ export function FilterSheet({ visible, value, genres, onApply, onClose, countEnd
           </Text>
           <IconButton icon={{ ios: 'xmark', android: 'close' }} label="Close filters" onPress={onClose} />
         </View>
-        <ScrollView contentContainerStyle={styles.body}>
+        <ScrollView {...scrollList} contentContainerStyle={styles.body}>
           {section(
             'Show',
             SHOW_STATES.map((s) => (

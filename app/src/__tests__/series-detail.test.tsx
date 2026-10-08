@@ -216,10 +216,50 @@ describe('SeriesDetail', () => {
   it('retries a season that failed to load', async () => {
     routes['episodes:season-2'] = new ApiError('network');
     await render(<SeriesDetail />);
-    expect(await screen.findByText("Couldn't reach the server.")).toBeOnTheScreen();
+    expect(
+      await screen.findByText("Couldn't reach the server. Check your connection and try again."),
+    ).toBeOnTheScreen();
     routes['episodes:season-2'] = items(episode(2, 1));
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByRole('button', { name: 'Episode 1, Chapter 1' })).toBeOnTheScreen();
+  });
+
+  it('shows a placeholder, then an error with Retry when offline', async () => {
+    let fail!: () => void;
+    routes[`/Items/${SHOW}`] = new Promise((_, reject) => (fail = () => reject(new ApiError('network'))));
+    await render(<SeriesDetail />);
+    expect(screen.getByTestId('detail-placeholder')).toBeOnTheScreen();
+    await act(async () => fail());
+    expect(
+      await screen.findByText("Couldn't reach the server. Check your connection and try again."),
+    ).toBeOnTheScreen();
+    routes[`/Items/${SHOW}`] = show;
+    await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
+    expect(await screen.findByRole('header', { name: show.Name })).toBeOnTheScreen();
+  });
+
+  it('seasons: placeholders while loading, an error with Retry, or what no seasons means', async () => {
+    routes.seasons = new ApiError('http', 500);
+    await render(<SeriesDetail />);
+    expect(await screen.findByText('The server ran into a problem. Try again in a moment.')).toBeOnTheScreen();
+    routes.seasons = items();
+    await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
+    expect(
+      await screen.findByText('No episodes on the server yet. Add them in Jellyfin, then come back.'),
+    ).toBeOnTheScreen();
+  });
+
+  it('episode placeholders until Next Up picks the season to open', async () => {
+    routes.nextup = new Promise(() => {});
+    await render(<SeriesDetail />);
+    expect(await screen.findByLabelText('Loading episodes')).toBeOnTheScreen();
+  });
+
+  it('an empty season says so', async () => {
+    routes.nextup = items();
+    routes['episodes:season-1'] = items();
+    await render(<SeriesDetail />);
+    expect(await screen.findByText('No episodes in this season yet.')).toBeOnTheScreen();
   });
 
   it('says so when the series is gone, and never loads an empty id', async () => {

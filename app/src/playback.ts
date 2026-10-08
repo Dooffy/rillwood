@@ -313,10 +313,15 @@ const PROBLEM_MESSAGE: Record<PlayProblem, string> = {
   directPlay: "The server won't send this file as-is, and Rillwood doesn't use transcoding.",
 };
 
-/** Player error text for a refusal or a failed request. */
+/**
+ * Player error text for a refusal or a failed request. Offline and server failures say the same as every other screen
+ * (`loadErrorMessage` in Message.tsx - written out here, this file stays import-free for `check:home`; a test keeps
+ * the two equal).
+ */
 export function playErrorMessage(error: PlayProblem | ApiError): string {
   if (typeof error === 'string') return PROBLEM_MESSAGE[error];
-  if (error.kind === 'network') return "Couldn't reach the server.";
+  if (error.kind === 'network') return "Couldn't reach the server. Check your connection and try again.";
   if (error.status === 404) return PROBLEM_MESSAGE.none;
-  return "Couldn't start playback.";
+  if (error.status !== undefined && error.status >= 500) return 'The server ran into a problem. Try again in a moment.';
+  return "Couldn't start playback. Try again.";
 }

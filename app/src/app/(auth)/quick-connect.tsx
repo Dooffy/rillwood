@@ -5,6 +5,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { authErrorMessage, quickConnect, useServerParam } from '@/auth';
 import { Button } from '@/components/Button';
+import { Message } from '@/components/Message';
 import { Page } from '@/components/Page';
 import { Spinner } from '@/components/Spinner';
 import { StepPills } from '@/components/StepPills';
@@ -55,14 +56,7 @@ export default function QuickConnect() {
         )}
         {code === undefined && error === undefined && <Spinner />}
       </View>
-      {error !== undefined && (
-        <>
-          <Text secondary accessibilityRole="alert">
-            {error}
-          </Text>
-          <Button title="Try again" onPress={retry} />
-        </>
-      )}
+      {error !== undefined && <Message alert text={error} retry={retry} />}
       {code !== undefined && error === undefined && (
         <View style={styles.waiting}>
           <ActivityIndicator color={c.textSecondary} />
