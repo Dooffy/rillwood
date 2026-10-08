@@ -137,7 +137,7 @@ describe('Player screen', () => {
     await render(<PlayerScreen />);
     expect(screen.getByLabelText('Loading')).toBeOnTheScreen();
     await act(() => lastPlayer().onError?.('loading failed'));
-    expect(screen.getByText("Couldn't play this video.")).toBeOnTheScreen();
+    expect(screen.getByText("Couldn't play this video. Try again.")).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeOnTheScreen();
     expect(screen.queryByLabelText('Loading')).toBeNull();
   });
@@ -148,7 +148,7 @@ describe('Player screen', () => {
     try {
       await render(<PlayerScreen />);
       await act(() => jest.advanceTimersByTime(60_000));
-      expect(screen.queryByText("Couldn't play this video.")).toBeNull();
+      expect(screen.queryByText("Couldn't play this video. Try again.")).toBeNull();
       expect(screen.getByLabelText('Loading')).toBeOnTheScreen();
     } finally {
       jest.useRealTimers();
@@ -165,11 +165,13 @@ describe('Player screen', () => {
   it('network error → Retry asks again and plays', async () => {
     reply = () => Promise.reject(new ApiError('network'));
     await render(<PlayerScreen />);
-    expect(await screen.findByText("Couldn't reach the server.")).toBeOnTheScreen();
+    expect(
+      await screen.findByText("Couldn't reach the server. Check your connection and try again."),
+    ).toBeOnTheScreen();
     reply = () => Promise.resolve({ MediaSources: [source] });
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
     expect(request).toHaveBeenCalledTimes(2);
-    expect(screen.queryByText("Couldn't reach the server.")).toBeNull();
+    expect(screen.queryByText("Couldn't reach the server. Check your connection and try again.")).toBeNull();
     expect(lastPlayer().startSeconds).toBe(40);
   });
 
@@ -177,10 +179,10 @@ describe('Player screen', () => {
     await render(<PlayerScreen />);
     await act(() => lastPlayer().onProgress?.({ position: 123, duration: 888 }));
     await act(() => lastPlayer().onError?.('Failed to open'));
-    expect(screen.getByText("Couldn't play this video.")).toBeOnTheScreen();
+    expect(screen.getByText("Couldn't play this video. Try again.")).toBeOnTheScreen();
     const calls = Player.mock.calls.length;
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
-    expect(screen.queryByText("Couldn't play this video.")).toBeNull();
+    expect(screen.queryByText("Couldn't play this video. Try again.")).toBeNull();
     expect(Player.mock.calls.length).toBeGreaterThan(calls);
     expect(lastPlayer().startSeconds).toBe(123);
     expect(request).toHaveBeenCalledTimes(2);
@@ -226,7 +228,9 @@ describe('Player screen', () => {
     reply = () => Promise.reject(new ApiError('network'));
     await render(<PlayerScreen />);
     expect(StatusBar).toHaveBeenLastCalledWith({ style: 'light', hidden: false }, undefined);
-    expect(await screen.findByText("Couldn't reach the server.")).toHaveStyle({ color: palettes.dark.textSecondary });
+    expect(await screen.findByText("Couldn't reach the server. Check your connection and try again.")).toHaveStyle({
+      color: palettes.dark.textSecondary,
+    });
   });
 
   it('top bar: close + the item title, before playback starts too', async () => {
@@ -371,7 +375,7 @@ describe('Player screen', () => {
   it('taps before playback starts do nothing; the controls still show when it does', async () => {
     reply = () => Promise.reject(new ApiError('network'));
     await render(<PlayerScreen />);
-    await screen.findByText("Couldn't reach the server.");
+    await screen.findByText("Couldn't reach the server. Check your connection and try again.");
     await act(() => fireGestureHandler(getByGestureTestId('player-tap')));
     reply = () => Promise.resolve({ MediaSources: [source] });
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));

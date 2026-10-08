@@ -59,10 +59,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
+    // The same gap above every tab's content (the profile / filter buttons never touch it).
+    paddingBottom: spacing.sm,
   },
   titleButton: { minHeight: minTouch, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
   pressed: { opacity: pressedOpacity },
   right: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   body: { flex: 1 },
-  padded: { padding: spacing.md, gap: spacing.md },
+  // No top padding: the header's gap is the one above the content on every tab.
+  padded: { paddingHorizontal: spacing.md, paddingBottom: spacing.md, gap: spacing.md },
 });

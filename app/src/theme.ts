@@ -105,3 +105,12 @@ export const spacing = {
   md: 16,
   lg: 24,
 } as const;
+
+/** Every vertical list: no scroll bar. */
+export const scrollList = { showsVerticalScrollIndicator: false } as const;
+
+/**
+ * A vertical list on a tab screen: also clear of the tab bar. iOS native tabs inset only a screen's first scroll view
+ * (on Library that's the type chips), so each list asks for it; Android pads the bottom itself.
+ */
+export const tabList = { ...scrollList, contentInsetAdjustmentBehavior: 'automatic' } as const;

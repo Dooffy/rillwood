@@ -20,7 +20,7 @@ import { MoreLikeThis } from '@/components/MoreLikeThis';
 import { Overview } from '@/components/Overview';
 import { SeasonMenu } from '@/components/SeasonMenu';
 import { CARD_GAP } from '@/components/Row';
-import { Spinner } from '@/components/Spinner';
+import { DetailPlaceholder, EpisodeCardsPlaceholder } from '@/components/Skeleton';
 import { Text } from '@/components/Text';
 import { detailView } from '@/detail';
 import {
@@ -41,7 +41,7 @@ import { openItem, openPlayer } from '@/navigation';
 import { useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
 import { useUserFlag } from '@/useUserFlag';
-import { spacing } from '@/theme';
+import { scrollList, spacing } from '@/theme';
 
 export default function SeriesDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -51,7 +51,7 @@ export default function SeriesDetail() {
   if (!valid || error?.status === 404) return <Message fill text="This series isn't available." />;
   if (data) return <Series series={data} />;
   if (error) return <Message fill text={loadErrorMessage(error)} retry={refresh} />;
-  return <Spinner fill />;
+  return <DetailPlaceholder />;
 }
 
 function Series({ series }: { series: BaseItemDto }) {
@@ -66,7 +66,8 @@ function Series({ series }: { series: BaseItemDto }) {
   const list = seasonList.data?.Items;
   const nextEpisode = next.data?.Items[0];
   // Wait for Next Up (or its failure) before opening a season, so the list doesn't jump to another one.
-  const nextSettled = next.data !== undefined || next.error !== undefined;
+  // Not loading counts too: a request that never starts (no account) mustn't keep the episode placeholders up.
+  const nextSettled = next.data !== undefined || next.error !== undefined || !next.loading;
   const seasonId = picked ?? (list && nextSettled ? defaultSeasonId(list, nextEpisode) : undefined);
   const season = list?.find((s) => s.Id === seasonId);
   const view = detailView(series, new Date(), list ? realSeasons(list).length : undefined);
@@ -75,7 +76,7 @@ function Series({ series }: { series: BaseItemDto }) {
     <>
       <DetailHeader label={season ? `Download ${season.Name}` : 'Download'} />
       {/* The hero runs under the transparent header (back + download over the art). */}
-      <ScrollView contentInsetAdjustmentBehavior="never" contentContainerStyle={styles.scroll}>
+      <ScrollView {...scrollList} contentInsetAdjustmentBehavior="never" contentContainerStyle={styles.scroll}>
         <DetailHero
           art={image(view.art, width * HERO_ART_SCALE)}
           logo={image(view.logo, LOGO_WIDTH)}
@@ -95,20 +96,23 @@ function Series({ series }: { series: BaseItemDto }) {
                 <Message text={loadErrorMessage(seasonList.error)} retry={seasonList.refresh} />
               </View>
             ) : (
-              <Spinner />
+              <EpisodeCardsPlaceholder />
             )
           ) : list.length === 0 ? (
             <View style={styles.body}>
-              <Message text="No episodes on the server yet." />
+              <Message text="No episodes on the server yet. Add them in Jellyfin, then come back." />
             </View>
           ) : (
             <>
               <View style={styles.body}>
                 <SeasonMenu seasons={list} value={seasonId} onChange={setPicked} onMark={mark} />
               </View>
-              {seasonId && (
+              {seasonId ? (
                 // key: a new season starts a new list (its own start position, not the last season's scroll).
                 <EpisodeCards key={seasonId} seriesId={series.Id} seasonId={seasonId} startAt={nextEpisode?.Id} />
+              ) : (
+                // Waiting for Next Up to pick the season to open.
+                <EpisodeCardsPlaceholder />
               )}
             </>
           )}
@@ -174,13 +178,13 @@ function EpisodeCards({ seriesId, seasonId, startAt }: { seriesId: string; seaso
         <Message text={loadErrorMessage(error)} retry={refresh} />
       </View>
     ) : (
-      <Spinner />
+      <EpisodeCardsPlaceholder />
     );
   }
   if (data.Items.length === 0) {
     return (
       <View style={styles.body}>
-        <Message text="No episodes in this season." />
+        <Message text="No episodes in this season yet." />
       </View>
     );
   }

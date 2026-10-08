@@ -184,7 +184,8 @@ describe('playErrorMessage', () => {
     ['none', /isn't available/],
     [new ApiError('network'), /reach the server/],
     [new ApiError('http', 404), /isn't available/],
-    [new ApiError('http', 500), /Couldn't start playback/],
+    [new ApiError('http', 500), /The server ran into a problem/],
+    [new ApiError('http', 400), /Couldn't start playback/],
   ] as [PlayProblem | ApiError, RegExp][])('%s', (error, text) => {
     expect(playErrorMessage(error)).toMatch(text);
   });

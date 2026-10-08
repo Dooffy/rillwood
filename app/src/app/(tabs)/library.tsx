@@ -3,7 +3,7 @@
 // shared filter sheet + removable filter tags. One type → an endless poster grid or episode list; All → grouped rows
 // with See All. Data rules: docs/context/api.md (Library).
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { BaseItemDto, Endpoint, ItemsResult } from '@/api';
 import { Button } from '@/components/Button';
@@ -17,9 +17,9 @@ import { MenuButton } from '@/components/MenuButton';
 import { loadErrorMessage, Message } from '@/components/Message';
 import { PagedList } from '@/components/PagedList';
 import { Row } from '@/components/Row';
+import { PosterRowsPlaceholder } from '@/components/Skeleton';
 import { Screen } from '@/components/Screen';
 import { SearchField } from '@/components/SearchField';
-import { Spinner } from '@/components/Spinner';
 import { Text } from '@/components/Text';
 import {
   activeFilters,
@@ -46,9 +46,10 @@ import { addRecentSearch, clearRecentSearches, useRecentSearches } from '@/recen
 import { useSession } from '@/session';
 import { useDebounced } from '@/useDebounced';
 import { useFetch } from '@/useFetch';
+import { usePullToRefresh } from '@/usePullToRefresh';
 import { useImage } from '@/useImage';
 import { usePagedItems } from '@/usePagedItems';
-import { spacing } from '@/theme';
+import { spacing, tabList, useColors } from '@/theme';
 
 /** Wait this long after the last key before searching. */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -69,9 +70,15 @@ function countLabel(scope: SearchScope, total: number): string {
 /** What an empty list means. */
 function emptyText({ term, scope, filters }: LibraryQuery): string {
   const filtered = activeFilters(filters).length > 0;
-  if (term) return filtered ? `No results for "${term}" with these filters.` : `No results for "${term}".`;
-  if (filtered) return 'Nothing matches these filters.';
-  return scope === 'all' ? 'Nothing on the server yet.' : `No ${NOUN[scope]}s on the server yet.`;
+  const clear = 'Clear a filter to see more.';
+  if (term) {
+    return filtered
+      ? `No results for "${term}" with these filters. ${clear}`
+      : `No results for "${term}". Check the spelling or try another word.`;
+  }
+  if (filtered) return `Nothing matches these filters. ${clear}`;
+  const what = scope === 'all' ? 'Nothing' : `No ${NOUN[scope]}s`;
+  return `${what} on the server yet. Add some in Jellyfin, then pull down to refresh.`;
 }
 
 /** One `/Items` request, or nothing for undefined. */
@@ -82,6 +89,7 @@ function useItems(endpoint: Endpoint | undefined) {
 export default function Library() {
   const { active } = useSession();
   const image = useImage();
+  const c = useColors();
   const menu = useItemMenu();
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
@@ -109,6 +117,11 @@ export default function Library() {
   const shows = useItems(rowRequest('shows'));
   const episodes = useItems(rowRequest('episodes'));
   const parts = term ? [movies, shows, episodes] : [movies, shows];
+  // Rows (All): pull to refresh every part; the grid / list has its own (PagedList).
+  const rows = usePullToRefresh(
+    parts.some((p) => p.loading),
+    () => parts.forEach((p) => p.refresh()),
+  );
   const paged = usePagedItems(all ? null : listKey, (start) => listItems(query, LIBRARY_PAGE_SIZE, start));
   const sortLabel = LIBRARY_SORTS.find((o) => o.key === sort)?.label ?? LIBRARY_SORTS[0].label;
 
@@ -144,7 +157,7 @@ export default function Library() {
   if (focused && text.trim() === '' && recent.length > 0) {
     // Typing starts: recent searches until there is a term.
     body = (
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.padded}>
+      <ScrollView {...tabList} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.padded}>
         <ListSection title="Recent">
           {recent.map((t) => (
             <ListRow key={t} label={t} onPress={() => setText(t)} />
@@ -183,7 +196,7 @@ export default function Library() {
           <Message text={loadErrorMessage(failed)} retry={() => parts.forEach((p) => p.error && p.refresh())} />
         </View>
       ) : (
-        <Spinner />
+        <PosterRowsPlaceholder rows={term ? 3 : 2} />
       );
     } else if (groups.movies.length + groups.shows.length + groups.episodes.length === 0) {
       content = (
@@ -225,10 +238,12 @@ export default function Library() {
     }
     body = (
       <ScrollView
+        {...tabList}
         testID="library-rows"
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.rows}
+        refreshControl={<RefreshControl refreshing={rows.refreshing} onRefresh={rows.onRefresh} tintColor={c.text} />}
       >
         {content}
       </ScrollView>
@@ -291,7 +306,7 @@ export default function Library() {
 }
 
 const styles = StyleSheet.create({
-  controls: { paddingTop: spacing.sm, paddingBottom: spacing.md, gap: spacing.sm },
+  controls: { paddingBottom: spacing.md, gap: spacing.sm },
   scopes: { paddingHorizontal: spacing.md, gap: spacing.sm },
   rows: { gap: spacing.lg, paddingBottom: spacing.lg },
   padded: { paddingHorizontal: spacing.md, gap: spacing.md },

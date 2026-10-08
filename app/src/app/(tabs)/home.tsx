@@ -10,10 +10,9 @@ import { CardPlaceholder, LANDSCAPE_WIDTH, LandscapeCard, POSTER_WIDTH, PosterCa
 import { Hero } from '@/components/Hero';
 import { useItemMenu } from '@/components/ItemMenu';
 import { loadErrorMessage, Message } from '@/components/Message';
-import { CARD_GAP, Row } from '@/components/Row';
+import { Row } from '@/components/Row';
 import { Screen } from '@/components/Screen';
-import { Text } from '@/components/Text';
-import { PrimitivesPreview } from '@/dev/PrimitivesPreview';
+import { CardRowPlaceholder } from '@/components/Skeleton';
 import {
   backdropImage,
   cardTitles,
@@ -33,7 +32,7 @@ import { useSession } from '@/session';
 import { invalidate, useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
 import { usePullToRefresh } from '@/usePullToRefresh';
-import { minTouch, pressedOpacity, spacing, useColors } from '@/theme';
+import { minTouch, pressedOpacity, spacing, tabList, useColors } from '@/theme';
 
 /** Pull to refresh / Retry: refetch every Home row, failed ones too. */
 function refreshHome() {
@@ -94,11 +93,13 @@ export default function Home() {
           onPress={() => router.push('/settings')}
           style={({ pressed }) => [styles.profile, pressed && styles.pressed]}
         >
-          <Avatar name={active?.userName} size={36} />
+          {/* Same size as the round header buttons on other tabs (Library's filters). */}
+          <Avatar name={active?.userName} size={minTouch} />
         </Pressable>
       }
     >
       <ScrollView
+        {...tabList}
         testID="home-scroll"
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.text} />}
@@ -110,8 +111,8 @@ export default function Home() {
         ) : (
           <>
             {layout.empty && (
-              <View style={styles.message}>
-                <Text secondary>Nothing to watch yet. Movies and shows on your server show up here.</Text>
+              <View style={styles.padded}>
+                <Message text="Nothing to watch yet. Add movies and shows to your Jellyfin server, then pull down to refresh." />
               </View>
             )}
             {hero ? (
@@ -162,11 +163,6 @@ export default function Home() {
               ))
             )}
           </>
-        )}
-        {__DEV__ && (
-          <View style={styles.padded}>
-            <PrimitivesPreview />
-          </View>
         )}
       </ScrollView>
     </Screen>
@@ -232,11 +228,7 @@ function ItemRow({ title, shape, items, error, retry, card }: ItemRowProps) {
       ) : error ? (
         <Message text={loadErrorMessage(error)} retry={retry} />
       ) : (
-        <View accessible accessibilityLabel={`Loading ${title}`} style={styles.placeholders}>
-          {[0, 1, 2].map((i) => (
-            <CardPlaceholder key={i} shape={shape} />
-          ))}
-        </View>
+        <CardRowPlaceholder shape={shape} label={`Loading ${title}`} />
       )}
     </Row>
   );
@@ -247,6 +239,4 @@ const styles = StyleSheet.create({
   padded: { paddingHorizontal: spacing.md },
   profile: { width: minTouch, height: minTouch, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: pressedOpacity },
-  message: { paddingHorizontal: spacing.md, gap: spacing.md, alignItems: 'flex-start' },
-  placeholders: { flexDirection: 'row', gap: CARD_GAP },
 });

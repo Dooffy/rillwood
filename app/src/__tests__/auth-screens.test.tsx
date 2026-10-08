@@ -375,7 +375,7 @@ describe('Quick Connect', () => {
     await render(<QuickConnect />);
     await qc.fail(new ApiError('http', 401));
     expect(screen.getByRole('alert')).toHaveTextContent(/turned off/);
-    await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
     expect(mocked.quickConnect).toHaveBeenCalledTimes(2);
     expect(screen.getByText('123456')).toBeOnTheScreen();
   });
@@ -528,5 +528,12 @@ describe('Account', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Remove account' }));
     expect(alertButtons().find((b) => b.text === 'Cancel')).toEqual({ text: 'Cancel', style: 'cancel' });
     expect(screen.getByText('anna')).toBeOnTheScreen();
+  });
+});
+
+describe('Accounts, none yet', () => {
+  it('says what to do next', async () => {
+    await render(<Accounts />);
+    expect(screen.getByText('No accounts yet. Add a Jellyfin server to sign in.')).toBeOnTheScreen();
   });
 });

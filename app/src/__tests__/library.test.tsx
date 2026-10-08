@@ -187,13 +187,17 @@ describe('Library', () => {
   it('says what an empty list means', async () => {
     items = [];
     await render(<Library />);
-    expect(await screen.findByText('Nothing on the server yet.')).toBeOnTheScreen();
+    expect(
+      await screen.findByText('Nothing on the server yet. Add some in Jellyfin, then pull down to refresh.'),
+    ).toBeOnTheScreen();
     await type('zzzz');
-    expect(await screen.findByText('No results for "zzzz".')).toBeOnTheScreen();
+    expect(await screen.findByText('No results for "zzzz". Check the spelling or try another word.')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Movies', selected: false }));
-    expect(await screen.findByText('No results for "zzzz".')).toBeOnTheScreen();
+    expect(await screen.findByText('No results for "zzzz". Check the spelling or try another word.')).toBeOnTheScreen();
     await type('');
-    expect(await screen.findByText('No movies on the server yet.')).toBeOnTheScreen();
+    expect(
+      await screen.findByText('No movies on the server yet. Add some in Jellyfin, then pull down to refresh.'),
+    ).toBeOnTheScreen();
   });
 
   it('shows recent searches while the empty field is focused; one searches again; Clear empties them', async () => {
@@ -222,13 +226,48 @@ describe('Library', () => {
   it('shows an error with Retry, and refreshes on pull', async () => {
     fail = new ApiError('network');
     await render(<Library />);
-    expect(await screen.findByText("Couldn't reach the server.")).toBeOnTheScreen();
+    expect(
+      await screen.findByText("Couldn't reach the server. Check your connection and try again."),
+    ).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
     await fireEvent.press(await screen.findByRole('button', { name: 'Movies, See All' }));
     expect(await screen.findByText('11 movies · by Name')).toBeOnTheScreen();
     items = [...items, movie(99)];
     await act(() => refreshControl('library-list').onRefresh?.());
     expect(await screen.findByText('12 movies · by Name')).toBeOnTheScreen();
+  });
+
+  it('placeholders while rows load; the rows refresh on pull', async () => {
+    let answerNow!: () => void;
+    const pending = new Promise<void>((resolve) => (answerNow = resolve));
+    const real = request.getMockImplementation()!;
+    request.mockImplementation((...args) => pending.then(() => real(...args)) as never);
+    await render(<Library />);
+    expect(screen.getByTestId('poster-rows-placeholder')).toBeOnTheScreen();
+    expect(screen.queryByTestId('spinner')).toBeNull();
+    await act(async () => answerNow());
+    expect(await screen.findByRole('button', { name: 'Movies, See All' })).toBeOnTheScreen();
+    const before = request.mock.calls.length;
+    await act(() => refreshControl('library-rows').onRefresh?.());
+    expect(request.mock.calls.length).toBeGreaterThan(before);
+  });
+
+  it('the episode list shows row placeholders while its first page loads', async () => {
+    await render(<Library />);
+    await type('test');
+    const seeAll = await screen.findByRole('button', { name: 'Episodes, See All' });
+    request.mockImplementation(() => new Promise(() => {}));
+    await fireEvent.press(seeAll);
+    expect(await screen.findByTestId('episode-rows-placeholder')).toBeOnTheScreen();
+    expect(screen.queryByTestId('spinner')).toBeNull();
+  });
+
+  // Regression: the type chips are the screen's first scroll view, so iOS inset only them for the tab bar.
+  it('keeps the rows and the full list clear of the tab bar', async () => {
+    await render(<Library />);
+    expect(await screen.findByTestId('library-rows')).toHaveProp('contentInsetAdjustmentBehavior', 'automatic');
+    await fireEvent.press(await screen.findByRole('button', { name: 'Movies, See All' }));
+    expect(await screen.findByTestId('library-list')).toHaveProp('contentInsetAdjustmentBehavior', 'automatic');
   });
 
   it('searches All with one request per type, so a broad term cannot hide a type', async () => {

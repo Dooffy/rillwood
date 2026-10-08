@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { Message } from '@/components/Message';
 import { Screen } from '@/components/Screen';
-import { Text } from '@/components/Text';
 
 export default function Downloads() {
   return (
     <Screen title="Downloads">
-      <Text secondary>Nothing here yet.</Text>
+      <Message text="No downloads yet. Downloading comes in a later build." />
     </Screen>
   );
 }
