@@ -63,6 +63,8 @@ export type PlaySource = {
   /** Jellyfin indexes to start with (the server's defaults, i.e. the user's language preferences); subtitle -1 = off. */
   defaultAudio?: number;
   defaultSubtitle: number;
+  /** Picture width / height as shown (`pictureAspect`), if the server knows it. */
+  aspect?: number;
 };
 
 /** A track the player can switch to: `id` is mpv's (1-based per type), `index` Jellyfin's stream index. */
@@ -238,6 +240,16 @@ export function externalSubs(baseUrl: string, itemId: string, source: MediaSourc
   });
 }
 
+/** Display shape of the source's picture: the server's `AspectRatio` ("2.40:1"), else Width / Height. */
+export function pictureAspect(source: MediaSourceDto): number | undefined {
+  const video = source.MediaStreams?.find((s) => s.Type === 'Video');
+  if (!video) return undefined;
+  const [w, h] = (video.AspectRatio ?? '').split(':').map(Number);
+  if (w > 0 && h > 0) return w / h;
+  if (video.Width && video.Height) return video.Width / video.Height;
+  return undefined;
+}
+
 /**
  * Picks the source to play from a PlaybackInfo answer: `mediaSourceId` if given (it must be there), else the first.
  * The server says `SupportsDirectPlay: false` without an error code - that's a refusal too.
@@ -269,6 +281,7 @@ export function playSource(
       defaultAudio:
         tracks.audio.find((t) => t.index === source.DefaultAudioStreamIndex)?.index ?? tracks.audio[0]?.index,
       defaultSubtitle: tracks.subtitles.find((t) => t.index === source.DefaultSubtitleStreamIndex)?.index ?? -1,
+      aspect: pictureAspect(source),
     },
   };
 }

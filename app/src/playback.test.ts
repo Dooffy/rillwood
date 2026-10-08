@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from '@jest/globals';
 
-import { ApiError, type Connection, type MediaSourceDto, type PlaybackInfoResponse } from './api';
+import { ApiError, type Connection, type MediaSourceDto, type MediaStreamDto, type PlaybackInfoResponse } from './api';
 import {
   carryTracks,
   picksOf,
@@ -10,6 +10,7 @@ import {
   trackOptions,
   playbackInfoBody,
   playbackReport,
+  pictureAspect,
   playErrorMessage,
   playSource,
   streamUrl,
@@ -71,6 +72,30 @@ describe('urls', () => {
         title: 'Signs',
       },
     ]);
+  });
+});
+
+describe('pictureAspect', () => {
+  const video = (stream: Partial<MediaStreamDto>) => ({
+    Id: 'ms',
+    MediaStreams: [
+      { Type: 'Audio', Index: 0 },
+      { Type: 'Video', Index: 1, ...stream },
+    ],
+  });
+
+  it("the server's display shape, else Width / Height", () => {
+    expect(pictureAspect(video({ AspectRatio: '2.40:1', Width: 1920, Height: 800 }))).toBe(2.4);
+    // Anamorphic DVD: 720x480 stored, 16:9 shown.
+    expect(pictureAspect(video({ AspectRatio: '16:9', Width: 720, Height: 480 }))).toBe(16 / 9);
+    expect(pictureAspect(video({ AspectRatio: '0:1', Width: 1920, Height: 1080 }))).toBe(16 / 9);
+    expect(pictureAspect(video({ Width: 1920, Height: 800 }))).toBe(2.4);
+  });
+
+  it('none without a video stream or its size', () => {
+    expect(pictureAspect({ Id: 'ms', MediaStreams: [{ Type: 'Audio', Index: 0 }] })).toBeUndefined();
+    expect(pictureAspect(video({}))).toBeUndefined();
+    expect(pictureAspect({ Id: 'ms' })).toBeUndefined();
   });
 });
 

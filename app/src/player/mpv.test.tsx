@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { act, render } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import { createRef } from 'react';
 
 import type { MpvPlayerViewProps, SubtitleTrack } from '../../modules/mpv';
-import { MpvPlayer } from './mpv';
+import { frameSubtitleScale, MpvPlayer } from './mpv';
 import type { PlayerProps, PlayerRef } from './Player';
 
 // The native view, as a stub that records its props and exposes the imperative calls the adapter makes.
@@ -498,5 +499,56 @@ describe('MpvPlayer', () => {
     expect(mockNative.setSpeed).toHaveBeenCalledWith(1.5);
     expect(mockNative.setSubtitleScale).toHaveBeenCalledWith(1.25);
     expect(mockNative.setZoomedToFill).toHaveBeenCalledWith(true);
+  });
+
+  describe('subtitle size on the picture (iOS draws subtitles into it)', () => {
+    // Landscape iPhone view (fit: clear of the Dynamic Island), 2.39:1 film.
+    const layout = (width: number, height: number) =>
+      fireEvent(screen.getByTestId('player-frame'), 'layout', { nativeEvent: { layout: { width, height } } });
+
+    it('iOS, landscape: a wide picture gets its text scaled up to the view height', async () => {
+      await render(<MpvPlayer source={source} subtitleScale={1.2} aspect={2.39} />);
+      await act(() => layout(760, 390));
+      // Picture 760 / 2.39 = 318 high in a 390 view.
+      expect(mockNative.setSubtitleScale).toHaveBeenLastCalledWith(1.2 * 1.23);
+      mockNative.setSubtitleScale.mockClear();
+      await tracksReady();
+      expect(mockNative.setSubtitleScale).toHaveBeenCalledWith(1.2 * 1.23);
+    });
+
+    it('Android sizes text to the view itself: the scale goes as given', async () => {
+      const os = Platform.OS;
+      Platform.OS = 'android';
+      try {
+        await render(<MpvPlayer source={source} subtitleScale={1.2} aspect={2.39} />);
+        await act(() => layout(760, 390));
+        expect(mockNative.setSubtitleScale).toHaveBeenLastCalledWith(1.2);
+      } finally {
+        Platform.OS = os;
+      }
+    });
+  });
+});
+
+describe('frameSubtitleScale', () => {
+  const landscape = { width: 800, height: 400 };
+
+  it('fit: up for a picture wider than the view, 1 for one that fills its height', () => {
+    expect(frameSubtitleScale(landscape, 2.4, 'fit')).toBe(1.2);
+    expect(frameSubtitleScale(landscape, 16 / 9, 'fit')).toBe(1);
+    expect(frameSubtitleScale(landscape, 4 / 3, 'fit')).toBe(1);
+  });
+
+  it('fill: down for a picture taller than the view, 1 for a wider one', () => {
+    expect(frameSubtitleScale(landscape, 1.6, 'fill')).toBe(0.8);
+    expect(frameSubtitleScale(landscape, 2.4, 'fill')).toBe(1);
+  });
+
+  it('1 in portrait, without a shape or before layout; odd shapes clamp', () => {
+    expect(frameSubtitleScale({ width: 400, height: 800 }, 2.4, 'fit')).toBe(1);
+    expect(frameSubtitleScale(landscape, undefined, 'fit')).toBe(1);
+    expect(frameSubtitleScale(undefined, 2.4, 'fit')).toBe(1);
+    expect(frameSubtitleScale(landscape, 10, 'fit')).toBe(2);
+    expect(frameSubtitleScale(landscape, 0.5, 'fill')).toBe(0.5);
   });
 });
