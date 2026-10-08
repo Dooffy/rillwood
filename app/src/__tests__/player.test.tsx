@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import { AccessibilityInfo, Dimensions } from 'react-native';
+import { AccessibilityInfo, AppState, Dimensions, type AppStateStatus } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import {
   createGestureController,
@@ -557,6 +557,28 @@ describe('Player screen', () => {
     await inLandscape(async () => {
       expect(lastPlayer().zoom).toBe('fill');
     });
+  });
+
+  it('leaving the app pauses it, controls up; Control Center (iOS inactive) does not; the lock screen plays and pauses', async () => {
+    await renderPlaying();
+    // AppState is a jest-expo mock: tell every subscriber (the screen, the reporting hook).
+    const change = (state: AppStateStatus) =>
+      act(() => jest.mocked(AppState.addEventListener).mock.calls.forEach(([, listener]) => listener(state)));
+    await change('inactive');
+    expect(lastPlayer().paused).toBe(false);
+    await change('background');
+    expect(lastPlayer().paused).toBe(true);
+    expect(progressed).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ EventName: 'Pause' }));
+    // Lock screen Play / Pause (audio in the background): the screen and the reports follow.
+    await act(() => lastPlayer().onPausedChange?.(false));
+    expect(lastPlayer().paused).toBe(false);
+    expect(progressed).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ EventName: 'Unpause' }));
+    await act(() => lastPlayer().onPausedChange?.(true));
+    // Back in the app: still paused, Play carries on.
+    await change('active');
+    expect(lastPlayer().paused).toBe(true);
+    await fireEvent.press(screen.getByRole('button', { name: 'Play' }));
+    expect(lastPlayer().paused).toBe(false);
   });
 
   it('tracks menu: current values, pick a subtitle, change speed; controls stay up while it is open', async () => {

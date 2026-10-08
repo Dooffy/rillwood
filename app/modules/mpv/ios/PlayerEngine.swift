@@ -29,6 +29,9 @@ protocol MPVPlayerEngineDelegate: AnyObject {
 	/// forwards the request.
 	func engine(_ engine: MPVPlayerEngine, requestsSeekTo position: Double)
 	func engine(_ engine: MPVPlayerEngine, requestsSeekBy offset: Double)
+	/// Rillwood: paused / playing from outside the host's controls - lock screen, Control Center, headphones, a call.
+	/// Sent after the engine acted, so it works with the host's JS asleep (audio in the background).
+	func engine(_ engine: MPVPlayerEngine, didPauseFromOutside isPaused: Bool)
 }
 
 /// Hosts without position bookkeeping of their own let the engine seek.
@@ -40,6 +43,8 @@ extension MPVPlayerEngineDelegate {
 	func engine(_ engine: MPVPlayerEngine, requestsSeekBy offset: Double) {
 		engine.seekBy(offset: offset)
 	}
+
+	func engine(_ engine: MPVPlayerEngine, didPauseFromOutside isPaused: Bool) {}
 }
 
 /// Non-UI playback engine: owns the display layer, the libmpv renderer, PiP,
@@ -98,22 +103,23 @@ final class MPVPlayerEngine: NSObject {
 		// alive across that, so mpv would go on decoding audio behind the Home
 		// screen with nothing on screen to stop it. Pause instead. Owned here
 		// rather than by the host so BOTH hosts (RN-embedded view and presented
-		// native player) inherit it.
-		#if os(tvOS)
+		// native player) inherit it. Rillwood (I2): on iOS the host pauses
+		// (app policy); the engine takes the video track off.
 		NotificationCenter.default.addObserver(
 			self, selector: #selector(handleDidEnterBackground),
 			name: UIApplication.didEnterBackgroundNotification, object: nil)
-		#endif
 	}
 
 	#if os(iOS)
 	@objc private func handleDidBecomeActive() {
-		guard !isShutDown, !isPictureInPictureActive() else { return }
+		guard !isShutDown else { return }
+		// Rillwood (I2): also after PiP - a no-op unless mpv reports the track off.
+		renderer?.restoreVideoAfterForeground()
+		guard !isPictureInPictureActive() else { return }
 		renderer?.restoreSubtitlesAfterForeground()
 	}
 	#endif
 
-	#if os(tvOS)
 	/// PiP would be the one way playback is *meant* to outlive the foreground
 	/// app, so it opts out. Today that guard never fires on tvOS: AVKit never
 	/// engages PiP for an AVSampleBufferDisplayLayer content source there (it
@@ -122,10 +128,16 @@ final class MPVPlayerEngine: NSObject {
 	/// buffer playback delegate), and mpv has no AVPlayerLayer to offer
 	/// instead. Kept so this stays correct if Apple ever ships the fix.
 	@objc private func handleDidEnterBackground() {
-		guard !isPictureInPictureActive() else { return }
+		guard !isShutDown, !isPictureInPictureActive() else { return }
+		// Rillwood (I2): iOS too - the host pauses as well (app policy, its own state), but with the `audio` background
+		// mode the engine mustn't play on until the host's JS gets to it. Lock-screen play still works afterwards.
 		pause()
+		#if os(iOS)
+		// Rillwood (I2): iOS drops the VideoToolbox session in the background (PiP keeps showing video, so it keeps
+		// its track).
+		renderer?.disableVideoForBackground()
+		#endif
 	}
-	#endif
 
 	func start() throws {
 		try renderer?.start()
@@ -161,9 +173,15 @@ final class MPVPlayerEngine: NSObject {
 
 		switch type {
 		case .began:
+			// Rillwood: a stale "began" iOS delivers when a suspended app wakes up (lock-screen play) is no interruption.
+			if userInfo[AVAudioSessionInterruptionWasSuspendedKey] as? Bool == true { return }
+			if #available(iOS 14.5, tvOS 14.5, *),
+				let reason = userInfo[AVAudioSessionInterruptionReasonKey] as? UInt,
+				reason == AVAudioSession.InterruptionReason.appWasSuspended.rawValue
+			{ return }
 			// Interruption began - pause the video
 			print("[MPV] Audio session interrupted - pausing video")
-			self.pause()
+			playFromOutside(false)
 
 		case .ended:
 			// Interruption ended - check if we should resume
@@ -182,13 +200,23 @@ final class MPVPlayerEngine: NSObject {
 		}
 	}
 
+	/// Rillwood: a play / pause the host didn't ask for - acted on here, then told to the host.
+	private func playFromOutside(_ play: Bool) {
+		if play { self.play() } else { pause() }
+		// Delegate callbacks arrive on the main thread; interruptions may be posted on another.
+		DispatchQueue.main.async { [weak self] in
+			guard let self else { return }
+			self.delegate?.engine(self, didPauseFromOutside: !play)
+		}
+	}
+
 	private func setupRemoteCommands() {
 		nowPlayingManager.setupRemoteCommands(
-			playHandler: { [weak self] in self?.play() },
-			pauseHandler: { [weak self] in self?.pause() },
+			playHandler: { [weak self] in self?.playFromOutside(true) },
+			pauseHandler: { [weak self] in self?.playFromOutside(false) },
 			toggleHandler: { [weak self] in
 				guard let self else { return }
-				if self.intendedPlayState { self.pause() } else { self.play() }
+				self.playFromOutside(!self.intendedPlayState)
 			},
 			seekHandler: { [weak self] time in self?.requestSeek(to: time) },
 			skipForward: { [weak self] interval in self?.requestSeek(by: interval) },
@@ -238,7 +266,9 @@ final class MPVPlayerEngine: NSObject {
 		#if os(iOS)
 		hasRenderedFirstFrame = false
 		#endif
-		setPictureInPictureAutoStartEnabled(true)
+		// Rillwood: PiP is post-MVP. The `audio` background mode (lock-screen play) would let iOS start it on its own when
+		// the app is left - a paused, black window.
+		setPictureInPictureAutoStartEnabled(false)
 
 		let preset = PlayerPreset(
 			id: .sdrRec709,

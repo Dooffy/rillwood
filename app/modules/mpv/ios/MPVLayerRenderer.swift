@@ -252,6 +252,30 @@ final class MPVLayerRenderer {
     }
 
     #if os(iOS)
+    /// Rillwood (I2): iOS invalidates the VideoToolbox session in the background, and mpv then falls back to software
+    /// decoding for the rest of the file (mid-GOP: black until the next keyframe). With the video track off nothing
+    /// decodes; `restoreVideoAfterForeground` turns it back on and the decoder starts fresh, with hwdec, from a refresh
+    /// seek. Audio stays on its track (lock-screen play). The bounded decoder reset above stays as the fallback.
+    func disableVideoForBackground() {
+        guard isRunning, !isStopping, let expectedHandle = mpv else { return }
+        queue.async { [weak self] in
+            guard let self, self.mpv == expectedHandle, !self.isStopping else { return }
+            self.commandSync(expectedHandle, ["set", "vid", "no"])
+        }
+    }
+
+    /// Only after `disableVideoForBackground` (mpv reports the track off): the app never turns video off otherwise.
+    func restoreVideoAfterForeground() {
+        guard isRunning, !isStopping, let expectedHandle = mpv else { return }
+        queue.async { [weak self] in
+            guard let self, self.mpv == expectedHandle, !self.isStopping,
+                self.getStringProperty(handle: expectedHandle, name: "vid") == "no"
+            else { return }
+            // Auto is what every file starts with.
+            self.commandSync(expectedHandle, ["set", "vid", "auto"])
+        }
+    }
+
     /// SpringBoard can leave mpv's OSD stale even when video resumes.
     func restoreSubtitlesAfterForeground() {
         guard isRunning, !isStopping, let expectedHandle = mpv else { return }

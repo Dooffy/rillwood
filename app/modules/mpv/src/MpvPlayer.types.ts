@@ -102,6 +102,8 @@ export type MpvPlayerViewProps = {
   }) => void;
   /** Rillwood: end of file - mpv stays paused on the last frame (keep-open=always). */
   onPlaybackEnd?: (event: { nativeEvent: OnPlaybackEndPayload }) => void;
+  /** Rillwood: paused / playing from outside the app - lock screen, headphones, a call (iOS; Android has no media session). */
+  onOutsidePause?: (event: { nativeEvent: { isPaused: boolean } }) => void;
 };
 
 export interface SubtitleStyleConfig {

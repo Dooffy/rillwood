@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { AccessibilityInfo, AppState, StyleSheet, useWindowDimensions, View } from 'react-native';
 import {
   GestureDetector,
   GestureHandlerRootView,
@@ -204,6 +204,17 @@ export default function PlayerScreen() {
     return () => clearTimeout(timer);
   }, [shown, playing, paused, scrubbing, menuOpen, screenReader, touched]);
 
+  // Leaving the app (home, lock, another app) pauses on both platforms: back in the app, the controls are up and Play
+  // carries on. Not on iOS `inactive` (Control Center, a notification pulled down). Lock-screen Play can resume audio.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'background') return;
+      setPaused(true);
+      setShown(true);
+    });
+    return () => sub.remove();
+  }, []);
+
   // Jellyfin sees the session: start once mpv loaded the file, progress every 10 s / pause / seek, stop on leave.
   const { seeked } = useReporting({
     accountId,
@@ -390,6 +401,8 @@ export default function PlayerScreen() {
                     setPaused(true);
                     setShown(true);
                   }}
+                  // Lock screen, headphones, a call: the controls and the reports follow.
+                  onPausedChange={setPaused}
                   onBuffering={setWaiting}
                   onError={() => {
                     setWaiting(false);

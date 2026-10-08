@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Playback reporting (docs/context/player.md): `Sessions/Playing` once the file has loaded, `Progress` every 10 s (paused
-// too) + on pause / unpause / seek / track change / leaving the app, `Stopped` with the last position when the load
+// too) + on pause / unpause / seek / track change (leaving the app pauses the player: that pause saves the position), `Stopped` with the last position when the load
 // ends (close, Retry, error). Every report carries the audio / subtitle playing - the server remembers them per item.
 // Best effort: a failed report is dropped (offline progress is M6, docs/context/sync.md); a 401 signs out through the
 // API layer as everywhere else.
 import { useEffect, useRef } from 'react';
-import { AppState } from 'react-native';
 
 import { reportPlaybackProgress, reportPlaybackStart, reportPlaybackStopped, type PlaybackReport } from '@/api';
 import { playbackReport, type PlaySource, type TrackChoice } from '@/playback';
@@ -87,14 +86,9 @@ export function useReporting({
       () => send({ IsPaused: pausedNow.current, EventName: 'TimeUpdate' }),
       PROGRESS_INTERVAL_MS,
     );
-    // Leaving the app may end in a kill (no Stopped): save the position now (not on iOS `inactive` - Control Center).
-    const appState = AppState.addEventListener('change', (state) => {
-      if (state === 'background') send({ IsPaused: pausedNow.current, EventName: 'TimeUpdate' });
-    });
 
     return () => {
       clearInterval(timer);
-      appState.remove();
       report.current = null;
       // Last in the queue; then refresh everything showing this item: resume point, Continue Watching, Next Up.
       const stop = body({});

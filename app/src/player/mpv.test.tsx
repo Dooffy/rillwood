@@ -506,6 +506,15 @@ describe('MpvPlayer', () => {
     expect(mockNative.setZoomedToFill).toHaveBeenCalledWith(true);
   });
 
+  it('a pause / play from outside the app (lock screen, a call) goes to the screen', async () => {
+    const onPausedChange = jest.fn();
+    await render(<MpvPlayer source={source} onPausedChange={onPausedChange} />);
+    await act(async () => mockViewProps.onOutsidePause?.({ nativeEvent: { isPaused: true } }));
+    expect(onPausedChange).toHaveBeenLastCalledWith(true);
+    await act(async () => mockViewProps.onOutsidePause?.({ nativeEvent: { isPaused: false } }));
+    expect(onPausedChange).toHaveBeenLastCalledWith(false);
+  });
+
   describe('subtitle size on the picture (iOS draws subtitles into it)', () => {
     // Landscape iPhone view (fit: clear of the Dynamic Island), 2.39:1 film.
     const layout = (width: number, height: number) =>
