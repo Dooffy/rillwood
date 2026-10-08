@@ -83,6 +83,8 @@ All values live in `src/theme.ts`. Never hardcode colours, radii or font sizes i
 
 Accent tweak options: `#0A84FF`, `#30D158`, `#FF9F0A` - flip button text to white when non-white accent.
 
+Settings options (iOS Settings style): a row with the current value that opens a checkmark list (`OptionRow` → `/option/[key]`, `src/pickers.ts`); no controls inside cards; `Segmented` only bare on the background for switching what's shown, never for a saved setting.
+
 Rules: large titles 34/700, section headers 20/700 with chevron, 16:9 landscape cards for resume, 2:3 posters, white progress bars (over artwork: bottom fade + time left after the bar, `[=====   ] 9m`; watched items show `✓ Watched` in the same spot), download ring built from plain views (grey track + white arc; stop square = downloading, arrow = paused), min 44pt touch targets, tab bar: Home / Library / Downloads (search lives in Library).
 
 ---
@@ -115,7 +117,8 @@ src/app/                 expo-router
   series/[id].tsx
   player.tsx
   settings.tsx
-  subtitles.tsx          Settings → Subtitles: size, font, colour, edge + live preview
+  subtitles.tsx          Settings → Subtitles: preview + option rows (size, font, colour, edge, preview text)
+  option/[key].tsx       one option's checkmark list (appearance, subtitle options), preview on top for subtitles
 src/theme.ts             design tokens
 src/format.ts            display formatting (time left, clock, subtitle timing)
 src/api.ts               fetch client + endpoints + DTO types
@@ -137,12 +140,13 @@ src/playback.ts          PlaybackInfo → play source (pure): device profile, di
 src/downloads.ts         store, queue, reconcile, cleanup, storage
 src/sync.ts              offline progress queue replay
 src/settings.ts          user settings in kv-store (appearance, subtitle size + style, video zoom; downloads + offload later)
+src/pickers.ts           Settings options that open a checkmark list: key → title, choices, get / set
 src/player/Player.tsx    PlayerEngine interface + re-export of active engine
 src/player/mpv.tsx       mpv adapter
 src/player/controls.ts   player controls logic (pure): seek clamp, pull-to-close threshold, scrubber maths, zoom (pinch, fit inset)
 src/player/progress.ts   position + duration store outside React state (only the controls re-render)
 src/player/useReporting.ts  Sessions/Playing, Progress (10 s, pause, seek, track change, background), Stopped + refetch; reports carry the tracks
-src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List, StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message, DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing (+ AnimatedProgressRing), SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing, PlayerControls (+ PlayerBottom, PlayerScrubber), Glass, TracksMenu, TimingSlider, UpNext, SubtitlePreview, ColorSwatches, ItemMenu (+ ItemMenuProvider)
+src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List (+ Checkmark, Swatch), StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message, DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing (+ AnimatedProgressRing), SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing, PlayerControls (+ PlayerBottom, PlayerScrubber), Glass, TracksMenu, TimingSlider, UpNext, SubtitlePreview, OptionList (+ OptionRow), ItemMenu (+ ItemMenuProvider)
 src/dev/                 dev-only previews, rendered behind `__DEV__` (never in release)
 modules/mpv/             vendored native module (+ UPSTREAM.md: upstream repo + commit)
 modules/downloads/       own native background downloader (iOS + Android)

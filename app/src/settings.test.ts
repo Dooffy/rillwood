@@ -187,3 +187,13 @@ describe('subtitle style setting', () => {
     expect(result.current.font).toBe('monospace');
   });
 });
+
+describe('subtitle preview language', () => {
+  it('starts in English and is never saved', () => {
+    const { getSubtitleSample, setSubtitleSample } = load();
+    expect(getSubtitleSample()).toBe('en');
+    setSubtitleSample('ko');
+    expect(getSubtitleSample()).toBe('ko');
+    expect(load().getSubtitleSample()).toBe('en');
+  });
+});

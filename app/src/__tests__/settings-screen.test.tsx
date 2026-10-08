@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { Storage } from 'expo-sqlite/kv-store';
 import { Appearance as RNAppearance } from 'react-native';
 
@@ -36,19 +36,18 @@ describe('Settings screen', () => {
     setSubtitleScale(1);
   });
 
-  it('shows the current appearance', async () => {
+  it('shows the current appearance and opens its list', async () => {
     setAppearance('dark');
     await render(<Settings />);
-    expect(screen.getByRole('radio', { name: 'Dark' })).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Appearance' })).toHaveAccessibilityValue({ text: 'Dark' });
+    await fireEvent.press(screen.getByRole('button', { name: 'Appearance' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/option/[key]', params: { key: 'appearance' } });
   });
 
-  it('saves and applies a new appearance', async () => {
+  it('follows an appearance change made in its list', async () => {
     await render(<Settings />);
-    expect(screen.getByRole('radio', { name: 'System' })).toBeChecked();
-    await fireEvent.press(screen.getByRole('radio', { name: 'Light' }));
-    expect(screen.getByRole('radio', { name: 'Light' })).toBeChecked();
-    expect(Storage.getItemSync('settings.appearance')).toBe('light');
-    expect(RNAppearance.setColorScheme).toHaveBeenLastCalledWith('light');
+    await act(() => setAppearance('light'));
+    expect(screen.getByRole('button', { name: 'Appearance' })).toHaveAccessibilityValue({ text: 'Light' });
   });
 
   it('shows the current user card and opens Account', async () => {
@@ -68,10 +67,10 @@ describe('Settings screen', () => {
     expect(router.push).toHaveBeenCalledWith({ pathname: '/server', params: { onboarding: '1' } });
   });
 
-  it('shows the subtitle size and opens Subtitles', async () => {
+  it('shows the subtitle size and colour and opens Subtitles', async () => {
     setSubtitleScale(1.25);
     await render(<Settings />);
-    expect(screen.getByText('Large')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Subtitles' })).toHaveAccessibilityValue({ text: 'Large, White' });
     await fireEvent.press(screen.getByRole('button', { name: 'Subtitles' }));
     expect(router.push).toHaveBeenCalledWith('/subtitles');
   });

@@ -5,13 +5,13 @@ import { minTouch, radii, spacing, useColors } from '@/theme';
 
 import { Text } from './Text';
 
-export type SegmentedProps<T extends string | number> = {
+export type SegmentedProps<T extends string> = {
   options: readonly { value: T; label: string }[];
   value: T;
   onChange: (value: T) => void;
 };
 
-export function Segmented<T extends string | number>({ options, value, onChange }: SegmentedProps<T>) {
+export function Segmented<T extends string>({ options, value, onChange }: SegmentedProps<T>) {
   const c = useColors();
   return (
     <View accessibilityRole="radiogroup" style={[styles.track, { backgroundColor: c.elevated }]}>
@@ -19,7 +19,7 @@ export function Segmented<T extends string | number>({ options, value, onChange 
         const selected = o.value === value;
         return (
           <Pressable
-            key={String(o.value)}
+            key={o.value}
             accessibilityRole="radio"
             accessibilityLabel={o.label}
             accessibilityState={{ checked: selected }}

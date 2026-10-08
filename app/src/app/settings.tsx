@@ -6,18 +6,17 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Avatar } from '@/components/Avatar';
 import { Chevron, ListRow, ListSection } from '@/components/List';
 import { Page } from '@/components/Page';
-import { Segmented } from '@/components/Segmented';
+import { OptionRow } from '@/components/OptionList';
 import { Text } from '@/components/Text';
 import { ONBOARDING } from '@/navigation';
 import { useSession } from '@/session';
-import { APPEARANCE_OPTIONS, setAppearance, SUBTITLE_SIZES, useAppearance, useSubtitleScale } from '@/settings';
+import { usePicker } from '@/pickers';
 import { minTouch, radii, spacing, useColors } from '@/theme';
 
 // Downloads rows show the defaults (CLAUDE.md §2); they become editable in M5 / M6.
 export default function Settings() {
-  const appearance = useAppearance();
-  const subtitleScale = useSubtitleScale();
-  const subtitleSize = SUBTITLE_SIZES.find((o) => o.value === subtitleScale)?.label;
+  const subtitleSize = usePicker('subtitle-size').choice?.label;
+  const subtitleColour = usePicker('subtitle-colour').choice?.label;
   const { accounts, active } = useSession();
   const c = useColors();
 
@@ -45,13 +44,13 @@ export default function Settings() {
         </View>
         <Chevron />
       </Pressable>
-      <ListSection title="Appearance">
-        <View style={styles.segmented}>
-          <Segmented options={APPEARANCE_OPTIONS} value={appearance} onChange={setAppearance} />
-        </View>
-      </ListSection>
-      <ListSection title="Player">
-        <ListRow label="Subtitles" value={subtitleSize} onPress={() => router.push('/subtitles')} />
+      <ListSection>
+        <OptionRow option="appearance" />
+        <ListRow
+          label="Subtitles"
+          value={`${subtitleSize}, ${subtitleColour}`}
+          onPress={() => router.push('/subtitles')}
+        />
       </ListSection>
       <ListSection title="Downloads">
         <ListRow label="Network" value="Wi-Fi only" />
@@ -65,7 +64,6 @@ export default function Settings() {
 }
 
 const styles = StyleSheet.create({
-  segmented: { padding: spacing.sm },
   profile: {
     minHeight: minTouch,
     flexDirection: 'row',

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { SymbolView } from 'expo-symbols';
 import { useRef, type ReactNode } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { backdrop, radii, spacing, useColors } from '@/theme';
 
+import { Checkmark } from './List';
 import { Text } from './Text';
 
 /** Row height of the sheet's actions and Cancel (iOS action sheet). */
@@ -110,11 +110,7 @@ export function ActionSheet({
                     pressed && { backgroundColor: c.elevated2 },
                   ]}
                 >
-                  <View style={styles.check}>
-                    {action.selected && (
-                      <SymbolView name={{ ios: 'checkmark', android: 'check' }} tintColor={c.text} size={16} />
-                    )}
-                  </View>
+                  <View style={styles.check}>{action.selected && <Checkmark />}</View>
                   <View style={styles.labels}>
                     <Text>{action.label}</Text>
                     {action.detail !== undefined && (
