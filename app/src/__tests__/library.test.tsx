@@ -1,13 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import type { ReactElement } from 'react';
+import { act, fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react-native';
 import type { RefreshControlProps } from 'react-native';
 
 import * as api from '@/api';
 import { ApiError, type BaseItemDto, type Query, type RequestOptions } from '@/api';
 import Library from '@/app/(tabs)/library';
+import { ItemMenuProvider } from '@/components/ItemMenu';
+import { ToastProvider } from '@/components/Toast';
 import * as session from '@/session';
 
+const render = (ui: ReactElement) =>
+  rtlRender(
+    <ToastProvider>
+      <ItemMenuProvider>{ui}</ItemMenuProvider>
+    </ToastProvider>,
+  );
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 const { router } = jest.requireMock<{ router: { push: jest.Mock } }>('expo-router');
 
@@ -120,6 +129,16 @@ describe('Library', () => {
     expect(lastQuery()).toMatchObject({ includeItemTypes: 'Movie', sortBy: 'SortName', startIndex: 0, limit: 50 });
     await fireEvent.press(screen.getByRole('button', { name: 'Sintel, 2010' }));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/item/[id]', params: { id: 'sintel' } });
+  });
+
+  it('a long press on a row or grid card opens its menu', async () => {
+    await render(<Library />);
+    await fireEvent(await screen.findByRole('button', { name: 'Sintel, 2010' }), 'longPress');
+    expect(screen.getByText('Sintel · 2010')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Movies, See All' }));
+    await fireEvent(await screen.findByRole('button', { name: 'Sintel, 2010' }), 'longPress');
+    expect(screen.getByRole('menuitem', { name: 'Add to Favourites' })).toBeOnTheScreen();
   });
 
   it('sorts from the sort menu', async () => {

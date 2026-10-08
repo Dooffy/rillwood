@@ -52,7 +52,7 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [x] Search inside the Library (one tab: browse + search, debounced, type capsules, shared filter sheet + tags, paged one-type lists)
 - [x] Mark watched / favourite (detail ✓ / ♥, episode menu, Mark Season n as Watched in the season menu, confirm before unwatching a season / show)
 - [ ] Skeleton, empty, error states pass - moved to M4S
-- [ ] Long press on any poster (Home, Library, More Like This): Play / Mark as Watched / Add to Favourites / Download
+- [x] Long press on any poster (Home hero + rows, Library, More Like This, series episodes): one shared menu (`ItemMenu`, mounted in the root layout) - Resume + Play from Start (or Play) for movies / episodes, Mark as Watched, Add to Favourites, Download (placeholder until M5); shows and seasons have no Play (their detail picks the episode). VoiceOver: the card's "More" action
 
 ## M4 - Playback
 
@@ -150,6 +150,8 @@ Design + sources: `docs/research/background-downloads.md`.
 
 - [ ] Chapters in the player (moved from M4, 2026-10-08): marks on the scrubber (removed from the first Player UI - plain lines didn't explain themselves), names while scrubbing, snap / skip to chapter (`Chapters` on `/Items/{id}`)
 - [ ] PiP + keep playing on leave (moved from M4, 2026-10-08; `docs/open-items.md`): PiP when the app goes to the background, and/or keep the audio playing when the app is left (a setting) - the MVP pauses on leave; lock-screen Play already plays audio in the background. Android media session (lock-screen controls)
+
+- [ ] Long-press menu: Play / Resume Episode for shows and seasons (async next-episode lookup, `seriesNextUp` / `seriesPlayTarget` out of the series screen; `itemActions` into `items.ts`)
 
 ## Ideas
 

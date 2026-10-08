@@ -29,6 +29,18 @@ describe('PosterCard', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
+  it('long press (and the VoiceOver "More" action) opens the menu; no action without one', async () => {
+    const onLongPress = jest.fn();
+    const { rerender } = await render(<PosterCard title="Dune" onPress={() => {}} onLongPress={onLongPress} />);
+    const card = screen.getByRole('button', { name: 'Dune' });
+    await fireEvent(card, 'longPress');
+    expect(card.props.accessibilityActions).toEqual([{ name: 'more', label: 'More' }]);
+    await fireEvent(card, 'accessibilityAction', { nativeEvent: { actionName: 'more' } });
+    expect(onLongPress).toHaveBeenCalledTimes(2);
+    await rerender(<PosterCard title="Dune" onPress={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Dune' }).props.accessibilityActions).toBeUndefined();
+  });
+
   it('shows a placeholder without an image', async () => {
     await render(<PosterCard title="Dune" onPress={() => {}} />);
     expect(screen.getByTestId('artwork-placeholder')).toBeOnTheScreen();

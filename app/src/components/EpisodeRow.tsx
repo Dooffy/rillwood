@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { pressedOpacity, spacing } from '@/theme';
 
 import { Artwork } from './Artwork';
-import { cardLabel } from './Card';
+import { cardLabel, longPressProps } from './Card';
 import { Text } from './Text';
 
 /** Still width in an episode list (points); image URLs are sized from it. */
@@ -22,15 +22,18 @@ export type EpisodeRowProps = {
   remainingSeconds?: number;
   played?: boolean;
   onPress: () => void;
+  /** Long press (VoiceOver: "More"): the item's menu. */
+  onLongPress?: () => void;
 };
 
 /** Episode in a vertical list (Library, Episodes type): 16:9 still with progress, show, episode line, runtime. */
 export function EpisodeRow(props: EpisodeRowProps) {
-  const { title, subtitle, meta, image, progress, remainingSeconds, played, onPress } = props;
+  const { title, subtitle, meta, image, progress, remainingSeconds, played, onPress, onLongPress } = props;
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={cardLabel({ title, subtitle, progress, remainingSeconds, played, onPress })}
+      {...longPressProps(onLongPress)}
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >

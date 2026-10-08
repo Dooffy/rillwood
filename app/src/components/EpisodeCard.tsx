@@ -8,6 +8,7 @@ import { formatRemaining, spokenRemaining } from '@/format';
 import { minTouch, pressedOpacity, radii, spacing, type, useColors } from '@/theme';
 
 import { ProgressRing } from './ProgressRing';
+import { MORE_ACTION } from './Card';
 import { Text } from './Text';
 
 /** Card width (points); image URLs and the list's scroll offsets are sized from it. */
@@ -85,10 +86,7 @@ export const EpisodeCard = memo(function EpisodeCard(props: EpisodeCardProps) {
         .join(', ')}
       accessibilityHint="Opens the episode"
       // The ▶ and ⋯ buttons sit inside the card, which VoiceOver reads as one element: offer them as actions.
-      accessibilityActions={[
-        { name: 'play', label: inProgress ? 'Resume' : 'Play' },
-        { name: 'more', label: 'More' },
-      ]}
+      accessibilityActions={[{ name: 'play', label: inProgress ? 'Resume' : 'Play' }, MORE_ACTION]}
       onAccessibilityAction={({ nativeEvent }) => (nativeEvent.actionName === 'play' ? onPlay() : onMore())}
       onPress={onPress}
       onLongPress={onMore}

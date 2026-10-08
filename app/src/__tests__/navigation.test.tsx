@@ -7,6 +7,7 @@ import Accounts from '@/app/(auth)/accounts';
 import Home from '@/app/(tabs)/home';
 import Settings from '@/app/settings';
 import * as session from '@/session';
+import { ItemMenuProvider } from '@/components/ItemMenu';
 import { ToastProvider } from '@/components/Toast';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
@@ -22,7 +23,11 @@ const anna: session.Account = {
 };
 
 async function renderScreen(ui: ReactElement) {
-  await render(<ToastProvider>{ui}</ToastProvider>);
+  await render(
+    <ToastProvider>
+      <ItemMenuProvider>{ui}</ItemMenuProvider>
+    </ToastProvider>,
+  );
 }
 
 describe('navigation', () => {

@@ -1,13 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import type { ReactElement } from 'react';
+import { act, fireEvent, render as rtlRender, screen, waitFor, within } from '@testing-library/react-native';
 import type { RefreshControlProps } from 'react-native';
 
 import * as api from '@/api';
 import { ApiError, type BaseItemDto, type RequestOptions } from '@/api';
 import Home from '@/app/(tabs)/home';
+import { ItemMenuProvider } from '@/components/ItemMenu';
+import { ToastProvider } from '@/components/Toast';
 import * as session from '@/session';
 
+const render = (ui: ReactElement) =>
+  rtlRender(
+    <ToastProvider>
+      <ItemMenuProvider>{ui}</ItemMenuProvider>
+    </ToastProvider>,
+  );
 jest.mock('expo-router', () => ({ router: { push: jest.fn(), back: jest.fn() } }));
 // Dev-only primitives preview (sample cards) renders under __DEV__ in tests too.
 jest.mock('@/dev/PrimitivesPreview', () => ({ PrimitivesPreview: () => null }));
@@ -122,6 +131,25 @@ describe('Home', () => {
     ).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: /^Sintel, 2010, \d+% watched/ })).toBeNull();
     expect(screen.getByRole('button', { name: 'Test Show, S1:E2 · Episode 2' })).toBeOnTheScreen();
+  });
+
+  it('a long press on any card opens its menu', async () => {
+    await render(<Home />);
+    // The hero too.
+    await fireEvent(await screen.findByRole('button', { name: /^Continue Watching, Sintel, 2010/ }), 'longPress');
+    expect(screen.getByText('Sintel · 2010')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
+    const resume = await screen.findByRole('button', { name: /^Tears of Steel, 2012, 8% watched/ });
+    await fireEvent(resume, 'longPress');
+    expect(screen.getByRole('menuitem', { name: 'Resume' })).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
+    await fireEvent(screen.getByRole('button', { name: 'Test Show, S1:E2 · Episode 2' }), 'longPress');
+    expect(screen.getByText('Test Show · S1:E2 · Episode 2')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
+    // Recently Added: a show has no Play.
+    await fireEvent(await screen.findByRole('button', { name: 'Test Show' }), 'longPress');
+    expect(screen.getByRole('menuitem', { name: 'Mark as Watched' })).toBeOnTheScreen();
+    expect(screen.queryByRole('menuitem', { name: 'Play' })).toBeNull();
   });
 
   it('shows Recently Added for movie and TV libraries only', async () => {

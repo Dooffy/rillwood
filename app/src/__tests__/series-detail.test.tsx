@@ -7,10 +7,16 @@ import { Alert, type AlertButton } from 'react-native';
 import * as api from '@/api';
 import { ApiError, type BaseItemDto, type RequestOptions } from '@/api';
 import SeriesDetail from '@/app/series/[id]';
+import { ItemMenuProvider } from '@/components/ItemMenu';
 import { ToastProvider } from '@/components/Toast';
 import * as session from '@/session';
 
-const render = (ui: ReactElement) => rtlRender(<ToastProvider>{ui}</ToastProvider>);
+const render = (ui: ReactElement) =>
+  rtlRender(
+    <ToastProvider>
+      <ItemMenuProvider>{ui}</ItemMenuProvider>
+    </ToastProvider>,
+  );
 
 jest.mock('expo-router', () => ({
   router: { push: jest.fn() },
@@ -194,6 +200,7 @@ describe('SeriesDetail', () => {
     await fireEvent.press(await screen.findByRole('button', { name: 'More for Episode 1, Chapter 1' }));
     expect(screen.getAllByText('S2, E1 · Chapter 1').length).toBe(2); // line under Play + menu title
     expect(screen.getByRole('menuitem', { name: 'Mark as Watched' })).toBeOnTheScreen();
+    expect(screen.getByRole('menuitem', { name: 'Resume' })).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('menuitem', { name: 'Play from Start' }));
     expect(router.push).toHaveBeenLastCalledWith({ pathname: '/player', params: { id: 'ep-2-1', start: '0' } });
 
@@ -201,7 +208,8 @@ describe('SeriesDetail', () => {
     expect(screen.getByText('S2, E2 · Chapter 2')).toBeOnTheScreen();
     expect(screen.getByRole('menuitem', { name: 'Mark as Unwatched' })).toBeOnTheScreen();
     expect(screen.queryByRole('menuitem', { name: 'Play from Start' })).toBeNull();
-    await fireEvent.press(screen.getByRole('menuitem', { name: 'Download Episode' }));
+    expect(screen.getByRole('menuitem', { name: 'Play' })).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Download' }));
     expect(await screen.findByText('Coming in a later build.')).toBeOnTheScreen();
   });
 
