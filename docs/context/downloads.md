@@ -10,39 +10,11 @@ Own Expo module (Swift + Kotlin, Expo Modules API) - no third-party downloader, 
 - Android 14+: one user-initiated data transfer (UIDT) job as queue runner. Android 8-13: WorkManager unique worker + `dataSync` FGS (dependency decision pending, `docs/open-items.md`).
 - Network setting (Wi-Fi only default / Any network): iOS `allowsCellularAccess` (+ `allowsExpensiveNetworkAccess`), Android UIDT `setRequiredNetworkType` / WorkManager `UNMETERED` vs `CONNECTED`. Wi-Fi only = unmetered. No NetInfo.
 
-```ts
-export type TaskState =
-  "queued" | "running" | "waiting" | "paused" | "done" | "error";
-export type Task = {
-  id: string;
-  bytes: number;
-  total: number;
-  state: TaskState;
-  reason?: "network" | "auth" | "user" | "storage" | "system";
-};
-export function setCredential(
-  accountId: string,
-  headers: Record<string, string>,
-): void; // native secure store
-export function clearCredential(accountId: string): void; // on sign-out
-export function enqueue(
-  items: {
-    id: string;
-    accountId: string;
-    url: string;
-    dest: string /* relative to Paths.document */;
-    size: number;
-  }[],
-  o: { cellular: boolean },
-): void; // whole batch, keeps order
-export function pause(id: string): void; // iOS: keeps resume data; Android: keeps .part + Last-Modified
-export function resume(id: string): void;
-export function cancel(id: string): void; // deletes partial data
-export function setCellular(cellular: boolean): void;
-export function getTasks(): Promise<Task[]>;
-// events: progress { id, bytes, total } (native-throttled ~500ms), done { id }, error { id, status?, message }
-```
+Contract (types, calls, events): [`app/modules/downloads/index.ts`](../../app/modules/downloads/index.ts), native module name `Downloads`. `import Downloads from '../../modules/downloads'`, events via `Downloads.addListener('progress' | 'done' | 'error', fn)`.
 
+- `dest` is relative to `Paths.document`; native resolves it under Documents and rejects anything that ends up outside (it re-reads `dest` after process death, without JS). `size` (`MediaSource.Size`) is required - the store's pre-flight skips items without one, so one episode can't block a season.
+- `enqueue` items and options are typed `Record`s on both platforms (`EnqueueItem`, `EnqueueOptions`) - the bridge checks field types.
+- iOS: background session id `app.rillwood.client.downloads`. `DownloadsAppDelegateSubscriber` answers `handleEventsForBackgroundURLSession` for other ids straight away (Expo waits for every subscriber) and hands ours to `DownloadsSession` (session owner) for `urlSessionDidFinishEvents`.
 - Tokens never in URLs or logs. Native keeps them only in OS-protected storage so transfers resume after process death without JS (iOS: the background session; Android: credential store, storage form pending - `docs/open-items.md`). This is the only exception to "tokens only in `expo-secure-store`" (root §2).
 - HTTP: never HEAD (405); total from `Content-Range` / `Content-Length`, checked against `MediaSource.Size`. Resume = `Range: bytes=<n>-` + `If-Range: <Last-Modified>`; 206 with another start → fail, 200 → file changed, restart; 416 → done if size == total. Finalize only when size == total (`.part` → rename). iOS: check the HTTP status in `didFinishDownloadingTo` (error bodies "finish" too).
 - Status: 401 → `paused(auth)`, 403 → error (user policy `EnableContentDownloading` off - hide Download), 404 → failed, 5xx / IO → native retry with backoff.
@@ -58,4 +30,4 @@ export function getTasks(): Promise<Task[]>;
 - iOS downloads dir `isExcludedFromBackup`.
 - `cleanup()` on launch + foreground: delete when `now > expires_at`, skip pinned / currently playing / active; weekly orphan sweep.
 - Offload policy setting: Off / After watched (default) / After download; delay 0/7/14/30 days (default 7). Watched = local ≥90% or server `UserData.Played`.
-- Device test plan (M5): `docs/test-plans/downloads.md` (to write) - force-quit, OS kill, reboot, airplane mode, 20GB + 60GB file, file replaced mid-download, token revoked, low disk, Android Task Manager stop + dataSync timeout + standby buckets, notification permission denied, iOS `Authorization` header on a background task.
+- Device test plan (M5): `docs/test-plans/downloads.md` (scaffold rows done) - force-quit, OS kill, reboot, airplane mode, 20GB + 60GB file, file replaced mid-download, token revoked, low disk, Android Task Manager stop + dataSync timeout + standby buckets, notification permission denied, iOS `Authorization` header on a background task.

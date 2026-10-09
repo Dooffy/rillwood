@@ -97,15 +97,15 @@ Before M5: every screen handles no data and failure the same way.
 
 Design + sources: `docs/research/background-downloads.md`.
 
-- [ ] `modules/downloads` scaffold (`npx create-expo-module --local downloads`), JS contract per `docs/context/downloads.md`, `appDelegateSubscribers` in `expo-module.config.json`
-- [ ] iOS: one background `URLSession` (fixed id, `sessionSendsLaunchEvents`, not discretionary, `httpMaximumConnectionsPerHost = 2`), created at launch, works without JS. Season = all tasks enqueued at once. `taskDescription` = download id. Auth header per request. Check HTTP status + size in `didFinishDownloadingTo`, move synchronously. Downloads dir `isExcludedFromBackup`. Pause = cancel with resume data (protected file). Reattach via `getAllTasks`. `handleEventsForBackgroundURLSession` subscriber calls the handler straight away for foreign session ids. `allowsCellularAccess` / `allowsExpensiveNetworkAccess`
-- [ ] Android shared engine: OkHttp (RN's version, never 5.x), `Range` + `If-Range: <Last-Modified>`, 206 start check, 200 → restart, 416 → size check, `.part` + fsync + rename, status mapping 401 / 403 / 404
+- [x] `modules/downloads` scaffold (hand-written, no generated view / web / example), typed JS contract in `index.ts` (`docs/context/downloads.md` points to it), typed `EnqueueItem` / `EnqueueOptions` records, `appDelegateSubscribers` in `expo-module.config.json`. Native calls are no-op stubs; device test D1-D3 pending
+- [ ] iOS: one background `URLSession` (fixed id, `sessionSendsLaunchEvents`, not discretionary, `httpMaximumConnectionsPerHost = 2`), created at launch, works without JS. Season = all tasks enqueued at once. `taskDescription` = download id. Auth header per request. Resolve `dest` under Documents, reject paths outside. Check HTTP status + size in `didFinishDownloadingTo`, move synchronously. Downloads dir `isExcludedFromBackup`. Pause = cancel with resume data (protected file). Reattach via `getAllTasks`. `handleEventsForBackgroundURLSession` subscriber calls the handler straight away for foreign session ids. `allowsCellularAccess` / `allowsExpensiveNetworkAccess`
+- [ ] Android shared engine: OkHttp (RN's version, never 5.x), `Range` + `If-Range: <Last-Modified>`, 206 start check, 200 → restart, 416 → size check, `dest` resolved under `filesDir`, paths outside rejected, `.part` + fsync + rename, status mapping 401 / 403 / 404
 - [ ] Android 14+: UIDT queue-runner `JobService` (`setUserInitiated`, network constraint per setting, `setEstimatedNetworkBytes`, `setPersisted`, `setNotification` within 10s with Pause / Cancel, `updateTransferredNetworkBytes`, `onStopJob` persists + reschedules). Fall back to the 8-13 path if `schedule` fails
 - [ ] Android 8-13: WorkManager (≥ 2.10) unique work + `CoroutineWorker` + `setForeground(dataSync)`, same engine (or own FGS - `docs/open-items.md` decision)
 - [ ] Module manifest: `RUN_USER_INITIATED_JOBS`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_DATA_SYNC`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, JobService (`BIND_JOB_SERVICE`), `SystemForegroundService` `dataSync` merge
 - [ ] Native credential store + `setCredential` / `clearCredential`, cleared on sign-out (`docs/open-items.md` decision)
 - [ ] Notification permission prompt before first download (Android 13+); downloads still run if denied
-- [ ] Store + hooks + reconcile + pre-flight + snapshot/images/subs; `dl` index versioned with migrations
+- [ ] Store + hooks + reconcile + pre-flight (skip items without `MediaSource.Size`) + snapshot/images/subs; `dl` index versioned with migrations
 - [ ] Network setting: Wi-Fi only / Any network
 - [ ] Hide Download when `User.Policy.EnableContentDownloading` is false; handle 403
 - [ ] Downloads screen: storage bar (`Paths.availableDiskSpace`), in progress, ready, delete
