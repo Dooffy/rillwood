@@ -106,7 +106,7 @@ Design + sources: `docs/research/background-downloads.md`.
 - [ ] Native credential store + `setCredential` / `clearCredential`, cleared on sign-out (sign-out also cancels that account's tasks + deletes their resume data, which hold the header) (`docs/open-items.md` decision)
 - [ ] Notification permission prompt before first download (Android 13+); downloads still run if denied
 - [x] Store + hooks + reconcile + pre-flight (`src/downloads.ts`): versioned `dl` index, `useDownload` / `useDownloadList`, start (batch per account, skip items without `MediaSource.Size`), pause / resume / delete, native events, reconcile on launch + foreground, native credential set on enqueue / reconcile and cleared for signed-out accounts
-- [ ] Per download: item JSON snapshot, poster / backdrop, external subtitle files (relative paths)
+- [x] Per download: item JSON snapshot, poster / backdrop, external subtitle files (relative paths) - `src/downloadSnapshot.ts`, retried at reconcile, deleted with the item's last version; iOS excludes `Documents/downloads` from backup. Device test S1-S3 + D17 pending
 - [ ] Network setting: Wi-Fi only / Any network
 - [x] Download button (`DownloadButton` + item menu, `src/useDownloadControl.ts`): detail + series header (season) + item menu, ↓ / ring / paused / ✓ states, pause / resume / delete; hidden when `User.Policy.EnableContentDownloading` is false; 403 on start → toast. Device test pending (incl. the store, PR 59)
 - [ ] Downloads screen: storage bar (`Paths.availableDiskSpace`), in progress, ready, delete
@@ -139,7 +139,7 @@ Design + sources: `docs/research/background-downloads.md`.
 - [ ] Review server: self-hosted Jellyfin 12.1 over HTTPS, non-admin review user with downloads on, open / public-domain media only, credentials only in the store consoles (`demo.jellyfin.org` resets hourly, no downloads)
 - [ ] App Store Connect: privacy label "Data Not Collected", age rating questionnaire, EU DSA trader status, export compliance (`docs/open-items.md`), review notes (draft in `docs/research/store-requirements.md`)
 - [ ] Play Console: data safety, FGS `dataSync` declaration + video (Android 8-13 path), app access, content rating, closed test (12 testers x 14 days for new personal accounts - start early)
-- [ ] Release checks: Xcode privacy report on the archive, AAB 16 KB page alignment, release permissions list, no spike / test screens
+- [ ] Release checks: Xcode privacy report on the archive, AAB 16 KB page alignment, release permissions list, no spike / test screens, no `UIFileSharingEnabled` in the release Info.plist (built without `RILLWOOD_FILE_SHARING`)
 - [ ] TestFlight + Play internal, 3-5 testers
 - [ ] Tag release; publish mpv/FFmpeg source tarballs
 
@@ -152,6 +152,7 @@ Design + sources: `docs/research/background-downloads.md`.
 - [ ] Chapters in the player (moved from M4, 2026-10-08): marks on the scrubber (removed from the first Player UI - plain lines didn't explain themselves), names while scrubbing, snap / skip to chapter (`Chapters` on `/Items/{id}`)
 - [ ] PiP + keep playing on leave (moved from M4, 2026-10-08; `docs/open-items.md`): PiP when the app goes to the background, and/or keep the audio playing when the app is left (a setting) - the MVP pauses on leave; lock-screen Play already plays audio in the background. Android media session (lock-screen controls)
 
+- [ ] Files app sharing for users: decide keep private vs share (needs the kv-store moved out of `Documents` first) - `docs/open-items.md`
 - [ ] Long-press menu: Play / Resume Episode for shows and seasons (async next-episode lookup, `seriesNextUp` / `seriesPlayTarget` out of the series screen; `itemActions` into `items.ts`)
 
 ## Ideas

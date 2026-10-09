@@ -87,7 +87,7 @@ let routes: Record<string, unknown>;
 function routeOf(path: string, options?: RequestOptions) {
   const q = options?.query;
   if (path.endsWith('/Episodes'))
-    return `${q?.fields === 'MediaSources' ? 'files' : 'episodes'}:${String(q?.seasonId)}`;
+    return `${q?.fields?.toString().includes('MediaSources') ? 'files' : 'episodes'}:${String(q?.seasonId)}`;
   if (path === '/Shows/NextUp') return 'nextup';
   if (path.endsWith('/Seasons')) return 'seasons';
   if (path.endsWith('/Similar')) return 'similar';

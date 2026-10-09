@@ -87,9 +87,13 @@ export function streamUrl(baseUrl: string, itemId: string, mediaSourceId: string
   return `${baseUrl}/Videos/${encodeURIComponent(itemId)}/stream?static=true&mediaSourceId=${encodeURIComponent(mediaSourceId)}`;
 }
 
+/** File extension a text subtitle is served as (`srt`, `ass`, `vtt`); undefined for image formats (PGS, VobSub). */
+export const subtitleExtension = (stream: MediaStreamDto): string | undefined =>
+  SUB_EXTENSION[stream.Codec?.toLowerCase() ?? ''];
+
 /** `/Videos/{id}/{msId}/Subtitles/{index}/Stream.{ext}`; null for formats the server can't serve as text. */
 export function subtitleUrl(baseUrl: string, itemId: string, mediaSourceId: string, stream: MediaStreamDto) {
-  const ext = SUB_EXTENSION[stream.Codec?.toLowerCase() ?? ''];
+  const ext = subtitleExtension(stream);
   if (!ext) return null;
   return `${baseUrl}/Videos/${encodeURIComponent(itemId)}/${encodeURIComponent(mediaSourceId)}/Subtitles/${stream.Index}/Stream.${ext}`;
 }

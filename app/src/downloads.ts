@@ -9,7 +9,9 @@ import { useCallback, useRef, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 
 import Downloads, { type EnqueueItem, type Task } from '../modules/downloads';
-import { authHeader, type BaseItemDto, type MediaSourceDto } from '@/api';
+import { authHeader, request, type BaseItemDto, type MediaSourceDto } from '@/api';
+import { itemFolder, readSnapshotItem, saveSnapshot, subtitlePrefix, type Snapshot } from '@/downloadSnapshot';
+import { itemDetail } from '@/items';
 import { connectionFor, getSession, subscribeSession, type Account } from '@/session';
 
 export type DownloadStatus = 'queued' | 'downloading' | 'paused' | 'done' | 'error';
@@ -33,6 +35,8 @@ export type Download = {
   createdAt: number;
   downloadedAt?: number;
   pinned: boolean;
+  /** Item JSON, poster, backdrop, subtitles saved next to the file; missing → retried at reconcile. */
+  snapshot?: Snapshot;
 };
 
 export type DownloadRequest = { item: BaseItemDto; source: MediaSourceDto };
@@ -122,15 +126,17 @@ function batch(fn: () => void) {
   }
 }
 
-/** Structural changes (status, reason) are saved; progress only re-renders that item. */
+/** Saved when anything but progress changes; progress (`bytes`) only re-renders that item. */
 function patch(id: string, fields: Partial<Download>) {
   const items = store();
   const old = items.get(id);
   if (!old) return;
   const next = { ...old, ...fields };
-  if (Object.keys(fields).every((k) => next[k as keyof Download] === old[k as keyof Download])) return;
+  const changed = Object.keys(fields).filter((k) => next[k as keyof Download] !== old[k as keyof Download]);
+  if (changed.length === 0) return;
   items.set(id, next);
-  if (next.status !== old.status || next.reason !== old.reason) {
+  // Progress (bytes) stays in memory; anything else is saved.
+  if (changed.some((k) => k !== 'bytes')) {
     dirty = true;
     save();
   }
@@ -269,9 +275,11 @@ export async function startDownloads(requests: DownloadRequest[]): Promise<Start
   if (!account || account.id !== requested || !connectionFor(account)) return { ok: false, problem: 'signedOut' };
   const now = Date.now();
   const fresh = new Map<string, Download>();
+  const from: DownloadRequest[] = [];
   for (const { item, source } of requests) {
     const id = downloadId(account.id, item.Id, source.Id);
     if (!source.Size || store().has(id) || fresh.has(id)) continue;
+    from.push({ item, source });
     fresh.set(id, {
       id,
       accountId: account.id,
@@ -294,6 +302,7 @@ export async function startDownloads(requests: DownloadRequest[]): Promise<Start
     if (!hasSpace(free, bytes)) return { ok: false, problem: 'space' };
     put(downloads);
     send(downloads);
+    downloads.forEach((d, i) => void snapshot(d, account.server.url, from[i]));
   }
   return { ok: true, started: downloads.length, skipped: requests.length - downloads.length };
 }
@@ -329,19 +338,84 @@ export function deleteDownloads(ids: readonly string[]) {
   batch(() => ids.forEach(deleteDownload));
 }
 
-/** Stops it and deletes the file (or the partial data). */
+/** Stops it and deletes its files (`removeFiles`). */
 export function deleteDownload(id: string) {
   const d = getDownload(id);
   if (!d) return;
   Downloads.cancel(id);
-  try {
-    const file = new File(Paths.document, d.path);
-    if (file.exists) file.delete();
-    // The item's folder once its last version is gone.
-    const dir = new Directory(Paths.document, d.path.slice(0, d.path.lastIndexOf('/')));
-    if (dir.exists && dir.list().length === 0) dir.delete();
-  } catch {}
   remove(id);
+  removeFiles(d);
+}
+
+/** Whether another download of the item (another version, same account) is in the index. */
+const hasVersion = (d: Download) =>
+  // The index, not `list`: a batch delete hasn't rebuilt it yet.
+  [...store().values()].some((o) => o.id !== d.id && o.accountId === d.accountId && o.itemId === d.itemId);
+
+/**
+ * Files of a download that's gone from the index: the item's whole folder (item JSON, images) with its last version,
+ * else only this version's video + subtitles.
+ */
+function removeFiles(d: Download) {
+  try {
+    const folder = new Directory(Paths.document, itemFolder(d.path));
+    if (!folder.exists) return;
+    if (!hasVersion(d)) {
+      folder.delete();
+      return;
+    }
+    const subs = subtitlePrefix(d.path);
+    for (const f of folder.list()) {
+      const path = `${itemFolder(d.path)}/${f.name}`;
+      if (f instanceof File && (path === d.path || path.startsWith(subs))) f.delete();
+    }
+  } catch {}
+}
+
+// One snapshot at a time per item folder (versions share its item JSON + images); keys of the ones queued.
+const chains = new Map<string, Promise<boolean>>();
+const snapping = new Set<string>();
+
+/** The item for a retry: the saved JSON, else (it was never written) the server's, when signed in. */
+async function itemFor(d: Download): Promise<BaseItemDto | null> {
+  const saved = readSnapshotItem(d.path);
+  if (saved) return saved;
+  const account = getSession().accounts.find((a) => a.id === d.accountId);
+  const conn = account && connectionFor(account);
+  return conn ? request<BaseItemDto>(conn, itemDetail(d.itemId).path).catch(() => null) : null;
+}
+
+/**
+ * Saves the download's snapshot (`src/downloadSnapshot.ts`) from the item it started with, or - a retry - from the
+ * saved item JSON. Resolves false when it failed (offline): `snapshot` stays unset for the next reconcile.
+ */
+function snapshot(d: Download, baseUrl: string, from?: DownloadRequest): Promise<boolean> {
+  // The same download started again (deleted + re-added) is a new one: its own key.
+  const key = `${d.id}@${d.createdAt}`;
+  if (snapping.has(key)) return Promise.resolve(true);
+  snapping.add(key);
+  const folder = itemFolder(d.path);
+  const run = async () => {
+    const current = () => getDownload(d.id)?.createdAt === d.createdAt;
+    try {
+      const item = from?.item ?? (await itemFor(d));
+      const source = from?.source ?? item?.MediaSources?.find((s) => s.Id === d.sourceId);
+      if (!item || !source || !current()) return false;
+      const saved = await saveSnapshot(baseUrl, d.path, item, source, !!from);
+      if (current()) patch(d.id, { snapshot: saved });
+      return true;
+    } catch {
+      return false; // offline, server gone, disk full: retried at the next reconcile
+    } finally {
+      snapping.delete(key);
+      // Deleted while saving: don't leave what it wrote (a re-added one owns the files).
+      if (!getDownload(d.id)) removeFiles(d);
+    }
+  };
+  const next = (chains.get(folder) ?? Promise.resolve(true)).then(run);
+  chains.set(folder, next);
+  void next.then(() => chains.get(folder) === next && chains.delete(folder));
+  return next;
 }
 
 const STATUS: Record<Task['state'], DownloadStatus> = {
@@ -402,6 +476,28 @@ async function run() {
     }
   });
   if (lost.length > 0) send(lost);
+
+  void retrySnapshots();
+}
+
+let retrying = false;
+
+/**
+ * Snapshots that didn't finish (offline at the start, app killed), one at a time; the first failure (still offline)
+ * ends the round. Images are served without auth, so signed-out accounts get theirs too.
+ */
+async function retrySnapshots() {
+  if (retrying) return;
+  retrying = true;
+  try {
+    const servers = new Map(getSession().accounts.map((a) => [a.id, a.server.url]));
+    for (const d of getDownloads()) {
+      const baseUrl = servers.get(d.accountId);
+      if (!d.snapshot && baseUrl && !(await snapshot(d, baseUrl))) break;
+    }
+  } finally {
+    retrying = false;
+  }
 }
 
 let started = false;

@@ -42,7 +42,7 @@ Platforms: **iOS first**, Android phones in the same release. iPad layout before
 | State | React only: `useState`/`useReducer`, Context (theme), `useSyncExternalStore` stores (session, settings, downloads) | **No Zustand, Redux, TanStack Query, MMKV** |
 | Persistence | `expo-sqlite/kv-store` (accounts, downloads index, settings, sync queue) | Sync reads on boot |
 | Secrets | `expo-secure-store` (token per account) | Never put tokens in URLs or files. Only exception: the native downloader keeps a copy in OS-protected storage so downloads resume after process death (`docs/context/downloads.md`) |
-| Files | `expo-file-system` new API (`File`, `Directory`, `Paths`) | Store **relative** paths only (iOS container path changes). Only legacy call: `getFreeDiskStorageAsync` (`expo-file-system/legacy`) for the download pre-flight - iOS free space incl. purgeable (`Paths.availableDiskSpace` leaves it out) |
+| Files | `expo-file-system` new API (`File`, `Directory`, `Paths`) | Store **relative** paths only (iOS container path changes). Opt-in dev builds (`RILLWOOD_FILE_SHARING=1` at prebuild, `app.config.ts`) share `Documents` with the Files app; every other build doesn't. Only legacy call: `getFreeDiskStorageAsync` (`expo-file-system/legacy`) for the download pre-flight - iOS free space incl. purgeable (`Paths.availableDiskSpace` leaves it out) |
 | Orientation | `expo-screen-orientation` | Upright portrait everywhere (config plugin `initialOrientation: PORTRAIT_UP` + `lockAsync` in the root layout); the player unlocks (`DEFAULT`) while open and re-locks on leave. `app.json` `orientation: default` so the player can rotate. Native-stack / tabs `orientation` options don't hold in dev-client builds - don't use them |
 | Glass | `expo-glass-effect` (`Glass` primitive) | Player controls over video: Liquid Glass on iOS 26+, translucent fill (`glassFallback`) elsewhere. Glass never under opacity < 1 - hide by unmounting |
 | Background playback | Pause when the app is left (both platforms); iOS lock-screen / headphones Play carries on with audio (`UIBackgroundModes: audio`) | Video track off in the background (I2). Keep playing on leave (a setting) and PiP are post-MVP. Rules: `docs/context/player.md` |
@@ -139,6 +139,7 @@ src/useDownloadControl.ts  download from a button / menu: state (item or season)
 src/detail.ts            detailView: everything the detail screen shows, from one item (pure)
 src/playback.ts          PlaybackInfo → play source (pure): device profile, direct play check, stream + sidecar subtitle URLs, track options + `matchTracks` (real mpv ids) + `carryTracks` (picks to the next episode by language)
 src/downloads.ts         store, queue, reconcile, cleanup, storage
+src/downloadSnapshot.ts  per-download snapshot: item JSON, poster, backdrop, external subtitles next to the file
 src/sync.ts              offline progress queue replay
 src/settings.ts          user settings in kv-store (appearance, subtitle size + style, video zoom; downloads + offload later)
 src/pickers.ts           Settings options that open a checkmark list: key → title, choices, get / set

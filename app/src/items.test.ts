@@ -855,7 +855,7 @@ describe('downloads', () => {
   it('asks for a season with its files, without missing episodes', () => {
     expect(seasonFiles('show', 's1')).toEqual({
       path: '/Shows/show/Episodes',
-      query: { seasonId: 's1', fields: 'MediaSources', isMissing: false },
+      query: { seasonId: 's1', fields: 'MediaSources,Overview', isMissing: false },
     });
   });
 

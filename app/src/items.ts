@@ -190,10 +190,13 @@ export function nextEpisode(list: BaseItemDto[] | undefined, id: string): BaseIt
 /** The signed-in user; `Policy.EnableContentDownloading` false (or 403 from `/Download`) → no Download button. */
 export const currentUser: Endpoint = { path: '/Users/Me' };
 
-/** A season's episodes with their files (`MediaSources` with `Size`), to download it. Missing episodes left out. */
+/**
+ * A season's episodes with their files (`MediaSources` with `Size`) and overview (the download snapshot), to download
+ * it. Missing episodes left out.
+ */
 export function seasonFiles(seriesId: string, seasonId: string): Endpoint {
   const list = episodes(seriesId, seasonId);
-  return { ...list, query: { ...list.query, fields: 'MediaSources', isMissing: false } };
+  return { ...list, query: { ...list.query, fields: 'MediaSources,Overview', isMissing: false } };
 }
 
 /** False for a missing or not yet aired episode (`Virtual`: no file on the server). */
