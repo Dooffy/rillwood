@@ -5,6 +5,7 @@ Pod::Spec.new do |s|
   s.summary        = 'Rillwood background downloader'
   s.license        = 'GPL-3.0-or-later'
   s.author         = 'Rillwood contributors'
+  s.homepage       = 'https://example.invalid/rillwood' # required by CocoaPods; no project site yet
   s.platforms      = { :ios => '16.4' }
   s.source         = { git: '' }
   s.static_framework = true
