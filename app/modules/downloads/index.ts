@@ -36,7 +36,10 @@ declare class DownloadsModule extends NativeModule<DownloadsEvents> {
   setCredential(accountId: string, headers: Record<string, string>): void;
   /** On sign-out. */
   clearCredential(accountId: string): void;
-  /** Whole batch at once (a season = one call), kept in order. Native runs at most 2 at a time. */
+  /**
+   * Whole batch at once (a season = one call), kept in order. Native runs at most 2 at a time; known ids are skipped.
+   * Throws (nothing enqueued) if a `dest` resolves outside Documents, a `url` isn't http(s) or a `size` isn't > 0.
+   */
   enqueue(items: EnqueueItem[], options: EnqueueOptions): void;
   /** iOS keeps resume data, Android the `.part` file + `Last-Modified`. */
   pause(id: string): void;
