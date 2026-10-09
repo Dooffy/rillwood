@@ -11,9 +11,6 @@ export const TOAST_MS = 3000;
 
 type ShowToast = (message: string) => void;
 
-/** Toast for buttons that are placeholders until their feature lands. */
-export const SOON = 'Coming in a later build.';
-
 const ToastContext = createContext<ShowToast | null>(null);
 
 /** One toast at a time; a new message replaces the current one and restarts the timer. */

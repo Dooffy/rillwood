@@ -4,6 +4,8 @@ import { describe, expect, it } from '@jest/globals';
 import type { BaseItemDto, MediaStreamDto } from './api';
 import {
   backdropImage,
+  downloadSources,
+  seasonFiles,
   cardTitles,
   activeFilters,
   castAndCrew,
@@ -846,5 +848,22 @@ describe('user data', () => {
     expect(patchResponse(other, change)).toBeUndefined();
     expect(patchResponse({ Version: '12.1.0' }, change)).toBeUndefined();
     expect(patchResponse(null, change)).toBeUndefined();
+  });
+});
+
+describe('downloads', () => {
+  it('asks for a season with its files, without missing episodes', () => {
+    expect(seasonFiles('show', 's1')).toEqual({
+      path: '/Shows/show/Episodes',
+      query: { seasonId: 's1', fields: 'MediaSources', isMissing: false },
+    });
+  });
+
+  it('downloads the first version of each item that has a file', () => {
+    const source = (Id: string) => ({ Id, Size: 1 });
+    const a = { Id: 'a', Name: 'A', Type: 'Episode', MediaSources: [source('a1'), source('a2')] };
+    const missing = { Id: 'b', Name: 'B', Type: 'Episode', LocationType: 'Virtual', MediaSources: [source('b1')] };
+    const none = { Id: 'c', Name: 'C', Type: 'Episode' };
+    expect(downloadSources([a, missing, none])).toEqual([{ item: a, source: source('a1') }]);
   });
 });

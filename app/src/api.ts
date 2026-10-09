@@ -175,6 +175,8 @@ export type UserDto = {
   ServerId?: string;
   PrimaryImageTag?: string;
   HasPassword?: boolean;
+  /** `/Users/Me` only. */
+  Policy?: { EnableContentDownloading?: boolean };
 };
 
 export type AuthenticationResult = {

@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { fireEvent, render as rtlRender, screen } from '@testing-library/react-native';
+import { act, fireEvent, render as rtlRender, screen } from '@testing-library/react-native';
+import { Paths } from 'expo-file-system';
 import type { ReactElement } from 'react';
+import { Alert, type AlertButton } from 'react-native';
 
 import * as api from '@/api';
 import { ApiError, type BaseItemDto } from '@/api';
 import ItemDetail from '@/app/item/[id]';
 import { ItemMenuProvider } from '@/components/ItemMenu';
 import { ToastProvider } from '@/components/Toast';
+import { initDownloads } from '@/downloads';
 import * as session from '@/session';
+
+import NativeDownloads from '../../modules/downloads';
 
 const render = (ui: ReactElement) =>
   rtlRender(
@@ -80,6 +85,12 @@ const episode: BaseItemDto = {
 };
 
 let reply: () => Promise<unknown>;
+let me: api.UserDto;
+const GB = 1024 ** 3;
+const native = jest.mocked(NativeDownloads);
+// Native events, as the store's listeners get them.
+const emit = (event: string, payload: object) =>
+  native.addListener.mock.calls.filter(([e]) => e === event).forEach(([, fn]) => (fn as (p: object) => void)(payload));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -95,7 +106,10 @@ beforeEach(() => {
   }));
   useLocalSearchParams.mockReturnValue({ id: sintel.Id });
   reply = () => Promise.resolve(sintel);
-  request.mockImplementation(() => reply() as Promise<never>);
+  me = { Id: `u${seq}`, Name: 'anna', Policy: { EnableContentDownloading: true } };
+  request.mockImplementation((_conn, path) => (path === '/Users/Me' ? Promise.resolve(me) : reply()) as Promise<never>);
+  jest.spyOn(Paths, 'availableDiskSpace', 'get').mockReturnValue(500 * GB);
+  jest.spyOn(Paths, 'totalDiskSpace', 'get').mockReturnValue(1000 * GB);
 });
 
 describe('ItemDetail', () => {
@@ -167,10 +181,52 @@ describe('ItemDetail', () => {
     expect(await screen.findByLabelText(/, 5\.1, Dolby Atmos, SDH$/)).toBeOnTheScreen();
   });
 
-  it('Download is a placeholder for now', async () => {
+  it('downloads from the header: ring while downloading, pause / resume, ✓ when done, delete after asking', async () => {
+    const withSize = { ...sintel, MediaSources: [{ ...sintel.MediaSources![0], Container: 'mkv', Size: 2 * GB }] };
+    reply = () => Promise.resolve(withSize);
+    initDownloads(); // native event listeners (cleared mocks: register them inside this test)
     await render(<ItemDetail />);
     await fireEvent.press(await screen.findByRole('button', { name: 'Download' }));
-    expect(await screen.findByText('Coming in a later build.')).toBeOnTheScreen();
+    expect(native.enqueue).toHaveBeenCalledWith(
+      [expect.objectContaining({ url: 'https://jf.example.com/Items/ms/Download', size: 2 * GB })],
+      { cellular: false },
+    );
+    const id = native.enqueue.mock.calls[0][0][0].id;
+
+    await act(() => emit('progress', { id, bytes: GB }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Pause download', value: { text: '50%' } }));
+    expect(native.pause).toHaveBeenCalledWith(id);
+    await fireEvent.press(screen.getByRole('button', { name: 'Resume download' }));
+    expect(native.resume).toHaveBeenCalledWith(id);
+
+    await act(() => emit('done', { id }));
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    await fireEvent.press(screen.getByRole('button', { name: 'Downloaded, delete download' }));
+    const buttons = alert.mock.calls[0][2] as AlertButton[];
+    await act(() => buttons.find((b) => b.style === 'destructive')?.onPress?.());
+    expect(native.cancel).toHaveBeenCalledWith(id);
+    expect(screen.getByRole('button', { name: 'Download' })).toBeOnTheScreen();
+  });
+
+  it('hides Download when the user may not download', async () => {
+    me = { ...me, Policy: { EnableContentDownloading: false } };
+    await render(<ItemDetail />);
+    expect(await screen.findByRole('header', { name: 'Sintel' })).toBeOnTheScreen();
+    expect(request).toHaveBeenCalledWith(expect.anything(), '/Users/Me', expect.anything());
+    expect(screen.queryByRole('button', { name: 'Download' })).toBeNull();
+  });
+
+  it('says when the server sends no file size', async () => {
+    await render(<ItemDetail />);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Download' }));
+    expect(await screen.findByText("Nothing to download - the server didn't send a file.")).toBeOnTheScreen();
+  });
+
+  it('says when there is not enough space', async () => {
+    reply = () => Promise.resolve({ ...sintel, MediaSources: [{ ...sintel.MediaSources![0], Size: 600 * GB }] });
+    await render(<ItemDetail />);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Download' }));
+    expect(await screen.findByText('Not enough free space on this device.')).toBeOnTheScreen();
   });
 
   it('marks as watched at once, before the server answers', async () => {

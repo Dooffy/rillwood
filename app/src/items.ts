@@ -182,7 +182,29 @@ export function nextEpisodes(item: BaseItemDto): Endpoint | undefined {
 export function nextEpisode(list: BaseItemDto[] | undefined, id: string): BaseItemDto | undefined {
   const at = list?.findIndex((ep) => ep.Id === id) ?? -1;
   const next = at < 0 ? undefined : list?.[at + 1];
-  return next?.LocationType === 'Virtual' ? undefined : next;
+  return next && hasFile(next) ? next : undefined;
+}
+
+// Downloads.
+
+/** The signed-in user; `Policy.EnableContentDownloading` false (or 403 from `/Download`) → no Download button. */
+export const currentUser: Endpoint = { path: '/Users/Me' };
+
+/** A season's episodes with their files (`MediaSources` with `Size`), to download it. Missing episodes left out. */
+export function seasonFiles(seriesId: string, seasonId: string): Endpoint {
+  const list = episodes(seriesId, seasonId);
+  return { ...list, query: { ...list.query, fields: 'MediaSources', isMissing: false } };
+}
+
+/** False for a missing or not yet aired episode (`Virtual`: no file on the server). */
+export const hasFile = (item: BaseItemDto) => item.LocationType !== 'Virtual';
+
+/** What to download for each item: its first version (the one Play picks). Items without a file are left out. */
+export function downloadSources(items: BaseItemDto[]): { item: BaseItemDto; source: MediaSourceDto }[] {
+  return items.flatMap((item) => {
+    const source = hasFile(item) ? item.MediaSources?.[0] : undefined;
+    return source ? [{ item, source }] : [];
+  });
 }
 
 /** "More Like This" for a movie or series: `{Items}`, often empty on sparse metadata. */

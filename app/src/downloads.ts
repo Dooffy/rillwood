@@ -3,8 +3,9 @@
 // (modules/downloads - the only file that imports it). Native owns the queue; this keeps what the UI shows and
 // re-sends what native lost (reconcile). Read once (sync) on first use, then served from memory.
 import { Directory, File, Paths } from 'expo-file-system';
+import { getFreeDiskStorageAsync } from 'expo-file-system/legacy';
 import { Storage } from 'expo-sqlite/kv-store';
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useRef, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 
 import Downloads, { type EnqueueItem, type Task } from '../modules/downloads';
@@ -21,6 +22,8 @@ export type Download = {
   sourceId: string;
   title: string;
   seriesId?: string;
+  /** Episodes: their season (the series screen's header button shows the season's downloads). */
+  seasonId?: string;
   /** Relative to `Paths.document`. */
   path: string;
   status: DownloadStatus;
@@ -53,6 +56,35 @@ let batching = false;
 let readable = true;
 const listListeners = new Set<() => void>();
 const itemListeners = new Map<string, Set<() => void>>();
+// By `downloadGroup` key: every change of a download in it, progress included (a season's ring).
+const groupListeners = new Map<string, Set<() => void>>();
+
+/** Movie / episode by its item id (every version); a season by `seasonId`. */
+export type DownloadMatch = { itemId: string } | { seasonId: string };
+
+/** Key of an account's downloads of an item or a season (`useDownloadSummary`). */
+export const downloadGroup = (accountId: string, match: DownloadMatch) =>
+  'itemId' in match ? `${accountId}|i|${match.itemId}` : `${accountId}|s|${match.seasonId}`;
+
+const groupsOf = (d: Download) => [
+  downloadGroup(d.accountId, { itemId: d.itemId }),
+  ...(d.seasonId ? [downloadGroup(d.accountId, { seasonId: d.seasonId })] : []),
+];
+
+function notify(d: Download) {
+  itemListeners.get(d.id)?.forEach((l) => l());
+  for (const g of groupsOf(d)) groupListeners.get(g)?.forEach((l) => l());
+}
+
+function subscribeTo(map: Map<string, Set<() => void>>, key: string | null, listener: () => void) {
+  if (!key) return () => {};
+  const set = map.get(key) ?? new Set();
+  map.set(key, set.add(listener));
+  return () => {
+    set.delete(listener);
+    if (set.size === 0) map.delete(key);
+  };
+}
 
 function store(): Map<string, Download> {
   if (!index) {
@@ -102,7 +134,7 @@ function patch(id: string, fields: Partial<Download>) {
     dirty = true;
     save();
   }
-  itemListeners.get(id)?.forEach((l) => l());
+  notify(next);
 }
 
 function put(downloads: Download[]) {
@@ -110,14 +142,16 @@ function put(downloads: Download[]) {
   for (const d of downloads) items.set(d.id, d);
   dirty = true;
   save();
-  downloads.forEach((d) => itemListeners.get(d.id)?.forEach((l) => l()));
+  downloads.forEach(notify);
 }
 
 function remove(id: string) {
-  if (!store().delete(id)) return;
+  const old = store().get(id);
+  if (!old) return;
+  store().delete(id);
   dirty = true;
   save();
-  itemListeners.get(id)?.forEach((l) => l());
+  notify(old);
 }
 
 export const downloadId = (accountId: string, itemId: string, sourceId: string) => `${accountId}:${itemId}:${sourceId}`;
@@ -202,21 +236,37 @@ function send(downloads: Download[]) {
   });
 }
 
+/**
+ * Free space as iOS counts it for something the user asked for (`volumeAvailableCapacityForImportantUsage`, purgeable
+ * space included - what Settings shows). `Paths.availableDiskSpace` leaves purgeable space out and can be a fraction of
+ * it, so it's only the fallback.
+ */
+async function freeSpace(): Promise<number> {
+  try {
+    return await getFreeDiskStorageAsync();
+  } catch {
+    return Paths.availableDiskSpace;
+  }
+}
+
 /** Space left after everything queued has finished must stay above max(2 GB, 5% of the disk). */
-function hasSpace(bytes: number): boolean {
+function hasSpace(free: number, bytes: number): boolean {
   let pending = 0;
   // The index, not `list`: live bytes.
   for (const d of store().values()) if (d.status !== 'done') pending += Math.max(0, d.total - d.bytes);
-  return Paths.availableDiskSpace - pending - bytes > Math.max(2 * GB, 0.05 * Paths.totalDiskSpace);
+  return free - pending - bytes > Math.max(2 * GB, 0.05 * Paths.totalDiskSpace);
 }
 
 /**
  * Downloads items (a movie, an episode, a season) for the active account as one batch. Items already downloaded or
  * queued, and sources without a size (can't be checked when done), are skipped.
  */
-export function startDownloads(requests: DownloadRequest[]): StartResult {
+export async function startDownloads(requests: DownloadRequest[]): Promise<StartResult> {
+  const requested = getSession().active?.id;
+  const free = await freeSpace();
+  // The items are the requesting account's: another account active after the wait (a switch) doesn't get them.
   const account = getSession().active;
-  if (!account || !connectionFor(account)) return { ok: false, problem: 'signedOut' };
+  if (!account || account.id !== requested || !connectionFor(account)) return { ok: false, problem: 'signedOut' };
   const now = Date.now();
   const fresh = new Map<string, Download>();
   for (const { item, source } of requests) {
@@ -229,6 +279,7 @@ export function startDownloads(requests: DownloadRequest[]): StartResult {
       sourceId: source.Id,
       title: item.Name,
       seriesId: item.SeriesId,
+      seasonId: item.SeasonId,
       path: `downloads/${segment(account.id)}/${segment(item.Id)}/${segment(source.Id)}.${extension(source)}`,
       status: 'queued',
       bytes: 0,
@@ -239,7 +290,8 @@ export function startDownloads(requests: DownloadRequest[]): StartResult {
   }
   const downloads = [...fresh.values()];
   if (downloads.length > 0) {
-    if (!hasSpace(downloads.reduce((sum, d) => sum + d.total, 0))) return { ok: false, problem: 'space' };
+    const bytes = downloads.reduce((sum, d) => sum + d.total, 0);
+    if (!hasSpace(free, bytes)) return { ok: false, problem: 'space' };
     put(downloads);
     send(downloads);
   }
@@ -253,15 +305,28 @@ export function pauseDownload(id: string) {
   patch(id, { status: 'paused', reason: 'user' });
 }
 
+export function pauseDownloads(ids: readonly string[]) {
+  batch(() => ids.forEach(pauseDownload));
+}
+
 /** Also after a sign-in again (paused for auth) or an error. Native skips the enqueue if it still has the task. */
 export function resumeDownload(id: string) {
-  const d = getDownload(id);
-  if (!d || (d.status !== 'paused' && d.status !== 'error')) return;
+  resumeDownloads([id]);
+}
+
+/** Resumes several (a season) as one native batch. */
+export function resumeDownloads(ids: readonly string[]) {
+  const stopped = ids.map(getDownload).filter((d): d is Download => d?.status === 'paused' || d?.status === 'error');
+  if (stopped.length === 0) return;
   batch(() => {
-    patch(id, { status: 'queued', reason: undefined });
-    send([d]);
+    stopped.forEach((d) => patch(d.id, { status: 'queued', reason: undefined }));
+    send(stopped);
   });
-  if (getDownload(id)?.status === 'queued') Downloads.resume(id);
+  for (const d of stopped) if (getDownload(d.id)?.status === 'queued') Downloads.resume(d.id);
+}
+
+export function deleteDownloads(ids: readonly string[]) {
+  batch(() => ids.forEach(deleteDownload));
 }
 
 /** Stops it and deletes the file (or the partial data). */
@@ -381,19 +446,60 @@ export function useDownloadList(): readonly Download[] {
   return useSyncExternalStore(subscribeList, getDownloads);
 }
 
+/** What a button shows for a group of downloads (a movie's versions, a season's episodes). */
+export type DownloadSummary = {
+  /** Something running → downloading; else something paused / failed → paused; else done. */
+  state: 'downloading' | 'paused' | 'done';
+  /** 0-1 over every download in the group. */
+  progress: number;
+  ids: string[];
+  /** Items in it (a season: its episodes downloaded or on the way). */
+  itemIds: string[];
+};
+
+export function summarize(downloads: readonly Download[]): DownloadSummary | null {
+  if (downloads.length === 0) return null;
+  let bytes = 0;
+  let total = 0;
+  for (const d of downloads) {
+    bytes += d.status === 'done' ? d.total : Math.min(d.bytes, d.total);
+    total += d.total;
+  }
+  const has = (...s: DownloadStatus[]) => downloads.some((d) => s.includes(d.status));
+  return {
+    state: has('queued', 'downloading') ? 'downloading' : has('paused', 'error') ? 'paused' : 'done',
+    progress: total > 0 ? bytes / total : 0,
+    ids: downloads.map((d) => d.id),
+    itemIds: [...new Set(downloads.map((d) => d.itemId))],
+  };
+}
+
+const inGroup = (group: string) => [...store().values()].filter((d) => groupsOf(d).includes(group));
+
+const sameSummary = (a: DownloadSummary | null, b: DownloadSummary | null) =>
+  a === b || (!!a && !!b && a.state === b.state && a.progress === b.progress && a.ids.join() === b.ids.join());
+
+/** A group's downloads (`downloadGroup`), with live progress; null when there are none or no group. */
+export function useDownloadSummary(group: string | null): DownloadSummary | null {
+  const last = useRef<DownloadSummary | null>(null);
+  const subscribe = useCallback((listener: () => void) => subscribeTo(groupListeners, group, listener), [group]);
+  const getSnapshot = useCallback(() => {
+    const next = group ? summarize(inGroup(group)) : null;
+    // The same object while nothing it shows changed (useSyncExternalStore compares by reference).
+    if (!sameSummary(last.current, next)) last.current = next;
+    return last.current;
+  }, [group]);
+  return useSyncExternalStore(subscribe, getSnapshot);
+}
+
+/** Whether a group has any download - re-renders only when that changes, not on progress. */
+export function useHasDownloads(group: string | null): boolean {
+  const subscribe = useCallback((listener: () => void) => subscribeTo(groupListeners, group, listener), [group]);
+  return useSyncExternalStore(subscribe, () => !!group && inGroup(group).length > 0);
+}
+
 /** One download, with live progress; null when there is none. */
 export function useDownload(id: string | null): Download | null {
-  const subscribe = useCallback(
-    (listener: () => void) => {
-      if (!id) return () => {};
-      const set = itemListeners.get(id) ?? new Set();
-      itemListeners.set(id, set.add(listener));
-      return () => {
-        set.delete(listener);
-        if (set.size === 0) itemListeners.delete(id);
-      };
-    },
-    [id],
-  );
+  const subscribe = useCallback((listener: () => void) => subscribeTo(itemListeners, id, listener), [id]);
   return useSyncExternalStore(subscribe, () => (id ? getDownload(id) : null));
 }

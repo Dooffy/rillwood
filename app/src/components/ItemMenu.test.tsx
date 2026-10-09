@@ -8,7 +8,9 @@ import type { BaseItemDto } from '@/api';
 import * as session from '@/session';
 
 import { PosterCard } from './Card';
-import { itemActions, ItemMenuProvider, useItemMenu } from './ItemMenu';
+import type { DownloadControl } from '@/useDownloadControl';
+
+import { downloadActions, itemActions, ItemMenuProvider, useItemMenu } from './ItemMenu';
 import { ToastProvider } from './Toast';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
@@ -16,7 +18,9 @@ const { router } = jest.requireMock<{ router: { push: jest.Mock } }>('expo-route
 
 const TICKS = 10_000_000;
 const item = (over: Partial<BaseItemDto>): BaseItemDto => ({ Id: 'i', Name: 'Dune', Type: 'Movie', ...over });
-const labels = (x: BaseItemDto) => itemActions(x, { mark: jest.fn(), download: jest.fn() }).map((a) => a.label);
+const download = { label: 'Download', onPress: jest.fn() };
+const labels = (x: BaseItemDto, withDownload = true) =>
+  itemActions(x, { mark: jest.fn(), download: withDownload ? [download] : undefined }).map((a) => a.label);
 
 describe('itemActions', () => {
   it('a movie not started: Play, watched, favourite, download', () => {
@@ -44,9 +48,40 @@ describe('itemActions', () => {
     expect(labels(item({ UserData: { PlaybackPositionTicks: 0, Played: true } }))).toContain('Mark as Unwatched');
   });
 
-  it('a show has no Play (its detail picks the episode); a collection no Download', () => {
+  it('a show has no Play (its detail picks the episode); no download action, no Download', () => {
     expect(labels(item({ Type: 'Series' }))).toEqual(['Mark as Watched', 'Add to Favourites', 'Download']);
-    expect(labels(item({ Type: 'BoxSet' }))).toEqual(['Mark as Watched', 'Add to Favourites']);
+    expect(labels(item({ Type: 'BoxSet' }), false)).toEqual(['Mark as Watched', 'Add to Favourites']);
+  });
+});
+
+describe('downloadActions', () => {
+  const control = (over: Partial<DownloadControl>): DownloadControl => ({
+    available: true,
+    summary: null,
+    partial: false,
+    starting: false,
+    start: jest.fn(),
+    pause: jest.fn(),
+    resume: jest.fn(),
+    remove: jest.fn(),
+    ...over,
+  });
+  const summary = (state: 'downloading' | 'paused' | 'done') => ({ state, progress: 0.5, ids: ['x'], itemIds: ['i'] });
+  const labels = (over: Partial<DownloadControl>) => downloadActions(control(over)).map((a) => a.label);
+
+  it('follows the download state; none when it is not available', () => {
+    const c = control({});
+    expect(downloadActions(c)).toEqual([{ label: 'Download', onPress: c.start }]);
+    expect(labels({ summary: summary('downloading') })).toEqual(['Pause Download']);
+    expect(labels({ summary: summary('paused') })).toEqual(['Resume Download', 'Delete Download']);
+    expect(labels({ summary: summary('done') })).toEqual(['Delete Download']);
+    expect(labels({ available: false })).toEqual([]);
+  });
+
+  it('a partial season offers the rest and delete; while downloading only pause', () => {
+    expect(labels({ summary: summary('done'), partial: true })).toEqual(['Download', 'Delete Download']);
+    expect(labels({ summary: summary('paused'), partial: true })).toEqual(['Download', 'Delete Download']);
+    expect(labels({ summary: summary('downloading'), partial: true })).toEqual(['Pause Download']);
   });
 });
 
@@ -89,7 +124,7 @@ describe('ItemMenuProvider', () => {
     expect(router.push).toHaveBeenCalledWith({ pathname: '/player', params: { id: 'i', start: '600' } });
   });
 
-  it('Mark as Watched goes to the server; Download is a placeholder', async () => {
+  it('Mark as Watched goes to the server; no Download until the user may download (/Users/Me)', async () => {
     const account = { id: 'a', server: 'https://jf.example.com', userId: 'u', userName: 'me', deviceId: 'd' };
     jest.spyOn(session, 'getSession').mockReturnValue({ accounts: [account], active: account } as never);
     jest.spyOn(session, 'connectionFor').mockReturnValue({} as never);
@@ -99,8 +134,7 @@ describe('ItemMenuProvider', () => {
     await fireEvent.press(screen.getByRole('menuitem', { name: 'Mark as Watched' }));
     expect(setPlayed).toHaveBeenCalledWith(expect.anything(), 'i', true);
     await fireEvent(screen.getByRole('button', { name: 'Dune' }), 'longPress');
-    await fireEvent.press(screen.getByRole('menuitem', { name: 'Download' }));
-    expect(await screen.findByText('Coming in a later build.')).toBeOnTheScreen();
+    expect(screen.queryByRole('menuitem', { name: 'Download' })).toBeNull();
   });
 
   it('closes the keyboard first; another account (switch, sign-out) closes the menu', async () => {
