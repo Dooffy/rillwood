@@ -32,6 +32,22 @@ jest.mock('expo-secure-store', () => {
 
 jest.mock('expo-symbols', () => ({ SymbolView: () => null }));
 
+// Native downloader (modules/downloads): no tasks; tests drive it through the mocked calls + `addListener`.
+jest.mock('./modules/downloads', () => ({
+  __esModule: true,
+  default: {
+    setCredential: jest.fn(),
+    clearCredential: jest.fn(),
+    enqueue: jest.fn(),
+    pause: jest.fn(),
+    resume: jest.fn(),
+    cancel: jest.fn(),
+    setCellular: jest.fn(),
+    getTasks: jest.fn(async () => []),
+    addListener: jest.fn(() => ({ remove: jest.fn() })),
+  },
+}));
+
 // Liquid Glass is native-only: tests get the translucent fallback (`Glass`).
 jest.mock('expo-glass-effect', () => ({
   GlassView: require('react-native').View,

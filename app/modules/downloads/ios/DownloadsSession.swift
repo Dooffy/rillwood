@@ -232,7 +232,7 @@ final class DownloadsSession: NSObject, URLSessionDownloadDelegate {
     r.state = state
     r.reason = reason
     detach(&r)
-    onEvent?("error", ["id": id, "status": status, "message": message])
+    onEvent?("error", ["id": id, "state": state.rawValue, "reason": reason.rawValue, "status": status, "message": message])
   }
 
   private func finish(_ id: String, file location: URL) {

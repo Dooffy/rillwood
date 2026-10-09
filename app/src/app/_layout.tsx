@@ -8,6 +8,7 @@ import { useColorScheme } from 'react-native';
 
 import { ItemMenuProvider } from '@/components/ItemMenu';
 import { ToastProvider } from '@/components/Toast';
+import { initDownloads } from '@/downloads';
 import { SignedOutRedirect, tabsTitle } from '@/navigation';
 import { pickerTitle } from '@/pickers';
 import { applyNativeAppearance, useAppearance } from '@/settings';
@@ -32,6 +33,11 @@ export default function RootLayout() {
 
   useEffect(() => {
     applyNativeAppearance();
+  }, []);
+
+  // Downloads: native events, credentials, reconcile at launch + back from the background (docs/context/downloads.md).
+  useEffect(() => {
+    initDownloads();
   }, []);
 
   // Upright portrait everywhere; only the player unlocks rotation while it's open. app.json allows all orientations

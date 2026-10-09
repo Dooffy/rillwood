@@ -28,7 +28,14 @@ export type DownloadsEvents = {
   /** Native-throttled (~500 ms). */
   progress: (e: { id: string; bytes: number; total: number }) => void;
   done: (e: { id: string }) => void;
-  error: (e: { id: string; status?: number; message: string }) => void;
+  /** The task stopped: paused (auth) or failed - `state` / `reason` as `getTasks` would report them. */
+  error: (e: {
+    id: string;
+    state: 'paused' | 'error';
+    reason: NonNullable<Task['reason']>;
+    status?: number;
+    message: string;
+  }) => void;
 };
 
 declare class DownloadsModule extends NativeModule<DownloadsEvents> {

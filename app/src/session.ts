@@ -77,14 +77,15 @@ function save(accounts: Account[], activeId: string | null | undefined) {
   listeners.forEach((l) => l());
 }
 
-function subscribe(listener: () => void) {
+/** Every session change (sign-in, sign-out, switch); for stores outside React. */
+export function subscribeSession(listener: () => void) {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
 
 /** All accounts + the active one (null when signed out). */
 export function useSession(): SessionState {
-  return useSyncExternalStore(subscribe, getSession);
+  return useSyncExternalStore(subscribeSession, getSession);
 }
 
 /** Connection for API calls as this account; null when it's signed out. */
