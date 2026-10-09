@@ -29,12 +29,15 @@ Contract (types, calls, events): [`app/modules/downloads/index.ts`](../../app/mo
 
 ## Store (`src/downloads.ts`)
 
-- Index in kv-store key `dl` (versioned, with migrations); item: `{ id: "account:item:source", accountId, itemId, title, seriesId?, path (relative), status: queued|downloading|paused|done|error, bytes, total, downloadedAt?, watchedAt?, lastPlayedAt?, pinned, positionTicks?, dirtyProgress?: { positionTicks, lastPlayedAt, watched } }`.
-- Hooks: `useDownload(id)`, `useDownloadList()` via `useSyncExternalStore`; per-item subscriptions; progress throttled to 500ms; persist to kv-store only on structural changes.
-- Queue rules are enforced natively; JS mirrors state and re-enqueues on reconcile. Season = one `enqueue` call.
-- Pre-flight: `Paths.availableDiskSpace - size > max(2GB, 5%)`.
-- Also save per download: item JSON snapshot, poster/backdrop, external subtitle files. Relative paths only.
-- `reconcile()` on launch + foreground: `getTasks()` → rebind; missing task + complete file → finalize; missing task + no file → re-queue; orphan native tasks → stop.
+- Index in kv-store key `dl`: `{ version: 1, items }` (`Download` in `src/downloads.ts`); an unknown version or bad JSON starts empty and isn't overwritten, and reconcile then doesn't cancel native tasks - migrations go in `store()` when the version moves on. Watched / progress fields come with offload + sync (M6).
+- File `downloads/<accountId>/<itemId>/<sourceId>.<container>` (server ids cleaned to `[A-Za-z0-9_-]` - no `/`, no `..`; delete also removes the empty item folder); URL `/Items/<sourceId>/Download` (an alternate version is an item of its own).
+- Hooks: `useDownload(id)` = live progress; `useDownloadList()` = structure only (add, remove, status). Progress stays in memory; kv-store is written only when status / reason change (one write per batch).
+- Start: `startDownloads(requests)` for the active account, one native `enqueue` per account (a season = one call); skips items in the index and sources without a size; a batch native rejects ends in `error`. Pre-flight (only when something new starts): free space minus everything still to download stays above max(2 GB, 5% of the disk).
+- Native `error` event carries the stopped `state` + `reason` (paused for auth / failed) - JS applies it like `done`, no reconcile.
+- `reconcile()` (`initDownloads`: launch + back from the background, not a quick switch; one at a time): mirror native state; no task + full-size file → `done` (any status); no task + queued / downloading → re-send; paused / failed without a task wait for resume; unknown native tasks → `cancel`.
+- Credentials follow the session (`subscribeSession`): native holds the header of each signed-in account with downloads, cleared on sign-out / removal (also once its downloads are gone); only changes are sent.
+- Network: Wi-Fi only (`cellular: false`) until the network setting lands.
+- Also save per download (next PR): item JSON snapshot, poster/backdrop, external subtitle files. Relative paths only.
 - iOS downloads dir `isExcludedFromBackup`.
 - `cleanup()` on launch + foreground: delete when `now > expires_at`, skip pinned / currently playing / active; weekly orphan sweep.
 - Offload policy setting: Off / After watched (default) / After download; delay 0/7/14/30 days (default 7). Watched = local ≥90% or server `UserData.Played`.

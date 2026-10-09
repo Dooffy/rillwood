@@ -105,7 +105,8 @@ Design + sources: `docs/research/background-downloads.md`.
 - [ ] Module manifest: `RUN_USER_INITIATED_JOBS`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_DATA_SYNC`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, JobService (`BIND_JOB_SERVICE`), `SystemForegroundService` `dataSync` merge
 - [ ] Native credential store + `setCredential` / `clearCredential`, cleared on sign-out (sign-out also cancels that account's tasks + deletes their resume data, which hold the header) (`docs/open-items.md` decision)
 - [ ] Notification permission prompt before first download (Android 13+); downloads still run if denied
-- [ ] Store + hooks + reconcile + pre-flight (skip items without `MediaSource.Size`) + snapshot/images/subs; `dl` index versioned with migrations
+- [x] Store + hooks + reconcile + pre-flight (`src/downloads.ts`): versioned `dl` index, `useDownload` / `useDownloadList`, start (batch per account, skip items without `MediaSource.Size`), pause / resume / delete, native events, reconcile on launch + foreground, native credential set on enqueue / reconcile and cleared for signed-out accounts
+- [ ] Per download: item JSON snapshot, poster / backdrop, external subtitle files (relative paths)
 - [ ] Network setting: Wi-Fi only / Any network
 - [ ] Hide Download when `User.Policy.EnableContentDownloading` is false; handle 403
 - [ ] Downloads screen: storage bar (`Paths.availableDiskSpace`), in progress, ready, delete
