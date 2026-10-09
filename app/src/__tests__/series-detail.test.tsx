@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render as rtlRender, screen } from '@testing-library/react-native';
+import { Paths } from 'expo-file-system';
 import type { ReactElement } from 'react';
 import { Alert, type AlertButton } from 'react-native';
 
@@ -9,7 +10,10 @@ import { ApiError, type BaseItemDto, type RequestOptions } from '@/api';
 import SeriesDetail from '@/app/series/[id]';
 import { ItemMenuProvider } from '@/components/ItemMenu';
 import { ToastProvider } from '@/components/Toast';
+import { initDownloads } from '@/downloads';
 import * as session from '@/session';
+
+import NativeDownloads from '../../modules/downloads';
 
 const render = (ui: ReactElement) =>
   rtlRender(
@@ -66,6 +70,15 @@ function episode(season: number, n: number, extra: Partial<BaseItemDto> = {}): B
   };
 }
 
+const GB = 1024 ** 3;
+const native = jest.mocked(NativeDownloads);
+const emitNative = (event: string, payload: object) =>
+  native.addListener.mock.calls.filter(([e]) => e === event).forEach(([, fn]) => (fn as (p: object) => void)(payload));
+const withFile = (ep: BaseItemDto): BaseItemDto => ({
+  ...ep,
+  MediaSources: [{ Id: ep.Id, Container: 'mkv', Size: GB }],
+});
+
 const items = (...list: BaseItemDto[]) => ({ Items: list, TotalRecordCount: list.length });
 
 // Responses by route; an ApiError rejects.
@@ -73,7 +86,8 @@ let routes: Record<string, unknown>;
 
 function routeOf(path: string, options?: RequestOptions) {
   const q = options?.query;
-  if (path.endsWith('/Episodes')) return `episodes:${String(q?.seasonId)}`;
+  if (path.endsWith('/Episodes'))
+    return `${q?.fields === 'MediaSources' ? 'files' : 'episodes'}:${String(q?.seasonId)}`;
   if (path === '/Shows/NextUp') return 'nextup';
   if (path.endsWith('/Seasons')) return 'seasons';
   if (path.endsWith('/Similar')) return 'similar';
@@ -104,7 +118,10 @@ beforeEach(() => {
     'episodes:season-1': items(episode(1, 1, { UserData: { PlaybackPositionTicks: 0, Played: true } }), episode(1, 2)),
     'episodes:season-2': items(episode(2, 1, { UserData: { PlaybackPositionTicks: 0, Played: true } }), episode(2, 2)),
     similar: items(),
+    '/Users/Me': { Id: 'u', Name: 'anna', Policy: { EnableContentDownloading: true } },
   };
+  jest.spyOn(Paths, 'availableDiskSpace', 'get').mockReturnValue(500 * GB);
+  jest.spyOn(Paths, 'totalDiskSpace', 'get').mockReturnValue(1000 * GB);
   request.mockImplementation((_conn, path, options) => {
     const reply = routes[routeOf(path, options)];
     return (reply instanceof Error ? Promise.reject(reply) : Promise.resolve(reply)) as Promise<never>;
@@ -140,10 +157,35 @@ describe('SeriesDetail', () => {
     expect(screen.queryByRole('button', { name: 'Play from Start' })).toBeNull();
   });
 
-  it('downloads the shown season from the header (placeholder)', async () => {
+  it('downloads the shown season from the header as one batch, then shows its ring', async () => {
+    routes['files:season-2'] = items(withFile(episode(2, 1)), withFile(episode(2, 2)));
     await render(<SeriesDetail />);
     await fireEvent.press(await screen.findByRole('button', { name: 'Download Season 2' }));
-    expect(await screen.findByText('Coming in a later build.')).toBeOnTheScreen();
+    expect(native.enqueue).toHaveBeenCalledTimes(1);
+    expect(native.enqueue.mock.calls[0][0].map((i) => i.url)).toEqual([
+      'https://jf.example.com/Items/ep-2-1/Download',
+      'https://jf.example.com/Items/ep-2-2/Download',
+    ]);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Pause download' }));
+    expect(native.pause).toHaveBeenCalledTimes(2);
+  });
+
+  it('says the account may not download when the season lookup is refused (403)', async () => {
+    routes['files:season-2'] = new ApiError('http', 403);
+    await render(<SeriesDetail />);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Download Season 2' }));
+    expect(await screen.findByText("This account isn't allowed to download.")).toBeOnTheScreen();
+    expect(native.enqueue).not.toHaveBeenCalled();
+  });
+
+  it('says so when the season fails to load for download', async () => {
+    routes['files:season-2'] = new ApiError('network');
+    await render(<SeriesDetail />);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Download Season 2' }));
+    expect(
+      await screen.findByText("Couldn't start the download. Check the connection and try again."),
+    ).toBeOnTheScreen();
+    expect(native.enqueue).not.toHaveBeenCalled();
   });
 
   it('resumes a started next episode, with Play from Start', async () => {
@@ -189,7 +231,7 @@ describe('SeriesDetail', () => {
     expect(router.push).toHaveBeenLastCalledWith({ pathname: '/item/[id]', params: { id: 'ep-2-2' } });
   });
 
-  it('opens episode actions from ⋯ and long press; labels follow the state, Download is a placeholder', async () => {
+  it('opens episode actions from ⋯ and long press; labels follow the state, Download starts it', async () => {
     const started = episode(2, 1, { UserData: { PlaybackPositionTicks: 6_000_000_000, Played: false } });
     routes.nextup = items(started);
     routes['episodes:season-2'] = items(
@@ -209,8 +251,24 @@ describe('SeriesDetail', () => {
     expect(screen.getByRole('menuitem', { name: 'Mark as Unwatched' })).toBeOnTheScreen();
     expect(screen.queryByRole('menuitem', { name: 'Play from Start' })).toBeNull();
     expect(screen.getByRole('menuitem', { name: 'Play' })).toBeOnTheScreen();
+    // A card's episode comes without its files: looked up first.
+    routes['/Items/ep-2-2'] = withFile(episode(2, 2));
+    routes['files:season-2'] = items(withFile(started), withFile(episode(2, 2)));
+    initDownloads(); // native event listeners (cleared mocks: register them inside this test)
     await fireEvent.press(screen.getByRole('menuitem', { name: 'Download' }));
-    expect(await screen.findByText('Coming in a later build.')).toBeOnTheScreen();
+    // Something of the season is downloading: the header shows its ring.
+    expect(await screen.findByRole('button', { name: 'Pause download' })).toBeOnTheScreen();
+    const [[[{ id, url }]]] = native.enqueue.mock.calls;
+    expect(url).toBe('https://jf.example.com/Items/ep-2-2/Download');
+    await fireEvent(screen.getByRole('button', { name: 'Episode 2, Chapter 2, watched' }), 'longPress');
+    expect(screen.getByRole('menuitem', { name: 'Pause Download' })).toBeOnTheScreen();
+    await fireEvent.press(screen.getByText('Cancel'));
+
+    // One of two episodes downloaded: the season offers Download (the rest), the episode Delete Download.
+    await act(() => emitNative('done', { id }));
+    expect(await screen.findByRole('button', { name: 'Download Season 2' })).toBeOnTheScreen();
+    await fireEvent(screen.getByRole('button', { name: 'Episode 2, Chapter 2, watched' }), 'longPress');
+    expect(screen.getByRole('menuitem', { name: 'Delete Download' })).toBeOnTheScreen();
   });
 
   it('retries a season that failed to load', async () => {

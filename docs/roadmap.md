@@ -108,7 +108,7 @@ Design + sources: `docs/research/background-downloads.md`.
 - [x] Store + hooks + reconcile + pre-flight (`src/downloads.ts`): versioned `dl` index, `useDownload` / `useDownloadList`, start (batch per account, skip items without `MediaSource.Size`), pause / resume / delete, native events, reconcile on launch + foreground, native credential set on enqueue / reconcile and cleared for signed-out accounts
 - [ ] Per download: item JSON snapshot, poster / backdrop, external subtitle files (relative paths)
 - [ ] Network setting: Wi-Fi only / Any network
-- [ ] Hide Download when `User.Policy.EnableContentDownloading` is false; handle 403
+- [x] Download button (`DownloadButton` + item menu, `src/useDownloadControl.ts`): detail + series header (season) + item menu, ↓ / ring / paused / ✓ states, pause / resume / delete; hidden when `User.Policy.EnableContentDownloading` is false; 403 on start → toast. Device test pending (incl. the store, PR 59)
 - [ ] Downloads screen: storage bar (`Paths.availableDiskSpace`), in progress, ready, delete
 - [ ] Play Console FGS declaration (dataSync) text + video
 - [ ] Tests (`docs/test-plans/downloads.md`): force-quit (iOS: cancelled → re-enqueue), `exit(0)` relaunch, OS kill, reboot, airplane mode, 20GB + 60GB file, server file replaced mid-download (If-Range → 200), token revoked, low disk, Task Manager stop (Android 14+), dataSync timeout (`device_config ... data_sync_fgs_timeout_duration`), Android 16 standby buckets (`am set-standby-bucket`), notification permission denied, `Authorization` header on an iOS background task
@@ -158,3 +158,4 @@ Design + sources: `docs/research/background-downloads.md`.
 
 - [ ] Research Apple TV (tvOS) + Google TV / Android TV apps: focus navigation (every card is already `Pressable`), RN TV support, player on TV, store requirements
 - [ ] Kids mode (post-MVP): a simpler, YouTube-like look for children - big thumbnails in one feed, minimal chrome, only their allowed libraries / parental rating; switch in and out from the profile
+- [ ] Download space limit setting: the user picks the most space downloads may use (e.g. 5 / 10 / 25 / 50 GB / no limit), used bytes shown against it; the pre-flight refuses past the limit as well as on free space

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Movie / episode detail: hero, Play + watched / favourite, overview, chips, Directed by, media rows, cast & crew,
-// More Like This. Data rules: docs/context/api.md (Detail). Playback lands in M4, download in M5.
+// More Like This. Data rules: docs/context/api.md (Detail). Header ↓ downloads it (docs/context/downloads.md).
 import { useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
@@ -50,7 +50,7 @@ function Detail({ item }: { item: BaseItemDto }) {
 
   return (
     <>
-      <DetailHeader />
+      <DetailHeader download={item} />
       {/* The hero runs under the transparent header (back + download over the art). */}
       <ScrollView {...scrollList} contentInsetAdjustmentBehavior="never" contentContainerStyle={styles.scroll}>
         <DetailHero

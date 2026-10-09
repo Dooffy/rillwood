@@ -15,7 +15,7 @@ const GB = 1024 ** 3;
 const mockFiles = new Map<string, number>();
 const mockDirs = new Set<string>();
 const mockDeletedDirs: string[] = [];
-const mockDisk = { available: 100 * GB, total: 200 * GB };
+const mockDisk = { available: 100 * GB, important: (100 * GB) as number | null, total: 200 * GB };
 jest.mock('expo-file-system', () => ({
   Paths: {
     document: 'docs',
@@ -57,6 +57,14 @@ jest.mock('expo-file-system', () => ({
       mockDirs.delete(this.path);
       mockDeletedDirs.push(this.path);
     }
+  },
+}));
+
+// Free space as the store reads it (iOS "important usage"); null → the call fails, the store falls back to Paths.
+jest.mock('expo-file-system/legacy', () => ({
+  getFreeDiskStorageAsync: async () => {
+    if (mockDisk.important === null) throw new Error('unavailable');
+    return mockDisk.important;
   },
 }));
 
@@ -113,6 +121,7 @@ beforeEach(() => {
   mockDirs.clear();
   mockDeletedDirs.length = 0;
   mockDisk.available = 100 * GB;
+  mockDisk.important = 100 * GB;
   mockSession.accounts = [account('a1')];
   mockSession.active = mockSession.accounts[0];
   mockSessionListeners.clear();
@@ -121,8 +130,8 @@ beforeEach(() => {
 });
 
 describe('startDownloads', () => {
-  it('saves the downloads and hands them to native in one batch with the credential', () => {
-    const result = dl.startDownloads([movie('m1', 4 * GB), movie('m2', GB, 'mov,mp4')]);
+  it('saves the downloads and hands them to native in one batch with the credential', async () => {
+    const result = await dl.startDownloads([movie('m1', 4 * GB), movie('m2', GB, 'mov,mp4')]);
 
     expect(result).toEqual({ ok: true, started: 2, skipped: 0 });
     expect(native.setCredential).toHaveBeenCalledWith('a1', { Authorization: expect.stringContaining('tok-a1') });
@@ -147,8 +156,10 @@ describe('startDownloads', () => {
     ]);
   });
 
-  it('downloads an alternate version by its source id', () => {
-    dl.startDownloads([{ item: movie('m1').item, source: { Id: 'v2', Container: 'mp4', Size: GB } as MediaSourceDto }]);
+  it('downloads an alternate version by its source id', async () => {
+    await dl.startDownloads([
+      { item: movie('m1').item, source: { Id: 'v2', Container: 'mp4', Size: GB } as MediaSourceDto },
+    ]);
     expect(native.enqueue.mock.calls[0][0][0]).toMatchObject({
       id: 'a1:m1:v2',
       url: 'https://a1.example/Items/v2/Download',
@@ -156,11 +167,11 @@ describe('startDownloads', () => {
     });
   });
 
-  it('skips sources without a size and items already downloaded or queued', () => {
-    dl.startDownloads([movie('m1', GB)]);
+  it('skips sources without a size and items already downloaded or queued', async () => {
+    await dl.startDownloads([movie('m1', GB)]);
     native.enqueue.mockClear();
 
-    expect(dl.startDownloads([movie('m1', GB), movie('m2'), movie('m3', GB)])).toEqual({
+    expect(await dl.startDownloads([movie('m1', GB), movie('m2'), movie('m3', GB)])).toEqual({
       ok: true,
       started: 1,
       skipped: 2,
@@ -168,38 +179,38 @@ describe('startDownloads', () => {
     expect(native.enqueue.mock.calls[0][0].map((i) => i.id)).toEqual(['a1:m3:m3']);
   });
 
-  it('does nothing when every item is skipped', () => {
-    expect(dl.startDownloads([movie('m1')])).toEqual({ ok: true, started: 0, skipped: 1 });
+  it('does nothing when every item is skipped', async () => {
+    expect(await dl.startDownloads([movie('m1')])).toEqual({ ok: true, started: 0, skipped: 1 });
     expect(native.enqueue).not.toHaveBeenCalled();
     expect(Storage.getItemSync('dl')).toBeNull();
   });
 
-  it('names the file .bin when the server sends no container', () => {
-    dl.startDownloads([movie('m1', GB, '')]);
+  it('names the file .bin when the server sends no container', async () => {
+    await dl.startDownloads([movie('m1', GB, '')]);
     expect(dl.getDownload('a1:m1:m1')?.path).toBe('downloads/a1/m1/m1.bin');
   });
 
-  it('needs a signed-in account', () => {
+  it('needs a signed-in account', async () => {
     mockSession.active = null;
-    expect(dl.startDownloads([movie('m1', GB)])).toEqual({ ok: false, problem: 'signedOut' });
+    expect(await dl.startDownloads([movie('m1', GB)])).toEqual({ ok: false, problem: 'signedOut' });
     expect(native.enqueue).not.toHaveBeenCalled();
   });
 
-  it('keeps max(2 GB, 5% of the disk) free after everything queued', () => {
+  it('keeps max(2 GB, 5% of the disk) free after everything queued', async () => {
     mockDisk.total = 100 * GB; // 5% = 5 GB
-    mockDisk.available = 20 * GB;
-    expect(dl.startDownloads([movie('m1', 10 * GB)]).ok).toBe(true);
+    mockDisk.important = 20 * GB;
+    expect((await dl.startDownloads([movie('m1', 10 * GB)])).ok).toBe(true);
     // 20 - 10 pending - 6 = 4 GB left < 5 GB
-    expect(dl.startDownloads([movie('m2', 6 * GB)])).toEqual({ ok: false, problem: 'space' });
+    expect(await dl.startDownloads([movie('m2', 6 * GB)])).toEqual({ ok: false, problem: 'space' });
     expect(native.enqueue).toHaveBeenCalledTimes(1);
     expect(dl.getDownload('a1:m2:m2')).toBeNull();
   });
 });
 
 describe('native events', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     dl.initDownloads();
-    dl.startDownloads([movie('m1', 4 * GB)]);
+    await dl.startDownloads([movie('m1', 4 * GB)]);
   });
 
   it('progress updates bytes in memory; only the first one is saved (status)', () => {
@@ -245,8 +256,8 @@ describe('native events', () => {
 });
 
 describe('pause / resume / delete', () => {
-  beforeEach(() => {
-    dl.startDownloads([movie('m1', GB)]);
+  beforeEach(async () => {
+    await dl.startDownloads([movie('m1', GB)]);
     native.enqueue.mockClear();
   });
 
@@ -292,6 +303,81 @@ describe('pause / resume / delete', () => {
   });
 });
 
+describe('groups', () => {
+  const episode = (id: string, season: string, size = GB): Store.DownloadRequest => ({
+    item: { Id: id, Name: id, Type: 'Episode', SeriesId: 'show', SeasonId: season } as BaseItemDto,
+    source: { Id: id, Container: 'mkv', Size: size } as MediaSourceDto,
+  });
+
+  beforeEach(async () => {
+    dl.initDownloads();
+    await dl.reconcile(); // the launch reconcile, done before anything starts
+    await dl.startDownloads([episode('e1', 's1'), episode('e2', 's1', 3 * GB), episode('e3', 's2')]);
+    native.enqueue.mockClear();
+  });
+
+  it('saves the season of an episode', () => {
+    expect(saved().items.map((d) => d.seasonId)).toEqual(['s1', 's1', 's2']);
+  });
+
+  it('summarize: downloading over paused over done, progress over every byte', () => {
+    const at = (status: Store.DownloadStatus, bytes: number, total = 4) => ({ status, bytes, total, itemId: status });
+    const sum = (...d: ReturnType<typeof at>[]) => dl.summarize(d as unknown as Store.Download[]);
+    expect(sum()).toBeNull();
+    expect(sum(at('done', 0), at('paused', 1), at('queued', 1))).toMatchObject({
+      state: 'downloading',
+      progress: 6 / 12,
+    });
+    expect(sum(at('done', 0), at('error', 2))).toMatchObject({
+      state: 'paused',
+      progress: 6 / 8,
+      itemIds: ['done', 'error'],
+    });
+    expect(sum(at('done', 4))).toMatchObject({ state: 'done', progress: 1 });
+  });
+
+  it('useDownloadSummary follows a season live, the same object while nothing changes', async () => {
+    const season = await renderHook(() => dl.useDownloadSummary(dl.downloadGroup('a1', { seasonId: 's1' })));
+    const first = season.result.current;
+    expect(first).toMatchObject({
+      state: 'downloading',
+      progress: 0,
+      ids: ['a1:e1:e1', 'a1:e2:e2'],
+      itemIds: ['e1', 'e2'],
+    });
+    await act(async () => emit('progress', { id: 'a1:e3:e3', bytes: GB }));
+    expect(season.result.current).toBe(first); // another season
+    await act(async () => emit('progress', { id: 'a1:e2:e2', bytes: GB }));
+    expect(season.result.current?.progress).toBe(0.25);
+    const other = await renderHook(() => dl.useDownloadSummary(dl.downloadGroup('a2', { itemId: 'e1' })));
+    expect(other.result.current).toBeNull(); // another account's
+  });
+
+  it('useHasDownloads re-renders when the group gains or loses downloads, not on progress', async () => {
+    let renders = 0;
+    const has = await renderHook(() => {
+      renders++;
+      return dl.useHasDownloads(dl.downloadGroup('a1', { itemId: 'e1' }));
+    });
+    expect(has.result.current).toBe(true);
+    await act(async () => emit('progress', { id: 'a1:e1:e1', bytes: GB / 2 }));
+    expect(renders).toBe(1);
+    await act(async () => dl.deleteDownload('a1:e1:e1'));
+    expect(has.result.current).toBe(false);
+  });
+
+  it('pauses, resumes (one native batch) and deletes a group', () => {
+    dl.pauseDownloads(['a1:e1:e1', 'a1:e2:e2']);
+    expect(native.pause).toHaveBeenCalledTimes(2);
+    dl.resumeDownloads(['a1:e1:e1', 'a1:e2:e2', 'a1:e3:e3']);
+    expect(native.enqueue).toHaveBeenCalledTimes(1);
+    expect(native.enqueue.mock.calls[0][0].map((i) => i.id)).toEqual(['a1:e1:e1', 'a1:e2:e2']);
+    expect(native.resume).toHaveBeenCalledTimes(2);
+    dl.deleteDownloads(['a1:e1:e1', 'a1:e2:e2']);
+    expect(dl.getDownloads().map((d) => d.id)).toEqual(['a1:e3:e3']);
+  });
+});
+
 describe('reconcile', () => {
   const task = (id: string, state: Task['state'], bytes = 0, reason?: Task['reason']): Task => ({
     id,
@@ -301,8 +387,8 @@ describe('reconcile', () => {
     reason,
   });
 
-  beforeEach(() => {
-    dl.startDownloads([movie('m1', GB), movie('m2', GB), movie('m3', GB), movie('m4', GB)]);
+  beforeEach(async () => {
+    await dl.startDownloads([movie('m1', GB), movie('m2', GB), movie('m3', GB), movie('m4', GB)]);
     dl.pauseDownload('a1:m4:m4');
     native.enqueue.mockClear();
     native.setCredential.mockClear();
@@ -358,8 +444,8 @@ describe('index', () => {
 });
 
 describe('credentials', () => {
-  it('native holds the header of signed-in accounts with downloads, sent only when it changes', () => {
-    dl.startDownloads([movie('m1', GB)]);
+  it('native holds the header of signed-in accounts with downloads, sent only when it changes', async () => {
+    await dl.startDownloads([movie('m1', GB)]);
     native.setCredential.mockClear();
     dl.initDownloads();
     const notify = () => mockSessionListeners.forEach((l) => l());
@@ -402,8 +488,8 @@ describe('lifecycle', () => {
 });
 
 describe('review regressions', () => {
-  it("keeps server ids from leaving their folder (no '/', no '..')", () => {
-    dl.startDownloads([
+  it("keeps server ids from leaving their folder (no '/', no '..')", async () => {
+    await dl.startDownloads([
       { item: movie('../../x').item, source: { Id: 'a/../b', Container: 'mkv', Size: GB } as MediaSourceDto },
     ]);
     const path = dl.getDownloads()[0].path;
@@ -411,51 +497,68 @@ describe('review regressions', () => {
     expect(path.split('/').every((p) => p !== '..' && p !== '.')).toBe(true);
   });
 
-  it('a batch native rejects ends in error instead of throwing', () => {
+  it('a batch native rejects ends in error instead of throwing', async () => {
     native.enqueue.mockImplementationOnce(() => {
       throw new Error('Invalid download');
     });
-    expect(dl.startDownloads([movie('m1', GB)])).toEqual({ ok: true, started: 1, skipped: 0 });
+    expect(await dl.startDownloads([movie('m1', GB)])).toEqual({ ok: true, started: 1, skipped: 0 });
     expect(dl.getDownload('a1:m1:m1')).toMatchObject({ status: 'error', reason: 'system' });
   });
 
-  it('a late progress event after a pause keeps it paused', () => {
+  it('a late progress event after a pause keeps it paused', async () => {
     dl.initDownloads();
-    dl.startDownloads([movie('m1', GB)]);
+    await dl.startDownloads([movie('m1', GB)]);
     dl.pauseDownload('a1:m1:m1');
     emit('progress', { id: 'a1:m1:m1', bytes: 10, total: GB });
     expect(dl.getDownload('a1:m1:m1')).toMatchObject({ status: 'paused', reason: 'user' });
   });
 
-  it('clears the credential of an account signed out after its downloads were deleted', () => {
+  it('clears the credential of an account signed out after its downloads were deleted', async () => {
     dl.initDownloads();
-    dl.startDownloads([movie('m1', GB)]);
+    await dl.startDownloads([movie('m1', GB)]);
     dl.deleteDownload('a1:m1:m1');
     mockSession.accounts = [account('a1', true)];
     mockSessionListeners.forEach((l) => l());
     expect(native.clearCredential).toHaveBeenCalledWith('a1');
   });
 
-  it('counts live bytes of running downloads as already on disk', () => {
+  it('counts live bytes of running downloads as already on disk', async () => {
     dl.initDownloads();
     mockDisk.total = 100 * GB; // margin 5 GB
-    mockDisk.available = 30 * GB;
-    dl.startDownloads([movie('m1', 20 * GB)]);
+    mockDisk.important = 30 * GB;
+    await dl.startDownloads([movie('m1', 20 * GB)]);
     emit('progress', { id: 'a1:m1:m1', bytes: 1, total: 20 * GB });
     emit('progress', { id: 'a1:m1:m1', bytes: 19 * GB, total: 20 * GB });
-    mockDisk.available = 11 * GB; // 19 GB written
+    mockDisk.important = 11 * GB; // 19 GB written
     // 11 - 1 pending - 3 = 7 GB left > 5 GB
-    expect(dl.startDownloads([movie('m2', 3 * GB)]).ok).toBe(true);
+    expect((await dl.startDownloads([movie('m2', 3 * GB)])).ok).toBe(true);
   });
 
-  it('a request with nothing new to start never fails on space', () => {
-    dl.startDownloads([movie('m1', GB)]);
-    mockDisk.available = GB;
-    expect(dl.startDownloads([movie('m1', GB), movie('m2')])).toEqual({ ok: true, started: 0, skipped: 2 });
+  it("an account switch while reading free space doesn't hand the items to the other account", async () => {
+    const start = dl.startDownloads([movie('m1', GB)]);
+    mockSession.accounts = [account('a1'), account('a2')];
+    mockSession.active = mockSession.accounts[1];
+    expect(await start).toEqual({ ok: false, problem: 'signedOut' });
+    expect(native.enqueue).not.toHaveBeenCalled();
+  });
+
+  it('counts purgeable space as free (iOS important usage), Paths only as the fallback', async () => {
+    // Regression: Settings showed 120 GB free, systemFreeSize far less - a 4 GB movie was refused.
+    mockDisk.available = 5 * GB;
+    mockDisk.important = 120 * GB;
+    expect((await dl.startDownloads([movie('m1', 4 * GB)])).ok).toBe(true);
+    mockDisk.important = null;
+    expect(await dl.startDownloads([movie('m2', 4 * GB)])).toEqual({ ok: false, problem: 'space' });
+  });
+
+  it('a request with nothing new to start never fails on space', async () => {
+    await dl.startDownloads([movie('m1', GB)]);
+    mockDisk.important = GB;
+    expect(await dl.startDownloads([movie('m1', GB), movie('m2')])).toEqual({ ok: true, started: 0, skipped: 2 });
   });
 
   it('reconcile finishes a paused download whose full file is on disk', async () => {
-    dl.startDownloads([movie('m1', GB)]);
+    await dl.startDownloads([movie('m1', GB)]);
     dl.pauseDownload('a1:m1:m1');
     mockFiles.set('downloads/a1/m1/m1.mkv', GB);
     await dl.reconcile();
@@ -474,8 +577,8 @@ describe('review regressions', () => {
     expect(native.getTasks).toHaveBeenCalledTimes(2);
   });
 
-  it("delete removes the item's folder once it's empty", () => {
-    dl.startDownloads([movie('m1', GB)]);
+  it("delete removes the item's folder once it's empty", async () => {
+    await dl.startDownloads([movie('m1', GB)]);
     mockFiles.set('downloads/a1/m1/m1.mkv', GB);
     dl.deleteDownload('a1:m1:m1');
     expect(mockDeletedDirs).toEqual(['downloads/a1/m1']);
@@ -486,7 +589,7 @@ describe('review regressions', () => {
     native.getTasks.mockResolvedValueOnce([{ id: 'a1:m1:m1', bytes: 5, total: GB, state: 'running' }]);
     await dl.reconcile();
     expect(native.cancel).not.toHaveBeenCalled();
-    dl.startDownloads([movie('m2', GB)]);
+    await dl.startDownloads([movie('m2', GB)]);
     expect(JSON.parse(Storage.getItemSync('dl') ?? '{}').version).toBe(2);
   });
 });

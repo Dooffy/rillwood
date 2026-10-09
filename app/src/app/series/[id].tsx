@@ -2,9 +2,9 @@
 // Series detail (Apple TV style): hero, Play / Resume the next episode + watched / favourite, next-episode line,
 // overview, chips, "Season n ⌃⌄" menu, horizontal episode cards (▶ + ⋯ / long press), cast & crew, More Like This.
 // The header ↓ downloads the selected season. ✓ / ♥ mark the whole show; the season menu marks a season. Data rules:
-// docs/context/api.md (Series data). Playback lands in M4, downloads in M5.
+// docs/context/api.md (Series data), downloads: docs/context/downloads.md.
 import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import type { BaseItemDto, ItemsResult } from '@/api';
@@ -70,11 +70,13 @@ function Series({ series }: { series: BaseItemDto }) {
   const nextSettled = next.data !== undefined || next.error !== undefined || !next.loading;
   const seasonId = picked ?? (list && nextSettled ? defaultSeasonId(list, nextEpisode) : undefined);
   const season = list?.find((s) => s.Id === seasonId);
+  // Its episodes are looked up by series + season: the screen's series id when the season lacks one.
+  const download = useMemo(() => season && { ...season, SeriesId: season.SeriesId ?? series.Id }, [season, series.Id]);
   const view = detailView(series, new Date(), list ? realSeasons(list).length : undefined);
 
   return (
     <>
-      <DetailHeader label={season ? `Download ${season.Name}` : 'Download'} />
+      <DetailHeader download={download} label={season && `Download ${season.Name}`} />
       {/* The hero runs under the transparent header (back + download over the art). */}
       <ScrollView {...scrollList} contentInsetAdjustmentBehavior="never" contentContainerStyle={styles.scroll}>
         <DetailHero
