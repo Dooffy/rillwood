@@ -53,9 +53,13 @@ final class DownloadsStore {
   }
 
   func load() {
-    var url = dir
-    try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-    try? Self.excludeFromBackup(&url)
+    // Our state, and Documents/downloads: the files and their snapshots (item JSON, images, subtitles - written by
+    // JS). All of it can be downloaded again, so none of it goes into the backup; the flag on a folder covers its
+    // contents.
+    for case var url? in [dir, Self.resolve("downloads")] {
+      try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+      try? Self.excludeFromBackup(&url)
+    }
     guard FileManager.default.fileExists(atPath: stateFile.path) else { return }
     guard let data = try? Data(contentsOf: stateFile) else {
       writable = false

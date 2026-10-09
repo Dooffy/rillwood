@@ -6,6 +6,7 @@ import type NativeDownloads from '../modules/downloads';
 import type { Task } from '../modules/downloads';
 import type { BaseItemDto, MediaSourceDto } from './api';
 import type * as Store from './downloads';
+import { readSnapshotItem } from './downloadSnapshot';
 import type { Account } from './session';
 
 const React = jest.requireActual<typeof import('react')>('react');
@@ -15,21 +16,21 @@ const GB = 1024 ** 3;
 const mockFiles = new Map<string, number>();
 const mockDirs = new Set<string>();
 const mockDeletedDirs: string[] = [];
+// Snapshot I/O: written text by path, fetched URLs, a switch to fail every fetch.
+const mockTexts = new Map<string, string>();
+const mockFetched: string[] = [];
+const mockFailFetch = { value: false };
+// Single URLs that fail (a subtitle the server no longer serves).
+const mockFailUrls = new Set<string>();
 const mockDisk = { available: 100 * GB, important: (100 * GB) as number | null, total: 200 * GB };
-jest.mock('expo-file-system', () => ({
-  Paths: {
-    document: 'docs',
-    get availableDiskSpace() {
-      return mockDisk.available;
-    },
-    get totalDiskSpace() {
-      return mockDisk.total;
-    },
-  },
-  File: class {
+jest.mock('expo-file-system', () => {
+  class File {
     path: string;
-    constructor(_dir: string, path: string) {
-      this.path = path;
+    constructor(_dir: string, ...parts: string[]) {
+      this.path = parts.join('/');
+    }
+    get name() {
+      return this.path.slice(this.path.lastIndexOf('/') + 1);
     }
     get exists() {
       return mockFiles.has(this.path);
@@ -37,11 +38,26 @@ jest.mock('expo-file-system', () => ({
     get size() {
       return mockFiles.get(this.path) ?? 0;
     }
+    create() {
+      mockFiles.set(this.path, 0);
+    }
+    async write(text: string) {
+      mockTexts.set(this.path, text);
+      mockFiles.set(this.path, text.length);
+    }
+    textSync() {
+      return mockTexts.get(this.path) ?? '';
+    }
     delete() {
       mockFiles.delete(this.path);
     }
-  },
-  Directory: class {
+    static async downloadFileAsync(url: string, file: { path: string }) {
+      mockFetched.push(url);
+      if (mockFailFetch.value || mockFailUrls.has(url)) throw new Error('UnableToDownload');
+      mockFiles.set(file.path, 1);
+    }
+  }
+  class Directory {
     path: string;
     constructor(_dir: string, path: string) {
       this.path = path;
@@ -50,15 +66,32 @@ jest.mock('expo-file-system', () => ({
     get exists() {
       return mockDirs.has(this.path);
     }
+    create() {
+      mockDirs.add(this.path);
+    }
     list() {
-      return [...mockFiles.keys()].filter((f) => f.startsWith(`${this.path}/`));
+      return [...mockFiles.keys()].filter((f) => f.startsWith(`${this.path}/`)).map((f) => new File('docs', f));
     }
     delete() {
       mockDirs.delete(this.path);
       mockDeletedDirs.push(this.path);
+      for (const f of this.list()) mockFiles.delete(f.path);
     }
-  },
-}));
+  }
+  return {
+    Paths: {
+      document: 'docs',
+      get availableDiskSpace() {
+        return mockDisk.available;
+      },
+      get totalDiskSpace() {
+        return mockDisk.total;
+      },
+    },
+    File,
+    Directory,
+  };
+});
 
 // Free space as the store reads it (iOS "important usage"); null → the call fails, the store falls back to Paths.
 jest.mock('expo-file-system/legacy', () => ({
@@ -120,6 +153,10 @@ beforeEach(() => {
   mockFiles.clear();
   mockDirs.clear();
   mockDeletedDirs.length = 0;
+  mockTexts.clear();
+  mockFetched.length = 0;
+  mockFailFetch.value = false;
+  mockFailUrls.clear();
   mockDisk.available = 100 * GB;
   mockDisk.important = 100 * GB;
   mockSession.accounts = [account('a1')];
@@ -378,6 +415,162 @@ describe('groups', () => {
   });
 });
 
+describe('snapshot', () => {
+  // Snapshots chain per item and retry one at a time: let every pending step run.
+  const flush = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+  const sintel = (): Store.DownloadRequest => ({
+    item: {
+      Id: 'm1',
+      Name: 'Sintel',
+      Type: 'Movie',
+      Overview: 'A girl and a dragon.',
+      ImageTags: { Primary: 'p' },
+      BackdropImageTags: ['b'],
+    } as BaseItemDto,
+    source: {
+      Id: 'v1',
+      Container: 'mkv',
+      Size: GB,
+      MediaStreams: [
+        { Type: 'Subtitle', Index: 2, Codec: 'subrip' },
+        { Type: 'Subtitle', Index: 3, Codec: 'subrip', IsExternal: true },
+        { Type: 'Subtitle', Index: 4, Codec: 'PGSSUB', IsExternal: true },
+      ],
+    } as MediaSourceDto,
+  });
+
+  it('saves item JSON, poster, backdrop and the external text subtitles next to the file - no token in the URLs', async () => {
+    await dl.startDownloads([sintel()]);
+    await flush();
+    expect(JSON.parse(mockTexts.get('downloads/a1/m1/item.json') ?? '{}')).toMatchObject({
+      Overview: 'A girl and a dragon.',
+    });
+    expect(mockFetched).toEqual([
+      'https://a1.example/Items/m1/Images/Primary?fillWidth=720&quality=90&tag=p',
+      'https://a1.example/Items/m1/Images/Backdrop?fillWidth=1920&quality=90&tag=b',
+      'https://a1.example/Videos/m1/v1/Subtitles/3/Stream.srt',
+    ]);
+    expect(mockFetched.join()).not.toMatch(/tok-|api_?key/i);
+    expect(saved().items[0].snapshot).toEqual({
+      poster: 'downloads/a1/m1/poster.jpg',
+      backdrop: 'downloads/a1/m1/backdrop.jpg',
+      subtitles: [{ index: 3, path: 'downloads/a1/m1/v1.sub-3.srt' }],
+    });
+    expect(readSnapshotItem('downloads/a1/m1/v1.mkv')?.Name).toBe('Sintel');
+  });
+
+  it('a failed snapshot is retried at reconcile from the saved item JSON', async () => {
+    mockFailFetch.value = true;
+    await dl.startDownloads([sintel()]);
+    await flush();
+    expect(dl.getDownload('a1:m1:v1')?.snapshot).toBeUndefined();
+    mockFailFetch.value = false;
+    await dl.reconcile();
+    await flush();
+    expect(dl.getDownload('a1:m1:v1')?.snapshot?.subtitles).toEqual([
+      { index: 3, path: 'downloads/a1/m1/v1.sub-3.srt' },
+    ]);
+  });
+
+  it('a download deleted while its snapshot saves leaves no folder behind', async () => {
+    await dl.startDownloads([sintel()]);
+    dl.deleteDownload('a1:m1:v1'); // before the snapshot's fetches finish
+    await flush();
+    expect([...mockFiles.keys()].filter((f) => f.startsWith('downloads/a1/m1/'))).toEqual([]);
+    expect(dl.getDownloads()).toEqual([]);
+  });
+
+  it("deleting one of two versions keeps the item's snapshot; the other's file and subtitles go", async () => {
+    const other = { item: sintel().item, source: { ...sintel().source, Id: 'v2' } };
+    await dl.startDownloads([sintel(), other]);
+    await flush();
+    mockFiles.set('downloads/a1/m1/v2.mkv', GB);
+    dl.deleteDownload('a1:m1:v2');
+    expect(mockFiles.has('downloads/a1/m1/v2.mkv')).toBe(false);
+    expect(mockFiles.has('downloads/a1/m1/v2.sub-3.srt')).toBe(false);
+    expect(mockFiles.has('downloads/a1/m1/v1.sub-3.srt')).toBe(true);
+    expect(mockFiles.has('downloads/a1/m1/item.json')).toBe(true);
+    expect(mockDeletedDirs).toEqual([]);
+  });
+
+  it('versions of one item save one after the other; the second keeps the poster + backdrop already there', async () => {
+    const other = { item: sintel().item, source: { ...sintel().source, Id: 'v2' } };
+    await dl.startDownloads([sintel(), other]);
+    await flush();
+    expect(mockFetched.filter((u) => u.includes('/Images/'))).toHaveLength(2);
+    expect(mockFetched.filter((u) => u.includes('/Subtitles/'))).toEqual([
+      'https://a1.example/Videos/m1/v1/Subtitles/3/Stream.srt',
+      'https://a1.example/Videos/m1/v2/Subtitles/3/Stream.srt',
+    ]);
+    expect(dl.getDownload('a1:m1:v2')?.snapshot?.poster).toBe('downloads/a1/m1/poster.jpg');
+  });
+
+  it("a server stream index can't put a subtitle file outside the item folder", async () => {
+    const request = sintel();
+    const hostile = {
+      Type: 'Subtitle',
+      Index: '/../../../a2/x' as unknown as number,
+      Codec: 'subrip',
+      IsExternal: true,
+    };
+    request.source.MediaStreams = [hostile];
+    await dl.startDownloads([request]);
+    await flush();
+    expect(mockFetched.some((u) => u.includes('/Subtitles/'))).toBe(false);
+    expect([...mockFiles.keys()].every((f) => f.startsWith('downloads/a1/m1/'))).toBe(true);
+  });
+
+  it('keeps what it got when one piece fails for good (no retry on every foreground)', async () => {
+    mockFailUrls.add('https://a1.example/Videos/m1/v1/Subtitles/3/Stream.srt');
+    await dl.startDownloads([sintel()]);
+    await flush();
+    expect(dl.getDownload('a1:m1:v1')?.snapshot).toEqual({
+      poster: 'downloads/a1/m1/poster.jpg',
+      backdrop: 'downloads/a1/m1/backdrop.jpg',
+      subtitles: [],
+    });
+  });
+
+  it('a retry round stops at the first failure (still offline)', async () => {
+    mockFailFetch.value = true;
+    await dl.startDownloads([sintel(), { ...movie('m2', GB), item: { ...sintel().item, Id: 'm2' } }]);
+    await flush();
+    mockFetched.length = 0;
+    await dl.reconcile();
+    await flush();
+    // The first download's 3 pieces were tried, the second's weren't.
+    expect(mockFetched).toHaveLength(3);
+    expect(mockFetched.every((u) => u.includes('/m1/'))).toBe(true);
+  });
+
+  it("one version deleted while saving: its subtitles don't stay behind", async () => {
+    const other = { item: sintel().item, source: { ...sintel().source, Id: 'v2' } };
+    await dl.startDownloads([sintel(), other]);
+    dl.deleteDownload('a1:m1:v2'); // its snapshot is queued behind v1's
+    await flush();
+    expect(mockFiles.has('downloads/a1/m1/v2.sub-3.srt')).toBe(false);
+    expect(mockFiles.has('downloads/a1/m1/v1.sub-3.srt')).toBe(true);
+  });
+
+  it('retries from the server when the item JSON was never written', async () => {
+    const fetchMock = jest.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ ...sintel().item, MediaSources: [{ ...sintel().source, Id: 'm1' }] }),
+    }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+    mockFailFetch.value = true;
+    await dl.startDownloads([{ ...sintel(), source: { ...sintel().source, Id: 'm1' } }]);
+    await flush();
+    mockFiles.delete('downloads/a1/m1/item.json'); // as if killed before it landed
+    mockFailFetch.value = false;
+    await dl.reconcile();
+    await flush();
+    expect(fetchMock).toHaveBeenCalledWith('https://a1.example/Items/m1', expect.anything());
+    expect(dl.getDownload('a1:m1:m1')?.snapshot?.poster).toBe('downloads/a1/m1/poster.jpg');
+  });
+});
+
 describe('reconcile', () => {
   const task = (id: string, state: Task['state'], bytes = 0, reason?: Task['reason']): Task => ({
     id,
@@ -577,7 +770,7 @@ describe('review regressions', () => {
     expect(native.getTasks).toHaveBeenCalledTimes(2);
   });
 
-  it("delete removes the item's folder once it's empty", async () => {
+  it("delete removes the item's folder with its last version", async () => {
     await dl.startDownloads([movie('m1', GB)]);
     mockFiles.set('downloads/a1/m1/m1.mkv', GB);
     dl.deleteDownload('a1:m1:m1');
