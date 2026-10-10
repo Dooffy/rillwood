@@ -1,23 +1,30 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Downloads tab (docs/context/downloads.md, Downloads screen): the active account's downloads in one list, newest
 // first - a row per movie, a row per show (opens its episodes), running ones with their ring. Swipe left to delete.
-// Search (on the device) + All / Movies / Shows chips narrow the list.
-// The list re-renders on structure only; each row reads its own progress.
+// Search (on the device) + All / Movies / Shows chips narrow the list; Episodes lists every episode on its own row.
+// A FlatList (100+ shows stay smooth); it re-renders on structure only, each row reads its own progress.
 import { router } from 'expo-router';
 import { getFreeDiskStorageAsync } from 'expo-file-system/legacy';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, View, type ListRenderItem } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useDownloadActions } from '@/components/DownloadActions';
-import { DownloadRow, ShowDownloadRow, type ShowDownloadRowProps } from '@/components/DownloadRow';
+import { DownloadRow, DownloadRowGap, ShowDownloadRow, type ShowDownloadRowProps } from '@/components/DownloadRow';
 import { Chip } from '@/components/Chip';
 import { IconButton } from '@/components/IconButton';
 import { Message } from '@/components/Message';
 import { Screen } from '@/components/Screen';
 import { SearchField } from '@/components/SearchField';
 import { StorageBar } from '@/components/StorageBar';
-import { DOWNLOAD_SCOPES, downloadList, filterDownloads, type DownloadQuery, type DownloadScope } from '@/downloadList';
+import {
+  DOWNLOAD_SCOPES,
+  downloadList,
+  filterDownloads,
+  type DownloadEntry,
+  type DownloadQuery,
+  type DownloadScope,
+} from '@/downloadList';
 import { deleteDownloads, useDownloadList } from '@/downloads';
 import { formatBytes } from '@/format';
 import { searchTerm } from '@/items';
@@ -50,10 +57,13 @@ function useFreeSpace(key: string): number | undefined {
 
 type Show = ShowDownloadRowProps['show'];
 
+const entryKey = (e: DownloadEntry) => (e.kind === 'show' ? `show:${e.seriesId}` : e.id);
+
 /** What an empty list means (only ever narrowed: no downloads at all has its own message). */
 function emptyText({ term, scope }: DownloadQuery): string {
   if (term) return `No downloads match "${term}".`;
-  return scope === 'shows' ? 'No shows downloaded.' : 'No movies downloaded.';
+  const label = DOWNLOAD_SCOPES.find((s) => s.key === scope)?.label ?? 'items';
+  return `No ${label.toLowerCase()} downloaded.`;
 }
 
 export default function Downloads() {
@@ -81,6 +91,16 @@ export default function Downloads() {
     [],
   );
   const removeShow = useCallback((show: Show) => confirmDeleteDownloads(show.name, show.ids), []);
+  const accountId = active?.id ?? '';
+  const renderEntry = useCallback<ListRenderItem<DownloadEntry>>(
+    ({ item: e }) =>
+      e.kind === 'show' ? (
+        <ShowDownloadRow accountId={accountId} show={e} onOpen={openShow} onDelete={removeShow} />
+      ) : (
+        <DownloadRow id={e.id} title={e.title} onPlay={play} onDelete={remove} onMenu={openMenu} />
+      ),
+    [accountId, openShow, removeShow, play, remove, openMenu],
+  );
 
   // Everything of this account, running ones too.
   const removeAll = () =>
@@ -117,27 +137,17 @@ export default function Downloads() {
                 ))}
               </View>
             </View>
-            <ScrollView
+            <FlatList
               {...tabList}
+              data={entries}
+              keyExtractor={entryKey}
+              renderItem={renderEntry}
+              ItemSeparatorComponent={DownloadRowGap}
+              ListEmptyComponent={<Message text={emptyText({ term, scope })} />}
               keyboardDismissMode="on-drag"
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={styles.list}
-            >
-              {entries.length === 0 && <Message text={emptyText({ term, scope })} />}
-              {entries.map((e) =>
-                e.kind === 'show' ? (
-                  <ShowDownloadRow
-                    key={e.seriesId}
-                    accountId={active.id}
-                    show={e}
-                    onOpen={openShow}
-                    onDelete={removeShow}
-                  />
-                ) : (
-                  <DownloadRow key={e.id} id={e.id} onPlay={play} onDelete={remove} onMenu={openMenu} />
-                ),
-              )}
-            </ScrollView>
+            />
           </>
         )}
         {sheet}
@@ -150,5 +160,5 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   controls: { gap: spacing.sm },
   scopes: { flexDirection: 'row', gap: spacing.sm },
-  list: { gap: spacing.sm + spacing.xs, paddingTop: spacing.sm, paddingBottom: spacing.md },
+  list: { paddingTop: spacing.sm, paddingBottom: spacing.md },
 });

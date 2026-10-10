@@ -98,7 +98,7 @@ describe("A show's downloads", () => {
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     await render(<ShowDownloads />);
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Delete Episode 1' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Delete 1. Episode 1' }));
     const buttons = alert.mock.calls[0][2] as AlertButton[];
     await act(() => buttons.find((b) => b.style === 'destructive')?.onPress?.());
     expect(native.cancel).toHaveBeenCalledWith(idOf(e1));

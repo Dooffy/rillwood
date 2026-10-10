@@ -47,14 +47,16 @@ Until the store + Downloads screen land, drive the module from a temporary snipp
 
 ## Downloads screen
 
-| #   | Test                                                                          | Pass when                                                                                      |
-| --- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| L1  | Download a movie, then two episodes of one show                               | One list, newest first: the show is one row ("2 episodes · size", ring while running), posters |
-| L2  | Tap the show row                                                              | Its episodes by season, "1. Title", rings live; back returns to the list                       |
-| L3  | Swipe a movie row left, tap Delete, confirm; same on a show row               | Asks first; the show's swipe deletes every episode; row closes again on Cancel                 |
-| L4  | On a show's screen, delete its last episode                                   | Goes back to the tab, the show row is gone                                                     |
-| L5  | Scroll the list with a finger, then swipe a row (VoiceOver: long press)       | Vertical scroll never opens a row; VoiceOver reaches Delete through the long-press menu        |
-| L6  | Episodes downloaded on a build before this one, open the tab after the update | The show row has the show's real name (not "TV Show"), episodes numbered by season             |
+| #   | Test                                                                                      | Pass when                                                                                      |
+| --- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| L1  | Download a movie, then two episodes of one show                                           | One list, newest first: the show is one row ("2 episodes · size", ring while running), posters |
+| L2  | Tap the show row                                                                          | Its episodes by season, "1. Title", rings live; back returns to the list                       |
+| L3  | Swipe a movie row left, tap Delete, confirm; same on a show row                           | Asks first; the show's swipe deletes every episode; row closes again on Cancel                 |
+| L4  | On a show's screen, delete its last episode                                               | Goes back to the tab, the show row is gone                                                     |
+| L5  | Scroll the list with a finger, then swipe a row (VoiceOver: long press)                   | Vertical scroll never opens a row; VoiceOver reaches Delete through the long-press menu        |
+| L6  | Episodes downloaded on a build before this one, open the tab after the update             | The show row has the show's real name (not "TV Show"), episodes numbered by season             |
+| L7  | Episodes chip with a few shows downloaded, then search a show name, then an episode title | Every episode on its own row, newest first, "Show · S1:E3 · Title"; both searches narrow it    |
+| L8  | 100+ downloads (or `Long Show`, 50 episodes): fling the tab list and a show's screen      | Scrolls smoothly, rings stay live, no blank rows after a fast fling                            |
 
 ## Cancel download
 

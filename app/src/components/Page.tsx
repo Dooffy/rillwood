@@ -12,6 +12,9 @@ type PageProps = {
   children: ReactNode;
 };
 
+/** A page's padding and the space between its blocks: a stack screen built on a list instead of `Page` uses them too. */
+export const pageContent = { padding: spacing.md, gap: spacing.lg } as const;
+
 /** Stack page under a native large-title header (settings, auth). */
 export function Page({ form = false, busy = false, children }: PageProps) {
   useEffect(() => {
@@ -38,5 +41,5 @@ export function Page({ form = false, busy = false, children }: PageProps) {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.md, gap: spacing.lg },
+  content: pageContent,
 });

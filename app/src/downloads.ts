@@ -302,6 +302,9 @@ function withinLimit(bytes: number): boolean {
   return limit <= 0 || downloadsSize(store().values()) + bytes <= limit * 1e9;
 }
 
+/** When the last batch was stamped (this run only: a stored time from a wrong clock never pins new ones). */
+let lastStart = 0;
+
 /**
  * Downloads items (a movie, an episode, a season) for the active account as one batch. Items already downloaded or
  * queued, and sources without a size (can't be checked when done), are skipped.
@@ -312,7 +315,9 @@ export async function startDownloads(requests: DownloadRequest[]): Promise<Start
   // The items are the requesting account's: another account active after the wait (a switch) doesn't get them.
   const account = getSession().active;
   if (!account || account.id !== requested || !connectionFor(account)) return { ok: false, problem: 'signedOut' };
-  const now = Date.now();
+  // Later than the last batch: two in one millisecond still list newest first.
+  const now = Math.max(Date.now(), lastStart + 1);
+  lastStart = now;
   const fresh = new Map<string, Download>();
   const from: DownloadRequest[] = [];
   for (const { item, source } of requests) {

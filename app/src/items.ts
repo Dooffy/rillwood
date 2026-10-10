@@ -738,6 +738,11 @@ export function episodeLine(ep: BaseItemDto): string {
 
 /** "S1:E3"; "E3" without a season; undefined without an episode number. */
 export function episodeCode({ ParentIndexNumber: season, IndexNumber: episode }: BaseItemDto): string | undefined {
+  return seasonEpisodeCode(season, episode);
+}
+
+/** `episodeCode` from the numbers alone (a download keeps them, not the item). */
+export function seasonEpisodeCode(season: number | undefined, episode: number | undefined): string | undefined {
   if (episode === undefined) return undefined;
   return season === undefined ? `E${episode}` : `S${season}:E${episode}`;
 }
