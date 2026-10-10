@@ -3,6 +3,7 @@
 // runs the transfers (and retry delays), this delegate moves finished files, maps HTTP status and persists the
 // queue. Everything runs on `queue` (also the session's delegate queue).
 import Foundation
+import Network
 
 final class DownloadsSession: NSObject, URLSessionDownloadDelegate {
   static let identifier = "app.rillwood.client.downloads"
@@ -15,6 +16,9 @@ final class DownloadsSession: NSObject, URLSessionDownloadDelegate {
   // records whose task is gone are restarted only after this grace period (keeps force-quit resume data).
   private static let reattachGrace: TimeInterval = 2
   private static let progressInterval: TimeInterval = 0.5
+  // A connection error while the path is blocked restarts without using a retry - not at once, in case the path is
+  // wrong about the route to the server (no tight loop).
+  private static let blockedRestartDelay: TimeInterval = 30
 
   let queue = DispatchQueue(label: "app.rillwood.client.downloads")
   private let store = DownloadsStore()
@@ -24,6 +28,9 @@ final class DownloadsSession: NSObject, URLSessionDownloadDelegate {
   private var lastProgress: [String: Date] = [:]
   // Paused tasks whose resume data hasn't arrived yet - a resume in that window waits for it.
   private var pausing: Set<String> = []
+  // The daemon holds a task the network rule blocks without telling us; the path says why it waits.
+  private let monitor = NWPathMonitor()
+  private var path: NWPath?
   private var onEvent: ((String, [String: Any?]) -> Void)?
 
   // MARK: - Calls from the module / app delegate
@@ -44,6 +51,11 @@ final class DownloadsSession: NSObject, URLSessionDownloadDelegate {
       delegateQueue.underlyingQueue = queue
       session = URLSession(configuration: config, delegate: self, delegateQueue: delegateQueue)
       session.getAllTasks { live in self.queue.async { self.reattach(live) } }
+      monitor.pathUpdateHandler = { [weak self] path in
+        self?.path = path
+        self?.updateNetworkWait()
+      }
+      monitor.start(queue: queue)
     }
   }
 
@@ -176,11 +188,12 @@ final class DownloadsSession: NSObject, URLSessionDownloadDelegate {
     if delay > 0 { task.earliestBeginDate = Date(timeIntervalSinceNow: delay) }
     task.taskDescription = id
     r.state = .queued
-    r.reason = nil
+    if r.reason != .network { r.reason = nil }  // the network wait is updateNetworkWait's
     r.taskId = task.taskIdentifier
     store.set(r)
     tasks[id] = task
     task.resume()
+    updateNetworkWait()
   }
 
   /// Unbinds the record from its task (later events of that task are ignored) and saves it.
@@ -196,6 +209,7 @@ final class DownloadsSession: NSObject, URLSessionDownloadDelegate {
   private func setCellularOnQueue(_ cellular: Bool) {
     guard store.cellular != cellular else { return }
     store.cellular = cellular
+    updateNetworkWait()
     for id in Array(tasks.keys) {
       guard var r = store.record(id) else { continue }
       detach(&r)?.cancel(byProducingResumeData: { data in
@@ -206,6 +220,37 @@ final class DownloadsSession: NSObject, URLSessionDownloadDelegate {
         }
       })
     }
+  }
+
+  // MARK: - Network wait
+
+  /// The current path doesn't meet the rule: no network, or Wi-Fi only on an expensive one (cellular, hotspot).
+  /// Unknown (no update yet) counts as fine.
+  private var networkBlocked: Bool {
+    guard let path else { return false }
+    return path.status != .satisfied || (!store.cellular && path.isExpensive)
+  }
+
+  /// The one place that marks active tasks as waiting for the network (or not any more) and tells JS - the daemon
+  /// keeps them queued. On a path update, a rule change and every task start. Saved with the next write; a stale
+  /// value after a relaunch is fixed by the first path update (before JS asks: the monitor starts with the session).
+  private func updateNetworkWait() {
+    let blocked = networkBlocked
+    for var r in store.records where r.isActive && (r.reason == .network) != blocked {
+      if blocked {
+        r.state = .queued
+        lastProgress[r.id] = nil  // the first bytes after it show at once
+      }
+      r.reason = blocked ? .network : nil
+      store.set(r, persist: false)
+      emitWaiting(r)
+    }
+  }
+
+  private func emitWaiting(_ r: TaskRecord) {
+    var body: [String: Any?] = ["id": r.id]
+    if let reason = r.reason { body["reason"] = reason.rawValue }
+    onEvent?("waiting", body)
   }
 
   private func retry(_ id: String, status: Int?, message: String) {
@@ -271,7 +316,10 @@ final class DownloadsSession: NSObject, URLSessionDownloadDelegate {
     r.bytes = totalBytesWritten
     let started = r.state != .running
     r.state = .running
-    if started { r.attempts = 0 }  // moving again - each stall gets the full retry budget
+    if started {
+      r.attempts = 0  // moving again - each stall gets the full retry budget
+      r.reason = nil  // bytes flow: not waiting for the network
+    }
     store.set(r, persist: started)
     let now = Date()
     if let last = lastProgress[id], now.timeIntervalSince(last) < Self.progressInterval { return }
@@ -324,6 +372,8 @@ final class DownloadsSession: NSObject, URLSessionDownloadDelegate {
     }
     if let reason {
       fail(id, reason, message: error.localizedDescription)
+    } else if networkBlocked {
+      startTask(id, after: Self.blockedRestartDelay)  // lost the network: no retry used up
     } else {
       retry(id, status: nil, message: error.localizedDescription)
     }

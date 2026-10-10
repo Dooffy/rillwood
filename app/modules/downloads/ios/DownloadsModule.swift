@@ -24,7 +24,7 @@ public class DownloadsModule: Module {
   public func definition() -> ModuleDefinition {
     Name("Downloads")
 
-    Events("progress", "done", "error")
+    Events("progress", "done", "error", "waiting")
 
     OnCreate { [weak self] in
       DownloadsSession.shared.setEventHandler { name, body in self?.sendEvent(name, body) }
