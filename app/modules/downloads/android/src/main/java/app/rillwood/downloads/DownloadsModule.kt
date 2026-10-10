@@ -2,6 +2,7 @@
 // Background downloader bridge - rules in docs/context/downloads.md. The work is in DownloadsQueue.
 package app.rillwood.downloads
 
+import android.app.ActivityManager
 import android.net.Uri
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.exception.CodedException
@@ -36,6 +37,18 @@ class DownloadsModule : Module() {
       val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
       DownloadsQueue.setEventHandler(this@DownloadsModule) { name, body -> sendEvent(name, body) }
       DownloadsQueue.start(context)
+      // Created after the activity resumed (no foreground event yet).
+      val state = ActivityManager.RunningAppProcessInfo().also { ActivityManager.getMyMemoryState(it) }
+      DownloadsQueue.setVisible(state.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND)
+    }
+
+    // A UIDT job can only be scheduled while the app is on screen - work restored at launch waits for this.
+    OnActivityEntersForeground {
+      DownloadsQueue.setVisible(true)
+    }
+
+    OnActivityEntersBackground {
+      DownloadsQueue.setVisible(false)
     }
 
     OnDestroy {
