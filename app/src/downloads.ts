@@ -379,6 +379,11 @@ export function deleteDownloads(ids: readonly string[]) {
   batch(() => ids.forEach(deleteDownload));
 }
 
+/** Stops the ones not finished yet and deletes them with their partial files (Cancel Download); done ones stay. */
+export function cancelDownloads(ids: readonly string[]) {
+  deleteDownloads(ids.filter((id) => getDownload(id)?.status !== 'done'));
+}
+
 /** Stops it and deletes its files (`removeFiles`). */
 export function deleteDownload(id: string) {
   const d = getDownload(id);
@@ -604,13 +609,17 @@ export type DownloadSummary = {
   ids: string[];
   /** Items in it (a season: its episodes downloaded or on the way). */
   itemIds: string[];
+  /** How many of `ids` are downloaded. */
+  done: number;
 };
 
 export function summarize(downloads: readonly Download[]): DownloadSummary | null {
   if (downloads.length === 0) return null;
   let bytes = 0;
   let total = 0;
+  let done = 0;
   for (const d of downloads) {
+    if (d.status === 'done') done++;
     bytes += d.status === 'done' ? d.total : Math.min(d.bytes, d.total);
     total += d.total;
   }
@@ -620,13 +629,20 @@ export function summarize(downloads: readonly Download[]): DownloadSummary | nul
     progress: total > 0 ? bytes / total : 0,
     ids: downloads.map((d) => d.id),
     itemIds: [...new Set(downloads.map((d) => d.itemId))],
+    done,
   };
 }
 
 const inGroup = (group: string) => [...store().values()].filter((d) => groupsOf(d).includes(group));
 
 const sameSummary = (a: DownloadSummary | null, b: DownloadSummary | null) =>
-  a === b || (!!a && !!b && a.state === b.state && a.progress === b.progress && a.ids.join() === b.ids.join());
+  a === b ||
+  (!!a &&
+    !!b &&
+    a.state === b.state &&
+    a.progress === b.progress &&
+    a.done === b.done &&
+    a.ids.join() === b.ids.join());
 
 /** A group's downloads (`downloadGroup`), with live progress; null when there are none or no group. */
 export function useDownloadSummary(group: string | null): DownloadSummary | null {

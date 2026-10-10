@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// What a download row does (Downloads tab, a show's downloaded episodes): play, delete after asking, the long-press menu.
-import { useCallback, useRef, useState } from 'react';
+// What a download row does (Downloads tab, a show's downloaded episodes): play, delete after asking, the menu (ring tap,
+// long press): Pause / Resume + Cancel Download while not finished, Delete Download once done.
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { request, type BaseItemDto } from '@/api';
-import type { Download } from '@/downloads';
+import { cancelDownloads, pauseDownload, resumeDownload, summarize, useDownload, type Download } from '@/downloads';
 import { itemDetail, playback } from '@/items';
 import { openPlayer } from '@/navigation';
 import { connectionFor, getSession } from '@/session';
-import { confirmDeleteDownloads } from '@/useDownloadControl';
+import { confirmDeleteDownloads, downloadActions } from '@/useDownloadControl';
 
 import { ActionSheet } from './ActionSheet';
 
@@ -33,14 +34,41 @@ export function useDownloadActions() {
     if (getSession().active?.id === d.accountId) openPlayer({ Id: d.itemId }, start);
   }, []);
 
-  const sheet = (
-    <ActionSheet
-      visible={menu !== null}
-      title={menu?.title}
-      actions={menu ? [{ label: 'Delete Download', onPress: () => remove(menu) }] : []}
-      onClose={close}
-    />
-  );
+  const sheet = <DownloadMenu of={menu} remove={remove} onClose={close} />;
 
   return { play, remove, openMenu: setMenu, sheet };
+}
+
+/**
+ * One download's menu (the item menu's rules): live on its own, so progress re-renders only the sheet, not the screen.
+ * Gone meanwhile (deleted elsewhere) → closes, so a re-download with the same id never reopens it.
+ */
+function DownloadMenu({
+  of,
+  remove,
+  onClose,
+}: {
+  of: Download | null;
+  remove: (d: Download) => void;
+  onClose: () => void;
+}) {
+  const d = useDownload(of?.id ?? null);
+  const gone = of !== null && d === null;
+  useEffect(() => {
+    if (gone) onClose();
+  }, [gone, onClose]);
+  const actions = d
+    ? downloadActions({
+        available: true,
+        summary: summarize([d]),
+        partial: false,
+        starting: false,
+        start: () => {},
+        pause: () => pauseDownload(d.id),
+        resume: () => resumeDownload(d.id),
+        remove: () => remove(d),
+        cancel: () => cancelDownloads([d.id]),
+      })
+    : [];
+  return <ActionSheet visible={d !== null} title={of?.title} actions={actions} onClose={onClose} />;
 }

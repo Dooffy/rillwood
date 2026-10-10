@@ -56,6 +56,14 @@ Until the store + Downloads screen land, drive the module from a temporary snipp
 | L5  | Scroll the list with a finger, then swipe a row (VoiceOver: long press)       | Vertical scroll never opens a row; VoiceOver reaches Delete through the long-press menu        |
 | L6  | Episodes downloaded on a build before this one, open the tab after the update | The show row has the show's real name (not "TV Show"), episodes numbered by season             |
 
+## Cancel download
+
+| #   | Test                                                                               | Pass when                                                                                               |
+| --- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| C1  | Detail header: tap the ring while downloading, then while paused                   | Menu: Pause Download + Cancel Download (red); paused: Resume Download + Cancel; tap alone doesn't pause |
+| C2  | Cancel Download on a running movie (Downloads row ring, then item menu on another) | Row gone at once, no question; no partial file left; ↓ again on the detail                              |
+| C3  | Season with 1 episode done + 1 downloading: header ring → Cancel Download          | The running one is gone, the done one stays; Delete Download in the same menu asks first                |
+
 ## Settings (network + storage limit)
 
 | #   | Test                                                                                   | Pass when                                                                             |

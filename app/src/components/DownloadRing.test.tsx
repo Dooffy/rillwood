@@ -27,19 +27,20 @@ describe('DownloadRing', () => {
     expect(screen.queryByTestId('ring-right')).toBeNull();
   });
 
-  it('shows a stop square while downloading and pauses on press', async () => {
+  it('shows a stop square while downloading; a press opens its menu', async () => {
     const onPress = jest.fn();
     await render(<DownloadRing progress={0.4} onPress={onPress} />);
     expect(screen.getByTestId('ring-stop', { includeHiddenElements: true })).toBeOnTheScreen();
-    const button = screen.getByRole('button', { name: 'Pause download' });
+    const button = screen.getByRole('button', { name: 'Downloading' });
+    expect(button.props.accessibilityHint).toBe('Pause or cancel');
     expect(button).toHaveAccessibilityValue({ now: 40, text: '40%' });
     await fireEvent.press(button);
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('offers resume when paused', async () => {
+  it('says paused, resume or cancel, when paused', async () => {
     await render(<DownloadRing progress={0.4} paused onPress={() => {}} />);
-    expect(screen.getByRole('button', { name: 'Resume download' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Download paused' }).props.accessibilityHint).toBe('Resume or cancel');
     expect(screen.queryByTestId('ring-stop', { includeHiddenElements: true })).toBeNull();
   });
 

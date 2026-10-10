@@ -166,7 +166,8 @@ describe('SeriesDetail', () => {
       'https://jf.example.com/Items/ep-2-1/Download',
       'https://jf.example.com/Items/ep-2-2/Download',
     ]);
-    await fireEvent.press(await screen.findByRole('button', { name: 'Pause download' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Downloading' }));
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Pause Download' }));
     expect(native.pause).toHaveBeenCalledTimes(2);
   });
 
@@ -257,7 +258,7 @@ describe('SeriesDetail', () => {
     initDownloads(); // native event listeners (cleared mocks: register them inside this test)
     await fireEvent.press(screen.getByRole('menuitem', { name: 'Download' }));
     // Something of the season is downloading: the header shows its ring.
-    expect(await screen.findByRole('button', { name: 'Pause download' })).toBeOnTheScreen();
+    expect(await screen.findByRole('button', { name: 'Downloading' })).toBeOnTheScreen();
     const [[[{ id, url }]]] = native.enqueue.mock.calls;
     expect(url).toBe('https://jf.example.com/Items/ep-2-2/Download');
     await fireEvent(screen.getByRole('button', { name: 'Episode 2, Chapter 2, watched' }), 'longPress');

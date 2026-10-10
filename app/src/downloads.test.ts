@@ -476,6 +476,20 @@ describe('groups', () => {
     dl.deleteDownloads(['a1:e1:e1', 'a1:e2:e2']);
     expect(dl.getDownloads().map((d) => d.id)).toEqual(['a1:e3:e3']);
   });
+  it('cancel deletes the unfinished ones of a group at once; done ones stay (and count in the summary)', async () => {
+    emit('done', { id: 'a1:e1:e1' });
+    const season = await renderHook(() => dl.useDownloadSummary(dl.downloadGroup('a1', { seasonId: 's1' })));
+    expect(season.result.current).toMatchObject({ state: 'downloading', done: 1 });
+    await act(async () => dl.cancelDownloads(['a1:e1:e1', 'a1:e2:e2']));
+    expect(native.cancel.mock.calls).toEqual([['a1:e2:e2']]);
+    expect(
+      dl
+        .getDownloads()
+        .map((d) => d.id)
+        .sort(),
+    ).toEqual(['a1:e1:e1', 'a1:e3:e3']);
+    expect(season.result.current).toMatchObject({ state: 'done', done: 1, ids: ['a1:e1:e1'] });
+  });
 });
 
 describe('snapshot', () => {

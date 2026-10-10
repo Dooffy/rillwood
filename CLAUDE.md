@@ -85,7 +85,7 @@ Accent tweak options: `#0A84FF`, `#30D158`, `#FF9F0A` - flip button text to whit
 
 Settings options (iOS Settings style): a row with the current value that opens a checkmark list (`OptionRow` → `/option/[key]`, `src/pickers.ts`); a long numeric range (Storage limit) opens its own page with a `StepSlider` instead; no controls inside cards; `Segmented` only bare on the background for switching what's shown, never for a saved setting.
 
-Rules: large titles 34/700, section headers 20/700 with chevron, 16:9 landscape cards for resume, 2:3 posters, white progress bars (over artwork: bottom fade + time left after the bar, `[=====   ] 9m`; watched items show `✓ Watched` in the same spot), download ring built from plain views (grey track + white arc; stop square = downloading, arrow = paused), min 44pt touch targets, tab bar: Home / Library / Downloads (search lives in Library). Tab header (`Screen`): large title + 44pt round buttons (the profile avatar too), the same `spacing.sm` gap above every tab's content; scroll bars hidden (`scrollList` / `tabList`).
+Rules: large titles 34/700, section headers 20/700 with chevron, 16:9 landscape cards for resume, 2:3 posters, white progress bars (over artwork: bottom fade + time left after the bar, `[=====   ] 9m`; watched items show `✓ Watched` in the same spot), download ring built from plain views (grey track + white arc; stop square = downloading, arrow = paused; tap opens Pause / Resume + Cancel Download), min 44pt touch targets, tab bar: Home / Library / Downloads (search lives in Library). Tab header (`Screen`): large title + 44pt round buttons (the profile avatar too), the same `spacing.sm` gap above every tab's content; scroll bars hidden (`scrollList` / `tabList`).
 
 ---
 
@@ -137,7 +137,7 @@ src/useDebounced.ts      value once it stops changing (search while typing)
 src/recentSearches.ts    recent search terms per account, in memory for the session
 src/userData.ts          mark watched / favourite: optimistic cache + paged list patch, server answer, refetch
 src/useUserFlag.ts       mark from a button / menu: failure toast, confirm before unwatching a season / show
-src/useDownloadControl.ts  download from a button / menu: state (item or season), start (files looked up first), pause / resume, delete after asking, policy check
+src/useDownloadControl.ts  download from a button / menu: state (item or season), start (files looked up first), pause / resume, cancel, delete after asking, menu actions (`downloadActions`), policy check
 src/detail.ts            detailView: everything the detail screen shows, from one item (pure)
 src/playback.ts          PlaybackInfo → play source (pure): device profile, direct play check, stream + sidecar subtitle URLs, track options + `matchTracks` (real mpv ids) + `carryTracks` (picks to the next episode by language)
 src/downloads.ts         store, queue, reconcile, cleanup, storage

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Long press on a card (Home, Library, More Like This, series episodes): one shared action sheet for the item - play,
-// mark watched, favourite, download / pause / resume / delete download. Mounted once in the root layout; cards open it with `useItemMenu()`.
+// mark watched, favourite, download / pause / resume / cancel / delete download. Mounted once in the root layout; cards open it with `useItemMenu()`.
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import { Keyboard } from 'react-native';
 
@@ -9,7 +9,7 @@ import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
 import { cardTitles, playback } from '@/items';
 import { openPlayer } from '@/navigation';
 import { useSession } from '@/session';
-import { useDownloadControl, type DownloadControl } from '@/useDownloadControl';
+import { downloadActions, useDownloadControl } from '@/useDownloadControl';
 import { useUserFlag } from '@/useUserFlag';
 
 /** Opens the menu for an item; `title` overrides the heading (the series screen names episodes without the show). */
@@ -19,19 +19,6 @@ type OpenItemMenu = (item: BaseItemDto, title?: string) => void;
 const PLAYABLE = new Set(['Movie', 'Episode', 'Video']);
 
 const ItemMenuContext = createContext<OpenItemMenu | null>(null);
-
-/**
- * Download / Pause / Resume / Delete Download by the item's state (a partial season: Download the rest + Delete);
- * none when it can't be downloaded.
- */
-export function downloadActions({ available, summary, partial, start, pause, resume, remove }: DownloadControl) {
-  const del = { label: 'Delete Download', onPress: remove };
-  if (!available) return [];
-  if (!summary) return [{ label: 'Download', onPress: start }];
-  if (summary.state === 'downloading') return [{ label: 'Pause Download', onPress: pause }];
-  if (partial) return [{ label: 'Download', onPress: start }, del];
-  return summary.state === 'paused' ? [{ label: 'Resume Download', onPress: resume }, del] : [del];
-}
 
 /** The actions for an item: Resume + Play from Start (or Play), watched, favourite, download. */
 export function itemActions(

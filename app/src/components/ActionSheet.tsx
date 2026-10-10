@@ -19,6 +19,8 @@ export type SheetAction = {
   detail?: string;
   /** Current choice (season menu): checkmark. */
   selected?: boolean;
+  /** Removes something at once (Cancel Download): danger colour. */
+  destructive?: boolean;
   onPress: () => void;
 };
 
@@ -112,7 +114,7 @@ export function ActionSheet({
                 >
                   <View style={styles.check}>{action.selected && <Checkmark />}</View>
                   <View style={styles.labels}>
-                    <Text>{action.label}</Text>
+                    <Text style={action.destructive && { color: c.danger }}>{action.label}</Text>
                     {action.detail !== undefined && (
                       <Text variant="caption" secondary>
                         {action.detail}
