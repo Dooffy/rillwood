@@ -26,6 +26,10 @@ export type Download = {
   seriesId?: string;
   /** Episodes: their season (the series screen's header button shows the season's downloads). */
   seasonId?: string;
+  /** Episodes: the show's name and their place in it (Downloads tab: a row per show, its episodes by season). */
+  seriesName?: string;
+  seasonNumber?: number;
+  episodeNumber?: number;
   /** Relative to `Paths.document`. */
   path: string;
   status: DownloadStatus;
@@ -63,16 +67,21 @@ const itemListeners = new Map<string, Set<() => void>>();
 // By `downloadGroup` key: every change of a download in it, progress included (a season's ring).
 const groupListeners = new Map<string, Set<() => void>>();
 
-/** Movie / episode by its item id (every version); a season by `seasonId`. */
-export type DownloadMatch = { itemId: string } | { seasonId: string };
+/** Movie / episode by its item id (every version); a season by `seasonId`, a show by `seriesId`. */
+export type DownloadMatch = { itemId: string } | { seasonId: string } | { seriesId: string };
 
-/** Key of an account's downloads of an item or a season (`useDownloadSummary`). */
+/** Key of an account's downloads of an item, a season or a show (`useDownloadSummary`). */
 export const downloadGroup = (accountId: string, match: DownloadMatch) =>
-  'itemId' in match ? `${accountId}|i|${match.itemId}` : `${accountId}|s|${match.seasonId}`;
+  'itemId' in match
+    ? `${accountId}|i|${match.itemId}`
+    : 'seasonId' in match
+      ? `${accountId}|s|${match.seasonId}`
+      : `${accountId}|r|${match.seriesId}`;
 
 const groupsOf = (d: Download) => [
   downloadGroup(d.accountId, { itemId: d.itemId }),
   ...(d.seasonId ? [downloadGroup(d.accountId, { seasonId: d.seasonId })] : []),
+  ...(d.seriesId ? [downloadGroup(d.accountId, { seriesId: d.seriesId })] : []),
 ];
 
 function notify(d: Download) {
@@ -90,6 +99,22 @@ function subscribeTo(map: Map<string, Set<() => void>>, key: string | null, list
   };
 }
 
+/** The show's name + place in it, as the Downloads tab groups episodes. */
+const showFields = (item: BaseItemDto): Pick<Download, 'seriesName' | 'seasonNumber' | 'episodeNumber'> => ({
+  seriesName: item.SeriesName,
+  seasonNumber: item.ParentIndexNumber,
+  episodeNumber: item.IndexNumber,
+});
+
+/** An episode from before the store kept its show's name: filled in from its saved item JSON (once, then saved). */
+function withShowName(d: Download): Download {
+  if (!d.seriesId || d.seriesName) return d;
+  const item = readSnapshotItem(d.path);
+  if (!item?.SeriesName) return d;
+  dirty = true;
+  return { ...d, ...showFields(item) };
+}
+
 function store(): Map<string, Download> {
   if (!index) {
     index = new Map();
@@ -97,7 +122,7 @@ function store(): Map<string, Download> {
     try {
       const saved = JSON.parse(raw ?? 'null') as { version: number; items: Download[] } | null;
       // Migrations go here when VERSION moves on.
-      if (saved?.version === VERSION) index = new Map(saved.items.map((d) => [d.id, d]));
+      if (saved?.version === VERSION) index = new Map(saved.items.map((d) => [d.id, withShowName(d)]));
       else readable = raw === null;
     } catch {
       readable = false;
@@ -288,6 +313,7 @@ export async function startDownloads(requests: DownloadRequest[]): Promise<Start
       title: item.Name,
       seriesId: item.SeriesId,
       seasonId: item.SeasonId,
+      ...showFields(item),
       path: `downloads/${segment(account.id)}/${segment(item.Id)}/${segment(source.Id)}.${extension(source)}`,
       status: 'queued',
       bytes: 0,
@@ -402,7 +428,9 @@ function snapshot(d: Download, baseUrl: string, from?: DownloadRequest): Promise
       const source = from?.source ?? item?.MediaSources?.find((s) => s.Id === d.sourceId);
       if (!item || !source || !current()) return false;
       const saved = await saveSnapshot(baseUrl, d.path, item, source, !!from);
-      if (current()) patch(d.id, { snapshot: saved });
+      // Old episodes without their show's name get it here too (the item JSON was missing at launch).
+      if (current())
+        patch(d.id, d.seriesId && !d.seriesName ? { snapshot: saved, ...showFields(item) } : { snapshot: saved });
       return true;
     } catch {
       return false; // offline, server gone, disk full: retried at the next reconcile

@@ -43,6 +43,17 @@ Until the store + Downloads screen land, drive the module from a temporary snipp
 | S2  | Open a movie, airplane mode on, tap ↓; airplane mode off, background + reopen | Snapshot missing at first; after the foreground reconcile the files appear                                |
 | S3  | Delete it                                                                     | The whole item folder is gone (with two versions: only the deleted one's video + subtitles)               |
 
+## Downloads screen
+
+| #   | Test                                                                          | Pass when                                                                                      |
+| --- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| L1  | Download a movie, then two episodes of one show                               | One list, newest first: the show is one row ("2 episodes · size", ring while running), posters |
+| L2  | Tap the show row                                                              | Its episodes by season, "1. Title", rings live; back returns to the list                       |
+| L3  | Swipe a movie row left, tap Delete, confirm; same on a show row               | Asks first; the show's swipe deletes every episode; row closes again on Cancel                 |
+| L4  | On a show's screen, delete its last episode                                   | Goes back to the tab, the show row is gone                                                     |
+| L5  | Scroll the list with a finger, then swipe a row (VoiceOver: long press)       | Vertical scroll never opens a row; VoiceOver reaches Delete through the long-press menu        |
+| L6  | Episodes downloaded on a build before this one, open the tab after the update | The show row has the show's real name (not "TV Show"), episodes numbered by season             |
+
 ## To add with the Android transfer work (M5)
 
 OS kill, reboot, airplane mode, 20GB + 60GB file, server file replaced mid-download (If-Range → 200), token revoked, low disk, Task Manager stop (Android 14+), dataSync timeout (`device_config ... data_sync_fgs_timeout_duration`), Android 16 standby buckets (`am set-standby-bucket`), notification permission denied.

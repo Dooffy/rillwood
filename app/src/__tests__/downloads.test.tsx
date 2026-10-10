@@ -1,12 +1,255 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { describe, expect, it } from '@jest/globals';
-import { render, screen } from '@testing-library/react-native';
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { Paths } from 'expo-file-system';
+import { Alert, type AlertButton } from 'react-native';
 
+import * as api from '@/api';
+import type { BaseItemDto } from '@/api';
 import Downloads from '@/app/(tabs)/downloads';
+import { downloadId, initDownloads, startDownloads } from '@/downloads';
+import * as session from '@/session';
+import type { Account } from '@/session';
+
+import NativeDownloads from '../../modules/downloads';
+
+jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
+// Swipe actions: the hidden Delete button is rendered (off screen until the row slides).
+const { router } = jest.requireMock<{ router: { push: jest.Mock } }>('expo-router');
+
+const GB = 1024 ** 3;
+// Free space as iOS Settings shows it (the screen and the store's pre-flight read it).
+jest.mock('expo-file-system/legacy', () => ({ getFreeDiskStorageAsync: async () => 120e9 }));
+
+const server = { id: 'srv', url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' };
+let seq = 0;
+let account: Account;
+let accounts: Account[];
+const native = jest.mocked(NativeDownloads);
+// The store registers its native listeners once per module: keep them past `clearAllMocks`.
+initDownloads();
+const listeners = [...native.addListener.mock.calls];
+const emit = (event: string, payload: object) =>
+  listeners.filter(([e]) => e === event).forEach(([, fn]) => (fn as (p: object) => void)(payload));
+
+const newAccount = (): Account => ({
+  id: `srv.u${++seq}`,
+  server,
+  userId: `u${seq}`,
+  userName: 'anna',
+  deviceId: 'dev',
+});
+const signIn = (a: Account) => {
+  account = a;
+  accounts = [...accounts.filter((x) => x.id !== a.id), a];
+};
+
+const movie: BaseItemDto = { Id: 'sintel', Name: 'Sintel', Type: 'Movie' };
+// The movie's detail as the server answers it (resume point).
+let sintel: () => Promise<BaseItemDto>;
+const episode = (n: number): BaseItemDto => ({
+  Id: `ep${n}`,
+  Name: `Episode ${n}`,
+  Type: 'Episode',
+  SeriesId: 'show',
+  SeasonId: 'season1',
+  SeriesName: 'Test Show',
+  ParentIndexNumber: 1,
+  IndexNumber: n,
+});
+const download = (...items: BaseItemDto[]) =>
+  startDownloads(items.map((item) => ({ item, source: { Id: `${item.Id}-ms`, Size: 2 * GB, Container: 'mkv' } })));
+const idOf = (item: BaseItemDto) => downloadId(account.id, item.Id, `${item.Id}-ms`);
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  // A new account per test: the store outlives a test, and other accounts' downloads never show.
+  accounts = [];
+  sintel = async () => movie;
+  signIn(newAccount());
+  jest.spyOn(session, 'useSession').mockImplementation(() => ({ accounts, active: account }));
+  jest.spyOn(session, 'getSession').mockImplementation(() => ({ accounts, active: account }));
+  jest.spyOn(session, 'connectionFor').mockImplementation((a) => ({
+    baseUrl: a.server.url,
+    deviceId: a.deviceId,
+    token: 'tok',
+    accountId: a.id,
+  }));
+  jest
+    .spyOn(api, 'request')
+    .mockImplementation(
+      (_conn, path) =>
+        (path === '/Items/show'
+          ? Promise.resolve({ Id: 'show', Name: 'Test Show', Type: 'Series' })
+          : path === '/Items/sintel'
+            ? sintel()
+            : new Promise(() => {})) as Promise<never>,
+    );
+  jest.spyOn(Paths, 'totalDiskSpace', 'get').mockReturnValue(1000 * GB);
+});
 
 describe('Downloads', () => {
-  it('says what the empty tab means until downloads land (M5)', async () => {
+  it('says what to do when nothing is downloaded', async () => {
     await render(<Downloads />);
-    expect(screen.getByText('No downloads yet. Downloading comes in a later build.')).toBeOnTheScreen();
+    expect(screen.getByText(/^Nothing downloaded yet\./)).toBeOnTheScreen();
+    expect(screen.queryByText('Downloading')).toBeNull();
+  });
+
+  it('lists movies and shows in one list, newest first, with the storage bar', async () => {
+    await download(episode(1), episode(2));
+    await download(movie);
+    await act(() => emit('done', { id: idOf(episode(1)) }));
+    await render(<Downloads />);
+
+    expect(await screen.findByLabelText(/^Downloads 6\.4 GB · 120 GB free$/)).toBeOnTheScreen();
+    expect(screen.queryByRole('header', { name: 'Downloading' })).toBeNull();
+    const rows = screen.getAllByLabelText(/^(Sintel|Test Show), /).map((r) => r.props.accessibilityLabel);
+    expect(rows).toEqual(['Sintel, Waiting · 0 MB of 2.1 GB', 'Test Show, 2 episodes · 4.3 GB, Downloading']);
+    // Episodes live on the show's own screen.
+    expect(screen.queryByText('Episode 1')).toBeNull();
+  });
+
+  it("opens a show's episodes; its ring follows them and goes once all are done", async () => {
+    await download(episode(1), episode(2));
+    await render(<Downloads />);
+    expect(screen.getByRole('progressbar', { name: 'Downloading' })).toBeOnTheScreen();
+
+    await act(() => emit('done', { id: idOf(episode(1)) }));
+    await act(() => emit('done', { id: idOf(episode(2)) }));
+    expect(screen.queryByRole('progressbar', { name: 'Downloading' })).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'Test Show, 2 episodes · 4.3 GB' }));
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/show-downloads/[id]',
+      params: { id: 'show', name: 'Test Show' },
+    });
+  });
+
+  it('swipe Delete on a show deletes every episode after asking', async () => {
+    await download(episode(1), episode(2));
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    await render(<Downloads />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Delete Test Show' }));
+    expect(alert.mock.calls[0].slice(0, 2)).toEqual([
+      'Delete the downloads of Test Show?',
+      '2 downloads are removed from this device. You can download them again.',
+    ]);
+    const buttons = alert.mock.calls[0][2] as AlertButton[];
+    await act(() => buttons.find((b) => b.style === 'destructive')?.onPress?.());
+    expect(native.cancel).toHaveBeenCalledWith(idOf(episode(1)));
+    expect(native.cancel).toHaveBeenCalledWith(idOf(episode(2)));
+    expect(screen.getByText(/^Nothing downloaded yet\./)).toBeOnTheScreen();
+  });
+
+  it('shows live progress and pauses / resumes from the ring', async () => {
+    await download(movie);
+    const id = idOf(movie);
+    await render(<Downloads />);
+
+    await act(() => emit('progress', { id, bytes: GB }));
+    expect(screen.getByLabelText('Sintel, Downloading · 1.1 GB of 2.1 GB')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Pause download', value: { text: '50%' } }));
+    expect(native.pause).toHaveBeenCalledWith(id);
+    expect(screen.getByLabelText(/^Sintel, Paused · /)).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Resume download' }));
+    expect(native.resume).toHaveBeenCalledWith(id);
+    expect(screen.getByRole('button', { name: 'Pause download' })).toBeOnTheScreen();
+  });
+
+  it('says why a download stopped', async () => {
+    await download(movie);
+    await render(<Downloads />);
+    await act(() => emit('error', { id: idOf(movie), state: 'error', reason: 'storage', message: 'full' }));
+    expect(screen.getByLabelText(/^Sintel, Failed - not enough space · /)).toBeOnTheScreen();
+  });
+
+  it("plays a ready download from the server's resume point", async () => {
+    sintel = async () => ({
+      ...movie,
+      RunTimeTicks: 8_880_000_000,
+      UserData: { PlaybackPositionTicks: 400_000_000, Played: false },
+    });
+    await download(movie);
+    await act(() => emit('done', { id: idOf(movie) }));
+    await render(<Downloads />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Sintel, 2.1 GB' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/player', params: { id: 'sintel', start: '40' } });
+  });
+
+  it('plays from the start when the resume point is out of reach', async () => {
+    sintel = () => Promise.reject(new api.ApiError('network'));
+    await download(movie);
+    await act(() => emit('done', { id: idOf(movie) }));
+    await render(<Downloads />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Sintel, 2.1 GB' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/player', params: { id: 'sintel', start: '0' } });
+  });
+
+  it('deletes from the long-press menu after asking', async () => {
+    await download(movie);
+    const id = idOf(movie);
+    await act(() => emit('done', { id }));
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    await render(<Downloads />);
+
+    await fireEvent(screen.getByRole('button', { name: 'Sintel, 2.1 GB' }), 'longPress');
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Delete Download' }));
+    expect(alert.mock.calls[0][0]).toBe('Delete the download of Sintel?');
+    const buttons = alert.mock.calls[0][2] as AlertButton[];
+    await act(() => buttons.find((b) => b.style === 'destructive')?.onPress?.());
+
+    expect(native.cancel).toHaveBeenCalledWith(id);
+    expect(screen.getByText(/^Nothing downloaded yet\./)).toBeOnTheScreen();
+  });
+
+  it('swipe Delete asks first, running downloads too; Cancel keeps it', async () => {
+    await download(movie);
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    await render(<Downloads />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Delete Sintel' }));
+    expect(alert.mock.calls[0][0]).toBe('Delete the download of Sintel?');
+    const buttons = alert.mock.calls[0][2] as AlertButton[];
+    await act(() => buttons.find((b) => b.style === 'cancel')?.onPress?.());
+    expect(native.cancel).not.toHaveBeenCalled();
+    await act(() => buttons.find((b) => b.style === 'destructive')?.onPress?.());
+
+    expect(native.cancel).toHaveBeenCalledWith(idOf(movie));
+    expect(screen.getByText(/^Nothing downloaded yet\./)).toBeOnTheScreen();
+  });
+
+  it("deletes all of the account's downloads, running ones too, after asking", async () => {
+    await download(episode(2));
+    const otherAccounts = idOf(episode(2));
+    signIn(newAccount());
+    await download(movie, episode(1));
+    await act(() => emit('done', { id: idOf(movie) }));
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    await render(<Downloads />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Delete All Downloads' }));
+    expect(alert.mock.calls[0].slice(0, 2)).toEqual([
+      'Delete all downloads?',
+      '2 downloads (4.3 GB) are removed from this device. You can download them again.',
+    ]);
+    const buttons = alert.mock.calls[0][2] as AlertButton[];
+    await act(() => buttons.find((b) => b.style === 'destructive')?.onPress?.());
+
+    expect(native.cancel).toHaveBeenCalledWith(idOf(movie));
+    expect(native.cancel).toHaveBeenCalledWith(idOf(episode(1)));
+    expect(native.cancel).not.toHaveBeenCalledWith(otherAccounts);
+    expect(screen.getByText(/^Nothing downloaded yet\./)).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Delete All Downloads' })).toBeNull();
+  });
+
+  it("hides another account's downloads", async () => {
+    await download(movie);
+    signIn(newAccount());
+    await download(episode(1));
+    await render(<Downloads />);
+
+    expect(await screen.findByLabelText(/^Test Show, 1 episode /)).toBeOnTheScreen();
+    expect(screen.queryByLabelText(/^Sintel, /)).toBeNull();
   });
 });

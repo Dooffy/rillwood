@@ -79,6 +79,9 @@ export const subtitleEdge = {
 /** Dims the screen behind a sheet or menu, in both themes. */
 export const backdrop = 'rgba(0, 0, 0, 0.5)';
 
+/** Text on a danger fill (swipe-to-delete action), in both themes. */
+export const onDanger = '#FFFFFF';
+
 export const radii = {
   card: 12,
   cardLarge: 20,

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from '@jest/globals';
 
-import { formatClock, formatDelay, formatEndsAt, formatRemaining, spokenRemaining } from './format';
+import { formatBytes, formatClock, formatDelay, formatEndsAt, formatRemaining, spokenRemaining } from './format';
 
 describe('formatRemaining / spokenRemaining', () => {
   it.each([
@@ -52,5 +52,21 @@ describe('formatDelay', () => {
     expect(formatDelay(0)).toBe('In sync');
     expect(formatDelay(-0.3)).toBe('0.3 s earlier');
     expect(formatDelay(2)).toBe('2 s later');
+  });
+});
+
+describe('formatBytes', () => {
+  it.each([
+    [0, '0 MB'],
+    [820_400_000, '820 MB'],
+    [999_000_000, '999 MB'],
+    [999_700_000, '1 GB'],
+    [4_230_000_000, '4.2 GB'],
+    [12_000_000_000, '12 GB'],
+    [128_400_000_000, '128 GB'],
+    [-5, '0 MB'],
+    [Number.NaN, '0 MB'],
+  ])('%d bytes → %s', (bytes, text) => {
+    expect(formatBytes(bytes)).toBe(text);
   });
 });

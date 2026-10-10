@@ -342,7 +342,16 @@ describe('pause / resume / delete', () => {
 
 describe('groups', () => {
   const episode = (id: string, season: string, size = GB): Store.DownloadRequest => ({
-    item: { Id: id, Name: id, Type: 'Episode', SeriesId: 'show', SeasonId: season } as BaseItemDto,
+    item: {
+      Id: id,
+      Name: id,
+      Type: 'Episode',
+      SeriesId: 'show',
+      SeasonId: season,
+      SeriesName: 'Show',
+      ParentIndexNumber: Number(season.slice(1)),
+      IndexNumber: Number(id.slice(1)),
+    } as BaseItemDto,
     source: { Id: id, Container: 'mkv', Size: size } as MediaSourceDto,
   });
 
@@ -355,6 +364,21 @@ describe('groups', () => {
 
   it('saves the season of an episode', () => {
     expect(saved().items.map((d) => d.seasonId)).toEqual(['s1', 's1', 's2']);
+  });
+
+  it("saves the show's name and the episode's place in it (Downloads tab)", () => {
+    expect(saved().items.map((d) => [d.seriesName, d.seasonNumber, d.episodeNumber])).toEqual([
+      ['Show', 1, 1],
+      ['Show', 1, 2],
+      ['Show', 2, 3],
+    ]);
+  });
+
+  it('useDownloadSummary follows a whole show across its seasons', async () => {
+    const show = await renderHook(() => dl.useDownloadSummary(dl.downloadGroup('a1', { seriesId: 'show' })));
+    expect(show.result.current?.ids).toEqual(['a1:e1:e1', 'a1:e2:e2', 'a1:e3:e3']);
+    await act(async () => emit('progress', { id: 'a1:e3:e3', bytes: GB }));
+    expect(show.result.current?.progress).toBe(0.2);
   });
 
   it('summarize: downloading over paused over done, progress over every byte', () => {
@@ -625,6 +649,19 @@ describe('index', () => {
     const item = { id: 'a1:m1:m1', accountId: 'a1', status: 'done' };
     Storage.setItemSync('dl', JSON.stringify({ version: 1, items: [item] }));
     expect(dl.getDownloads()).toEqual([item]);
+  });
+
+  it("fills in an old episode's show name from its saved item JSON", () => {
+    const path = 'downloads/a1/e1/s1.mkv';
+    mockFiles.set('downloads/a1/e1/item.json', 1);
+    mockTexts.set(
+      'downloads/a1/e1/item.json',
+      JSON.stringify({ Id: 'e1', SeriesName: 'Big Show', ParentIndexNumber: 2, IndexNumber: 5 }),
+    );
+    const old = { id: 'a1:e1:s1', accountId: 'a1', seriesId: 'show', path, status: 'done' };
+    const noJson = { ...old, id: 'a1:e2:s2', path: 'downloads/a1/e2/s2.mkv' };
+    Storage.setItemSync('dl', JSON.stringify({ version: 1, items: [old, noJson] }));
+    expect(dl.getDownloads()).toEqual([{ ...old, seriesName: 'Big Show', seasonNumber: 2, episodeNumber: 5 }, noJson]);
   });
 
   it('starts empty on an unknown version or bad JSON', () => {

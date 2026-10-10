@@ -118,9 +118,10 @@ src/app/                 expo-router
   player.tsx
   settings.tsx
   subtitles.tsx          Settings → Subtitles: preview + option rows (size, font, colour, edge, preview text)
+  show-downloads/[id].tsx  a show's downloaded episodes by season (from its Downloads row)
   option/[key].tsx       one option's checkmark list (appearance, subtitle options), preview on top for subtitles
 src/theme.ts             design tokens
-src/format.ts            display formatting (time left, clock, subtitle timing)
+src/format.ts            display formatting (time left, clock, subtitle timing, file size)
 src/api.ts               fetch client + endpoints + DTO types
 src/items.ts             pure item logic: Home requests + layout, Latest shaping, time left, card titles, detail facts / tracks / cast, image picks + URLs
 src/session.ts           session store: accounts (kv-store), tokens (secure-store), active account, 401 sign-out
@@ -140,6 +141,7 @@ src/detail.ts            detailView: everything the detail screen shows, from on
 src/playback.ts          PlaybackInfo → play source (pure): device profile, direct play check, stream + sidecar subtitle URLs, track options + `matchTracks` (real mpv ids) + `carryTracks` (picks to the next episode by language)
 src/downloads.ts         store, queue, reconcile, cleanup, storage
 src/downloadSnapshot.ts  per-download snapshot: item JSON, poster, backdrop, external subtitles next to the file
+src/downloadList.ts      Downloads tab (pure): one list per account (a row per movie / show), a show's seasons, status wording
 src/sync.ts              offline progress queue replay
 src/settings.ts          user settings in kv-store (appearance, subtitle size + style, video zoom; downloads + offload later)
 src/pickers.ts           Settings options that open a checkmark list: key → title, choices, get / set
@@ -148,7 +150,7 @@ src/player/mpv.tsx       mpv adapter
 src/player/controls.ts   player controls logic (pure): seek clamp, pull-to-close threshold, scrubber maths, zoom (pinch, fit inset)
 src/player/progress.ts   position + duration store outside React state (only the controls re-render)
 src/player/useReporting.ts  Sessions/Playing, Progress (10 s, pause, seek, track change, background), Stopped + refetch; reports carry the tracks
-src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List (+ Checkmark, Swatch), StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message, DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing (+ AnimatedProgressRing), SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing, DownloadButton, PlayerControls (+ PlayerBottom, PlayerScrubber), Glass, TracksMenu, TimingSlider, UpNext, SubtitlePreview, OptionList (+ OptionRow), ItemMenu (+ ItemMenuProvider), Skeleton (CardRowPlaceholder, DetailPlaceholder, EpisodeCardsPlaceholder, EpisodeRowsPlaceholder, PosterGridPlaceholder, PosterRowsPlaceholder)
+src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List (+ Checkmark, Swatch), StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message, DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing (+ AnimatedProgressRing), SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing, DownloadButton, DownloadRow (+ ShowDownloadRow), DownloadActions (useDownloadActions), SwipeToDelete, StorageBar, PlayerControls (+ PlayerBottom, PlayerScrubber), Glass, TracksMenu, TimingSlider, UpNext, SubtitlePreview, OptionList (+ OptionRow), ItemMenu (+ ItemMenuProvider), Skeleton (CardRowPlaceholder, DetailPlaceholder, EpisodeCardsPlaceholder, EpisodeRowsPlaceholder, PosterGridPlaceholder, PosterRowsPlaceholder)
 modules/mpv/             vendored native module (+ UPSTREAM.md: upstream repo + commit)
 modules/downloads/       own native background downloader (iOS + Android)
 ```

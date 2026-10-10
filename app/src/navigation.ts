@@ -57,6 +57,6 @@ export function openItem({ Id: id, Type }: BaseItemDto) {
 }
 
 /** Opens the player (M4) on an item at `start` seconds. */
-export function openPlayer({ Id: id }: BaseItemDto, start = 0) {
+export function openPlayer({ Id: id }: Pick<BaseItemDto, 'Id'>, start = 0) {
   router.push({ pathname: '/player', params: { id, start: String(Math.floor(start)) } });
 }

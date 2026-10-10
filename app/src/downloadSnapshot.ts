@@ -31,6 +31,9 @@ export const subtitlePrefix = (path: string) => `${path.slice(0, path.lastIndexO
 
 const fileAt = (path: string) => new File(Paths.document, path);
 
+/** `file://` URI of a saved snapshot file (poster, backdrop) for an image view. */
+export const snapshotUri = (path: string) => fileAt(path).uri;
+
 /**
  * Saves the snapshot of one version. The item JSON is written when `item` is fresh from the server (always with the
  * downloaded version in `MediaSources`); assets already on disk are kept (a retry, or the item's other version).
