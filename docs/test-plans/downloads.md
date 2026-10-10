@@ -78,6 +78,23 @@ Until the store + Downloads screen land, drive the module from a temporary snipp
 | N6  | Wi-Fi only, mid-download turn Wi-Fi off for 5+ min, then on                            | "Waiting for Wi-Fi" (not Failed - network); carries on from where it was               |
 | N7  | Any network, airplane mode mid-download, off again                                     | "Waiting for network", then Downloading (Wi-Fi only on a hotspot: "Waiting for Wi-Fi") |
 
-## To add with the Android transfer work (M5)
+## Android transfers (in-process queue)
 
-OS kill, reboot, airplane mode, 20GB + 60GB file, server file replaced mid-download (If-Range → 200), token revoked, low disk, Task Manager stop (Android 14+), dataSync timeout (`device_config ... data_sync_fgs_timeout_duration`), Android 16 standby buckets (`am set-standby-bucket`), notification permission denied.
+App open (no background runner yet). Files: `adb shell run-as app.rillwood.client ls -l files/downloads/...` (`.part` while running), state: `run-as ... cat no_backup/downloads/state.json` (debug build).
+
+| #   | Test                                                                   | Expect                                                                                                    |
+| --- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| A1  | Enqueue one movie, keep the app open                                   | `progress` ~every 0.5 s, `done`, file at `files/<dest>` with the server size, no `.part` left             |
+| A2  | Enqueue a season                                                       | At most 2 at a time, in episode order; all finish                                                         |
+| A3  | Pause, wait, resume (server log or proxy)                              | Resume request has `Range: bytes=<n>-` + `If-Range`, 206; carries on from the paused byte count           |
+| A4  | `adb shell am force-stop app.rillwood.client` mid-download, reopen     | Carries on from the `.part` (not 0); `credentials` file in `no_backup/downloads` is binary, no token text |
+| A5  | Airplane mode mid-download, off again after 1 min                      | "Waiting for network", no `error`; carries on from where it was                                           |
+| A6  | Wi-Fi only, Wi-Fi off with mobile data on; then Settings → Any network | "Waiting for Wi-Fi" at once; Any network → continues on mobile data, progress kept                        |
+| A7  | Revoke the token in the dashboard mid-download                         | `error` 401, `paused` / `auth`; sign in again + resume carries on from the `.part`                        |
+| A8  | User without download permission (`EnableContentDownloading` off)      | `error` 403, no file written                                                                              |
+| A9  | Replace the file on the server mid-download (pause, swap, resume)      | 200 → starts again from 0 (or `error` size mismatch); never a mixed file at `dest`                        |
+| A10 | Fill the disk to < file size, enqueue                                  | `error` / `storage`, no file at `dest`                                                                    |
+
+## To add with the Android runners (M5)
+
+OS kill, reboot, 20GB + 60GB file, Task Manager stop (Android 14+), dataSync timeout (`device_config ... data_sync_fgs_timeout_duration`), Android 16 standby buckets (`am set-standby-bucket`), notification permission denied.

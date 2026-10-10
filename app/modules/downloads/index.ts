@@ -30,7 +30,8 @@ export type DownloadsEvents = {
   done: (e: { id: string }) => void;
   /**
    * A queued / running task (now queued) waits for the network (`reason: 'network'`: no network, or Wi-Fi only on
-   * cellular or a hotspot) or not any more (no reason). iOS only - the daemon holds such a task without an error.
+   * cellular or a hotspot) or not any more (no reason). iOS: the daemon holds such a task without an error; Android:
+   * the queue stops it and starts it again from its `.part` once the network is back.
    */
   waiting: (e: { id: string; reason?: 'network' }) => void;
   /** The task stopped: paused (auth) or failed - `state` / `reason` as `getTasks` would report them. */
