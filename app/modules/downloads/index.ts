@@ -28,6 +28,11 @@ export type DownloadsEvents = {
   /** Native-throttled (~500 ms). */
   progress: (e: { id: string; bytes: number; total: number }) => void;
   done: (e: { id: string }) => void;
+  /**
+   * A queued / running task (now queued) waits for the network (`reason: 'network'`: no network, or Wi-Fi only on
+   * cellular or a hotspot) or not any more (no reason). iOS only - the daemon holds such a task without an error.
+   */
+  waiting: (e: { id: string; reason?: 'network' }) => void;
   /** The task stopped: paused (auth) or failed - `state` / `reason` as `getTasks` would report them. */
   error: (e: {
     id: string;

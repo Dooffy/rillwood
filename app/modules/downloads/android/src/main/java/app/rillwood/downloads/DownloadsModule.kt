@@ -24,7 +24,7 @@ class DownloadsModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("Downloads")
 
-    Events("progress", "done", "error")
+    Events("progress", "done", "error", "waiting")
 
     Function("setCredential") { _: String, _: Map<String, String> -> }
 

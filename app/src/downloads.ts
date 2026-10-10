@@ -557,7 +557,12 @@ export function initDownloads() {
   Downloads.addListener('progress', ({ id, bytes }) => {
     // A late event from before a pause doesn't bring it back.
     const status = getDownload(id)?.status;
-    if (status === 'queued' || status === 'downloading') patch(id, { bytes, status: 'downloading' });
+    // Bytes flow: not waiting for the network any more.
+    if (status === 'queued' || status === 'downloading') patch(id, { bytes, status: 'downloading', reason: undefined });
+  });
+  Downloads.addListener('waiting', ({ id, reason }) => {
+    const status = getDownload(id)?.status;
+    if (status === 'queued' || status === 'downloading') patch(id, { status: 'queued', reason });
   });
   Downloads.addListener('done', ({ id }) => {
     const d = getDownload(id);

@@ -66,12 +66,15 @@ Until the store + Downloads screen land, drive the module from a temporary snipp
 
 ## Settings (network + storage limit)
 
-| #   | Test                                                                                   | Pass when                                                                             |
-| --- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| N1  | Settings → Network → Any network, Wi-Fi off, download a movie (then D12 the other way) | Downloads on cellular; back to Wi-Fi only → waits (no "Waiting for Wi-Fi" on iOS yet) |
-| N2  | Set Any network, force-quit, relaunch with Wi-Fi off                                   | Still Any network, the queued download carries on over cellular                       |
-| N3  | Storage limit: drag, − / +, VoiceOver swipe up / down                                  | Stops from 5 GB to No limit, saved on release, Settings row shows it                  |
-| N4  | Limit below what's downloaded + a new movie, tap ↓                                     | Toast "over your download storage limit", nothing queued; existing downloads stay     |
+| #   | Test                                                                                   | Pass when                                                                              |
+| --- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| N1  | Settings → Network → Any network, Wi-Fi off, download a movie (then D12 the other way) | Downloads on cellular; back to Wi-Fi only → "Waiting for Wi-Fi"                        |
+| N2  | Set Any network, force-quit, relaunch with Wi-Fi off                                   | Still Any network, the queued download carries on over cellular                        |
+| N3  | Storage limit: drag, − / +, VoiceOver swipe up / down                                  | Stops from 5 GB to No limit, saved on release, Settings row shows it                   |
+| N4  | Limit below what's downloaded + a new movie, tap ↓                                     | Toast "over your download storage limit", nothing queued; existing downloads stay      |
+| N5  | Wi-Fi only, Wi-Fi off (cellular on), tap ↓ on a movie                                  | Row says "Waiting for Wi-Fi" at once; Wi-Fi on → Downloading                           |
+| N6  | Wi-Fi only, mid-download turn Wi-Fi off for 5+ min, then on                            | "Waiting for Wi-Fi" (not Failed - network); carries on from where it was               |
+| N7  | Any network, airplane mode mid-download, off again                                     | "Waiting for network", then Downloading (Wi-Fi only on a hotspot: "Waiting for Wi-Fi") |
 
 ## To add with the Android transfer work (M5)
 
