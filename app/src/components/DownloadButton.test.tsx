@@ -10,7 +10,13 @@ import { DownloadButton } from './DownloadButton';
 
 const item: BaseItemDto = { Id: 'm', Name: 'Dune', Type: 'Movie' };
 let state: DownloadControl;
-const summary = (s: 'downloading' | 'paused' | 'done') => ({ state: s, progress: 0.4, ids: ['x'], itemIds: ['m'] });
+const summary = (s: 'downloading' | 'paused' | 'done') => ({
+  state: s,
+  progress: 0.4,
+  ids: ['x'],
+  itemIds: ['m'],
+  done: s === 'done' ? 1 : 0,
+});
 
 beforeEach(() => {
   state = {
@@ -22,6 +28,7 @@ beforeEach(() => {
     pause: jest.fn(),
     resume: jest.fn(),
     remove: jest.fn(),
+    cancel: jest.fn(),
   };
   jest.spyOn(control, 'useDownloadControl').mockImplementation(() => state);
 });
@@ -40,15 +47,36 @@ describe('DownloadButton', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('the ring pauses while downloading and resumes when paused', async () => {
+  it('the ring opens Pause + Cancel Download while downloading, Resume + Cancel when paused', async () => {
     state.summary = summary('downloading');
     const { rerender } = await render(<DownloadButton item={item} />);
-    await fireEvent.press(screen.getByRole('button', { name: 'Pause download', value: { text: '40%' } }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Downloading', value: { text: '40%' } }));
+    // The tap alone changes nothing: the menu picks.
+    expect(state.pause).not.toHaveBeenCalled();
+    expect(screen.getAllByRole('menuitem').map((m) => m.props.accessibilityLabel)).toEqual([
+      'Pause Download',
+      'Cancel Download',
+    ]);
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Pause Download' }));
     expect(state.pause).toHaveBeenCalled();
     state = { ...state, summary: summary('paused') };
     await rerender(<DownloadButton item={item} />);
-    await fireEvent.press(screen.getByRole('button', { name: 'Resume download' }));
-    expect(state.resume).toHaveBeenCalled();
+    await fireEvent.press(screen.getByRole('button', { name: 'Download paused' }));
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Cancel Download' }));
+    expect(state.cancel).toHaveBeenCalled();
+    expect(state.resume).not.toHaveBeenCalled();
+  });
+
+  it('the ring menu closes with the ring and stays closed when a ring comes back', async () => {
+    state.summary = summary('downloading');
+    const { rerender } = await render(<DownloadButton item={item} />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Downloading' }));
+    expect(screen.getByRole('menuitem', { name: 'Cancel Download' })).toBeOnTheScreen();
+    state = { ...state, summary: summary('done') };
+    await rerender(<DownloadButton item={item} />);
+    state = { ...state, summary: summary('downloading') };
+    await rerender(<DownloadButton item={item} />);
+    expect(screen.queryByRole('menuitem')).toBeNull();
   });
 
   it('a partial season shows ↓ for the rest unless something of it is downloading', async () => {
@@ -59,7 +87,7 @@ describe('DownloadButton', () => {
     expect(state.start).toHaveBeenCalled();
     state = { ...state, summary: summary('downloading') };
     await rerender(<DownloadButton item={item} label="Download Season 1" />);
-    expect(screen.getByRole('button', { name: 'Pause download' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Downloading' })).toBeOnTheScreen();
   });
 
   it('✓ once downloaded asks to delete', async () => {

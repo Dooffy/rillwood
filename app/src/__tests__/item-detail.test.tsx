@@ -195,9 +195,11 @@ describe('ItemDetail', () => {
     const id = native.enqueue.mock.calls[0][0][0].id;
 
     await act(() => emit('progress', { id, bytes: GB }));
-    await fireEvent.press(await screen.findByRole('button', { name: 'Pause download', value: { text: '50%' } }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Downloading', value: { text: '50%' } }));
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Pause Download' }));
     expect(native.pause).toHaveBeenCalledWith(id);
-    await fireEvent.press(screen.getByRole('button', { name: 'Resume download' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Download paused' }));
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Resume Download' }));
     expect(native.resume).toHaveBeenCalledWith(id);
 
     await act(() => emit('done', { id }));

@@ -14,7 +14,7 @@ export type DownloadRingProps = {
   /** Paused shows a resume arrow; running shows a stop square. */
   paused?: boolean;
   size?: number;
-  /** Pause / resume. Without it the ring is display-only. */
+  /** Opens the download's menu (pause / resume, cancel). Without it the ring is display-only. */
   onPress?: () => void;
 };
 
@@ -50,7 +50,8 @@ export function DownloadRing({ progress, paused = false, size = 28, onPress }: D
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={paused ? 'Resume download' : 'Pause download'}
+      accessibilityLabel={paused ? 'Download paused' : 'Downloading'}
+      accessibilityHint={paused ? 'Resume or cancel' : 'Pause or cancel'}
       accessibilityValue={{ min: 0, max: 100, now: percent, text: `${percent}%` }}
       onPress={onPress}
       hitSlop={Math.max(0, (minTouch - size) / 2)}

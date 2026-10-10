@@ -7,7 +7,7 @@ import { Alert, type AlertButton } from 'react-native';
 import * as api from '@/api';
 import type { BaseItemDto } from '@/api';
 import Downloads from '@/app/(tabs)/downloads';
-import { downloadId, initDownloads, startDownloads } from '@/downloads';
+import { deleteDownloads, downloadId, initDownloads, startDownloads } from '@/downloads';
 import * as session from '@/session';
 import type { Account } from '@/session';
 
@@ -164,20 +164,45 @@ describe('Downloads', () => {
     expect(screen.getByText(/^Nothing downloaded yet\./)).toBeOnTheScreen();
   });
 
-  it('shows live progress and pauses / resumes from the ring', async () => {
+  it('shows live progress; the ring opens Pause / Resume', async () => {
     await download(movie);
     const id = idOf(movie);
     await render(<Downloads />);
 
     await act(() => emit('progress', { id, bytes: GB }));
     expect(screen.getByLabelText('Sintel, Downloading · 1.1 GB of 2.1 GB')).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole('button', { name: 'Pause download', value: { text: '50%' } }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Downloading', value: { text: '50%' } }));
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Pause Download' }));
     expect(native.pause).toHaveBeenCalledWith(id);
     expect(screen.getByLabelText(/^Sintel, Paused · /)).toBeOnTheScreen();
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Resume download' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Download paused' }));
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Resume Download' }));
     expect(native.resume).toHaveBeenCalledWith(id);
-    expect(screen.getByRole('button', { name: 'Pause download' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Downloading' })).toBeOnTheScreen();
+  });
+
+  it('Cancel Download stops a running download and removes it in one step, no question', async () => {
+    await download(movie);
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    await render(<Downloads />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Downloading' }));
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Cancel Download' }));
+    expect(native.cancel).toHaveBeenCalledWith(idOf(movie));
+    expect(alert).not.toHaveBeenCalled();
+    expect(screen.getByText(/^Nothing downloaded yet\./)).toBeOnTheScreen();
+  });
+
+  it('a row menu closes when its download goes elsewhere and never reopens on a re-download', async () => {
+    await download(movie);
+    await render(<Downloads />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Downloading' }));
+    expect(screen.getByRole('menuitem', { name: 'Cancel Download' })).toBeOnTheScreen();
+    await act(() => deleteDownloads([idOf(movie)]));
+    expect(screen.queryByRole('menuitem')).toBeNull();
+    await act(() => download(movie)); // same item + version: the same id
+    expect(screen.getByRole('button', { name: 'Downloading' })).toBeOnTheScreen();
+    expect(screen.queryByRole('menuitem')).toBeNull();
   });
 
   it('says why a download stopped', async () => {

@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Download from a button or menu (docs/context/downloads.md): the item's download state, start (looking up the files
-// first when the item came from a list), pause / resume, delete after a confirmation, a toast when starting fails.
+// first when the item came from a list), pause / resume, cancel, delete after a confirmation, a toast when starting fails.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 
 import { ApiError, request, type BaseItemDto, type Connection, type ItemsResult, type UserDto } from '@/api';
+import type { SheetAction } from '@/components/ActionSheet';
 import { useToast } from '@/components/Toast';
 import {
+  cancelDownloads,
   deleteDownloads,
   downloadId,
   pauseDownloads,
@@ -44,6 +46,8 @@ export type DownloadControl = {
   resume: () => void;
   /** Asks first. */
   remove: () => void;
+  /** Stops what isn't finished and deletes it, at once (picked from a menu); done ones stay. */
+  cancel: () => void;
 };
 
 /** The item's `downloadGroup` for the active account; null when it isn't downloadable or nobody is signed in. */
@@ -133,8 +137,30 @@ export function useDownloadControl(item: BaseItemDto | undefined): DownloadContr
   const resume = useCallback(() => ids && resumeDownloads(ids), [ids]);
   const name = item?.Name;
   const remove = useCallback(() => ids && confirmDeleteDownloads(name, ids), [ids, name]);
+  const cancel = useCallback(() => ids && cancelDownloads(ids), [ids]);
 
-  return { available, summary, partial, starting, start, pause, resume, remove };
+  return { available, summary, partial, starting, start, pause, resume, remove, cancel };
+}
+
+/**
+ * Download actions by the state (item menu, header ring, Downloads row): Download; while not finished Pause (running)
+ * or Resume (paused / failed; a partial season: Download the rest) + Cancel Download (+ Delete Download once part of it
+ * is done); done: Delete (a partial season: Download the rest first). None when it can't be downloaded.
+ */
+export function downloadActions(control: DownloadControl): SheetAction[] {
+  const { available, summary, partial, start, pause, resume, remove, cancel } = control;
+  if (!available) return [];
+  const download = { label: 'Download', onPress: start };
+  if (!summary) return [download];
+  const del = { label: 'Delete Download', onPress: remove };
+  if (summary.state === 'done') return partial ? [download, del] : [del];
+  const first =
+    summary.state === 'downloading'
+      ? { label: 'Pause Download', onPress: pause }
+      : partial
+        ? download // also resumes the paused ones
+        : { label: 'Resume Download', onPress: resume };
+  return [first, { label: 'Cancel Download', destructive: true, onPress: cancel }, ...(summary.done > 0 ? [del] : [])];
 }
 
 /** Asks before deleting downloads (a header button, a menu, the Downloads tab), then deletes them. */

@@ -85,7 +85,8 @@ describe("A show's downloads", () => {
     await act(() => emit('done', { id: idOf(e2) }));
     await render(<ShowDownloads />);
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Pause download' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Downloading' }));
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Pause Download' }));
     expect(native.pause).toHaveBeenCalledWith(idOf(e1));
     await fireEvent.press(screen.getByRole('button', { name: '2. Episode 2, 1.1 GB' }));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/player', params: { id: e2.Id, start: '0' } });

@@ -8,9 +8,9 @@ import type { BaseItemDto } from '@/api';
 import * as session from '@/session';
 
 import { PosterCard } from './Card';
-import type { DownloadControl } from '@/useDownloadControl';
+import { downloadActions, type DownloadControl } from '@/useDownloadControl';
 
-import { downloadActions, itemActions, ItemMenuProvider, useItemMenu } from './ItemMenu';
+import { itemActions, ItemMenuProvider, useItemMenu } from './ItemMenu';
 import { ToastProvider } from './Toast';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
@@ -64,24 +64,52 @@ describe('downloadActions', () => {
     pause: jest.fn(),
     resume: jest.fn(),
     remove: jest.fn(),
+    cancel: jest.fn(),
     ...over,
   });
-  const summary = (state: 'downloading' | 'paused' | 'done') => ({ state, progress: 0.5, ids: ['x'], itemIds: ['i'] });
+  const summary = (state: 'downloading' | 'paused' | 'done', done = state === 'done' ? 1 : 0) => ({
+    state,
+    progress: 0.5,
+    ids: ['x', 'y'],
+    itemIds: ['i'],
+    done,
+  });
   const labels = (over: Partial<DownloadControl>) => downloadActions(control(over)).map((a) => a.label);
 
   it('follows the download state; none when it is not available', () => {
     const c = control({});
     expect(downloadActions(c)).toEqual([{ label: 'Download', onPress: c.start }]);
-    expect(labels({ summary: summary('downloading') })).toEqual(['Pause Download']);
-    expect(labels({ summary: summary('paused') })).toEqual(['Resume Download', 'Delete Download']);
+    expect(labels({ summary: summary('downloading') })).toEqual(['Pause Download', 'Cancel Download']);
+    expect(labels({ summary: summary('paused') })).toEqual(['Resume Download', 'Cancel Download']);
     expect(labels({ summary: summary('done') })).toEqual(['Delete Download']);
     expect(labels({ available: false })).toEqual([]);
   });
 
-  it('a partial season offers the rest and delete; while downloading only pause', () => {
+  it('Cancel Download stops at once (red); Delete Download (asks) too once part of it is done', () => {
+    const c = control({ summary: summary('downloading', 1) });
+    const actions = downloadActions(c);
+    expect(actions.map((a) => a.label)).toEqual(['Pause Download', 'Cancel Download', 'Delete Download']);
+    expect(actions[1]).toEqual({ label: 'Cancel Download', destructive: true, onPress: c.cancel });
+    expect(actions[2].onPress).toBe(c.remove);
+    expect(labels({ summary: summary('paused', 1) })).toEqual([
+      'Resume Download',
+      'Cancel Download',
+      'Delete Download',
+    ]);
+  });
+
+  it('a partial season offers the rest and delete; while downloading pause + cancel', () => {
     expect(labels({ summary: summary('done'), partial: true })).toEqual(['Download', 'Delete Download']);
-    expect(labels({ summary: summary('paused'), partial: true })).toEqual(['Download', 'Delete Download']);
-    expect(labels({ summary: summary('downloading'), partial: true })).toEqual(['Pause Download']);
+    expect(labels({ summary: summary('paused', 1), partial: true })).toEqual([
+      'Download',
+      'Cancel Download',
+      'Delete Download',
+    ]);
+    expect(labels({ summary: summary('downloading', 1), partial: true })).toEqual([
+      'Pause Download',
+      'Cancel Download',
+      'Delete Download',
+    ]);
   });
 });
 

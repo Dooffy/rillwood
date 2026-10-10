@@ -5,15 +5,7 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { downloadStatus, episodeCount, type DownloadEntry } from '@/downloadList';
-import {
-  downloadGroup,
-  pauseDownload,
-  resumeDownload,
-  summarize,
-  useDownload,
-  useDownloadSummary,
-  type Download,
-} from '@/downloads';
+import { downloadGroup, summarize, useDownload, useDownloadSummary, type Download } from '@/downloads';
 import { snapshotUri } from '@/downloadSnapshot';
 import { formatBytes } from '@/format';
 import { useDownloadNetwork } from '@/settings';
@@ -34,13 +26,13 @@ export type DownloadRowProps = {
   onPlay: (d: Download) => void;
   /** Swipe → Delete: asks, then deletes. */
   onDelete: (d: Download) => void;
-  /** Long press (VoiceOver: "More"): the download's menu. */
+  /** Ring tap, long press (VoiceOver: "More"): the download's menu. */
   onMenu: (d: Download) => void;
 };
 
 const poster = (d: Download | undefined) => (d?.snapshot?.poster ? snapshotUri(d.snapshot.poster) : undefined);
 
-/** Poster, title, size + status, then the pause / resume ring while it isn't done. Tap plays a ready one. */
+/** Poster, title, size + status, then the ring (opens the menu) while it isn't done. Tap plays a ready one. */
 export const DownloadRow = memo(function DownloadRow({ id, title, onPlay, onDelete, onMenu }: DownloadRowProps) {
   const d = useDownload(id);
   const network = useDownloadNetwork();
@@ -77,11 +69,7 @@ export const DownloadRow = memo(function DownloadRow({ id, title, onPlay, onDele
         </Pressable>
         {!done && (
           <View style={styles.control}>
-            <DownloadRing
-              progress={progress}
-              paused={state === 'paused'}
-              onPress={() => (state === 'paused' ? resumeDownload(id) : pauseDownload(id))}
-            />
+            <DownloadRing progress={progress} paused={state === 'paused'} onPress={() => onMenu(d)} />
           </View>
         )}
       </View>
