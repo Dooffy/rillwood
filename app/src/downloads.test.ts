@@ -325,6 +325,17 @@ describe('native events', () => {
     expect(dl.getDownload('a1:m1:m1')).toMatchObject({ status: 'downloading', reason: undefined, bytes: 200 });
   });
 
+  it('waiting: the clear keeps a downloading row downloading; done / failed rows ignore it', () => {
+    emit('waiting', { id: 'a1:m1:m1', reason: 'network' });
+    emit('progress', { id: 'a1:m1:m1', bytes: 100, total: 4 * GB });
+    emit('waiting', { id: 'a1:m1:m1' });
+    expect(dl.getDownload('a1:m1:m1')).toMatchObject({ status: 'downloading', reason: undefined });
+
+    emit('error', { id: 'a1:m1:m1', state: 'error', reason: 'storage', message: 'Disk full' });
+    emit('waiting', { id: 'a1:m1:m1', reason: 'network' });
+    expect(dl.getDownload('a1:m1:m1')).toMatchObject({ status: 'error', reason: 'storage' });
+  });
+
   it('waiting: a late event after a pause keeps it paused', () => {
     dl.pauseDownload('a1:m1:m1');
     emit('waiting', { id: 'a1:m1:m1', reason: 'network' });

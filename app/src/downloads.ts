@@ -562,7 +562,8 @@ export function initDownloads() {
   });
   Downloads.addListener('waiting', ({ id, reason }) => {
     const status = getDownload(id)?.status;
-    if (status === 'queued' || status === 'downloading') patch(id, { status: 'queued', reason });
+    // Not waiting any more: only the reason goes (bytes may already flow).
+    if (status === 'queued' || status === 'downloading') patch(id, reason ? { status: 'queued', reason } : { reason });
   });
   Downloads.addListener('done', ({ id }) => {
     const d = getDownload(id);
