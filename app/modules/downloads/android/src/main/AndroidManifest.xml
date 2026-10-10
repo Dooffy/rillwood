@@ -3,4 +3,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <!-- Default network callback: Wi-Fi only rule + waiting for the network. -->
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+  <!-- Android 14+ queue runner: user-initiated data transfer job, persisted across reboots. -->
+  <uses-permission android:name="android.permission.RUN_USER_INITIATED_JOBS" />
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+  <!-- Download notification (Android 13+: runtime permission - asked before the first download). -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+  <application>
+    <service
+      android:name="app.rillwood.downloads.DownloadsJobService"
+      android:exported="false"
+      android:permission="android.permission.BIND_JOB_SERVICE" />
+    <receiver
+      android:name="app.rillwood.downloads.DownloadsNotification$PauseReceiver"
+      android:exported="false" />
+  </application>
 </manifest>

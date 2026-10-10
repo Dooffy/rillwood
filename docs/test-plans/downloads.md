@@ -95,6 +95,21 @@ App open (no background runner yet). Files: `adb shell run-as app.rillwood.clien
 | A9  | Replace the file on the server mid-download (pause, swap, resume)      | 200 → starts again from 0 (or `error` size mismatch); never a mixed file at `dest`                        |
 | A10 | Fill the disk to < file size, enqueue                                  | `error` / `storage`, no file at `dest`                                                                    |
 
+## Android 14+ background (UIDT job)
+
+Android 14+ device or emulator. Job state: `adb shell dumpsys jobscheduler | grep -A20 app.rillwood.client`.
+
+| #   | Test                                                                             | Expect                                                                                                 |
+| --- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| U1  | Download a movie, go home, lock the phone for 10 min                             | Notification "Downloading 1 item", "x of y" + bar; finishes; notification gone at the end              |
+| U2  | Download a season, background the app                                            | "Downloading N items", 2 at a time; job ends after the last one (`dumpsys`: no job)                    |
+| U3  | Notification → Pause                                                             | Every download Paused (app shows it, also when open); job ends; resume in the app starts the job again |
+| U4  | Mid-download `adb shell am kill app.rillwood.client` (app in the background)     | The job restarts the queue without opening the app; carries on from the `.part`                        |
+| U5  | Reboot mid-download, unlock                                                      | Job runs again (persisted) and carries on                                                              |
+| U6  | Settings → Task Manager (notification shade, active apps) → Stop                 | Downloads Paused - not Failed; opening the app + resume continues                                      |
+| U7  | Wi-Fi only, background the app, Wi-Fi off (mobile data on); Wi-Fi on after 2 min | "Waiting for Wi-Fi" in the notification (or the job stops until Wi-Fi); carries on once Wi-Fi is back  |
+| U8  | Notification permission denied (Android 13+), download a movie in the background | Finishes; nothing in the shade, the job shows in Task Manager                                          |
+
 ## To add with the Android runners (M5)
 
 OS kill, reboot, 20GB + 60GB file, Task Manager stop (Android 14+), dataSync timeout (`device_config ... data_sync_fgs_timeout_duration`), Android 16 standby buckets (`am set-standby-bucket`), notification permission denied.
