@@ -76,6 +76,11 @@ export default function RootLayout() {
             <Stack.Screen name="series/[id]" options={detailOptions} />
             <Stack.Screen name="settings" options={pages.settings} />
             <Stack.Screen name="subtitles" options={pages.subtitles} />
+            {/* A show's downloaded episodes (Downloads tab): the show's name comes with the link. */}
+            <Stack.Screen
+              name="show-downloads/[id]"
+              options={({ route }) => page((route.params as { name?: string } | undefined)?.name ?? 'Downloads')}
+            />
             {/* An option's checkmark list: a plain title, as iOS Settings subscreens. */}
             <Stack.Screen
               name="option/[key]"

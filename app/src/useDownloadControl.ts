@@ -130,13 +130,22 @@ export function useDownloadControl(item: BaseItemDto | undefined): DownloadContr
   const pause = useCallback(() => ids && pauseDownloads(ids), [ids]);
   const resume = useCallback(() => ids && resumeDownloads(ids), [ids]);
   const name = item?.Name;
-  const remove = useCallback(() => {
-    if (!ids) return;
-    Alert.alert(`Delete the download of ${name}?`, "It's removed from this device. You can download it again.", [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteDownloads(ids) },
-    ]);
-  }, [ids, name]);
+  const remove = useCallback(() => ids && confirmDeleteDownloads(name, ids), [ids, name]);
 
   return { available, summary, partial, starting, start, pause, resume, remove };
+}
+
+/** Asks before deleting downloads (a header button, a menu, the Downloads tab), then deletes them. */
+export function confirmDeleteDownloads(name: string | undefined, ids: readonly string[]) {
+  const many = ids.length > 1;
+  Alert.alert(
+    name ? `Delete the ${many ? 'downloads' : 'download'} of ${name}?` : 'Delete this download?',
+    many
+      ? `${ids.length} downloads are removed from this device. You can download them again.`
+      : "It's removed from this device. You can download it again.",
+    [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteDownloads(ids) },
+    ],
+  );
 }

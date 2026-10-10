@@ -44,3 +44,11 @@ export function formatEndsAt(seconds: number, now: Date = new Date()): string | 
 /** Subtitle timing: "In sync", "0.3 s earlier", "2 s later". */
 export const formatDelay = (seconds: number) =>
   seconds === 0 ? 'In sync' : `${Math.abs(seconds)} s ${seconds < 0 ? 'earlier' : 'later'}`;
+
+/** File size in decimal units, as iOS Settings shows storage: "820 MB", "4.2 GB", "128 GB". */
+export function formatBytes(bytes: number): string {
+  const b = Number.isFinite(bytes) && bytes > 0 ? bytes : 0;
+  if (b < 999.5e6) return `${Math.round(b / 1e6)} MB`;
+  const gb = b / 1e9;
+  return `${gb < 100 ? Math.round(gb * 10) / 10 : Math.round(gb)} GB`;
+}

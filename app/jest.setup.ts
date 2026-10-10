@@ -88,3 +88,24 @@ jest.mock('react-native/Libraries/Modal/Modal', () => {
   }
   return { __esModule: true, default: Modal };
 });
+
+// Gesture Handler's swipeable row needs live Reanimated shared values (the mock's have no listeners): render the row
+// with its actions next to it, as if swiped open, so tests press the actions directly.
+jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
+  const React = jest.requireActual<typeof import('react')>('react');
+  const { View } = jest.requireActual<typeof import('react-native')>('react-native');
+  const methods = { close: () => {}, openLeft: () => {}, openRight: () => {}, reset: () => {} };
+  function Swipeable({
+    ref,
+    children,
+    renderRightActions,
+  }: {
+    ref?: React.Ref<typeof methods>;
+    children?: React.ReactNode;
+    renderRightActions?: (...args: unknown[]) => React.ReactNode;
+  }) {
+    React.useImperativeHandle(ref, () => methods);
+    return React.createElement(View, null, children, renderRightActions?.(undefined, undefined, methods));
+  }
+  return { __esModule: true, default: Swipeable };
+});
