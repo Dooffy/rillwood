@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from '@jest/globals';
 
-import { downloadList, downloadStatus, episodeCount, episodeTitle, showSeasons } from './downloadList';
+import { downloadList, downloadStatus, filterDownloads, episodeCount, episodeTitle, showSeasons } from './downloadList';
 import type { Download } from './downloads';
 
 const d = (id: string, fields: Partial<Download> = {}): Download => ({
@@ -51,7 +51,45 @@ describe('downloadList', () => {
 
   it("leaves out other accounts' downloads; empty without an account", () => {
     expect(downloadList([d('m1'), d('m2', { accountId: 'a2' })], 'a1').entries).toEqual([{ kind: 'item', id: 'm1' }]);
-    expect(downloadList([d('m1')], undefined)).toEqual({ entries: [], used: 0, storageKey: '0|0' });
+    expect(downloadList([d('m1')], undefined)).toMatchObject({ entries: [], ids: [], used: 0, storageKey: '0|0' });
+  });
+});
+
+describe('filterDownloads', () => {
+  const all = [
+    // The show's name comes from a later episode (an old download without it).
+    d('e1', { seriesId: 's', title: 'Earthfall', createdAt: 3 }),
+    d('e2', { seriesId: 's', seriesName: 'Pioneer One', title: 'The Man From Mars', createdAt: 2 }),
+    d('m1', { title: 'Amélie', createdAt: 1, total: 50 }),
+  ];
+  const list = downloadList(all, 'a1');
+  const ids = (query: Parameters<typeof filterDownloads>[1]) =>
+    filterDownloads(list, query).map((e) => (e.kind === 'show' ? e.seriesId : e.id));
+
+  it('narrows to movies or shows', () => {
+    expect(ids({ scope: 'all' })).toEqual(['s', 'm1']);
+    expect(ids({ scope: 'movies' })).toEqual(['m1']);
+    expect(ids({ scope: 'shows' })).toEqual(['s']);
+  });
+
+  it("matches a movie's title, a show's name or an episode title, case and accents ignored", () => {
+    expect(ids({ term: 'AMELIE', scope: 'all' })).toEqual(['m1']);
+    expect(ids({ term: 'pioneer', scope: 'all' })).toEqual(['s']);
+    expect(ids({ term: 'mars', scope: 'all' })).toEqual(['s']);
+    expect(ids({ term: 'mars', scope: 'movies' })).toEqual([]);
+    expect(ids({ term: 'nothing', scope: 'all' })).toEqual([]);
+  });
+
+  it('finds a show with no known name by what its row says', () => {
+    const old = downloadList([d('e1', { seriesId: 's' })], 'a1');
+    expect(filterDownloads(old, { term: 'tv show', scope: 'all' })).toEqual(old.entries);
+  });
+
+  it("keeps a matched show's row as is, every episode in it", () => {
+    const [show] = filterDownloads(list, { term: 'earth', scope: 'all' });
+    expect(show).toBe(list.entries[0]);
+    expect(show).toEqual({ kind: 'show', seriesId: 's', name: 'Pioneer One', ids: ['e1', 'e2'], total: 200 });
+    expect(list.ids).toEqual(['e1', 'e2', 'm1']);
   });
 });
 

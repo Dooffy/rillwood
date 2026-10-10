@@ -109,6 +109,29 @@ describe('Downloads', () => {
     expect(screen.queryByText('Episode 1')).toBeNull();
   });
 
+  it('narrows the list by search and type; Delete All still counts every download', async () => {
+    await download(episode(1), episode(2));
+    await download(movie);
+    await render(<Downloads />);
+    const rows = () => screen.queryAllByLabelText(/^(Sintel|Test Show), /).map((r) => r.props.accessibilityLabel);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Shows' }));
+    expect(rows()).toEqual(['Test Show, 2 episodes · 4.3 GB, Downloading']);
+    await fireEvent.press(screen.getByRole('button', { name: 'Movies' }));
+    expect(rows()).toEqual(['Sintel, Waiting · 0 MB of 2.1 GB']);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'All' }));
+    await fireEvent.changeText(screen.getByLabelText('Search downloads'), 'episode 2');
+    expect(rows()).toEqual(['Test Show, 2 episodes · 4.3 GB, Downloading']);
+    await fireEvent.changeText(screen.getByLabelText('Search downloads'), 'zzz');
+    expect(rows()).toEqual([]);
+    expect(screen.getByText('No downloads match "zzz".')).toBeOnTheScreen();
+
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    await fireEvent.press(screen.getByRole('button', { name: 'Delete All Downloads' }));
+    expect(alert.mock.calls[0][1]).toMatch(/^3 downloads /);
+  });
+
   it("opens a show's episodes; its ring follows them and goes once all are done", async () => {
     await download(episode(1), episode(2));
     await render(<Downloads />);
@@ -241,6 +264,20 @@ describe('Downloads', () => {
     expect(native.cancel).not.toHaveBeenCalledWith(otherAccounts);
     expect(screen.getByText(/^Nothing downloaded yet\./)).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Delete All Downloads' })).toBeNull();
+  });
+
+  it('starts unnarrowed after an account switch', async () => {
+    await download(movie);
+    const { rerender } = await render(<Downloads />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Shows' }));
+    await fireEvent.changeText(screen.getByLabelText('Search downloads'), 'zzz');
+
+    signIn(newAccount());
+    await act(() => download(movie));
+    await rerender(<Downloads />);
+    expect(screen.getByLabelText('Search downloads').props.value).toBe('');
+    expect(screen.getByRole('button', { name: 'All' })).toBeSelected();
+    expect(screen.getByLabelText(/^Sintel, /)).toBeOnTheScreen();
   });
 
   it("hides another account's downloads", async () => {

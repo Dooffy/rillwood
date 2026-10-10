@@ -7,30 +7,57 @@ import type { DownloadNetwork } from '@/settings';
 export type DownloadEntry =
   { kind: 'item'; id: string } | { kind: 'show'; seriesId: string; name: string; ids: string[]; total: number };
 
+/** Downloads tab type chips. */
+export type DownloadScope = 'all' | 'movies' | 'shows';
+
+export const DOWNLOAD_SCOPES: { key: DownloadScope; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'movies', label: 'Movies' },
+  { key: 'shows', label: 'Shows' },
+];
+
+/** What the tab shows: a search term (on the device, no server call) and a type. */
+export type DownloadQuery = { term?: string; scope: DownloadScope };
+
 export type DownloadList = {
   /** Newest first: a show sits where its latest episode would. */
   entries: DownloadEntry[];
+  /** Every download of the account (Delete All). */
+  ids: string[];
   /** Bytes of every download (what they take once done). */
   used: number;
   /** Changes when the space on disk does (one added / removed / finished): when to re-read free space. */
   storageKey: string;
+  /** What a search term matches, folded: a movie's title; a show's name and its episode titles. */
+  text: ReadonlyMap<DownloadEntry, string>;
 };
 
 /** An episode whose show name is unknown: from before the store kept it, and its item JSON was never saved. */
 export const UNKNOWN_SHOW = 'TV Show';
+
+/** Folded for matching: lower case, no accents ("Amélie" → "amelie"). */
+const fold = (text: string) =>
+  text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 
 /** An account's downloads as the tab lists them: one list, a row per movie and per show, running ones included. */
 export function downloadList(downloads: readonly Download[], accountId: string | undefined): DownloadList {
   const mine = downloads.filter((d) => d.accountId === accountId).sort((a, b) => b.createdAt - a.createdAt);
   const entries: DownloadEntry[] = [];
   const shows = new Map<string, Extract<DownloadEntry, { kind: 'show' }>>();
+  // Raw titles per row; the show's displayed name is added at the end (it can come from a later episode).
+  const titles = new Map<DownloadEntry, string[]>();
   let used = 0;
   let done = 0;
   for (const d of mine) {
     used += d.total;
     if (d.status === 'done') done++;
     if (!d.seriesId) {
-      entries.push({ kind: 'item', id: d.id });
+      const item = { kind: 'item' as const, id: d.id };
+      entries.push(item);
+      titles.set(item, [d.title]);
       continue;
     }
     const show = shows.get(d.seriesId);
@@ -38,6 +65,7 @@ export function downloadList(downloads: readonly Download[], accountId: string |
       show.ids.push(d.id);
       show.total += d.total;
       if (show.name === UNKNOWN_SHOW && d.seriesName) show.name = d.seriesName;
+      titles.get(show)?.push(d.title);
       continue;
     }
     const fresh = {
@@ -49,8 +77,25 @@ export function downloadList(downloads: readonly Download[], accountId: string |
     };
     shows.set(d.seriesId, fresh);
     entries.push(fresh);
+    titles.set(fresh, [d.title]);
   }
-  return { entries, used, storageKey: `${mine.length}|${done}` };
+  const text = new Map(
+    [...titles].map(([e, t]) => [e, fold((e.kind === 'show' ? [e.name, ...t] : t).join('\n'))] as const),
+  );
+  return { entries, ids: mine.map((d) => d.id), used, storageKey: `${mine.length}|${done}`, text };
+}
+
+/**
+ * The rows a query leaves, the same entry objects (rows keep their memo while typing) - pass the list as
+ * `downloadList` returned it. A term matches a movie's title,
+ * or a show's name or any of its episode titles (case and accents ignored).
+ */
+export function filterDownloads({ entries, text }: DownloadList, { term, scope }: DownloadQuery): DownloadEntry[] {
+  const want = term && fold(term);
+  return entries.filter(
+    (e) =>
+      (e.kind === 'show' ? scope !== 'movies' : scope !== 'shows') && (!want || (text.get(e) ?? '').includes(want)),
+  );
 }
 
 export type DownloadSeason = { title: string; ids: string[] };
