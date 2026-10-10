@@ -25,6 +25,7 @@ const pages = {
   account: page('Account'),
   settings: page('Settings'),
   subtitles: page('Subtitles'),
+  downloadStorage: page('Storage limit'),
 };
 
 export default function RootLayout() {
@@ -81,6 +82,7 @@ export default function RootLayout() {
               name="show-downloads/[id]"
               options={({ route }) => page((route.params as { name?: string } | undefined)?.name ?? 'Downloads')}
             />
+            <Stack.Screen name="download-storage" options={pages.downloadStorage} />
             {/* An option's checkmark list: a plain title, as iOS Settings subscreens. */}
             <Stack.Screen
               name="option/[key]"

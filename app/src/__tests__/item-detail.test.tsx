@@ -12,6 +12,7 @@ import { ItemMenuProvider } from '@/components/ItemMenu';
 import { ToastProvider } from '@/components/Toast';
 import { initDownloads } from '@/downloads';
 import * as session from '@/session';
+import { setDownloadLimit } from '@/settings';
 
 import NativeDownloads from '../../modules/downloads';
 
@@ -227,6 +228,20 @@ describe('ItemDetail', () => {
     await render(<ItemDetail />);
     await fireEvent.press(await screen.findByRole('button', { name: 'Download' }));
     expect(await screen.findByText('Not enough free space on this device.')).toBeOnTheScreen();
+  });
+
+  it('says when the download would go over the storage limit', async () => {
+    setDownloadLimit(1);
+    try {
+      reply = () => Promise.resolve({ ...sintel, MediaSources: [{ ...sintel.MediaSources![0], Size: 2 * GB }] });
+      await render(<ItemDetail />);
+      await fireEvent.press(await screen.findByRole('button', { name: 'Download' }));
+      expect(
+        await screen.findByText('This would go over your download storage limit. Change it in Settings.'),
+      ).toBeOnTheScreen();
+    } finally {
+      setDownloadLimit(0);
+    }
   });
 
   it('marks as watched at once, before the server answers', async () => {

@@ -197,3 +197,66 @@ describe('subtitle preview language', () => {
     expect(load().getSubtitleSample()).toBe('en');
   });
 });
+
+describe('download network setting', () => {
+  beforeEach(() => {
+    Storage.clearSync();
+  });
+
+  it('defaults to Wi-Fi only, also for an unknown stored value', () => {
+    expect(load().getDownloadNetwork()).toBe('wifi');
+    Storage.setItemSync('settings.downloadNetwork', 'satellite');
+    expect(load().getDownloadNetwork()).toBe('wifi');
+  });
+
+  it('persists a change', () => {
+    load().setDownloadNetwork('any');
+    expect(load().getDownloadNetwork()).toBe('any');
+  });
+});
+
+describe('download storage limit', () => {
+  beforeEach(() => {
+    Storage.clearSync();
+  });
+
+  it('defaults to no limit, also for a broken stored value', () => {
+    expect(load().getDownloadLimit()).toBe(0);
+    for (const bad of ['-5', 'abc', 'Infinity']) {
+      Storage.setItemSync('settings.downloadLimit', bad);
+      expect(load().getDownloadLimit()).toBe(0);
+    }
+  });
+
+  it('persists a change; a bad value saves as no limit', () => {
+    const { getDownloadLimit, setDownloadLimit } = load();
+    setDownloadLimit(50);
+    expect(load().getDownloadLimit()).toBe(50);
+    setDownloadLimit(Number.NaN);
+    expect(getDownloadLimit()).toBe(0);
+  });
+
+  it('slider stops fit under 90% of the disk, with no limit last', () => {
+    const { downloadLimitSteps } = load();
+    expect(downloadLimitSteps(64e9)).toEqual([5, 10, 15, 20, 25, 30, 40, 50, 0]);
+    expect(downloadLimitSteps(256e9).at(-2)).toBe(200);
+    // A disk too small for any stop still gets the first.
+    expect(downloadLimitSteps(4e9)).toEqual([5, 0]);
+  });
+
+  it('finds the stop for a limit: its own, the nearest, or the last for no limit', () => {
+    const { downloadLimitStep } = load();
+    const steps = [5, 10, 20, 50, 0];
+    expect(downloadLimitStep(steps, 20)).toBe(2);
+    expect(downloadLimitStep(steps, 1000)).toBe(3);
+    expect(downloadLimitStep(steps, 12)).toBe(1);
+    expect(downloadLimitStep(steps, 0)).toBe(4);
+  });
+
+  it('formats a limit', () => {
+    const { formatDownloadLimit } = load();
+    expect(formatDownloadLimit(0)).toBe('No limit');
+    expect(formatDownloadLimit(50)).toBe('50 GB');
+    expect(formatDownloadLimit(1500)).toBe('1.5 TB');
+  });
+});

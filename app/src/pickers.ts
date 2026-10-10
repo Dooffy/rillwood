@@ -5,11 +5,14 @@ import { useSyncExternalStore } from 'react';
 
 import {
   APPEARANCE_OPTIONS,
+  DOWNLOAD_NETWORK_OPTIONS,
   getAppearance,
+  getDownloadNetwork,
   getSubtitleSample,
   getSubtitleScale,
   getSubtitleStyle,
   setAppearance,
+  setDownloadNetwork,
   setSubtitleSample,
   setSubtitleScale,
   setSubtitleStyle,
@@ -89,6 +92,14 @@ export const PICKERS = {
     set: setSubtitleSample,
     preview: true,
     footer: 'Only for this preview. Subtitles play in the language of the track you pick.',
+  }),
+  'download-network': option({
+    title: 'Network',
+    choices: DOWNLOAD_NETWORK_OPTIONS,
+    get: getDownloadNetwork,
+    set: setDownloadNetwork,
+    footer:
+      "Wi-Fi only doesn't use mobile data or a personal hotspot. Files that are downloading when you change this start over.",
   }),
 };
 

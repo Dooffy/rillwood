@@ -83,7 +83,7 @@ All values live in `src/theme.ts`. Never hardcode colours, radii or font sizes i
 
 Accent tweak options: `#0A84FF`, `#30D158`, `#FF9F0A` - flip button text to white when non-white accent.
 
-Settings options (iOS Settings style): a row with the current value that opens a checkmark list (`OptionRow` → `/option/[key]`, `src/pickers.ts`); no controls inside cards; `Segmented` only bare on the background for switching what's shown, never for a saved setting.
+Settings options (iOS Settings style): a row with the current value that opens a checkmark list (`OptionRow` → `/option/[key]`, `src/pickers.ts`); a long numeric range (Storage limit) opens its own page with a `StepSlider` instead; no controls inside cards; `Segmented` only bare on the background for switching what's shown, never for a saved setting.
 
 Rules: large titles 34/700, section headers 20/700 with chevron, 16:9 landscape cards for resume, 2:3 posters, white progress bars (over artwork: bottom fade + time left after the bar, `[=====   ] 9m`; watched items show `✓ Watched` in the same spot), download ring built from plain views (grey track + white arc; stop square = downloading, arrow = paused), min 44pt touch targets, tab bar: Home / Library / Downloads (search lives in Library). Tab header (`Screen`): large title + 44pt round buttons (the profile avatar too), the same `spacing.sm` gap above every tab's content; scroll bars hidden (`scrollList` / `tabList`).
 
@@ -119,7 +119,8 @@ src/app/                 expo-router
   settings.tsx
   subtitles.tsx          Settings → Subtitles: preview + option rows (size, font, colour, edge, preview text)
   show-downloads/[id].tsx  a show's downloaded episodes by season (from its Downloads row)
-  option/[key].tsx       one option's checkmark list (appearance, subtitle options), preview on top for subtitles
+  option/[key].tsx       one option's checkmark list (appearance, subtitle options, download network), preview on top for subtitles
+  download-storage.tsx   Settings → Storage limit: step slider for the downloads' space limit
 src/theme.ts             design tokens
 src/format.ts            display formatting (time left, clock, subtitle timing, file size)
 src/api.ts               fetch client + endpoints + DTO types
@@ -143,14 +144,14 @@ src/downloads.ts         store, queue, reconcile, cleanup, storage
 src/downloadSnapshot.ts  per-download snapshot: item JSON, poster, backdrop, external subtitles next to the file
 src/downloadList.ts      Downloads tab (pure): one list per account (a row per movie / show), a show's seasons, status wording
 src/sync.ts              offline progress queue replay
-src/settings.ts          user settings in kv-store (appearance, subtitle size + style, video zoom; downloads + offload later)
+src/settings.ts          user settings in kv-store (appearance, subtitle size + style, video zoom, download network + storage limit; offload later)
 src/pickers.ts           Settings options that open a checkmark list: key → title, choices, get / set
 src/player/Player.tsx    PlayerEngine interface + re-export of active engine
 src/player/mpv.tsx       mpv adapter
 src/player/controls.ts   player controls logic (pure): seek clamp, pull-to-close threshold, scrubber maths, zoom (pinch, fit inset)
 src/player/progress.ts   position + duration store outside React state (only the controls re-render)
 src/player/useReporting.ts  Sessions/Playing, Progress (10 s, pause, seek, track change, background), Stopped + refetch; reports carry the tracks
-src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List (+ Checkmark, Swatch), StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message, DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing (+ AnimatedProgressRing), SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing, DownloadButton, DownloadRow (+ ShowDownloadRow), DownloadActions (useDownloadActions), SwipeToDelete, StorageBar, PlayerControls (+ PlayerBottom, PlayerScrubber), Glass, TracksMenu, TimingSlider, UpNext, SubtitlePreview, OptionList (+ OptionRow), ItemMenu (+ ItemMenuProvider), Skeleton (CardRowPlaceholder, DetailPlaceholder, EpisodeCardsPlaceholder, EpisodeRowsPlaceholder, PosterGridPlaceholder, PosterRowsPlaceholder)
+src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List (+ Checkmark, Swatch), StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message, DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing (+ AnimatedProgressRing), SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing, DownloadButton, DownloadRow (+ ShowDownloadRow), DownloadActions (useDownloadActions), SwipeToDelete, StorageBar, PlayerControls (+ PlayerBottom, PlayerScrubber), Glass, TracksMenu, TimingSlider, StepSlider, UpNext, SubtitlePreview, OptionList (+ OptionRow), ItemMenu (+ ItemMenuProvider), Skeleton (CardRowPlaceholder, DetailPlaceholder, EpisodeCardsPlaceholder, EpisodeRowsPlaceholder, PosterGridPlaceholder, PosterRowsPlaceholder)
 modules/mpv/             vendored native module (+ UPSTREAM.md: upstream repo + commit)
 modules/downloads/       own native background downloader (iOS + Android)
 ```
