@@ -1,19 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Downloads tab (docs/context/downloads.md, Downloads screen): the list, a show's seasons and status wording (pure).
 import type { Download } from '@/downloads';
+import { seasonEpisodeCode } from '@/items';
 import type { DownloadNetwork } from '@/settings';
 
-/** One row of the tab: a movie (or a video) on its own, or every downloaded episode of a show. */
+/**
+ * One row of the tab: a movie (or a video) on its own, every downloaded episode of a show, or (Episodes chip) one
+ * episode, titled "Pioneer One · S1:E3 · Pilot".
+ */
 export type DownloadEntry =
-  { kind: 'item'; id: string } | { kind: 'show'; seriesId: string; name: string; ids: string[]; total: number };
+  | { kind: 'item'; id: string; title?: string }
+  | { kind: 'show'; seriesId: string; name: string; ids: string[]; total: number };
 
 /** Downloads tab type chips. */
-export type DownloadScope = 'all' | 'movies' | 'shows';
+export type DownloadScope = 'all' | 'movies' | 'shows' | 'episodes';
 
 export const DOWNLOAD_SCOPES: { key: DownloadScope; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'movies', label: 'Movies' },
   { key: 'shows', label: 'Shows' },
+  { key: 'episodes', label: 'Episodes' },
 ];
 
 /** What the tab shows: a search term (on the device, no server call) and a type. */
@@ -22,13 +28,15 @@ export type DownloadQuery = { term?: string; scope: DownloadScope };
 export type DownloadList = {
   /** Newest first: a show sits where its latest episode would. */
   entries: DownloadEntry[];
+  /** Every episode on its own row, newest first (Episodes chip). */
+  episodes: DownloadEntry[];
   /** Every download of the account (Delete All). */
   ids: string[];
   /** Bytes of every download (what they take once done). */
   used: number;
   /** Changes when the space on disk does (one added / removed / finished): when to re-read free space. */
   storageKey: string;
-  /** What a search term matches, folded: a movie's title; a show's name and its episode titles. */
+  /** What a search term matches, folded: a movie's title; a show's name and its episode titles; an episode's row title. */
   text: ReadonlyMap<DownloadEntry, string>;
 };
 
@@ -82,23 +90,35 @@ export function downloadList(downloads: readonly Download[], accountId: string |
   const text = new Map(
     [...titles].map(([e, t]) => [e, fold((e.kind === 'show' ? [e.name, ...t] : t).join('\n'))] as const),
   );
-  return { entries, ids: mine.map((d) => d.id), used, storageKey: `${mine.length}|${done}`, text };
+  // Named once every episode is in: the show's name can come from a later one.
+  const episodes = mine.flatMap((d) => {
+    const show = d.seriesId ? shows.get(d.seriesId) : undefined;
+    if (!show) return [];
+    const title = [show.name, seasonEpisodeCode(d.seasonNumber, d.episodeNumber), d.title].filter(Boolean).join(' · ');
+    const entry = { kind: 'item' as const, id: d.id, title };
+    text.set(entry, fold(title));
+    return [entry];
+  });
+  return { entries, episodes, ids: mine.map((d) => d.id), used, storageKey: `${mine.length}|${done}`, text };
 }
 
 /**
  * The rows a query leaves, the same entry objects (rows keep their memo while typing) - pass the list as
- * `downloadList` returned it. A term matches a movie's title,
- * or a show's name or any of its episode titles (case and accents ignored).
+ * `downloadList` returned it. A term matches a movie's title, or a show's name or any of its episode titles; on the
+ * Episodes chip, an episode's show name or title (case and accents ignored).
  */
-export function filterDownloads({ entries, text }: DownloadList, { term, scope }: DownloadQuery): DownloadEntry[] {
+export function filterDownloads(
+  { entries, episodes, text }: DownloadList,
+  { term, scope }: DownloadQuery,
+): DownloadEntry[] {
   const want = term && fold(term);
-  return entries.filter(
-    (e) =>
-      (e.kind === 'show' ? scope !== 'movies' : scope !== 'shows') && (!want || (text.get(e) ?? '').includes(want)),
-  );
+  const matches = (e: DownloadEntry) => !want || (text.get(e) ?? '').includes(want);
+  if (scope === 'episodes') return want ? episodes.filter(matches) : episodes;
+  return entries.filter((e) => (e.kind === 'show' ? scope !== 'movies' : scope !== 'shows') && matches(e));
 }
 
-export type DownloadSeason = { title: string; ids: string[] };
+/** `data`: the episodes' download ids (a `SectionList` section as is). */
+export type DownloadSeason = { title: string; data: string[] };
 
 const LAST = Number.MAX_SAFE_INTEGER;
 
@@ -122,8 +142,8 @@ export function showSeasons(
   for (const d of episodes) {
     const title = seasonTitle(d.seasonNumber);
     const last = seasons.at(-1);
-    if (last?.title === title) last.ids.push(d.id);
-    else seasons.push({ title, ids: [d.id] });
+    if (last?.title === title) last.data.push(d.id);
+    else seasons.push({ title, data: [d.id] });
   }
   return seasons;
 }

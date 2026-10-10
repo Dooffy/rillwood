@@ -113,7 +113,7 @@ Design + sources: `docs/research/background-downloads.md`.
 - [x] Downloads tab search + type chips: search field on the device (no server call) + All / Movies / Shows chips, fixed under the storage bar; matches a movie's title, a show's name or any of its episode titles (the store's `seriesName`)
 - [x] Show why a download waits for the network (iOS): `NWPathMonitor` in `modules/downloads` marks active tasks `reason: network` (`waiting` event) while the path doesn't meet the rule (no network / Wi-Fi only on an expensive path); connection drops while it's blocked don't use up retries. Device test pending (N5-N7)
 - [x] Stop a running download in one step: a ring tap opens Pause / Resume + Cancel Download (red, stops + deletes the partial file at once; done episodes of a season stay) - Downloads row, item menu and detail header. Device test C1-C3 pending
-- [ ] Downloads tab browsing that scales (100+ shows): a "show every item" view (episodes flat). Done: shows collapsed to one row (Downloads screen), movies + shows chips and search
+- [x] Downloads tab browsing that scales (100+ shows): shows collapsed to one row, movies + shows chips and search, an Episodes chip (every episode on its own row), virtualised lists (tab `FlatList`, a show's screen `SectionList`). Device test L7-L8 pending
 - [ ] Play Console FGS declaration (dataSync) text + video
 - [ ] Tests (`docs/test-plans/downloads.md`): force-quit (iOS: cancelled → re-enqueue), `exit(0)` relaunch, OS kill, reboot, airplane mode, 20GB + 60GB file, server file replaced mid-download (If-Range → 200), token revoked, low disk, Task Manager stop (Android 14+), dataSync timeout (`device_config ... data_sync_fgs_timeout_duration`), Android 16 standby buckets (`am set-standby-bucket`), notification permission denied, `Authorization` header on an iOS background task
 
@@ -157,6 +157,7 @@ Design + sources: `docs/research/background-downloads.md`.
 - [ ] PiP + keep playing on leave (moved from M4, 2026-10-08; `docs/open-items.md`): PiP when the app goes to the background, and/or keep the audio playing when the app is left (a setting) - the MVP pauses on leave; lock-screen Play already plays audio in the background. Android media session (lock-screen controls)
 
 - [ ] Files app sharing for users: decide keep private vs share (needs the kv-store moved out of `Documents` first) - `docs/open-items.md`
+- [ ] Download a show from its page (idea - revise before building): today a show with many seasons means picking each season, then Download. Instead a Download button on the show that asks what to get, like the Apple TV app (e.g. a season picker, all seasons, unwatched only). Decide the choices, where the button sits and how it fits the season header button
 - [ ] Long-press menu: Play / Resume Episode for shows and seasons (async next-episode lookup, `seriesNextUp` / `seriesPlayTarget` out of the series screen; `itemActions` into `items.ts`)
 
 ## Ideas

@@ -30,6 +30,17 @@ export type DownloadRowProps = {
   onMenu: (d: Download) => void;
 };
 
+/** Space between download rows in a list. */
+export const DOWNLOAD_ROW_GAP = spacing.sm + spacing.xs;
+
+/**
+ * A list's `ItemSeparatorComponent`: the row gap. Not `gap` on a virtualised list's content - its spacers for the
+ * rows off screen would get the gap too.
+ */
+export function DownloadRowGap() {
+  return <View style={styles.gap} />;
+}
+
 const poster = (d: Download | undefined) => (d?.snapshot?.poster ? snapshotUri(d.snapshot.poster) : undefined);
 
 /** Poster, title, size + status, then the ring (opens the menu) while it isn't done. Tap plays a ready one. */
@@ -44,7 +55,7 @@ export const DownloadRow = memo(function DownloadRow({ id, title, onPlay, onDele
     ? formatBytes(d.total)
     : `${downloadStatus(d, network)} · ${formatBytes(Math.min(d.bytes, d.total))} of ${formatBytes(d.total)}`;
   return (
-    <SwipeToDelete label={`Delete ${d.title}`} onDelete={() => onDelete(d)}>
+    <SwipeToDelete label={`Delete ${name}`} onDelete={() => onDelete(d)}>
       <View style={styles.row}>
         <Pressable
           // Only a ready row does something on tap; the others have the long-press "More" action.
@@ -144,4 +155,5 @@ const styles = StyleSheet.create({
   control: { width: minTouch, height: minTouch, alignItems: 'center', justifyContent: 'center' },
   chevron: { width: spacing.lg, alignItems: 'center' },
   pressed: { opacity: pressedOpacity },
+  gap: { height: DOWNLOAD_ROW_GAP },
 });

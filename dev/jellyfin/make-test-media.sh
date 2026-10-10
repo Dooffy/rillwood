@@ -168,6 +168,21 @@ for ep in 1 2 3; do
     "${meta[@]}" -metadata title="Episode $ep" -f matroska "$out.part" && mv "$out.part" "$out"
 done
 
+# Long Show: 2 seasons x 25 short episodes (~4 MB each) for long lists - Downloads Episodes chip, a show's page (L8)
+for season in 1 2; do
+  dir="$SHOWS/Long Show (2026)/Season 0$season"
+  mkdir -p "$dir"
+  for ep in $(seq -w 1 25); do
+    name="Long Show S0${season}E$ep"
+    out="$dir/$name.mkv"
+    [[ -f "$out" ]] && { echo "skip  $name"; continue; }
+    echo "make  $name"
+    ffmpeg "${Q[@]}" -f lavfi -i "testsrc2=size=640x360:rate=24:duration=$SECS" "${TONE[@]}" \
+      -map 0:v -map 1:a -c:v libx264 -preset veryfast -b:v 1M -pix_fmt yuv420p -c:a aac -b:a 64k \
+      -metadata title="Episode $((10#$ep))" -f matroska "$out.part" && mv "$out.part" "$out"
+  done
+done
+
 echo
 echo "Done: $MEDIA"
 echo "Add real files for DV P8 and PGS to $MEDIA/real/ (see README.md)."

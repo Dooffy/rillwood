@@ -66,10 +66,30 @@ describe('filterDownloads', () => {
   const ids = (query: Parameters<typeof filterDownloads>[1]) =>
     filterDownloads(list, query).map((e) => (e.kind === 'show' ? e.seriesId : e.id));
 
-  it('narrows to movies or shows', () => {
+  it('narrows to movies, shows or every episode on its own', () => {
     expect(ids({ scope: 'all' })).toEqual(['s', 'm1']);
     expect(ids({ scope: 'movies' })).toEqual(['m1']);
     expect(ids({ scope: 'shows' })).toEqual(['s']);
+    expect(ids({ scope: 'episodes' })).toEqual(['e1', 'e2']);
+  });
+
+  it("titles an episode with its show's name and code, matched by either", () => {
+    const numbered = downloadList(
+      [
+        d('e1', { seriesId: 's', seriesName: 'Pioneer One', title: 'Earthfall', seasonNumber: 1, episodeNumber: 1 }),
+        d('e2', { seriesId: 's', title: 'Mars', episodeNumber: 2, createdAt: -1 }),
+        d('m1', { title: 'Amélie', createdAt: -2 }),
+      ],
+      'a1',
+    );
+    expect(numbered.episodes).toEqual([
+      { kind: 'item', id: 'e1', title: 'Pioneer One · S1:E1 · Earthfall' },
+      // The show's name from another episode; "E2" without a season.
+      { kind: 'item', id: 'e2', title: 'Pioneer One · E2 · Mars' },
+    ]);
+    expect(filterDownloads(numbered, { term: 'pioneer', scope: 'episodes' })).toEqual(numbered.episodes);
+    expect(filterDownloads(numbered, { term: 'mars', scope: 'episodes' })).toEqual([numbered.episodes[1]]);
+    expect(filterDownloads(numbered, { term: 'amelie', scope: 'episodes' })).toEqual([]);
   });
 
   it("matches a movie's title, a show's name or an episode title, case and accents ignored", () => {
@@ -109,10 +129,10 @@ describe('showSeasons', () => {
       's',
     );
     expect(seasons).toEqual([
-      { title: 'Specials', ids: ['sp'] },
-      { title: 'Season 1', ids: ['s1e1', 's1e2'] },
-      { title: 'Season 2', ids: ['s2e1'] },
-      { title: 'Episodes', ids: ['loose'] },
+      { title: 'Specials', data: ['sp'] },
+      { title: 'Season 1', data: ['s1e1', 's1e2'] },
+      { title: 'Season 2', data: ['s2e1'] },
+      { title: 'Episodes', data: ['loose'] },
     ]);
   });
 });

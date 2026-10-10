@@ -132,6 +132,29 @@ describe('Downloads', () => {
     expect(alert.mock.calls[0][1]).toMatch(/^3 downloads /);
   });
 
+  it('Episodes lists every episode on its own row, newest first; search matches its show or title', async () => {
+    // Two batches in the same millisecond: the later one still lists first.
+    const now = jest.spyOn(Date, 'now').mockReturnValue(1000);
+    await download(episode(1));
+    await download(movie, episode(2));
+    now.mockRestore();
+    await render(<Downloads />);
+    const rows = () => screen.queryAllByLabelText(/^(Sintel|Test Show)/).map((r) => r.props.accessibilityLabel);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Episodes' }));
+    expect(rows()).toEqual([
+      'Test Show · S1:E2 · Episode 2, Waiting · 0 MB of 2.1 GB',
+      'Test Show · S1:E1 · Episode 1, Waiting · 0 MB of 2.1 GB',
+    ]);
+    await fireEvent.changeText(screen.getByLabelText('Search downloads'), 'episode 1');
+    expect(rows()).toEqual(['Test Show · S1:E1 · Episode 1, Waiting · 0 MB of 2.1 GB']);
+    // Swipe Delete names the row as shown (the show too).
+    expect(screen.getByRole('button', { name: 'Delete Test Show · S1:E1 · Episode 1' })).toBeOnTheScreen();
+    await fireEvent.changeText(screen.getByLabelText('Search downloads'), 'sintel');
+    expect(rows()).toEqual([]);
+    expect(screen.getByText('No downloads match "sintel".')).toBeOnTheScreen();
+  });
+
   it("opens a show's episodes; its ring follows them and goes once all are done", async () => {
     await download(episode(1), episode(2));
     await render(<Downloads />);
