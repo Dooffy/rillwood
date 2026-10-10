@@ -16,6 +16,7 @@ import {
 } from '@/downloads';
 import { snapshotUri } from '@/downloadSnapshot';
 import { formatBytes } from '@/format';
+import { useDownloadNetwork } from '@/settings';
 import { minTouch, pressedOpacity, spacing } from '@/theme';
 
 import { Artwork } from './Artwork';
@@ -42,13 +43,14 @@ const poster = (d: Download | undefined) => (d?.snapshot?.poster ? snapshotUri(d
 /** Poster, title, size + status, then the pause / resume ring while it isn't done. Tap plays a ready one. */
 export const DownloadRow = memo(function DownloadRow({ id, title, onPlay, onDelete, onMenu }: DownloadRowProps) {
   const d = useDownload(id);
+  const network = useDownloadNetwork();
   if (!d) return null;
   const { state, progress } = summarize([d])!;
   const done = state === 'done';
   const name = title ?? d.title;
   const detail = done
     ? formatBytes(d.total)
-    : `${downloadStatus(d)} · ${formatBytes(Math.min(d.bytes, d.total))} of ${formatBytes(d.total)}`;
+    : `${downloadStatus(d, network)} · ${formatBytes(Math.min(d.bytes, d.total))} of ${formatBytes(d.total)}`;
   return (
     <SwipeToDelete label={`Delete ${d.title}`} onDelete={() => onDelete(d)}>
       <View style={styles.row}>

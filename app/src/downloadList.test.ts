@@ -102,6 +102,12 @@ describe('downloadStatus', () => {
     ['error', 'system', 'Failed'],
     ['done', undefined, 'Downloaded'],
   ])('%s (%s) → %s', (status, reason, text) => {
-    expect(downloadStatus({ status, reason })).toBe(text);
+    expect(downloadStatus({ status, reason }, 'wifi')).toBe(text);
+  });
+
+  it('waits for any network when the setting allows cellular', () => {
+    expect(downloadStatus({ status: 'downloading', reason: 'network' }, 'any')).toBe('Waiting for network');
+    expect(downloadStatus({ status: 'paused', reason: 'network' }, 'wifi')).toBe('Waiting for Wi-Fi');
+    expect(downloadStatus({ status: 'error', reason: 'network' }, 'any')).toBe('Failed - network');
   });
 });

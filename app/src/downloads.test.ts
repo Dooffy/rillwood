@@ -124,6 +124,7 @@ jest.mock('./session', () => ({
 // The store's kv-store instance (re-required after every jest.resetModules); `clearSync` is the mock's.
 let Storage: typeof import('expo-sqlite/kv-store').Storage & { clearSync: () => void };
 let dl: typeof Store;
+let settings: typeof import('./settings');
 let native: jest.Mocked<typeof NativeDownloads>;
 // Native event listeners registered by initDownloads.
 let emit: (event: 'progress' | 'done' | 'error', payload: object) => void;
@@ -143,6 +144,7 @@ function fresh() {
   /* eslint-disable @typescript-eslint/no-require-imports -- a fresh module per test needs a sync require */
   Storage = require('expo-sqlite/kv-store').Storage;
   dl = require('./downloads');
+  settings = require('./settings');
   native = require('../modules/downloads').default;
   /* eslint-enable @typescript-eslint/no-require-imports */
 }
@@ -241,6 +243,43 @@ describe('startDownloads', () => {
     expect(await dl.startDownloads([movie('m2', 6 * GB)])).toEqual({ ok: false, problem: 'space' });
     expect(native.enqueue).toHaveBeenCalledTimes(1);
     expect(dl.getDownload('a1:m2:m2')).toBeNull();
+  });
+
+  it('keeps every download together under the storage limit (decimal GB)', async () => {
+    settings.setDownloadLimit(10);
+    expect((await dl.startDownloads([movie('m1', 6 * GB)])).ok).toBe(true);
+    // 6 + 4 GiB = 10.7 GB > 10 GB
+    expect(await dl.startDownloads([movie('m2', 4 * GB)])).toEqual({ ok: false, problem: 'limit' });
+    expect(dl.getDownload('a1:m2:m2')).toBeNull();
+    expect((await dl.startDownloads([movie('m3', 3 * GB)])).ok).toBe(true);
+    settings.setDownloadLimit(0);
+    expect((await dl.startDownloads([movie('m2', 4 * GB)])).ok).toBe(true);
+  });
+
+  it('a request with nothing new never fails on the limit', async () => {
+    await dl.startDownloads([movie('m1', 6 * GB)]);
+    settings.setDownloadLimit(5);
+    expect(await dl.startDownloads([movie('m1', 6 * GB)])).toEqual({ ok: true, started: 0, skipped: 1 });
+  });
+
+  it('enqueues under the network setting', async () => {
+    settings.setDownloadNetwork('any');
+    await dl.startDownloads([movie('m1', GB)]);
+    expect(native.enqueue).toHaveBeenCalledWith([expect.objectContaining({ id: 'a1:m1:m1' })], { cellular: true });
+  });
+});
+
+describe('network setting', () => {
+  it('sends the saved rule at launch and every change after', () => {
+    settings.setDownloadNetwork('any');
+    dl.initDownloads();
+    expect(native.setCellular.mock.calls).toEqual([[true]]);
+    settings.setDownloadNetwork('wifi');
+    expect(native.setCellular).toHaveBeenLastCalledWith(false);
+    // Another setting changing doesn't resend it.
+    settings.setDownloadLimit(50);
+    settings.setDownloadNetwork('wifi');
+    expect(native.setCellular).toHaveBeenCalledTimes(2);
   });
 });
 

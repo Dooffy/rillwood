@@ -13,6 +13,7 @@ import { authHeader, request, type BaseItemDto, type MediaSourceDto } from '@/ap
 import { itemFolder, readSnapshotItem, saveSnapshot, subtitlePrefix, type Snapshot } from '@/downloadSnapshot';
 import { itemDetail } from '@/items';
 import { connectionFor, getSession, subscribeSession, type Account } from '@/session';
+import { getDownloadLimit, getDownloadNetwork, subscribeSettings } from '@/settings';
 
 export type DownloadStatus = 'queued' | 'downloading' | 'paused' | 'done' | 'error';
 
@@ -46,13 +47,13 @@ export type Download = {
 export type DownloadRequest = { item: BaseItemDto; source: MediaSourceDto };
 
 export type StartResult =
-  { ok: true; started: number; skipped: number } | { ok: false; problem: 'signedOut' | 'space' };
+  { ok: true; started: number; skipped: number } | { ok: false; problem: 'signedOut' | 'space' | 'limit' };
 
 const KEY = 'dl';
 const VERSION = 1;
 const GB = 1024 ** 3;
-// Wi-Fi only until the network setting lands (its own M5 task).
-const CELLULAR = false;
+
+const cellular = () => getDownloadNetwork() === 'any';
 
 let index: Map<string, Download> | undefined;
 // The same array between changes (useSyncExternalStore); rebuilt on save.
@@ -258,7 +259,7 @@ function send(downloads: Download[]) {
         size: d.total,
       }));
       try {
-        Downloads.enqueue(items, { cellular: CELLULAR });
+        Downloads.enqueue(items, { cellular: cellular() });
       } catch {
         // Native rejected the batch (dest, url or size) - nothing of it was queued.
         group.forEach((d) => patch(d.id, { status: 'error', reason: 'system' }));
@@ -286,6 +287,19 @@ function hasSpace(free: number, bytes: number): boolean {
   // The index, not `list`: live bytes.
   for (const d of store().values()) if (d.status !== 'done') pending += Math.max(0, d.total - d.bytes);
   return free - pending - bytes > Math.max(2 * GB, 0.05 * Paths.totalDiskSpace);
+}
+
+/** Space every download takes once finished (all accounts, the phone's files), in bytes. */
+export const downloadsSize = (downloads: Iterable<Download>) => {
+  let size = 0;
+  for (const d of downloads) size += d.total;
+  return size;
+};
+
+/** The storage limit (Settings, decimal GB) must hold everything downloaded or queued plus `bytes`. */
+function withinLimit(bytes: number): boolean {
+  const limit = getDownloadLimit();
+  return limit <= 0 || downloadsSize(store().values()) + bytes <= limit * 1e9;
 }
 
 /**
@@ -324,7 +338,8 @@ export async function startDownloads(requests: DownloadRequest[]): Promise<Start
   }
   const downloads = [...fresh.values()];
   if (downloads.length > 0) {
-    const bytes = downloads.reduce((sum, d) => sum + d.total, 0);
+    const bytes = downloadsSize(downloads);
+    if (!withinLimit(bytes)) return { ok: false, problem: 'limit' };
     if (!hasSpace(free, bytes)) return { ok: false, problem: 'space' };
     put(downloads);
     send(downloads);
@@ -547,6 +562,16 @@ export function initDownloads() {
 
   syncCredentials();
   subscribeSession(syncCredentials);
+
+  // Native keeps the network rule too (it runs without JS); a change moves queued and running tasks.
+  let network: boolean | undefined;
+  const syncNetwork = () => {
+    if (cellular() === network) return;
+    network = cellular();
+    Downloads.setCellular(network);
+  };
+  syncNetwork();
+  subscribeSettings(syncNetwork);
 
   void reconcile();
   // Back from the background (also via inactive), not after a quick switch (Control Center, notification shade).

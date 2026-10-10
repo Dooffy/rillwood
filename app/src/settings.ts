@@ -76,11 +76,15 @@ const APPEARANCE_KEY = 'settings.appearance';
 const SUBTITLE_SCALE_KEY = 'settings.subtitleScale';
 const SUBTITLE_STYLE_KEY = 'settings.subtitleStyle';
 const VIDEO_ZOOM_KEY = 'settings.videoZoom';
+const DOWNLOAD_NETWORK_KEY = 'settings.downloadNetwork';
+const DOWNLOAD_LIMIT_KEY = 'settings.downloadLimit';
 
 let appearance: Appearance | undefined;
 let subtitleScale: SubtitleScale | undefined;
 let subtitleStyle: SubtitleStyle | undefined;
 let videoZoom: VideoZoom | undefined;
+let downloadNetwork: DownloadNetwork | undefined;
+let downloadLimit: number | undefined;
 // Preview only, for this session: not saved.
 let subtitleSample: SubtitleSample = 'en';
 const listeners = new Set<() => void>();
@@ -191,6 +195,76 @@ export function setVideoZoom(value: VideoZoom): void {
 export function useVideoZoom(): VideoZoom {
   return useSyncExternalStore(subscribeSettings, getVideoZoom);
 }
+
+// Downloads, same for every account (the files are the phone's). Wi-Fi only = unmetered (no personal hotspot).
+export const DOWNLOAD_NETWORK_OPTIONS = [
+  { value: 'wifi', label: 'Wi-Fi only' },
+  { value: 'any', label: 'Any network' },
+] as const;
+
+export type DownloadNetwork = (typeof DOWNLOAD_NETWORK_OPTIONS)[number]['value'];
+
+export function getDownloadNetwork(): DownloadNetwork {
+  if (downloadNetwork === undefined) {
+    downloadNetwork = Storage.getItemSync(DOWNLOAD_NETWORK_KEY) === 'any' ? 'any' : 'wifi';
+  }
+  return downloadNetwork;
+}
+
+export function setDownloadNetwork(value: DownloadNetwork): void {
+  Storage.setItemSync(DOWNLOAD_NETWORK_KEY, value);
+  downloadNetwork = value;
+  listeners.forEach((l) => l());
+}
+
+export function useDownloadNetwork(): DownloadNetwork {
+  return useSyncExternalStore(subscribeSettings, getDownloadNetwork);
+}
+
+const toLimit = (gb: number) => (Number.isFinite(gb) && gb > 0 ? gb : 0);
+
+/** Most space every download together may take, in GB (decimal, as iOS Settings counts); 0 = no limit (default). */
+export function getDownloadLimit(): number {
+  if (downloadLimit === undefined) {
+    downloadLimit = toLimit(Number(Storage.getItemSync(DOWNLOAD_LIMIT_KEY)));
+  }
+  return downloadLimit;
+}
+
+export function setDownloadLimit(gb: number): void {
+  const value = toLimit(gb);
+  Storage.setItemSync(DOWNLOAD_LIMIT_KEY, String(value));
+  downloadLimit = value;
+  listeners.forEach((l) => l());
+}
+
+export function useDownloadLimit(): number {
+  return useSyncExternalStore(subscribeSettings, getDownloadLimit);
+}
+
+const LIMIT_STEPS = [5, 10, 15, 20, 25, 30, 40, 50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1000, 1500, 2000];
+
+/**
+ * Storage limit slider stops in GB for a disk of `diskBytes`: the steps below 90% of the disk (at least the first),
+ * then 0 = no limit at the end.
+ */
+export function downloadLimitSteps(diskBytes: number): number[] {
+  const fit = LIMIT_STEPS.filter((gb) => gb * 1e9 < 0.9 * diskBytes);
+  return [...(fit.length > 0 ? fit : LIMIT_STEPS.slice(0, 1)), 0];
+}
+
+/** Slider stop for a limit: its own, else the nearest (a limit saved on a bigger disk); no limit = the last. */
+export function downloadLimitStep(steps: readonly number[], gb: number): number {
+  if (gb <= 0) return steps.length - 1;
+  let best = 0;
+  steps.forEach((s, i) => {
+    if (s > 0 && Math.abs(s - gb) < Math.abs(steps[best] - gb)) best = i;
+  });
+  return best;
+}
+
+/** "50 GB", "1.5 TB", "No limit". */
+export const formatDownloadLimit = (gb: number) => (gb <= 0 ? 'No limit' : gb >= 1000 ? `${gb / 1000} TB` : `${gb} GB`);
 
 /**
  * Native override (headers, tab bar, system UI). JS colours come from `useAppearance()` instead - RN's

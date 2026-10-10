@@ -6,6 +6,8 @@ Record per run: date, commit, device + OS, pass / fail per row, notes.
 
 Runs: 2026-10-09 iPhone - D4 passed (3.77 GB at ~28 MB/s, progress every ~0.5 s, `done`, `getTasks()` empty after). D5 likely (daemon request authenticated - bytes flowed; server log check pending).
 
+2026-10-10 iPhone - N4 passed (5 GB limit, Sintel 3.77 GB downloaded + Tears of Steel 1.86 GB → toast, nothing queued). A download stuck at "Waiting" with 0 bytes was cleared by a rebuild (not the limit).
+
 ## Scaffold
 
 | #   | Test                                                            | Pass when                                                 |
@@ -53,6 +55,15 @@ Until the store + Downloads screen land, drive the module from a temporary snipp
 | L4  | On a show's screen, delete its last episode                                   | Goes back to the tab, the show row is gone                                                     |
 | L5  | Scroll the list with a finger, then swipe a row (VoiceOver: long press)       | Vertical scroll never opens a row; VoiceOver reaches Delete through the long-press menu        |
 | L6  | Episodes downloaded on a build before this one, open the tab after the update | The show row has the show's real name (not "TV Show"), episodes numbered by season             |
+
+## Settings (network + storage limit)
+
+| #   | Test                                                                                   | Pass when                                                                             |
+| --- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| N1  | Settings → Network → Any network, Wi-Fi off, download a movie (then D12 the other way) | Downloads on cellular; back to Wi-Fi only → waits (no "Waiting for Wi-Fi" on iOS yet) |
+| N2  | Set Any network, force-quit, relaunch with Wi-Fi off                                   | Still Any network, the queued download carries on over cellular                       |
+| N3  | Storage limit: drag, − / +, VoiceOver swipe up / down                                  | Stops from 5 GB to No limit, saved on release, Settings row shows it                  |
+| N4  | Limit below what's downloaded + a new movie, tap ↓                                     | Toast "over your download storage limit", nothing queued; existing downloads stay     |
 
 ## To add with the Android transfer work (M5)
 

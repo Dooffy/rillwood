@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Downloads tab (docs/context/downloads.md, Downloads screen): the list, a show's seasons and status wording (pure).
 import type { Download } from '@/downloads';
+import type { DownloadNetwork } from '@/settings';
 
 /** One row of the tab: a movie (or a video) on its own, or every downloaded episode of a show. */
 export type DownloadEntry =
@@ -90,9 +91,13 @@ export const episodeTitle = (d: Pick<Download, 'title' | 'episodeNumber'>) =>
   d.episodeNumber === undefined ? d.title : `${d.episodeNumber}. ${d.title}`;
 
 /** What a download is doing, in words: "Paused", "Waiting for Wi-Fi", "Failed - not enough space". */
-export function downloadStatus({ status, reason }: Pick<Download, 'status' | 'reason'>): string {
-  // Wi-Fi only until the network setting lands (src/downloads.ts).
-  if (reason === 'network' && status !== 'error' && status !== 'done') return 'Waiting for Wi-Fi';
+export function downloadStatus(
+  { status, reason }: Pick<Download, 'status' | 'reason'>,
+  network: DownloadNetwork,
+): string {
+  // Held by the network rule (Settings → Network): Wi-Fi only waits for Wi-Fi, Any network for any connection.
+  if (reason === 'network' && status !== 'error' && status !== 'done')
+    return network === 'any' ? 'Waiting for network' : 'Waiting for Wi-Fi';
   switch (status) {
     case 'queued':
       return 'Waiting';

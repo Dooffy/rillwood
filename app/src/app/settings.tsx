@@ -11,12 +11,14 @@ import { Text } from '@/components/Text';
 import { ONBOARDING } from '@/navigation';
 import { useSession } from '@/session';
 import { usePicker } from '@/pickers';
+import { formatDownloadLimit, useDownloadLimit } from '@/settings';
 import { minTouch, radii, spacing, useColors } from '@/theme';
 
-// Downloads rows show the defaults (CLAUDE.md §2); they become editable in M5 / M6.
+// Remove watched shows the default (CLAUDE.md §2) until offload lands in M6.
 export default function Settings() {
   const subtitleSize = usePicker('subtitle-size').choice?.label;
   const subtitleColour = usePicker('subtitle-colour').choice?.label;
+  const downloadLimit = useDownloadLimit();
   const { accounts, active } = useSession();
   const c = useColors();
 
@@ -53,7 +55,12 @@ export default function Settings() {
         />
       </ListSection>
       <ListSection title="Downloads">
-        <ListRow label="Network" value="Wi-Fi only" />
+        <OptionRow option="download-network" />
+        <ListRow
+          label="Storage limit"
+          value={formatDownloadLimit(downloadLimit)}
+          onPress={() => router.push('/download-storage')}
+        />
         <ListRow label="Remove watched" value="After 7 days" />
       </ListSection>
       <ListSection title="About">

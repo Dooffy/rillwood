@@ -27,6 +27,8 @@ const DOWNLOADABLE = new Set(['Movie', 'Episode', 'Video', 'Season']);
 export const DOWNLOAD_FAILED = "Couldn't start the download. Check the connection and try again.";
 export const DOWNLOAD_NOT_ALLOWED = "This account isn't allowed to download.";
 export const DOWNLOAD_NO_SPACE = 'Not enough free space on this device.';
+export const DOWNLOAD_OVER_LIMIT = 'This would go over your download storage limit. Change it in Settings.';
+const PROBLEMS = { space: DOWNLOAD_NO_SPACE, limit: DOWNLOAD_OVER_LIMIT, signedOut: DOWNLOAD_FAILED };
 export const DOWNLOAD_NOTHING = "Nothing to download - the server didn't send a file.";
 
 export type DownloadControl = {
@@ -111,7 +113,7 @@ export function useDownloadControl(item: BaseItemDto | undefined): DownloadContr
           return;
         }
         return startDownloads(requests).then((result) => {
-          if (!result.ok) toast(result.problem === 'space' ? DOWNLOAD_NO_SPACE : DOWNLOAD_FAILED);
+          if (!result.ok) toast(PROBLEMS[result.problem]);
           // Download on a partial season also resumes its paused / failed episodes.
           else resumeDownloads(requests.map((r) => downloadId(account.id, r.item.Id, r.source.Id)));
         });

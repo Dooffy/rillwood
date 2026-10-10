@@ -6,7 +6,7 @@ import { Appearance as RNAppearance } from 'react-native';
 
 import Settings from '@/app/settings';
 import { useSession, type Account } from '@/session';
-import { setAppearance, setSubtitleScale } from '@/settings';
+import { setAppearance, setDownloadLimit, setDownloadNetwork, setSubtitleScale } from '@/settings';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 jest.mock('@/session', () => ({ useSession: jest.fn() }));
@@ -34,6 +34,8 @@ describe('Settings screen', () => {
     jest.spyOn(RNAppearance, 'setColorScheme').mockImplementation(() => {});
     setAppearance('system');
     setSubtitleScale(1);
+    setDownloadNetwork('wifi');
+    setDownloadLimit(0);
   });
 
   it('shows the current appearance and opens its list', async () => {
@@ -77,8 +79,21 @@ describe('Settings screen', () => {
 
   it('shows the download defaults and app version', async () => {
     await render(<Settings />);
-    expect(screen.getByText('Wi-Fi only')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Network' })).toHaveAccessibilityValue({ text: 'Wi-Fi only' });
+    expect(screen.getByRole('button', { name: 'Storage limit' })).toHaveAccessibilityValue({ text: 'No limit' });
     expect(screen.getByText('After 7 days')).toBeOnTheScreen();
     expect(screen.getByText('Version')).toBeOnTheScreen();
+  });
+
+  it('opens the download network list and the storage limit', async () => {
+    setDownloadNetwork('any');
+    setDownloadLimit(50);
+    await render(<Settings />);
+    expect(screen.getByRole('button', { name: 'Network' })).toHaveAccessibilityValue({ text: 'Any network' });
+    expect(screen.getByRole('button', { name: 'Storage limit' })).toHaveAccessibilityValue({ text: '50 GB' });
+    await fireEvent.press(screen.getByRole('button', { name: 'Network' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/option/[key]', params: { key: 'download-network' } });
+    await fireEvent.press(screen.getByRole('button', { name: 'Storage limit' }));
+    expect(router.push).toHaveBeenCalledWith('/download-storage');
   });
 });
