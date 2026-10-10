@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Default network callback: Wi-Fi only rule + waiting for the network. -->
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+</manifest>

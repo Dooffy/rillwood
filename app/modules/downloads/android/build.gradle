@@ -13,3 +13,8 @@ useDefaultAndroidSdkVersions()
 android {
   namespace "app.rillwood.downloads"
 }
+
+dependencies {
+  // React Native's OkHttp (also on the app classpath via expo-file-system) - never 5.x, which breaks RN.
+  compileOnly "com.squareup.okhttp3:okhttp:4.9.2"
+}
