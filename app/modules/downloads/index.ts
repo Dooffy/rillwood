@@ -47,7 +47,7 @@ export type DownloadsEvents = {
 declare class DownloadsModule extends NativeModule<DownloadsEvents> {
   /** Auth headers kept in OS-protected storage, so transfers resume after process death without JS. */
   setCredential(accountId: string, headers: Record<string, string>): void;
-  /** On sign-out. */
+  /** On sign-out. JS then stops the account's tasks (iOS `cancel` - resume data holds the header; Android `pause`). */
   clearCredential(accountId: string): void;
   /**
    * Whole batch at once (a season = one call), kept in order. Native runs at most 2 at a time; known ids are skipped.

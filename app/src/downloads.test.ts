@@ -780,6 +780,62 @@ describe('credentials', () => {
     notify();
     expect(native.clearCredential.mock.calls).toEqual([['a1'], ['a1']]);
   });
+
+  it("sign-out cancels the account's unfinished native tasks (their resume data holds the header)", async () => {
+    dl.initDownloads();
+    mockSession.accounts = [account('a1'), account('a2')];
+    await dl.startDownloads([movie('m1', GB), movie('m2', GB), movie('m3', GB)]);
+    mockSession.active = mockSession.accounts[1];
+    await dl.startDownloads([movie('m4', GB)]);
+    emit('progress', { id: 'a1:m1:m1', bytes: 10, total: GB });
+    emit('done', { id: 'a1:m2:m2' });
+    dl.pauseDownload('a1:m3:m3');
+    native.cancel.mockClear();
+
+    mockSession.accounts = [account('a1', true), account('a2')];
+    mockSessionListeners.forEach((l) => l());
+    expect(native.cancel.mock.calls).toEqual([['a1:m1:m1'], ['a1:m3:m3']]);
+    expect(dl.getDownload('a1:m1:m1')).toMatchObject({ status: 'paused', reason: 'auth', bytes: 0 });
+    expect(dl.getDownload('a1:m2:m2')).toMatchObject({ status: 'done' });
+    expect(dl.getDownload('a1:m3:m3')).toMatchObject({ status: 'paused', reason: 'auth' });
+    expect(dl.getDownload('a2:m4:m4')).toMatchObject({ status: 'queued' });
+
+    // Signed in again: resume hands it to native from 0.
+    mockSession.accounts = [account('a1'), account('a2')];
+    mockSessionListeners.forEach((l) => l());
+    native.enqueue.mockClear();
+    dl.resumeDownload('a1:m1:m1');
+    expect(native.enqueue.mock.calls[0][0]).toEqual([expect.objectContaining({ id: 'a1:m1:m1' })]);
+    expect(dl.getDownload('a1:m1:m1')).toMatchObject({ status: 'queued' });
+  });
+
+  it('sign-out on Android pauses the tasks and keeps their progress (the .part holds no header)', async () => {
+    const { Platform } = jest.requireActual<typeof import('react-native')>('react-native');
+    const os = jest.replaceProperty(Platform, 'OS', 'android');
+    try {
+      dl.initDownloads();
+      await dl.startDownloads([movie('m1', GB)]);
+      emit('progress', { id: 'a1:m1:m1', bytes: 10, total: GB });
+
+      mockSession.accounts = [account('a1', true)];
+      mockSessionListeners.forEach((l) => l());
+      expect(native.cancel).not.toHaveBeenCalled();
+      expect(native.pause).toHaveBeenCalledWith('a1:m1:m1');
+      expect(dl.getDownload('a1:m1:m1')).toMatchObject({ status: 'paused', reason: 'auth', bytes: 10 });
+    } finally {
+      os.restore();
+    }
+  });
+
+  it('an account that boots signed out (token unreadable) keeps its native tasks', async () => {
+    const d = { id: 'a1:m1:m1', accountId: 'a1', path: 'downloads/a1/m1/m1.mkv', status: 'downloading', total: GB };
+    Storage.setItemSync('dl', JSON.stringify({ version: 1, items: [d] }));
+    mockSession.accounts = [account('a1', true)];
+    dl.initDownloads();
+    expect(native.clearCredential).toHaveBeenCalledWith('a1');
+    expect(native.cancel).not.toHaveBeenCalled();
+    expect(native.pause).not.toHaveBeenCalled();
+  });
 });
 
 describe('lifecycle', () => {

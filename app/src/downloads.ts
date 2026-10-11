@@ -6,7 +6,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 import { getFreeDiskStorageAsync } from 'expo-file-system/legacy';
 import { Storage } from 'expo-sqlite/kv-store';
 import { useCallback, useRef, useSyncExternalStore } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import Downloads, { type EnqueueItem, type Task } from '../modules/downloads';
 import { authHeader, request, type BaseItemDto, type MediaSourceDto } from '@/api';
@@ -214,22 +214,49 @@ const segment = (id: string) => id.replace(/[^A-Za-z0-9_-]/g, '_');
 function syncCredential(accountId: string, account: Account | undefined) {
   const conn = account && connectionFor(account);
   const header = conn ? authHeader(conn) : null;
-  if (sentCredentials.get(accountId) === header) return;
+  const sent = sentCredentials.get(accountId);
+  if (sent === header) return;
   sentCredentials.set(accountId, header);
-  if (header) Downloads.setCredential(accountId, { Authorization: header });
-  else Downloads.clearCredential(accountId);
+  if (header) {
+    Downloads.setCredential(accountId, { Authorization: header });
+    return;
+  }
+  Downloads.clearCredential(accountId);
+  // Only a sign-out in this run: an account that boots signed out (token unreadable, e.g. keychain locked) keeps its
+  // tasks - its downloads were already stopped when it signed out.
+  if (sent) stopAccount(accountId);
+}
+
+/**
+ * Signed out / removed: its unfinished downloads stop and wait as paused (auth) for a sign-in; done ones stay. iOS
+ * resume data replays the request with the old header, so iOS drops the task (starts from 0 after a sign-in); the
+ * Android `.part` holds no header, so it only pauses and keeps the progress.
+ */
+function stopAccount(accountId: string) {
+  for (const d of getDownloads()) {
+    if (d.accountId !== accountId || d.status === 'done') continue;
+    if (Platform.OS === 'ios') {
+      Downloads.cancel(d.id);
+      patch(d.id, { status: 'paused', reason: 'auth', bytes: 0 });
+    } else {
+      Downloads.pause(d.id);
+      patch(d.id, { status: 'paused', reason: 'auth' });
+    }
+  }
 }
 
 /** Native holds the header of every signed-in account with downloads, none for signed-out / removed ones. */
 function syncCredentials() {
   const accounts = getSession().accounts;
   const ids = new Set([...getDownloads().map((d) => d.accountId), ...sentCredentials.keys()]);
-  for (const accountId of ids) {
-    syncCredential(
-      accountId,
-      accounts.find((a) => a.id === accountId),
-    );
-  }
+  batch(() => {
+    for (const accountId of ids) {
+      syncCredential(
+        accountId,
+        accounts.find((a) => a.id === accountId),
+      );
+    }
+  });
 }
 
 /** Hands downloads to native, one batch per account (a season = one call). Signed-out accounts wait for sign-in. */
