@@ -110,6 +110,14 @@ Android 14+ device or emulator. Job state: `adb shell dumpsys jobscheduler | gre
 | U7  | Wi-Fi only, background the app, Wi-Fi off (mobile data on); Wi-Fi on after 2 min | "Waiting for Wi-Fi" in the notification (or the job stops until Wi-Fi); carries on once Wi-Fi is back  |
 | U8  | Notification permission denied (Android 13+), download a movie in the background | Finishes; nothing in the shade, the job shows in Task Manager                                          |
 
+## Notification permission (Android 13+)
+
+| #   | Test                                                  | Expect                                                                                   |
+| --- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| P1  | Fresh install, tap ↓ on a movie                       | Download starts, then the system asks "Allow notifications?"; Allow → notification shows |
+| P2  | Fresh install, ↓, Don't allow; download another movie | Both download; never asked again; nothing in the shade (Task Manager only, Android 14+)  |
+| P3  | Android 12 phone, ↓                                   | No prompt, download starts                                                               |
+
 ## To add with the Android runners (M5)
 
-OS kill, reboot, 20GB + 60GB file, Task Manager stop (Android 14+), dataSync timeout (`device_config ... data_sync_fgs_timeout_duration`), Android 16 standby buckets (`am set-standby-bucket`), notification permission denied.
+OS kill, reboot, 20GB + 60GB file, Task Manager stop (Android 14+), dataSync timeout (`device_config ... data_sync_fgs_timeout_duration`), Android 16 standby buckets (`am set-standby-bucket`).
