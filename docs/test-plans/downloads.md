@@ -66,6 +66,15 @@ Until the store + Downloads screen land, drive the module from a temporary snipp
 | C2  | Cancel Download on a running movie (Downloads row ring, then item menu on another) | Row gone at once, no question; no partial file left; ↓ again on the detail                              |
 | C3  | Season with 1 episode done + 1 downloading: header ring → Cancel Download          | The running one is gone, the done one stays; Delete Download in the same menu asks first                |
 
+## Sign out
+
+| #   | Test                                                                            | Pass when                                                                                                                                |
+| --- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| O1  | iPhone: one movie downloading, one paused, one done; sign out (Accounts)        | Transfer stops at once (server log), no `<id>.resume` left in `Application Support/Downloads`; rows "Paused - sign in again", done stays |
+| O2  | Then sign in again + Resume on the row                                          | Starts from 0 with the new token (server log: no `Range`), finishes                                                                      |
+| O3  | Android: same as O1 + O2                                                        | Transfer stops at once; sign in + Resume carries on from the `.part` (`Range`)                                                           |
+| O4  | Remove the account (Accounts) with a download running, then force-quit + reopen | Transfer stays stopped (no native task for it after `getTasks()`); a second account's downloads keep running                             |
+
 ## Settings (network + storage limit)
 
 | #   | Test                                                                                   | Pass when                                                                              |
