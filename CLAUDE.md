@@ -143,6 +143,7 @@ src/playback.ts          PlaybackInfo → play source (pure): device profile, di
 src/downloads.ts         store, queue, reconcile, cleanup, storage
 src/downloadSnapshot.ts  per-download snapshot: item JSON, poster, backdrop, external subtitles next to the file
 src/downloadList.ts      Downloads tab (pure): one list per account (a row per movie / show, search + type), a show's seasons, status wording
+src/notificationPermission.ts  Android 13+: notification permission asked once, when the first download starts
 src/sync.ts              offline progress queue replay
 src/settings.ts          user settings in kv-store (appearance, subtitle size + style, video zoom, download network + storage limit; offload later)
 src/pickers.ts           Settings options that open a checkmark list: key → title, choices, get / set

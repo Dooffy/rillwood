@@ -20,6 +20,7 @@ import {
   type DownloadSummary,
 } from '@/downloads';
 import { currentUser, downloadSources, itemDetail, seasonFiles } from '@/items';
+import { askNotificationsOnce } from '@/notificationPermission';
 import { connectionFor, getSession, useSession } from '@/session';
 import { useFetch } from '@/useFetch';
 
@@ -117,9 +118,10 @@ export function useDownloadControl(item: BaseItemDto | undefined): DownloadContr
           return;
         }
         return startDownloads(requests).then((result) => {
-          if (!result.ok) toast(PROBLEMS[result.problem]);
+          if (!result.ok) return toast(PROBLEMS[result.problem]);
           // Download on a partial season also resumes its paused / failed episodes.
-          else resumeDownloads(requests.map((r) => downloadId(account.id, r.item.Id, r.source.Id)));
+          resumeDownloads(requests.map((r) => downloadId(account.id, r.item.Id, r.source.Id)));
+          void askNotificationsOnce();
         });
       })
       .catch((e: unknown) => {
