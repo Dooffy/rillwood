@@ -81,11 +81,7 @@ Why one runner instead of one job per item: concurrency (2) and order stay ours,
 - dataSync is allowed "specifically for user-initiated work". Google recommends UIDT for network transfers started by the user. No separate Play declaration for UIDT (`RUN_USER_INITIATED_JOBS` is a normal permission) [V].
 - We still declare dataSync because the API 26-33 path uses it.
 
-Suggested text:
-
-> **dataSync - Download for offline viewing.** The user taps "Download" on a movie, episode or season. The app downloads the original media file from the user's own Jellyfin server to app storage, so it can be played without a connection. A notification shows progress with Pause and Cancel actions. Used only for downloads the user started; never for background sync. **If deferred:** the download starts later, so it may not be ready before the user goes offline (for example, before a flight). **If interrupted:** the download pauses and resumes from the same byte offset (HTTP Range) when allowed. On Android 14+ the app uses user-initiated data transfer jobs; the foreground service is used on Android 8-13.
-
-Video: add server -> open movie -> Download -> background the app -> notification progress -> pause/resume -> play offline.
+Final form text + video script: `docs/release/play-fgs-declaration.md`.
 
 ### 4. Large-file details
 
