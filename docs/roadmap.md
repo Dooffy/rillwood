@@ -114,7 +114,7 @@ Design + sources: `docs/research/background-downloads.md`.
 - [x] Show why a download waits for the network (iOS): `NWPathMonitor` in `modules/downloads` marks active tasks `reason: network` (`waiting` event) while the path doesn't meet the rule (no network / Wi-Fi only on an expensive path); connection drops while it's blocked don't use up retries. Device test pending (N5-N7)
 - [x] Stop a running download in one step: a ring tap opens Pause / Resume + Cancel Download (red, stops + deletes the partial file at once; done episodes of a season stay) - Downloads row, item menu and detail header. Device test C1-C3 pending
 - [x] Downloads tab browsing that scales (100+ shows): shows collapsed to one row, movies + shows chips and search, an Episodes chip (every episode on its own row), virtualised lists (tab `FlatList`, a show's screen `SectionList`). Device test L7-L8 pending
-- [ ] Play Console FGS declaration (dataSync) text + video
+- [x] Play Console FGS declaration (dataSync): form text + video script in `docs/release/play-fgs-declaration.md`. Recording + submit with the M7 Play Console item (review server, release build)
 - [ ] Tests (`docs/test-plans/downloads.md`): force-quit (iOS: cancelled → re-enqueue), `exit(0)` relaunch, OS kill, reboot, airplane mode, 20GB + 60GB file, server file replaced mid-download (If-Range → 200), token revoked, low disk, Task Manager stop (Android 14+), dataSync timeout (`device_config ... data_sync_fgs_timeout_duration`), Android 16 standby buckets (`am set-standby-bucket`), notification permission denied, `Authorization` header on an iOS background task
 
 ## M6 - Offline + offload + sync
@@ -142,7 +142,7 @@ Design + sources: `docs/research/background-downloads.md`.
 - [ ] Bump versions (`autoIncrement` in eas.json), `eas build -p ios --local` → Transporter; `-p android --local` → Play Console (first `.aab` manual)
 - [ ] Review server: self-hosted Jellyfin 12.1 over HTTPS, non-admin review user with downloads on, open / public-domain media only, credentials only in the store consoles (`demo.jellyfin.org` resets hourly, no downloads)
 - [ ] App Store Connect: privacy label "Data Not Collected", age rating questionnaire, EU DSA trader status, export compliance (`docs/open-items.md`), review notes (draft in `docs/research/store-requirements.md`)
-- [ ] Play Console: data safety, FGS `dataSync` declaration + video (Android 8-13 path), app access, content rating, closed test (12 testers x 14 days for new personal accounts - start early)
+- [ ] Play Console: data safety, FGS `dataSync` declaration (record the video, paste the text - `docs/release/play-fgs-declaration.md`), app access, content rating, closed test (12 testers x 14 days for new personal accounts - start early)
 - [ ] Release checks: Xcode privacy report on the archive, AAB 16 KB page alignment, release permissions list, no spike / test screens, no `UIFileSharingEnabled` in the release Info.plist (built without `RILLWOOD_FILE_SHARING`)
 - [ ] TestFlight + Play internal, 3-5 testers
 - [ ] Tag release; publish mpv/FFmpeg source tarballs
