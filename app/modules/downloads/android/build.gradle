@@ -17,4 +17,6 @@ android {
 dependencies {
   // React Native's OkHttp (also on the app classpath via expo-file-system) - never 5.x, which breaks RN.
   compileOnly "com.squareup.okhttp3:okhttp:4.9.2"
+  // Android 8-13 queue runner (DownloadsWorker), also the fallback when a UIDT job is refused. Brings coroutines.
+  implementation "androidx.work:work-runtime-ktx:2.12.0"
 }

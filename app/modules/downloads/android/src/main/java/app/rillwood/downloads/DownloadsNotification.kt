@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The UIDT job's notification: what's left over every active download, a Pause action, tap opens the app. Without the
-// notification permission (Android 13+) it's only shown in Task Manager; downloads run either way.
+// The runner's notification (UIDT job or WorkManager foreground service): what's left over every active download, a
+// Pause action, tap opens the app. Without the notification permission (Android 13+) it's only shown in Task Manager;
+// downloads run either way.
 package app.rillwood.downloads
 
 import android.app.Notification
@@ -14,8 +15,14 @@ import android.text.format.Formatter
 
 object DownloadsNotification {
   const val ID = 0x5257
+
+  // Own ID: WorkManager cancels its foreground notification when the worker ends - that mustn't take the job's.
+  const val WORKER_ID = 0x5258
   private const val CHANNEL = "downloads"
   private const val ACTION_PAUSE = "app.rillwood.downloads.PAUSE"
+
+  /** Shown at once when a runner starts, until the queue's first update. */
+  fun starting(context: Context) = build(context, 0, 0, 0, null)
 
   fun build(context: Context, count: Int, done: Long, total: Long, waiting: String?): Notification {
     val manager = context.getSystemService(NotificationManager::class.java)

@@ -119,6 +119,23 @@ Android 14+ device or emulator. Job state: `adb shell dumpsys jobscheduler | gre
 | U7  | Wi-Fi only, background the app, Wi-Fi off (mobile data on); Wi-Fi on after 2 min | "Waiting for Wi-Fi" in the notification (or the job stops until Wi-Fi); carries on once Wi-Fi is back  |
 | U8  | Notification permission denied (Android 13+), download a movie in the background | Finishes; nothing in the shade, the job shows in Task Manager                                          |
 
+## Android 8-13 background (WorkManager worker)
+
+Android 8-13 device or emulator (12 and 13 for the background-start rows). Work state: `adb shell dumpsys jobscheduler | grep -A20 app.rillwood.client` (WorkManager runs on JobScheduler), foreground service: `adb shell dumpsys activity services app.rillwood.client`.
+
+| #   | Test                                                                                  | Expect                                                                                                      |
+| --- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| W1  | Download a movie, go home, lock the phone for 10 min                                  | Notification "Downloading 1 item", "x of y" + bar (`SystemForegroundService` running); finishes; gone after |
+| W2  | Download a season, background the app                                                 | "Downloading N items", 2 at a time; worker ends after the last one (no pending work)                        |
+| W3  | Notification → Pause                                                                  | Every download Paused; notification gone; resume in the app starts the worker again                         |
+| W4  | Mid-download `adb shell am kill app.rillwood.client` (app in the background)          | WorkManager runs the worker again without opening the app; carries on from the `.part`                      |
+| W5  | Reboot mid-download, unlock                                                           | Worker runs again and carries on (Android 12-13: maybe without a notification - see W7)                     |
+| W6  | Wi-Fi only, background the app, Wi-Fi off (mobile data on); Wi-Fi on after 2 min      | Worker stops (constraint), carries on once Wi-Fi is back; Any network → carries on on mobile data           |
+| W7  | Android 12-13: download, background the app, `am kill`; wait for WorkManager's re-run | Runs as a plain job (no notification), stopped after ~10 min and run again; no crash, file finishes         |
+| W8  | Android 13: notification shade → active apps (Task Manager) → Stop                    | Downloads Paused - not Failed, and not started again by WorkManager; opening the app + resume continues     |
+
+On 14+ the worker is only the fallback when the UIDT job is refused - no device test (can't be forced without an OEM build).
+
 ## Notification permission (Android 13+)
 
 | #   | Test                                                  | Expect                                                                                   |
@@ -129,4 +146,4 @@ Android 14+ device or emulator. Job state: `adb shell dumpsys jobscheduler | gre
 
 ## To add with the Android runners (M5)
 
-OS kill, reboot, 20GB + 60GB file, Task Manager stop (Android 14+), dataSync timeout (`device_config ... data_sync_fgs_timeout_duration`), Android 16 standby buckets (`am set-standby-bucket`).
+20GB + 60GB file, Android 16 standby buckets (`am set-standby-bucket`). dataSync timeout (`device_config ... data_sync_fgs_timeout_duration`) only applies to the 14+ fallback - see W7 for the stop / re-run path.

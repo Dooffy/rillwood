@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
   <!-- Default network callback: Wi-Fi only rule + waiting for the network. -->
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
   <!-- Android 14+ queue runner: user-initiated data transfer job, persisted across reboots. -->
@@ -8,12 +8,19 @@
   <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
   <!-- Download notification (Android 13+: runtime permission - asked before the first download). -->
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <!-- Android 8-13 queue runner: WorkManager worker as a dataSync foreground service. -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
   <application>
     <service
       android:name="app.rillwood.downloads.DownloadsJobService"
       android:exported="false"
       android:permission="android.permission.BIND_JOB_SERVICE" />
+    <service
+      android:name="androidx.work.impl.foreground.SystemForegroundService"
+      android:foregroundServiceType="dataSync"
+      tools:node="merge" />
     <receiver
       android:name="app.rillwood.downloads.DownloadsNotification$PauseReceiver"
       android:exported="false" />

@@ -238,7 +238,7 @@ Applied to CLAUDE.md: §2 Downloads / Download network rows, §6 Downloader cont
 
 ## Open questions
 
-1. Approve `androidx.work` (Android 8-13 only) or use a plain JobScheduler job + own FGS on those versions to avoid the dependency?
+1. Approve `androidx.work` (Android 8-13 only) or use a plain JobScheduler job + own FGS on those versions to avoid the dependency? **Decided 2026-10-11: `androidx.work`.**
 2. Credential option A (Keystore) vs B (plaintext in app-private job DB)?
 3. iOS cellular toggle semantics for in-flight tasks.
 4. Does `httpMaximumConnectionsPerHost` keep FIFO order for background tasks? (device test)
