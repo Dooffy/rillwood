@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render as rtlRender, screen } from '@testing-library/react-native';
 import { Paths } from 'expo-file-system';
 import type { ReactElement } from 'react';
@@ -10,6 +10,7 @@ import { ApiError, type BaseItemDto } from '@/api';
 import ItemDetail from '@/app/item/[id]';
 import { ItemMenuProvider } from '@/components/ItemMenu';
 import { ToastProvider } from '@/components/Toast';
+import * as downloads from '@/downloads';
 import { initDownloads } from '@/downloads';
 import * as session from '@/session';
 import { setDownloadLimit } from '@/settings';
@@ -362,5 +363,55 @@ describe('ItemDetail', () => {
     reply = () => Promise.resolve(sintel);
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByRole('header', { name: 'Sintel' })).toBeOnTheScreen();
+  });
+
+  describe('offline, with a download of it', () => {
+    const art = 'file:///docs/downloads/a/m/backdrop.jpg';
+    const saved = { item: { ...sintel, Overview: 'Saved with the download.' }, art };
+    beforeEach(() => {
+      jest.spyOn(downloads, 'savedItem').mockReturnValue(saved);
+    });
+    afterEach(() => {
+      jest.mocked(downloads.savedItem).mockRestore();
+    });
+
+    it('shows the item saved with the download instead of the error: its own art, no More Like This', async () => {
+      reply = () => Promise.reject(new ApiError('network'));
+      await render(<ItemDetail />);
+      expect(await screen.findByText('Showing the details saved with the download.')).toBeOnTheScreen();
+      expect(downloads.savedItem).toHaveBeenCalledWith(expect.stringMatching(/^srv\.u/), sintel.Id);
+      expect(screen.getByRole('header', { name: 'Sintel' })).toBeOnTheScreen();
+      expect(screen.getByText('Saved with the download.')).toBeOnTheScreen();
+      expect(screen.getByTestId('detail-backdrop').props.source).toEqual([expect.objectContaining({ uri: art })]);
+      expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+    });
+
+    it('known offline: at once, without waiting for the request; the server answer replaces it', async () => {
+      const offline = jest.spyOn(api, 'useOffline').mockReturnValue(true);
+      let answer!: () => void;
+      reply = () => new Promise((resolve) => (answer = () => resolve(sintel)));
+      await render(<ItemDetail />);
+      expect(screen.getByText('Showing the details saved with the download.')).toBeOnTheScreen();
+      answer();
+      expect(await screen.findByText(/^A wandering warrior/)).toBeOnTheScreen();
+      expect(screen.queryByText('Showing the details saved with the download.')).toBeNull();
+      offline.mockRestore();
+    });
+
+    it('a 404 (gone from the server) still shows it - the file on the phone plays', async () => {
+      reply = () => Promise.reject(new ApiError('http', 404));
+      await render(<ItemDetail />);
+      expect(await screen.findByText('Showing the details saved with the download.')).toBeOnTheScreen();
+    });
+
+    it('online, the server answer wins and the saved copy stays hidden while loading', async () => {
+      let answer!: () => void;
+      reply = () => new Promise((resolve) => (answer = () => resolve(sintel)));
+      await render(<ItemDetail />);
+      expect(screen.getByTestId('detail-placeholder')).toBeOnTheScreen();
+      answer();
+      expect(await screen.findByText(/^A wandering warrior/)).toBeOnTheScreen();
+      expect(screen.queryByText('Showing the details saved with the download.')).toBeNull();
+    });
   });
 });

@@ -735,3 +735,23 @@ export function useDownload(id: string | null): Download | null {
   const subscribe = useCallback((listener: () => void) => subscribeTo(itemListeners, id, listener), [id]);
   return useSyncExternalStore(subscribe, () => (id ? getDownload(id) : null));
 }
+
+/** A download's saved item for offline detail: the item as downloaded + its hero art (`file://`). */
+export type SavedItem = { item: BaseItemDto; art?: string };
+
+/**
+ * The item as saved with the account's newest download of it (any status: the snapshot is saved at the start), else
+ * null (not downloaded, snapshot not saved yet or unreadable). Reads the file - call once per screen, not per render.
+ */
+export function savedItem(accountId: string, itemId: string): SavedItem | null {
+  const own = getDownloads()
+    .filter((d) => d.accountId === accountId && d.itemId === itemId)
+    .sort((a, b) => b.createdAt - a.createdAt);
+  for (const d of own) {
+    const item = readSnapshotItem(d.path);
+    if (!item) continue;
+    const art = d.snapshot?.backdrop ?? d.snapshot?.poster;
+    return { item, art: art && onDisk(art) ? documentUri(art) : undefined };
+  }
+  return null;
+}

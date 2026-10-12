@@ -7,6 +7,7 @@ import { Alert, type AlertButton } from 'react-native';
 import * as api from '@/api';
 import type { BaseItemDto } from '@/api';
 import Downloads from '@/app/(tabs)/downloads';
+import * as store from '@/downloads';
 import { deleteDownloads, downloadId, initDownloads, startDownloads } from '@/downloads';
 import * as session from '@/session';
 import type { Account } from '@/session';
@@ -255,6 +256,32 @@ describe('Downloads', () => {
     await render(<Downloads />);
     await fireEvent.press(screen.getByRole('button', { name: 'Sintel, 2.1 GB' }));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/player', params: { id: 'sintel', start: '0' } });
+  });
+
+  it('known offline: plays from the resume point saved with the download, without asking the server', async () => {
+    const offline = jest.spyOn(api, 'isOffline').mockReturnValue(true);
+    const saved = jest.spyOn(store, 'savedItem').mockReturnValue({
+      item: { ...movie, RunTimeTicks: 8_880_000_000, UserData: { PlaybackPositionTicks: 300_000_000, Played: false } },
+    });
+    await download(movie);
+    await act(() => emit('done', { id: idOf(movie) }));
+    jest.mocked(api.request).mockClear();
+    await render(<Downloads />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Sintel, 2.1 GB' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/player', params: { id: 'sintel', start: '30' } });
+    expect(saved).toHaveBeenCalledWith(account.id, 'sintel');
+    expect(api.request).not.toHaveBeenCalled();
+    offline.mockRestore();
+    saved.mockRestore();
+  });
+
+  it('the menu opens the details (online or offline)', async () => {
+    await download(movie);
+    await act(() => emit('done', { id: idOf(movie) }));
+    await render(<Downloads />);
+    await fireEvent(screen.getByRole('button', { name: 'Sintel, 2.1 GB' }), 'longPress');
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Go to Details' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/item/[id]', params: { id: 'sintel' } });
   });
 
   it('deletes from the long-press menu after asking', async () => {

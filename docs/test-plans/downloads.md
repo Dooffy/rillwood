@@ -154,6 +154,15 @@ On 14+ the worker is only the fallback when the UIDT job is refused - no device 
 | P2  | Fresh install, ↓, Don't allow; download another movie | Both download; never asked again; nothing in the shade (Task Manager only, Android 14+)  |
 | P3  | Android 12 phone, ↓                                   | No prompt, download starts                                                               |
 
+## Offline detail (M6)
+
+| #   | Steps                                                                         | Expected                                                                                                 |
+| --- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| OF1 | Download a movie, flight mode, Downloads → long press the row → Go to Details | Detail of the saved item: backdrop from the phone, "Showing the details saved with the download."        |
+| OF2 | Flight mode, open a downloaded episode's detail from Home (cached card)       | Saved detail once the request fails (at once when the app already knows it's offline); no More Like This |
+| OF3 | Flight mode, tap a ready Downloads row (after another screen failed)          | Player opens at once from the saved resume point - no 8 s wait                                           |
+| OF4 | Online, open the same detail                                                  | Server detail (logo, More Like This), no "saved with the download" line                                  |
+
 ## To add with the Android runners (M5)
 
 20GB + 60GB file, Android 16 standby buckets (`am set-standby-bucket`). dataSync timeout (`device_config ... data_sync_fgs_timeout_duration`) only applies to the 14+ fallback - see W7 for the stop / re-run path.
