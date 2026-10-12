@@ -2,7 +2,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, AppState, StyleSheet, useWindowDimensions, View } from 'react-native';
 import {
   GestureDetector,
@@ -33,12 +33,14 @@ import { Spinner } from '@/components/Spinner';
 import { Text } from '@/components/Text';
 import { TracksMenu, type TracksPage, type TracksValue } from '@/components/TracksMenu';
 import { UpNext } from '@/components/UpNext';
+import { localCopy } from '@/downloads';
 import { cardTitles, isItemId, itemDetail, nextEpisode, nextEpisodes, playback } from '@/items';
 import {
   carryTracks,
   matchTracks,
   picksOf,
   playbackInfoBody,
+  localPlaySource,
   playErrorMessage,
   playSource,
   type EngineTrack,
@@ -124,7 +126,14 @@ export default function PlayerScreen() {
   // A pull is on: the Up Next tile steps aside (glass can't fade with the video).
   const [pulling, setPulling] = useState(false);
 
-  const item = useFetch<BaseItemDto>(isItemId(id) ? itemDetail(id).path : null).data;
+  // A finished download of this item: played from the file (load effect); its saved item names it while offline.
+  // Looked up again on Retry: a file gone meanwhile streams instead.
+  const copy = useMemo(
+    () => (accountId && isItemId(id) ? localCopy(accountId, id) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `attempt` (Retry) re-checks the disk
+    [accountId, id, attempt],
+  );
+  const item = useFetch<BaseItemDto>(isItemId(id) ? itemDetail(id).path : null).data ?? copy?.item;
   const titles = item ? cardTitles(item) : undefined;
   // The episode after this one, played at the end unless its Up Next card was hidden (id of the episode it was hidden on).
   const nextRequest = item ? nextEpisodes(item) : undefined;
@@ -175,10 +184,17 @@ export default function PlayerScreen() {
 
   useEffect(() => {
     const account = getSession().active;
-    const conn = account && account.id === accountId ? connectionFor(account) : null;
     // Signed out: the root layout leaves for Welcome.
-    if (!conn || !isItemId(id)) return;
+    if (!account || account.id !== accountId || !isItemId(id)) return;
     const done = (next: State) => setLoaded({ key, state: next });
+    // Downloaded: plays the file on the phone, no server or connection needed. Else streams.
+    const local = copy && localPlaySource(copy);
+    if (local) {
+      done({ status: 'ready', play: local, start: progress.get().position });
+      return;
+    }
+    const conn = connectionFor(account);
+    if (!conn) return;
     const controller = new AbortController();
     getPlaybackInfo(conn, id, playbackInfoBody(), controller.signal)
       .then((info) => {
@@ -195,7 +211,7 @@ export default function PlayerScreen() {
         done({ status: 'error', message: playErrorMessage(e instanceof ApiError ? e : new ApiError('network')) });
       });
     return () => controller.abort();
-  }, [key, accountId, id, progress]);
+  }, [key, accountId, id, progress, copy]);
 
   // Auto-hide while playing; paused, scrubbing, the tracks menu or VoiceOver keep the controls up.
   const menuOpen = menu !== null;

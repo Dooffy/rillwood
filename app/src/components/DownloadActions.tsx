@@ -18,8 +18,8 @@ export function useDownloadActions() {
   const close = useCallback(() => setMenu(null), []);
   const remove = useCallback((d: Download) => confirmDeleteDownloads(d.title, [d.id]), []);
 
-  // Streams for now (the local file plays with offline mode, M6), from the server's resume point; lookup failed →
-  // from the start. One at a time; dropped if the account changed meanwhile.
+  // Plays the file on the phone (the player picks the download), from the server's resume point; lookup failed
+  // (offline) → from the start until offline progress (M6). One at a time; dropped if the account changed meanwhile.
   const opening = useRef(false);
   const play = useCallback(async (d: Download) => {
     if (opening.current) return;

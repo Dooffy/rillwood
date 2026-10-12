@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { downloadStatus, episodeCount, type DownloadEntry } from '@/downloadList';
 import { downloadGroup, summarize, useDownload, useDownloadSummary, type Download } from '@/downloads';
-import { snapshotUri } from '@/downloadSnapshot';
+import { documentUri } from '@/downloadSnapshot';
 import { formatBytes } from '@/format';
 import { useDownloadNetwork } from '@/settings';
 import { minTouch, pressedOpacity, spacing } from '@/theme';
@@ -41,7 +41,7 @@ export function DownloadRowGap() {
   return <View style={styles.gap} />;
 }
 
-const poster = (d: Download | undefined) => (d?.snapshot?.poster ? snapshotUri(d.snapshot.poster) : undefined);
+const poster = (d: Download | undefined) => (d?.snapshot?.poster ? documentUri(d.snapshot.poster) : undefined);
 
 /** Poster, title, size + status, then the ring (opens the menu) while it isn't done. Tap plays a ready one. */
 export const DownloadRow = memo(function DownloadRow({ id, title, onPlay, onDelete, onMenu }: DownloadRowProps) {

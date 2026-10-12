@@ -13,6 +13,7 @@ import {
 import * as api from '@/api';
 import { ApiError, type BaseItemDto, type MediaSourceDto, type PlaybackInfoResponse } from '@/api';
 import PlayerScreen from '@/app/player';
+import * as downloads from '@/downloads';
 import type { PlayerProps } from '@/player/Player';
 import * as session from '@/session';
 import * as settings from '@/settings';
@@ -68,6 +69,8 @@ const movie: BaseItemDto = {
   ProductionYear: 2010,
 };
 const itemRequest = jest.spyOn(api, 'request');
+// Not downloaded unless a test says so (the store's lookup is tested in src/downloads.test.ts).
+const localCopy = jest.spyOn(downloads, 'localCopy');
 let reply: () => Promise<PlaybackInfoResponse | undefined>;
 
 const lastPlayer = () => Player.mock.calls.at(-1)![0] as PlayerProps;
@@ -86,6 +89,7 @@ beforeEach(() => {
   reply = () => Promise.resolve({ MediaSources: [source], PlaySessionId: 'ps' });
   request.mockImplementation(() => reply() as ReturnType<typeof api.getPlaybackInfo>);
   itemRequest.mockImplementation(() => Promise.resolve(movie) as Promise<never>);
+  localCopy.mockReturnValue(null);
   jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(false);
   // Subtitle size, style and zoom are phone settings, kept in memory across tests.
   settings.setSubtitleScale(1);
@@ -130,6 +134,60 @@ describe('Player screen', () => {
     expect(screen.getByLabelText('Loading')).toBeOnTheScreen();
     await act(() => lastPlayer().onLoad?.({ duration: 888, audio: [], subs: [] }));
     expect(screen.queryByLabelText('Loading')).toBeNull();
+  });
+
+  describe('downloaded', () => {
+    const local = () => ({
+      sourceId: 'ms',
+      item: { ...movie, Name: 'Sintel (saved)', MediaSources: [source] },
+      uri: 'file:///docs/downloads/srv.a/m/ms.mkv',
+      subtitles: [{ index: 2, uri: 'file:///docs/downloads/srv.a/m/ms.sub-2.srt' }],
+    });
+
+    it('plays the file on the phone with its saved subtitles - no PlaybackInfo, no auth header', async () => {
+      localCopy.mockReturnValue(local());
+      await render(<PlayerScreen />);
+      expect(localCopy).toHaveBeenCalledWith('srv.a', ID);
+      expect(request).not.toHaveBeenCalled();
+      expect(lastPlayer()).toMatchObject({
+        source: { uri: 'file:///docs/downloads/srv.a/m/ms.mkv', headers: {} },
+        externalSubs: [{ uri: 'file:///docs/downloads/srv.a/m/ms.sub-2.srt', lang: 'ger' }],
+        startSeconds: 40,
+      });
+    });
+
+    it('offline: the saved item names it', async () => {
+      // An item no other test fetched (useFetch keeps answers in memory).
+      useLocalSearchParams.mockReturnValue({ id: 'f'.repeat(32), start: '0' });
+      localCopy.mockReturnValue(local());
+      itemRequest.mockImplementation(() => Promise.reject(new ApiError('network')));
+      await render(<PlayerScreen />);
+      expect(screen.getByText('Sintel (saved)')).toBeOnTheScreen();
+    });
+
+    it('needs no server connection (no token loaded yet)', async () => {
+      localCopy.mockReturnValue(local());
+      jest.spyOn(session, 'connectionFor').mockReturnValue(null);
+      await render(<PlayerScreen />);
+      expect(lastPlayer().source.uri).toBe('file:///docs/downloads/srv.a/m/ms.mkv');
+    });
+
+    it('Retry looks for the file again: gone meanwhile → streams', async () => {
+      localCopy.mockReturnValue(local());
+      await render(<PlayerScreen />);
+      await act(() => lastPlayer().onError?.('cannot open'));
+      localCopy.mockReturnValue(null);
+      await act(() => fireEvent.press(screen.getByText('Retry')));
+      expect(request).toHaveBeenCalled();
+      expect(lastPlayer().source.uri).toMatch(/^https:\/\/jf\.example\.com\/Videos\//);
+    });
+
+    it("the saved item doesn't list that version: streams it", async () => {
+      localCopy.mockReturnValue({ ...local(), item: { ...movie, MediaSources: [] } });
+      await render(<PlayerScreen />);
+      expect(request).toHaveBeenCalled();
+      expect(lastPlayer().source.uri).toMatch(/^https:\/\/jf\.example\.com\/Videos\//);
+    });
   });
 
   // I15: a file mpv can't open (404, unsupported) shows the error at once, not after a load timeout.

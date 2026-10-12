@@ -2,7 +2,15 @@
 // PlaybackInfo → what the player loads (docs/context/player.md): the media source, its static stream URL and the
 // sidecar subtitle URLs. URLs are built here, never taken from the server (`DeliveryUrl` carries `ApiKey=<token>`).
 // Pure (type-only imports), so `npm run check:home` loads it with plain Node.
-import type { ApiError, Connection, MediaSourceDto, MediaStreamDto, PlaybackInfoResponse, PlaybackReport } from '@/api';
+import type {
+  ApiError,
+  BaseItemDto,
+  Connection,
+  MediaSourceDto,
+  MediaStreamDto,
+  PlaybackInfoResponse,
+  PlaybackReport,
+} from '@/api';
 import type { Track } from '@/player/Player';
 
 // Sidecar text formats the server converts (srt / subrip / vtt / ass checked on 10.11 + 12.1). ASS keeps its styling.
@@ -240,9 +248,17 @@ export function externalSubs(baseUrl: string, itemId: string, source: MediaSourc
   return (source.MediaStreams ?? []).flatMap((s) => {
     if (s.Type !== 'Subtitle' || !s.IsExternal) return [];
     const uri = subtitleUrl(baseUrl, itemId, source.Id, s);
-    return uri ? [{ uri, index: s.Index, lang: s.Language, title: s.DisplayTitle ?? s.Title }] : [];
+    return uri ? [toExternalSub(s, uri)] : [];
   });
 }
+
+/** A sidecar subtitle stream at `uri` (the server's, or the file saved with a download). */
+const toExternalSub = (s: MediaStreamDto, uri: string): ExternalSub => ({
+  uri,
+  index: s.Index,
+  lang: s.Language,
+  title: s.DisplayTitle ?? s.Title,
+});
 
 /** Display shape of the source's picture: the server's `AspectRatio` ("2.40:1"), else Width / Height. */
 export function pictureAspect(source: MediaSourceDto): number | undefined {
@@ -269,24 +285,53 @@ export function playSource(
   const source = mediaSourceId ? info.MediaSources.find((s) => s.Id === mediaSourceId) : info.MediaSources[0];
   if (!source) return { ok: false, problem: 'none' };
   if (!source.SupportsDirectPlay) return { ok: false, problem: 'directPlay' };
-  const subs = externalSubs(conn.baseUrl, itemId, source);
+  const play = sourcePlay(
+    source,
+    {
+      uri: streamUrl(conn.baseUrl, itemId, source.Id),
+      headers: conn.token ? { Authorization: streamAuthHeader(conn.token) } : {},
+    },
+    externalSubs(conn.baseUrl, itemId, source),
+  );
+  return { ok: true, play: { ...play, playSessionId: info.PlaySessionId } };
+}
+
+/** A finished download on the phone: the item saved with it, its version, its file and its subtitle files. */
+export type LocalFiles = {
+  item: Pick<BaseItemDto, 'MediaSources'>;
+  sourceId: string;
+  /** `file://` URIs. */
+  uri: string;
+  subtitles: { index: number; uri: string }[];
+};
+
+/**
+ * A downloaded version, played from its file with the subtitle files saved next to it (by Jellyfin index). Tracks and
+ * defaults come from the item as it was when downloaded; no auth, no server. Null when the saved item doesn't list that
+ * version.
+ */
+export function localPlaySource({ item, sourceId, uri, subtitles }: LocalFiles): PlaySource | null {
+  const source = item.MediaSources?.find((s) => s.Id === sourceId);
+  if (!source) return null;
+  const streams = source.MediaStreams ?? [];
+  const subs = subtitles.flatMap((file) => {
+    const s = streams.find((stream) => stream.Index === file.index);
+    return s ? [toExternalSub(s, file.uri)] : [];
+  });
+  return sourcePlay(source, { uri, headers: {} }, subs);
+}
+
+/** The play source of one version, wherever its file and sidecar subtitles come from. */
+function sourcePlay(source: MediaSourceDto, file: PlaySource['source'], subs: ExternalSub[]): PlaySource {
   const tracks = trackOptions(source, subs);
   return {
-    ok: true,
-    play: {
-      mediaSourceId: source.Id,
-      playSessionId: info.PlaySessionId,
-      source: {
-        uri: streamUrl(conn.baseUrl, itemId, source.Id),
-        headers: conn.token ? { Authorization: streamAuthHeader(conn.token) } : {},
-      },
-      externalSubs: subs,
-      ...tracks,
-      defaultAudio:
-        tracks.audio.find((t) => t.index === source.DefaultAudioStreamIndex)?.index ?? tracks.audio[0]?.index,
-      defaultSubtitle: tracks.subtitles.find((t) => t.index === source.DefaultSubtitleStreamIndex)?.index ?? -1,
-      aspect: pictureAspect(source),
-    },
+    mediaSourceId: source.Id,
+    source: file,
+    externalSubs: subs,
+    ...tracks,
+    defaultAudio: tracks.audio.find((t) => t.index === source.DefaultAudioStreamIndex)?.index ?? tracks.audio[0]?.index,
+    defaultSubtitle: tracks.subtitles.find((t) => t.index === source.DefaultSubtitleStreamIndex)?.index ?? -1,
+    aspect: pictureAspect(source),
   };
 }
 
