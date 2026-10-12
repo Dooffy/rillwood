@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Movie / episode detail: hero, Play + watched / favourite, overview, chips, Directed by, media rows, cast & crew,
 // More Like This. Data rules: docs/context/api.md (Detail). Header ↓ downloads it (docs/context/downloads.md).
+// Offline (or the server failing) with a download of it: the item saved with the download instead of an error.
 import { useLocalSearchParams } from 'expo-router';
+import { useMemo } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import type { BaseItemDto } from '@/api';
+import { useOffline, type BaseItemDto } from '@/api';
 import { CastRow } from '@/components/CastRow';
 import { Chips } from '@/components/Chips';
 import { DetailActions } from '@/components/DetailActions';
@@ -18,9 +20,11 @@ import { ProgressBar } from '@/components/ProgressBar';
 import { DetailPlaceholder } from '@/components/Skeleton';
 import { Text } from '@/components/Text';
 import { detailView } from '@/detail';
+import { savedItem, type SavedItem } from '@/downloads';
 import { formatRemaining } from '@/format';
 import { isItemId, itemDetail, type TrackRow } from '@/items';
 import { openItem, openPlayer } from '@/navigation';
+import { useSession } from '@/session';
 import { useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
 import { useUserFlag } from '@/useUserFlag';
@@ -30,14 +34,22 @@ export default function ItemDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const valid = isItemId(id);
   const { data, error, refresh } = useFetch<BaseItemDto>(valid ? itemDetail(id).path : null);
+  const accountId = useSession().active?.id;
+  // Known offline: shown at once, not after the 8 s timeout; the server's answer replaces it if one lands.
+  const offline = useOffline();
+  const saved = useMemo(() => (valid && accountId ? savedItem(accountId, id) : null), [valid, accountId, id]);
 
-  if (!valid || error?.status === 404) return <Message fill text="This item isn't available." />;
+  if (!valid) return <Message fill text="This item isn't available." />;
   if (data) return <Detail item={data} />;
+  // Any failure, a 404 too: the file on the phone still plays.
+  if (saved && (error || offline)) return <Detail item={saved.item} saved={saved} />;
+  if (error?.status === 404) return <Message fill text="This item isn't available." />;
   if (error) return <Message fill text={loadErrorMessage(error)} retry={refresh} />;
   return <DetailPlaceholder />;
 }
 
-function Detail({ item }: { item: BaseItemDto }) {
+/** `saved`: the copy saved with a download - its own art, nothing more from the server (no logo, More Like This). */
+function Detail({ item, saved }: { item: BaseItemDto; saved?: SavedItem }) {
   const image = useImage();
   const mark = useUserFlag();
   const { width } = useWindowDimensions();
@@ -54,8 +66,8 @@ function Detail({ item }: { item: BaseItemDto }) {
       {/* The hero runs under the transparent header (back + download over the art). */}
       <ScrollView {...scrollList} contentInsetAdjustmentBehavior="never" contentContainerStyle={styles.scroll}>
         <DetailHero
-          art={image(view.art, width * HERO_ART_SCALE)}
-          logo={image(view.logo, LOGO_WIDTH)}
+          art={saved ? saved.art : image(view.art, width * HERO_ART_SCALE)}
+          logo={saved ? undefined : image(view.logo, LOGO_WIDTH)}
           title={item.Name}
           subtitle={view.subtitle}
           parent={
@@ -69,6 +81,7 @@ function Detail({ item }: { item: BaseItemDto }) {
         />
 
         <View style={styles.body}>
+          {saved && <Text secondary>Showing the details saved with the download.</Text>}
           {inProgress && (
             <View style={styles.progress}>
               <View style={styles.bar}>
@@ -111,7 +124,7 @@ function Detail({ item }: { item: BaseItemDto }) {
         </View>
 
         <CastRow people={view.people} />
-        <MoreLikeThis id={item.Id} />
+        {!saved && <MoreLikeThis id={item.Id} />}
       </ScrollView>
     </>
   );

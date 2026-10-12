@@ -582,6 +582,58 @@ describe('snapshot', () => {
     ]);
   });
 
+  describe('savedItem (offline detail)', () => {
+    // A download of item m1 (version `source`) with its saved item on "disk".
+    const withItem = (source: string, over: Partial<Store.Download> = {}) => {
+      const accountId = over.accountId ?? 'a1';
+      const folder = `downloads/${accountId}/m1`;
+      mockFiles.set(`${folder}/item.json`, 1);
+      mockTexts.set(`${folder}/item.json`, JSON.stringify({ Id: 'm1', Name: `Sintel ${source}` }));
+      const id = `${accountId}:m1:${source}`;
+      const path = `${folder}/${source}.mkv`;
+      return { id, accountId, itemId: 'm1', sourceId: source, path, status: 'done', total: GB, createdAt: 1, ...over };
+    };
+    const seed = (...items: object[]) => Storage.setItemSync('dl', JSON.stringify({ version: 1, items }));
+
+    it('the saved item with its backdrop, else its poster, as a file URI', () => {
+      mockFiles.set('downloads/a1/m1/backdrop.jpg', 1);
+      seed(withItem('v1', { snapshot: { backdrop: 'downloads/a1/m1/backdrop.jpg', subtitles: [] } }));
+      expect(dl.savedItem('a1', 'm1')).toEqual({
+        item: { Id: 'm1', Name: 'Sintel v1' },
+        art: 'file:///docs/downloads/a1/m1/backdrop.jpg',
+      });
+    });
+
+    it('falls back to the poster; no art when the files are gone', () => {
+      mockFiles.set('downloads/a1/m1/poster.jpg', 1);
+      seed(withItem('v1', { snapshot: { poster: 'downloads/a1/m1/poster.jpg', subtitles: [] } }));
+      expect(dl.savedItem('a1', 'm1')?.art).toBe('file:///docs/downloads/a1/m1/poster.jpg');
+      mockFiles.delete('downloads/a1/m1/poster.jpg');
+      expect(dl.savedItem('a1', 'm1')).toEqual({ item: { Id: 'm1', Name: 'Sintel v1' }, art: undefined });
+    });
+
+    it('any status - the snapshot is saved when the download starts', () => {
+      seed(withItem('v1', { status: 'downloading' }));
+      expect(dl.savedItem('a1', 'm1')?.item.Name).toBe('Sintel v1');
+    });
+
+    it.each([
+      ['not downloaded', () => seed()],
+      ['another account', () => seed(withItem('v1', { accountId: 'a2' }))],
+      [
+        'no saved item',
+        () => {
+          const d = withItem('v1');
+          mockFiles.delete('downloads/a1/m1/item.json');
+          seed(d);
+        },
+      ],
+    ])('null when %s', (_, setup) => {
+      setup();
+      expect(dl.savedItem('a1', 'm1')).toBeNull();
+    });
+  });
+
   it('a download deleted while its snapshot saves leaves no folder behind', async () => {
     await dl.startDownloads([sintel()]);
     dl.deleteDownload('a1:m1:v1'); // before the snapshot's fetches finish

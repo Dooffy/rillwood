@@ -1,10 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // What a download row does (Downloads tab, a show's downloaded episodes): play, delete after asking, the menu (ring tap,
 // long press): Pause / Resume + Cancel Download while not finished, Delete Download once done.
+import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { request, type BaseItemDto } from '@/api';
-import { cancelDownloads, pauseDownload, resumeDownload, summarize, useDownload, type Download } from '@/downloads';
+import { isOffline, request, type BaseItemDto } from '@/api';
+import {
+  cancelDownloads,
+  pauseDownload,
+  resumeDownload,
+  savedItem,
+  summarize,
+  useDownload,
+  type Download,
+} from '@/downloads';
 import { itemDetail, playback } from '@/items';
 import { openPlayer } from '@/navigation';
 import { connectionFor, getSession } from '@/session';
@@ -12,14 +21,20 @@ import { confirmDeleteDownloads, downloadActions } from '@/useDownloadControl';
 
 import { ActionSheet } from './ActionSheet';
 
+const resumeFrom = (item: BaseItemDto | undefined) => (item ? (playback(item).resumeSeconds ?? 0) : 0);
+
+/** Downloads are movies and episodes: always the item screen. */
+const openItemDetail = (id: string) => router.push({ pathname: '/item/[id]', params: { id } });
+
 /** Row handlers plus the menu sheet to render once on the screen. */
 export function useDownloadActions() {
   const [menu, setMenu] = useState<Download | null>(null);
   const close = useCallback(() => setMenu(null), []);
   const remove = useCallback((d: Download) => confirmDeleteDownloads(d.title, [d.id]), []);
 
-  // Plays the file on the phone (the player picks the download), from the server's resume point; lookup failed
-  // (offline) → from the start until offline progress (M6). One at a time; dropped if the account changed meanwhile.
+  // Plays the file on the phone (the player picks the download), from the server's resume point; lookup failed →
+  // from the start. Known offline: the resume point saved with the download, no lookup (no 8 s wait). One at a time;
+  // dropped if the account changed meanwhile.
   const opening = useRef(false);
   const play = useCallback(async (d: Download) => {
     if (opening.current) return;
@@ -28,7 +43,8 @@ export function useDownloadActions() {
     try {
       const account = getSession().active;
       const conn = account && connectionFor(account);
-      if (conn) start = playback(await request<BaseItemDto>(conn, itemDetail(d.itemId).path)).resumeSeconds ?? 0;
+      if (isOffline()) start = resumeFrom(account ? savedItem(account.id, d.itemId)?.item : undefined);
+      else if (conn) start = resumeFrom(await request<BaseItemDto>(conn, itemDetail(d.itemId).path));
     } catch {}
     opening.current = false;
     if (getSession().active?.id === d.accountId) openPlayer({ Id: d.itemId }, start);
@@ -57,18 +73,22 @@ function DownloadMenu({
   useEffect(() => {
     if (gone) onClose();
   }, [gone, onClose]);
+  // Details first: opens online or offline (the item saved with the download).
   const actions = d
-    ? downloadActions({
-        available: true,
-        summary: summarize([d]),
-        partial: false,
-        starting: false,
-        start: () => {},
-        pause: () => pauseDownload(d.id),
-        resume: () => resumeDownload(d.id),
-        remove: () => remove(d),
-        cancel: () => cancelDownloads([d.id]),
-      })
+    ? [
+        { label: 'Go to Details', onPress: () => openItemDetail(d.itemId) },
+        ...downloadActions({
+          available: true,
+          summary: summarize([d]),
+          partial: false,
+          starting: false,
+          start: () => {},
+          pause: () => pauseDownload(d.id),
+          resume: () => resumeDownload(d.id),
+          remove: () => remove(d),
+          cancel: () => cancelDownloads([d.id]),
+        }),
+      ]
     : [];
   return <ActionSheet visible={d !== null} title={of?.title} actions={actions} onClose={onClose} />;
 }
