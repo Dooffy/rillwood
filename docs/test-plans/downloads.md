@@ -58,6 +58,16 @@ Until the store + Downloads screen land, drive the module from a temporary snipp
 | L7  | Episodes chip with a few shows downloaded, then search a show name, then an episode title | Every episode on its own row, newest first, "Show · S1:E3 · Title"; both searches narrow it    |
 | L8  | 100+ downloads (or `Long Show`, 50 episodes): fling the tab list and a show's screen      | Scrolls smoothly, rings stay live, no blank rows after a fast fling                            |
 
+## Local playback (M6)
+
+| #   | Test                                                                                 | Expect                                                                                            |
+| --- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| LP1 | Downloaded movie: play from its detail screen, server log open                       | Plays at once; no `/Videos/.../stream` request in the server log; progress shows in the dashboard |
+| LP2 | Downloaded movie with an external SRT: pick it in the tracks menu                    | Subtitle shows, timing + style settings apply as when streaming                                   |
+| LP3 | Airplane mode, Downloads tab → tap a downloaded movie                                | Plays from the start (no resume point offline yet), title in the top bar, no Up Next tile         |
+| LP4 | Movie not downloaded, play                                                           | Streams as before                                                                                 |
+| LP5 | Delete a download's video file by hand (dev build with Files sharing), play the item | Streams instead of failing                                                                        |
+
 ## Cancel download
 
 | #   | Test                                                                               | Pass when                                                                                               |

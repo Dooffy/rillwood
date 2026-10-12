@@ -6,6 +6,7 @@ import {
   carryTracks,
   picksOf,
   externalSubs,
+  localPlaySource,
   matchTracks,
   trackOptions,
   playbackInfoBody,
@@ -152,6 +153,63 @@ describe('playSource', () => {
     ['other error code', info({ ErrorCode: 'NoCompatibleStream' }), undefined, 'directPlay'],
   ] as [string, PlaybackInfoResponse, string | undefined, PlayProblem][])('%s → %s', (_, answer, msId, problem) => {
     expect(playSource(conn, 'i', answer, msId)).toEqual({ ok: false, problem });
+  });
+});
+
+describe('localPlaySource', () => {
+  const file = 'file:///docs/downloads/a/i/ms1.mkv';
+  const subFiles = [
+    { index: 3, uri: 'file:///docs/downloads/a/i/ms1.sub-3.srt' },
+    { index: 4, uri: 'file:///docs/downloads/a/i/ms1.sub-4.ass' },
+  ];
+
+  it('the downloaded version from its file: no auth, saved subtitles, the same tracks + defaults as streaming', () => {
+    const play = localPlaySource({ item: { MediaSources: [source] }, sourceId: 'ms1', uri: file, subtitles: subFiles });
+    const streamed = playSource(conn, 'i', info());
+    if (!streamed.ok) throw new Error('expected a source');
+    expect(play).toEqual({
+      ...streamed.play,
+      playSessionId: undefined,
+      source: { uri: file, headers: {} },
+      externalSubs: [
+        { uri: subFiles[0].uri, index: 3, lang: 'eng', title: 'English' },
+        { uri: subFiles[1].uri, index: 4, lang: undefined, title: 'Signs' },
+      ],
+    });
+    expect(play && 'playSessionId' in play).toBe(false);
+  });
+
+  it('a subtitle file that failed to save is left out of the menu', () => {
+    const play = localPlaySource({
+      item: { MediaSources: [source] },
+      sourceId: 'ms1',
+      uri: file,
+      subtitles: [subFiles[1]],
+    });
+    expect(play?.externalSubs.map((s) => s.index)).toEqual([4]);
+    expect(play?.subtitles.map((s) => [s.id, s.index])).toEqual([
+      [1, 2],
+      [2, 4],
+    ]);
+  });
+
+  it('picks the downloaded version among the saved ones; a file for a stream the item lacks is ignored', () => {
+    const other = { ...source, Id: 'ms2' };
+    const play = localPlaySource({
+      item: { MediaSources: [other, source] },
+      sourceId: 'ms1',
+      uri: file,
+      subtitles: [{ index: 9, uri: 'file:///x.srt' }],
+    });
+    expect(play?.mediaSourceId).toBe('ms1');
+    expect(play?.externalSubs).toEqual([]);
+  });
+
+  it.each([
+    ['version not in the saved item', { MediaSources: [source] }, 'ms2'],
+    ['no sources saved', {}, 'ms1'],
+  ])('%s → null (streams instead)', (_, item, sourceId) => {
+    expect(localPlaySource({ item, sourceId, uri: file, subtitles: subFiles })).toBeNull();
   });
 });
 

@@ -10,7 +10,16 @@ import { AppState, Platform } from 'react-native';
 
 import Downloads, { type EnqueueItem, type Task } from '../modules/downloads';
 import { authHeader, request, type BaseItemDto, type MediaSourceDto } from '@/api';
-import { itemFolder, readSnapshotItem, saveSnapshot, subtitlePrefix, type Snapshot } from '@/downloadSnapshot';
+import type { LocalFiles } from '@/playback';
+import {
+  documentUri,
+  itemFolder,
+  onDisk,
+  readSnapshotItem,
+  saveSnapshot,
+  subtitlePrefix,
+  type Snapshot,
+} from '@/downloadSnapshot';
 import { itemDetail } from '@/items';
 import { connectionFor, getSession, subscribeSession, type Account } from '@/session';
 import { getDownloadLimit, getDownloadNetwork, subscribeSettings } from '@/settings';
@@ -195,6 +204,26 @@ export function getDownloads(): readonly Download[] {
 
 export function getDownload(id: string): Download | null {
   return store().get(id) ?? null;
+}
+
+/**
+ * The account's finished download of an item (the newest version) whose file is whole and whose saved item lists it,
+ * else null (not downloaded, or the file went missing - the player streams it).
+ */
+export function localCopy(accountId: string, itemId: string): (LocalFiles & { item: BaseItemDto }) | null {
+  const done = getDownloads()
+    .filter((d) => d.accountId === accountId && d.itemId === itemId && d.status === 'done')
+    .sort((a, b) => (b.downloadedAt ?? 0) - (a.downloadedAt ?? 0));
+  for (const d of done) {
+    const item = isComplete(d) ? readSnapshotItem(d.path) : null;
+    // Versions share the item's saved JSON: a re-save may have dropped this one - an older version may still play.
+    if (!item?.MediaSources?.some((s) => s.Id === d.sourceId)) continue;
+    const subtitles = (d.snapshot?.subtitles ?? [])
+      .filter((s) => onDisk(s.path))
+      .map((s) => ({ index: s.index, uri: documentUri(s.path) }));
+    return { item, sourceId: d.sourceId, uri: documentUri(d.path), subtitles };
+  }
+  return null;
 }
 
 /** Container's first name as the extension (`mkv`, `mp4`); mpv doesn't need it, file managers do. */

@@ -31,8 +31,11 @@ export const subtitlePrefix = (path: string) => `${path.slice(0, path.lastIndexO
 
 const fileAt = (path: string) => new File(Paths.document, path);
 
-/** `file://` URI of a saved snapshot file (poster, backdrop) for an image view. */
-export const snapshotUri = (path: string) => fileAt(path).uri;
+/** `file://` URI of a file under Documents (a poster for an image view, a video or subtitle for the player). */
+export const documentUri = (path: string) => fileAt(path).uri;
+
+/** Whether a file under Documents is there (a saved subtitle, poster). */
+export const onDisk = (path: string) => fileAt(path).exists;
 
 /**
  * Saves the snapshot of one version. The item JSON is written when `item` is fresh from the server (always with the

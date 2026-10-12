@@ -32,6 +32,9 @@ jest.mock('expo-file-system', () => {
     get name() {
       return this.path.slice(this.path.lastIndexOf('/') + 1);
     }
+    get uri() {
+      return `file:///docs/${this.path}`;
+    }
     get exists() {
       return mockFiles.has(this.path);
     }
@@ -745,6 +748,92 @@ describe('index', () => {
     const noJson = { ...old, id: 'a1:e2:s2', path: 'downloads/a1/e2/s2.mkv' };
     Storage.setItemSync('dl', JSON.stringify({ version: 1, items: [old, noJson] }));
     expect(dl.getDownloads()).toEqual([{ ...old, seriesName: 'Big Show', seasonNumber: 2, episodeNumber: 5 }, noJson]);
+  });
+
+  describe('localCopy', () => {
+    // A download of item m1 (version `source`) with its file + saved item on "disk" (listing versions v1-v3).
+    const savedItem = { Id: 'm1', Name: 'Sintel', MediaSources: [{ Id: 'v1' }, { Id: 'v2' }, { Id: 'v3' }] };
+    const copy = (source: string, over: Partial<Store.Download> = {}) => {
+      const accountId = over.accountId ?? 'a1';
+      const folder = `downloads/${accountId}/m1`;
+      const path = `${folder}/${source}.mkv`;
+      mockFiles.set(path, GB);
+      mockFiles.set(`${folder}/item.json`, 1);
+      mockTexts.set(`${folder}/item.json`, JSON.stringify(savedItem));
+      const id = `${accountId}:m1:${source}`;
+      return { id, accountId, itemId: 'm1', sourceId: source, path, status: 'done', total: GB, ...over };
+    };
+    const seed = (...items: object[]) => Storage.setItemSync('dl', JSON.stringify({ version: 1, items }));
+
+    it('a finished download: its file, saved item and the subtitle files still there', () => {
+      const d = copy('v1', {
+        snapshot: {
+          subtitles: [
+            { index: 3, path: 'downloads/a1/m1/v1.sub-3.srt' },
+            { index: 4, path: 'downloads/a1/m1/v1.sub-4.ass' },
+          ],
+        },
+      });
+      mockFiles.set('downloads/a1/m1/v1.sub-3.srt', 1);
+      seed(d);
+      expect(dl.localCopy('a1', 'm1')).toEqual({
+        item: savedItem,
+        sourceId: 'v1',
+        uri: 'file:///docs/downloads/a1/m1/v1.mkv',
+        subtitles: [{ index: 3, uri: 'file:///docs/downloads/a1/m1/v1.sub-3.srt' }],
+      });
+    });
+
+    it('the newest finished version', () => {
+      seed(copy('v1', { downloadedAt: 1 }), copy('v2', { downloadedAt: 2 }), copy('v3', { status: 'downloading' }));
+      expect(dl.localCopy('a1', 'm1')?.sourceId).toBe('v2');
+    });
+
+    it('a version whose file is gone falls back to an older one', () => {
+      const old = copy('v1', { downloadedAt: 1 });
+      const gone = copy('v2', { downloadedAt: 2 });
+      mockFiles.delete(gone.path);
+      seed(old, gone);
+      expect(dl.localCopy('a1', 'm1')?.sourceId).toBe('v1');
+    });
+
+    it('the saved item no longer lists the newest version: an older one plays', () => {
+      seed(copy('v1', { downloadedAt: 1 }), copy('v2', { downloadedAt: 2 }));
+      mockTexts.set('downloads/a1/m1/item.json', JSON.stringify({ ...savedItem, MediaSources: [{ Id: 'v1' }] }));
+      expect(dl.localCopy('a1', 'm1')?.sourceId).toBe('v1');
+    });
+
+    it.each([
+      ['not finished', () => seed(copy('v1', { status: 'paused' }))],
+      ['another account', () => seed(copy('v1', { accountId: 'a2' }))],
+      [
+        'file missing',
+        () => {
+          const d = copy('v1');
+          mockFiles.delete(d.path);
+          seed(d);
+        },
+      ],
+      [
+        'file shorter than the download (cut off)',
+        () => {
+          const d = copy('v1');
+          mockFiles.set(d.path, GB - 1);
+          seed(d);
+        },
+      ],
+      [
+        'saved item missing',
+        () => {
+          seed(copy('v1'));
+          mockFiles.delete('downloads/a1/m1/item.json');
+        },
+      ],
+      ['nothing downloaded', () => seed()],
+    ])('%s → null (streams)', (_, setup) => {
+      setup();
+      expect(dl.localCopy('a1', 'm1')).toBeNull();
+    });
   });
 
   it('starts empty on an unknown version or bad JSON', () => {
