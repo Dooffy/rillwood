@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The native queue (docs/context/downloads.md): order, max 2 transfers, network rule, retry, finished files.
 // Works without JS. Every state change runs on `handler`'s thread; transfers run on their own threads and post
-// their result back. Android 14+: a user-initiated data transfer job (DownloadsJobService) keeps the process alive
-// while there's work and starts the queue again after process death; below 14 the transfers last as long as the
-// process for now (WorkManager runner next, M5).
+// their result back. A runner keeps the process alive while there's work and starts the queue again after process
+// death: Android 14+ a user-initiated data transfer job (DownloadsJobService), 8-13 - or when the job is refused - a
+// WorkManager worker (DownloadsWorker).
 package app.rillwood.downloads
 
-import android.app.job.JobParameters
-import android.app.job.JobService
+import android.app.Notification
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
@@ -20,6 +20,20 @@ import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+
+/** What keeps the process alive for the queue: the UIDT job or the WorkManager worker. */
+interface DownloadsRunner {
+  /** The network rule it was scheduled for. */
+  val cellular: Boolean
+
+  fun notify(notification: Notification)
+
+  /** Bytes left over the active downloads, for runners the system tracks (UIDT). */
+  fun reportRemaining(remaining: Long) {}
+
+  /** Nothing left to do. */
+  fun finish()
+}
 
 object DownloadsQueue {
   private const val MAX_RUNNING = 2
@@ -56,12 +70,12 @@ object DownloadsQueue {
   private var onEvent: ((String, Map<String, Any?>) -> Unit)? = null
   private var eventOwner: Any? = null
 
-  // The running UIDT job (Android 14+), its byte counts for the system (both only grow) and whether the app is on
-  // screen - the only time a UIDT job can be scheduled.
-  private var job: Pair<JobService, JobParameters>? = null
-  private var jobEstimated = 0L
-  private var jobTransferred = 0L
+  // The attached runner and whether the app is on screen - the only time a UIDT job can be scheduled. `workerRule`:
+  // the rule the worker was enqueued for, until the queue ends it (it may wait for its constraint or a restart
+  // meanwhile).
+  private var runner: DownloadsRunner? = null
   private var visible = false
+  private var workerRule: Boolean? = null
 
   // `.part` lengths of records not running, so the notification doesn't stat files every second. Dropped when a
   // transfer ends (read again once).
@@ -178,22 +192,21 @@ object DownloadsQueue {
     }
   }
 
-  // MARK: - Calls from the job (Android 14+)
+  // MARK: - Calls from the runners
 
-  /** onStartJob - the job already shows a notification; it ends once nothing is left to do. */
-  fun attachJob(service: JobService, params: JobParameters) {
+  /** Job / worker started - it already shows a notification; it ends once nothing is left to do. */
+  fun attach(started: DownloadsRunner) {
     handler.post {
-      job = service to params
-      jobEstimated = 0L
-      jobTransferred = 0L
+      if (runner !== started) endRunner() // one is enough
+      runner = started
       pump()
       notifyTick()
     }
   }
 
-  /** onStopJob - the system ends it (constraint, Task Manager, replaced); the queue carries on while the process lives. */
-  fun detachJob(params: JobParameters) {
-    handler.post { if (job?.second === params) job = null }
+  /** Stopped by the system (constraint, timeout, replaced); the queue carries on while the process lives. */
+  fun detach(stopped: DownloadsRunner) {
+    handler.post { if (runner === stopped) runner = null }
   }
 
   fun resume(id: String) {
@@ -245,14 +258,14 @@ object DownloadsQueue {
 
   private val pumpRunnable = Runnable { pump() }
 
-  /** After every change: network wait, start what can run, then the job + its notification. */
+  /** After every change: network wait, start what can run, then the runner + its notification. */
   private fun pump() {
     handler.removeCallbacks(pumpRunnable)
     if (store.writable) {
       updateNetworkWait()
       if (!networkBlocked) startNext()
     }
-    syncJob()
+    syncRunner()
   }
 
   /** Starts queued records in order while fewer than MAX_RUNNING run; wakes again for the next retry delay. */
@@ -317,58 +330,83 @@ object DownloadsQueue {
     onEvent?.invoke("progress", mapOf("id" to run.id, "bytes" to bytes.toDouble(), "total" to total.toDouble()))
   }
 
-  // MARK: - Job
+  // MARK: - Runner
 
   /**
-   * Work left → the job is scheduled (only works while the app is visible - otherwise the queue runs in-process until
-   * the next open) and its notification current; nothing left → the job ends. Paused / failed records don't count.
+   * Work left → a runner is scheduled and its notification kept current; nothing left → the runner ends. Paused /
+   * failed records don't count.
    */
-  private fun syncJob() {
+  private fun syncRunner() {
     val active = store.records.filter { it.isActive }
-    // A stopping transfer may still write a cancelled `.part` - the job keeps the process until its thread ends.
+    // A stopping transfer may still write a cancelled `.part` - the runner keeps the process until its thread ends.
     if (active.isEmpty() && runs.isEmpty()) {
-      job?.let { (service, params) -> service.jobFinished(params, false) }
-      job = null
+      endRunner()
+      workerRule = null // a worker enqueued but not started yet ends at once when it does
       return
     }
     if (active.isEmpty()) return
-    val wanted = DownloadsJobService.jobId(store.cellular)
-    // The rule changed: schedule() cancels the running job - stop talking to it now.
-    if (job?.second?.jobId?.let { it != wanted } == true) job = null
-    if (job == null && visible) {
-      DownloadsJobService.schedule(appContext, store.cellular, active.sumOf { it.size - bytesOf(it) })
+    // The rule changed: the old rule's runner keeps the process until one for the new rule is scheduled.
+    val stale = runner?.takeIf { it.cellular != store.cellular }
+    if (runner == null || stale != null) {
+      if (schedule(active.sumOf { it.size - bytesOf(it) }) && stale != null) endRunner()
     }
-    notifyJob()
+    notifyRunner()
+  }
+
+  /** Ends the attached runner. A worker's rule is free again: the next schedule enqueues a new one. */
+  private fun endRunner() {
+    val current = runner ?: return
+    current.finish()
+    runner = null
+    if (current is DownloadsWorker && workerRule == current.cellular) workerRule = null
+  }
+
+  /**
+   * Android 14+: the UIDT job, only while the app is visible (otherwise the queue runs in-process until the next
+   * open); refused (OEM, not allowed right now) → the WorkManager worker, the job is tried again on the next schedule.
+   * 8-13: the worker, enqueued once per rule (it may start later - constraint, backoff - or run as a plain job when
+   * started in the background). False when nothing could be scheduled.
+   */
+  private fun schedule(remainingBytes: Long): Boolean {
+    val cellular = store.cellular
+    if (Build.VERSION.SDK_INT >= 34) {
+      if (!visible) return false
+      if (DownloadsJobService.schedule(appContext, cellular, remainingBytes)) return true
+    }
+    if (workerRule == cellular) return true
+    if (!DownloadsWorker.schedule(appContext, cellular)) return false
+    workerRule = cellular
+    return true
+  }
+
+  /** For a worker about to go foreground: false = nothing to do (an appended extra one), it ends at once. */
+  fun hasActive(done: (Boolean) -> Unit) {
+    handler.post { done(store.records.any { it.isActive }) }
   }
 
   private val notifyRunnable = Runnable { notifyTick() }
 
-  /** Every second while a job runs. */
+  /** Every second while a runner is attached. */
   private fun notifyTick() {
     handler.removeCallbacks(notifyRunnable)
-    if (job == null) return
-    notifyJob()
+    if (runner == null) return
+    notifyRunner()
     handler.postDelayed(notifyRunnable, NOTIFICATION_INTERVAL)
   }
 
-  private fun notifyJob() {
-    val (service, params) = job ?: return
+  private fun notifyRunner() {
+    val current = runner ?: return
     val active = store.records.filter { it.isActive }
     val total = active.sumOf { it.size }
     val done = active.sumOf { bytesOf(it) }
-    // For the system: transferred = what's gone from the remaining bytes since the job started; both only grow.
-    val remaining = (total - done).coerceAtLeast(0)
-    if (jobEstimated == 0L) jobEstimated = remaining
-    jobTransferred = maxOf(jobTransferred, jobEstimated - remaining)
-    jobEstimated = maxOf(jobEstimated, jobTransferred + remaining)
     val waiting = when {
       !networkBlocked -> null
       store.cellular -> "Waiting for network"
       else -> "Waiting for Wi-Fi"
     }
     val notification = DownloadsNotification.build(appContext, active.size, done, total, waiting)
-    DownloadsJobService.notify(service, params, notification)
-    DownloadsJobService.reportBytes(service, params, jobTransferred, jobEstimated)
+    current.notify(notification)
+    current.reportRemaining((total - done).coerceAtLeast(0))
   }
 
   private fun bytesOf(r: TaskRecord): Long =
