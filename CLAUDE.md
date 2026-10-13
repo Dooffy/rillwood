@@ -51,7 +51,7 @@ Platforms: **iOS first**, Android phones in the same release. iPad layout before
 | Download network | User setting: **Wi-Fi only (default) / Any network** | Enforced natively by `modules/downloads`. No NetInfo |
 | Player | libmpv via a vendored MPL-2.0 Expo module in `modules/mpv` (headers kept) behind own `PlayerEngine` interface (`docs/context/player.md`) | Fallback: `expo-libvlc-player` - under review (`docs/open-items.md`). See §7 - current mpv/FFmpeg builds are GPL, LGPL rebuild post-MVP |
 | Offload cleanup | Runs on app launch + foreground (`AppState` active) | No expo-background-task in MVP |
-| Network status | Fail-fast fetch (8s) + `/System/Info/Public` probe on foreground | |
+| Network status | Fail-fast fetch (8s) + `/System/Info/Public` probe on foreground, rechecked while offline (`src/connection.ts`) | |
 | Server target | **Jellyfin 12.1 base**, 12.0 + 10.11.x supported | Warn below 10.10.7. **Header auth only** (no `?api_key=` / `?ApiKey=`). Dev servers: `dev/jellyfin` (Docker, pinned 12.1 + 10.11). API rules: `docs/context/api.md` |
 | Tests | `jest-expo` + `@testing-library/react-native` (dev deps in `app/`), `*.test.ts(x)` next to the code; screen tests in `src/__tests__/` (never put tests in `src/app/` - expo-router treats files there as routes) | Unit tests for pure logic, regression test per bug fix, render tests for non-trivial components. Mock fetch / storage / native modules - shared mocks (kv-store, expo-symbols, safe-area, glass, reanimated + worklets, gesture-handler) in `app/jest.setup.ts`. Native code: manual device test plans in `docs/test-plans/` |
 | CI | GitHub Actions, GitHub-hosted `ubuntu-latest`, `.github/workflows/ci.yml`. Runs on every branch push + PRs to `main` | One independent runner per check (matrix, `fail-fast: false`): Lint, Typecheck, Format, Unit tests (+ coverage), Expo doctor, Bundle (iOS + Android), Licences. Plus Commit format + DCO: `[PREFIX]` format, blank line, DCO, no AI attribution |
@@ -128,6 +128,7 @@ src/items.ts             pure item logic: Home requests + layout, Latest shaping
 src/session.ts           session store: accounts (kv-store), tokens (secure-store), active account, 401 sign-out
 src/auth.ts              auth flows for the (auth) screens: probe, sign in, Quick Connect
 src/server.ts            server address → probe URLs, min version check (pure)
+src/connection.ts        offline mode: `/System/Info/Public` check at launch, foreground, account switch + backoff while offline; back online → failed screens reload
 src/navigation.ts        resetTo (clear stack), signed-out redirect, openItem, openPlayer
 src/useFetch.ts          in-memory cache, abort, invalidate()
 src/useImage.ts          image URL for the active server, sized to the screen scale

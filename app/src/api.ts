@@ -56,9 +56,14 @@ function setOffline(next: boolean) {
   offlineListeners.forEach((l) => l());
 }
 
-function subscribeOffline(listener: () => void) {
+export function subscribeOffline(listener: () => void) {
   offlineListeners.add(listener);
   return () => offlineListeners.delete(listener);
+}
+
+/** Another server is active: the last one's state doesn't apply (`src/connection.ts` checks the new one). */
+export function resetOffline() {
+  setOffline(false);
 }
 
 export function isOffline(): boolean {

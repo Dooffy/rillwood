@@ -4,6 +4,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { ApiError, request, type Query } from '@/api';
+import { onReconnect } from '@/connection';
 import { connectionFor, getSession, useSession } from '@/session';
 
 export const DEFAULT_TTL_MS = 5 * 60 * 1000;
@@ -67,6 +68,16 @@ export function invalidate(pathPrefix = '') {
   }
   restart([...mounted.keys()].filter((key) => key.slice(key.indexOf('|') + 1).startsWith(pathPrefix)));
 }
+
+// Keys whose last request failed (not aborted), until one answers.
+const failed = new Set<string>();
+
+/** Back online (`src/connection.ts`): mounted hooks whose request failed fetch again; the rest keep their data. */
+export function retryFailed() {
+  // A request still running (a Retry that brought the connection back) isn't sent twice.
+  restart([...failed].filter((key) => mounted.has(key) && !inflight.has(key)));
+}
+onReconnect(retryFailed);
 
 /** New requests for these keys: a running one may answer from before a change, so it is no longer joined or cached. */
 function restart(keys: string[]) {
@@ -140,7 +151,10 @@ export function useFetch<T>(path: string | null, { query, ttl = DEFAULT_TTL_MS }
     return () => {
       const hooks = (mounted.get(key) ?? 1) - 1;
       if (hooks > 0) mounted.set(key, hooks);
-      else mounted.delete(key);
+      else {
+        mounted.delete(key);
+        failed.delete(key); // nobody left to retry it for
+      }
     };
   }, [key]);
 
@@ -164,6 +178,7 @@ export function useFetch<T>(path: string | null, { query, ttl = DEFAULT_TTL_MS }
         // Superseded by invalidate / refresh: its answer may predate a change.
         if (inflight.get(key) !== shared) return;
         inflight.delete(key);
+        failed.delete(key);
         // Signed out meanwhile: don't cache for it.
         if (!connectionFor(account)) return;
         const entries = cache.get(accountId) ?? new Map<string, Entry>();
@@ -171,7 +186,13 @@ export function useFetch<T>(path: string | null, { query, ttl = DEFAULT_TTL_MS }
         cache.set(accountId, entries);
         bump([key]); // Every hook on this key shows the new data.
       });
-      promise.catch(() => inflight.get(key) === shared && inflight.delete(key));
+      promise.catch((e: unknown) => {
+        if (inflight.get(key) !== shared) return; // superseded: its replacement decides
+        inflight.delete(key);
+        // Only what the connection broke: a 404 / 5xx / bad answer isn't fixed by being back online.
+        if (e instanceof ApiError && e.kind === 'network') failed.add(key);
+        else failed.delete(key);
+      });
       shared = { promise, controller, users: 0 };
       inflight.set(key, shared);
     }
