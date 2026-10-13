@@ -741,16 +741,23 @@ export type SavedItem = { item: BaseItemDto; art?: string };
 
 /**
  * The item as saved with the account's newest download of it (any status: the snapshot is saved at the start), else
- * null (not downloaded, snapshot not saved yet or unreadable). Reads the file - call once per screen, not per render.
+ * null (not downloaded, snapshot not saved yet or unreadable). A show (`itemId` = its series id): built from its newest
+ * downloaded episode - id, name and the show's poster (an episode saves its show's). Reads the file - call once per
+ * screen, not per render.
  */
 export function savedItem(accountId: string, itemId: string): SavedItem | null {
   const own = getDownloads()
-    .filter((d) => d.accountId === accountId && d.itemId === itemId)
+    .filter((d) => d.accountId === accountId && (d.itemId === itemId || d.seriesId === itemId))
     .sort((a, b) => b.createdAt - a.createdAt);
   for (const d of own) {
-    const item = readSnapshotItem(d.path);
-    if (!item) continue;
-    const art = d.snapshot?.backdrop ?? d.snapshot?.poster;
+    const saved = readSnapshotItem(d.path);
+    if (!saved) continue;
+    const show = d.itemId !== itemId;
+    const item: BaseItemDto = show
+      ? { Id: itemId, Name: saved.SeriesName ?? d.seriesName ?? 'TV Show', Type: 'Series' }
+      : saved;
+    // A show's poster: the episode's backdrop may be its own still.
+    const art = show ? (d.snapshot?.poster ?? d.snapshot?.backdrop) : (d.snapshot?.backdrop ?? d.snapshot?.poster);
     return { item, art: art && onDisk(art) ? documentUri(art) : undefined };
   }
   return null;

@@ -3,10 +3,9 @@
 // More Like This. Data rules: docs/context/api.md (Detail). Header ↓ downloads it (docs/context/downloads.md).
 // Offline (or the server failing) with a download of it: the item saved with the download instead of an error.
 import { useLocalSearchParams } from 'expo-router';
-import { useMemo } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import { useOffline, type BaseItemDto } from '@/api';
+import type { BaseItemDto } from '@/api';
 import { CastRow } from '@/components/CastRow';
 import { Chips } from '@/components/Chips';
 import { DetailActions } from '@/components/DetailActions';
@@ -20,36 +19,28 @@ import { ProgressBar } from '@/components/ProgressBar';
 import { DetailPlaceholder } from '@/components/Skeleton';
 import { Text } from '@/components/Text';
 import { detailView } from '@/detail';
-import { savedItem, type SavedItem } from '@/downloads';
+import type { SavedItem } from '@/downloads';
 import { formatRemaining } from '@/format';
-import { isItemId, itemDetail, type TrackRow } from '@/items';
+import { isItemId, type TrackRow } from '@/items';
 import { openItem, openPlayer } from '@/navigation';
-import { useSession } from '@/session';
-import { useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
+import { useItem } from '@/useItem';
 import { useUserFlag } from '@/useUserFlag';
 import { scrollList, spacing } from '@/theme';
 
 export default function ItemDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const valid = isItemId(id);
-  const { data, error, refresh } = useFetch<BaseItemDto>(valid ? itemDetail(id).path : null);
-  const accountId = useSession().active?.id;
-  // Known offline: shown at once, not after the 8 s timeout; the server's answer replaces it if one lands.
-  const offline = useOffline();
-  const saved = useMemo(() => (valid && accountId ? savedItem(accountId, id) : null), [valid, accountId, id]);
+  // Offline or failed (a 404 too - the file on the phone still plays): the item saved with its download.
+  const { item, saved, fromSaved, error, refresh } = useItem(id);
 
-  if (!valid) return <Message fill text="This item isn't available." />;
-  if (data) return <Detail item={data} />;
-  // Any failure, a 404 too: the file on the phone still plays.
-  if (saved && (error || offline)) return <Detail item={saved.item} saved={saved} />;
-  if (error?.status === 404) return <Message fill text="This item isn't available." />;
+  if (item) return <Detail item={item} saved={fromSaved ? saved : null} />;
+  if (!isItemId(id) || error?.status === 404) return <Message fill text="This item isn't available." />;
   if (error) return <Message fill text={loadErrorMessage(error)} retry={refresh} />;
   return <DetailPlaceholder />;
 }
 
 /** `saved`: the copy saved with a download - its own art, nothing more from the server (no logo, More Like This). */
-function Detail({ item, saved }: { item: BaseItemDto; saved?: SavedItem }) {
+function Detail({ item, saved }: { item: BaseItemDto; saved: SavedItem | null }) {
   const image = useImage();
   const mark = useUserFlag();
   const { width } = useWindowDimensions();
