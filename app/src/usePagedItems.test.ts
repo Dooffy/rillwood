@@ -4,6 +4,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import * as api from '@/api';
 import { ApiError, type BaseItemDto, type RequestOptions } from '@/api';
+import * as connection from '@/connection';
 import { listItems, NO_FILTERS, type LibraryQuery } from '@/items';
 import * as session from '@/session';
 
@@ -145,6 +146,40 @@ describe('usePagedItems', () => {
     await act(() => result.current.retry());
     await waitFor(() => expect(result.current.items).toHaveLength(100));
     expect(result.current.error).toBeUndefined();
+  });
+
+  it('back online: a list showing an error loads again by itself; one without an error does not', async () => {
+    const reconnect = new Set<() => void>();
+    jest.spyOn(connection, 'onReconnect').mockImplementation((l) => {
+      reconnect.add(l);
+      return () => reconnect.delete(l);
+    });
+    request.mockImplementation(() => Promise.reject(new ApiError('network')));
+    const failing = await renderHook(() => useLibrary(movies));
+    await waitFor(() => expect(failing.result.current.error?.kind).toBe('network'));
+    serve(120);
+    const fine = await renderHook(() => useLibrary({ ...movies, sort: 'added' }));
+    await waitFor(() => expect(fine.result.current.items).toHaveLength(50));
+
+    request.mockClear();
+    await act(() => reconnect.forEach((l) => l()));
+    await waitFor(() => expect(failing.result.current.items).toHaveLength(50));
+    expect(failing.result.current.error).toBeUndefined();
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it('back online: a list that failed for another reason (500) is left for Retry', async () => {
+    const reconnect = new Set<() => void>();
+    jest.spyOn(connection, 'onReconnect').mockImplementation((l) => {
+      reconnect.add(l);
+      return () => reconnect.delete(l);
+    });
+    request.mockImplementation(() => Promise.reject(new ApiError('http', 500)));
+    const { result } = await renderHook(() => useLibrary({ ...movies, sort: 'year' }));
+    await waitFor(() => expect(result.current.error?.status).toBe(500));
+    request.mockClear();
+    await act(() => reconnect.forEach((l) => l()));
+    expect(request).not.toHaveBeenCalled();
   });
 
   it('refreshes from the first page, keeping items until it answers', async () => {

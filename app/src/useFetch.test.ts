@@ -6,7 +6,7 @@ import * as api from '@/api';
 import { ApiError } from '@/api';
 import * as session from '@/session';
 
-import { invalidate, onCacheUpdate, updateCached, useFetch } from './useFetch';
+import { invalidate, onCacheUpdate, retryFailed, updateCached, useFetch } from './useFetch';
 
 const server = { id: 'srv', url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' };
 const anna: session.Account = { id: 'srv.a', server, userId: 'a', userName: 'anna', deviceId: 'dev-a' };
@@ -178,6 +178,54 @@ describe('useFetch', () => {
     await act(() => result.current.refresh());
     await waitFor(() => expect(result.current.data).toBe('two'));
     expect(request).toHaveBeenCalledTimes(2);
+  });
+
+  it('retryFailed (back online): only mounted hooks whose request failed fetch again', async () => {
+    request.mockImplementation((_conn, path) =>
+      path === '/Retry/ok' ? Promise.resolve('ok') : Promise.reject(new ApiError('network')),
+    );
+    const ok = await renderHook(() => useFetch('/Retry/ok'));
+    const bad = await renderHook(() => useFetch('/Retry/bad'));
+    const gone = await renderHook(() => useFetch('/Retry/gone'));
+    await waitFor(() => expect(bad.result.current.error?.kind).toBe('network'));
+    await waitFor(() => expect(gone.result.current.error?.kind).toBe('network'));
+    await gone.unmount();
+    expect(ok.result.current.data).toBe('ok');
+
+    request.mockClear();
+    request.mockResolvedValue('back');
+    await act(() => retryFailed());
+    await waitFor(() => expect(bad.result.current).toMatchObject({ data: 'back', error: undefined }));
+    expect(request.mock.calls.map(([, path]) => path)).toEqual(['/Retry/bad']);
+
+    // Answered now: a second reconnect asks for nothing.
+    request.mockClear();
+    await act(() => retryFailed());
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it("retryFailed: a failure the connection didn't cause (404) is not asked again", async () => {
+    request.mockImplementation(() => Promise.reject(new ApiError('http', 404)));
+    const missing = await renderHook(() => useFetch('/Retry/missing'));
+    await waitFor(() => expect(missing.result.current.error?.status).toBe(404));
+    request.mockClear();
+    await act(() => retryFailed());
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('retryFailed: a retry still running is not sent twice', async () => {
+    request.mockImplementation(() => Promise.reject(new ApiError('network')));
+    const bad = await renderHook(() => useFetch('/Retry/running'));
+    await waitFor(() => expect(bad.result.current.error?.kind).toBe('network'));
+    const next = deferred();
+    request.mockClear();
+    request.mockReturnValue(next.promise);
+    await act(() => bad.result.current.refresh());
+    expect(request).toHaveBeenCalledTimes(1);
+    await act(() => retryFailed());
+    expect(request).toHaveBeenCalledTimes(1);
+    await act(() => next.resolve('back'));
+    await waitFor(() => expect(bad.result.current.data).toBe('back'));
   });
 
   it('invalidate refetches matching paths only, keeping data on screen meanwhile', async () => {

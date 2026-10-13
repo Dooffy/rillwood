@@ -2,10 +2,11 @@
 // Paged item lists for the active account (Library grid / one type's search results): first page on mount, more on demand
 // (docs/context/api.md, Library data). Own hook rather than useFetch: pages accumulate into one list, and a new query
 // or account starts over. Not tied to useFetch's invalidate(): lists refresh on pull to refresh (or a new query); optimistic
-// `updateCached` changes patch the loaded items.
+// `updateCached` changes patch the loaded items. A list that failed loads again once the server is back (`onReconnect`).
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 
 import { ApiError, request, type BaseItemDto, type Endpoint, type ItemsResult } from '@/api';
+import { onReconnect } from '@/connection';
 import { mergePage, nextPageStart } from '@/items';
 import { connectionFor, useSession } from '@/session';
 import { onCacheUpdate } from '@/useFetch';
@@ -132,6 +133,14 @@ export function usePagedItems(id: string | null, pageAt: (startIndex: number) =>
     setState({ ...live, loading: true, error: undefined, failedAt: undefined });
     load(0);
   };
+  const retry = () => (live.failedAt === 0 ? refresh() : loadNext());
+
+  // Back online: a list that failed for lack of a connection loads again by itself.
+  const retryIfFailed = useEffectEvent(() => {
+    if (live.error?.kind === 'network') retry();
+  });
+  useEffect(() => onReconnect(() => retryIfFailed()), []);
+
   return {
     items: live.items,
     total: live.total,
@@ -140,6 +149,6 @@ export function usePagedItems(id: string | null, pageAt: (startIndex: number) =>
     hasMore: next !== undefined,
     loadMore,
     refresh,
-    retry: () => (live.failedAt === 0 ? refresh() : loadNext()),
+    retry,
   };
 }
