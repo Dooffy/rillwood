@@ -34,7 +34,7 @@ import { Text } from '@/components/Text';
 import { TracksMenu, type TracksPage, type TracksValue } from '@/components/TracksMenu';
 import { UpNext } from '@/components/UpNext';
 import { localCopy } from '@/downloads';
-import { cardTitles, isItemId, itemDetail, nextEpisode, nextEpisodes, playback } from '@/items';
+import { cardTitles, isItemId, nextEpisode, nextEpisodes, playback } from '@/items';
 import {
   carryTracks,
   matchTracks,
@@ -66,6 +66,7 @@ import { setVideoZoom, useSubtitleScale, useSubtitleStyle, useVideoZoom } from '
 import { ColorsContext, palettes, radii, spacing } from '@/theme';
 import { useDebounced } from '@/useDebounced';
 import { useFetch } from '@/useFetch';
+import { useItem } from '@/useItem';
 
 // Tracks menu choices. Audio / subtitle are Jellyfin indexes of one file: kept with the id of the item they were picked
 // on, ignored for any other. `picks` is what carries to the next episode: the picked tracks' language + label (subtitle
@@ -126,14 +127,16 @@ export default function PlayerScreen() {
   // A pull is on: the Up Next tile steps aside (glass can't fade with the video).
   const [pulling, setPulling] = useState(false);
 
-  // A finished download of this item: played from the file (load effect); its saved item names it while offline.
+  // A finished download of this item: played from the file (load effect).
   // Looked up again on Retry: a file gone meanwhile streams instead.
   const copy = useMemo(
     () => (accountId && isItemId(id) ? localCopy(accountId, id) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `attempt` (Retry) re-checks the disk
     [accountId, id, attempt],
   );
-  const item = useFetch<BaseItemDto>(isItemId(id) ? itemDetail(id).path : null).data ?? copy?.item;
+  // Names it (title, next episode): the server's item, else the one saved with a download - also while it loads.
+  const named = useItem(id, attempt);
+  const item = named.item ?? named.saved?.item;
   const titles = item ? cardTitles(item) : undefined;
   // The episode after this one, played at the end unless its Up Next card was hidden (id of the episode it was hidden on).
   const nextRequest = item ? nextEpisodes(item) : undefined;

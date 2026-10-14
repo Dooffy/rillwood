@@ -632,6 +632,29 @@ describe('snapshot', () => {
       setup();
       expect(dl.savedItem('a1', 'm1')).toBeNull();
     });
+
+    it("a show: built from its newest downloaded episode, with the show's poster", () => {
+      const ep = (n: number, createdAt: number) => {
+        const folder = `downloads/a1/e${n}`;
+        mockFiles.set(`${folder}/item.json`, 1);
+        mockTexts.set(`${folder}/item.json`, JSON.stringify({ Id: `e${n}`, Name: `Ep ${n}`, SeriesName: `Show ${n}` }));
+        mockFiles.set(`${folder}/poster.jpg`, 1);
+        mockFiles.set(`${folder}/backdrop.jpg`, 1);
+        const snapshot = { poster: `${folder}/poster.jpg`, backdrop: `${folder}/backdrop.jpg`, subtitles: [] };
+        return {
+          ...withItem('v1', { itemId: `e${n}`, id: `a1:e${n}:v1`, createdAt, snapshot }),
+          path: `${folder}/v1.mkv`,
+          seriesId: 'show',
+        };
+      };
+      seed(ep(1, 1), ep(2, 2));
+      expect(dl.savedItem('a1', 'show')).toEqual({
+        item: { Id: 'show', Name: 'Show 2', Type: 'Series' },
+        art: 'file:///docs/downloads/a1/e2/poster.jpg',
+      });
+      expect(dl.savedItem('a1', 'e1')?.item.Name).toBe('Ep 1');
+      expect(dl.savedItem('a1', 'e1')?.art).toBe('file:///docs/downloads/a1/e1/backdrop.jpg');
+    });
   });
 
   it('a download deleted while its snapshot saves leaves no folder behind', async () => {

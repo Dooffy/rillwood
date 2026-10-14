@@ -132,6 +132,7 @@ src/connection.ts        offline mode: `/System/Info/Public` check at launch, fo
 src/navigation.ts        resetTo (clear stack), signed-out redirect, openItem, openPlayer
 src/useFetch.ts          in-memory cache, abort, invalidate()
 src/useImage.ts          image URL for the active server, sized to the screen scale
+src/useItem.ts           one item for a screen: the server's, else the one saved with a download (detail, series, player)
 src/usePagedItems.ts     paged lists (Library): load more, refresh, retry, reset per list / account
 src/usePullToRefresh.ts  RefreshControl state: spinner until loading ends + 500 ms hold (Home, Library)
 src/useDebounced.ts      value once it stops changing (search while typing)

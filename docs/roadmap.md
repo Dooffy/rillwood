@@ -122,7 +122,7 @@ Design + sources: `docs/research/background-downloads.md`.
 - [x] Play downloads from the file: the player looks for a finished download of the item (active account, newest version, file + saved item on disk - `localCopy`) and plays it with its saved subtitles, no PlaybackInfo, no auth (`localPlaySource`); else streams. Online, reports still go to the server; offline they drop until the progress queue. Device test LP1-LP5 pending
 - [ ] Play the version a Downloads row stands for (two versions of one movie downloaded): `openPlayer` + the player take a media source id, used for the local copy and PlaybackInfo; today the newest version plays
 - [x] Offline detection + offline UI (Downloads tab primary, detail from snapshots): the api offline flag (`useOffline` / `isOffline`) drives it; item detail falls back to the item saved with a download (`savedItem`: saved art, no More Like This) on any failure, at once when known offline; Downloads row menu → Go to Details; a ready row plays offline from the saved resume point without the 8 s lookup. Auto switch + probe stay with Offline mode below. Device test OF1-OF4 pending
-- [ ] One "server item, else the saved one" hook shared by item detail (`savedItem` today), series and the player (its own `?? copy.item` today)
+- [x] One "server item, else the saved one" hook (`useItem`) shared by item detail, series and the player (names it from the saved copy, also while loading); offline series = saved name + poster + Downloaded Episodes button. Device test OF5-OF6 pending
 - [ ] Connection error UI: one consistent state when the server can't be reached (no network / server down / timeout / TLS), told apart from 401 and 5xx, with Retry; a banner over cached content instead of a full-screen error where data is already shown
 - [x] Offline mode state (`src/connection.ts`): the offline flag (any request that can't reach the server sets it, any answer clears it) checked with `/System/Info/Public` at launch, back from the background and on a server switch, rechecked while offline (5 / 10 / 20 s, then every 30 s, on screen only); back online → screens and paged lists that failed for lack of a connection load again. The offline UI above now knows at launch / on return, not only after a failed request. Device test OM1-OM6 pending
 - [ ] Offline mode UI: screens without cached data point to Downloads (with the connection error UI)
@@ -132,6 +132,9 @@ Design + sources: `docs/research/background-downloads.md`.
 
 ## M7 - Hardening + release
 
+- [ ] Pre-release improvements:
+  - Offline series: per-episode art - each episode shows its own still (save it with the snapshot), not only the show's poster
+  - Storage limit across accounts made explicit: the limit is phone-wide, but the Downloads tab shows only the active account's usage. E.g. a 5 GB limit used up by account 1 → account 2 can't download and doesn't see why. Show the other accounts' share (storage bar + Settings → Storage limit) and name it in the "over the limit" message
 - [ ] Settings: accounts, playback defaults, downloads, cache clear, licenses screen
 - [ ] Perf (FlashList if FlatList stutters, image sizes, cold start <2s), accessibility pass
 - [ ] iPad layout for every screen (`supportsTablet` is off today): adaptive grids, readable-width forms and pages, landscape, split view / Stage Manager sizes

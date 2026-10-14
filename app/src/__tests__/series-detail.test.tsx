@@ -10,6 +10,7 @@ import { ApiError, type BaseItemDto, type RequestOptions } from '@/api';
 import SeriesDetail from '@/app/series/[id]';
 import { ItemMenuProvider } from '@/components/ItemMenu';
 import { ToastProvider } from '@/components/Toast';
+import * as downloads from '@/downloads';
 import { initDownloads } from '@/downloads';
 import * as session from '@/session';
 
@@ -370,5 +371,40 @@ describe('SeriesDetail', () => {
     await fireEvent.press(await screen.findByRole('button', { name: 'More for Episode 2, Chapter 2' }));
     await fireEvent.press(screen.getByRole('menuitem', { name: 'Add to Favourites' }));
     expect(await screen.findByRole('button', { name: 'Episode 2, Chapter 2, favourite' })).toBeOnTheScreen();
+  });
+});
+
+describe('SeriesDetail offline, with episodes downloaded', () => {
+  const poster = 'file:///docs/downloads/a/e/poster.jpg';
+  afterEach(() => {
+    jest.mocked(downloads.savedItem).mockRestore();
+  });
+
+  it("shows the show's name and poster with a link to its downloaded episodes", async () => {
+    jest
+      .spyOn(downloads, 'savedItem')
+      .mockReturnValue({ item: { Id: SHOW, Name: 'Test Show', Type: 'Series' }, art: poster });
+    routes[`/Items/${SHOW}`] = new ApiError('network');
+    await render(<SeriesDetail />);
+    expect(await screen.findByText('Showing the details saved with the download.')).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Test Show' })).toBeOnTheScreen();
+    expect(screen.getByTestId('detail-backdrop').props.source).toEqual([expect.objectContaining({ uri: poster })]);
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+    expect(calls('seasons')).toBe(0);
+    await fireEvent.press(screen.getByRole('button', { name: 'Downloaded Episodes' }));
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/show-downloads/[id]',
+      params: { id: SHOW, name: 'Test Show' },
+    });
+  });
+
+  it('nothing downloaded: the error with Retry as before', async () => {
+    jest.spyOn(downloads, 'savedItem').mockReturnValue(null);
+    routes[`/Items/${SHOW}`] = new ApiError('network');
+    await render(<SeriesDetail />);
+    expect(
+      await screen.findByText("Couldn't reach the server. Check your connection and try again."),
+    ).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeOnTheScreen();
   });
 });

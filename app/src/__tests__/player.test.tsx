@@ -71,6 +71,7 @@ const movie: BaseItemDto = {
 const itemRequest = jest.spyOn(api, 'request');
 // Not downloaded unless a test says so (the store's lookup is tested in src/downloads.test.ts).
 const localCopy = jest.spyOn(downloads, 'localCopy');
+const savedItem = jest.spyOn(downloads, 'savedItem');
 let reply: () => Promise<PlaybackInfoResponse | undefined>;
 
 const lastPlayer = () => Player.mock.calls.at(-1)![0] as PlayerProps;
@@ -90,6 +91,7 @@ beforeEach(() => {
   request.mockImplementation(() => reply() as ReturnType<typeof api.getPlaybackInfo>);
   itemRequest.mockImplementation(() => Promise.resolve(movie) as Promise<never>);
   localCopy.mockReturnValue(null);
+  savedItem.mockReturnValue(null);
   jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(false);
   // Subtitle size, style and zoom are phone settings, kept in memory across tests.
   settings.setSubtitleScale(1);
@@ -156,13 +158,16 @@ describe('Player screen', () => {
       });
     });
 
-    it('offline: the saved item names it', async () => {
+    it('the item saved with the download names it, offline and while the server loads', async () => {
       // An item no other test fetched (useFetch keeps answers in memory).
-      useLocalSearchParams.mockReturnValue({ id: 'f'.repeat(32), start: '0' });
+      const id = 'f'.repeat(32);
+      useLocalSearchParams.mockReturnValue({ id, start: '0' });
       localCopy.mockReturnValue(local());
+      savedItem.mockReturnValue({ item: local().item });
       itemRequest.mockImplementation(() => Promise.reject(new ApiError('network')));
       await render(<PlayerScreen />);
       expect(screen.getByText('Sintel (saved)')).toBeOnTheScreen();
+      expect(savedItem).toHaveBeenCalledWith('srv.a', id);
     });
 
     it('needs no server connection (no token loaded yet)', async () => {

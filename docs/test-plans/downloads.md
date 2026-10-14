@@ -156,12 +156,14 @@ On 14+ the worker is only the fallback when the UIDT job is refused - no device 
 
 ## Offline detail (M6)
 
-| #   | Steps                                                                         | Expected                                                                                                 |
-| --- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| OF1 | Download a movie, flight mode, Downloads → long press the row → Go to Details | Detail of the saved item: backdrop from the phone, "Showing the details saved with the download."        |
-| OF2 | Flight mode, open a downloaded episode's detail from Home (cached card)       | Saved detail once the request fails (at once when the app already knows it's offline); no More Like This |
-| OF3 | Flight mode, tap a ready Downloads row (after another screen failed)          | Player opens at once from the saved resume point - no 8 s wait                                           |
-| OF4 | Online, open the same detail                                                  | Server detail (logo, More Like This), no "saved with the download" line                                  |
+| #   | Steps                                                                                    | Expected                                                                                                        |
+| --- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| OF1 | Download a movie, flight mode, Downloads → long press the row → Go to Details            | Detail of the saved item: backdrop from the phone, "Showing the details saved with the download."               |
+| OF2 | Flight mode, open a downloaded episode's detail from Home (cached card)                  | Saved detail once the request fails (at once when the app already knows it's offline); no More Like This        |
+| OF3 | Flight mode, tap a ready Downloads row (after another screen failed)                     | Player opens at once from the saved resume point - no 8 s wait                                                  |
+| OF4 | Online, open the same detail                                                             | Server detail (logo, More Like This), no "saved with the download" line                                         |
+| OF5 | Download an episode, flight mode, open its show (Home card or the episode's series link) | Show name + poster from the phone, the saved-details line, Downloaded Episodes → the show's downloaded episodes |
+| OF6 | Flight mode, play a downloaded episode from its saved detail                             | Player names it (title) from the saved item; plays the file                                                     |
 
 ## To add with the Android runners (M5)
 

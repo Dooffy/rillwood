@@ -3,11 +3,12 @@
 // overview, chips, "Season n ⌃⌄" menu, horizontal episode cards (▶ + ⋯ / long press), cast & crew, More Like This.
 // The header ↓ downloads the selected season. ✓ / ♥ mark the whole show; the season menu marks a season. Data rules:
 // docs/context/api.md (Series data), downloads: docs/context/downloads.md.
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import type { BaseItemDto, ItemsResult } from '@/api';
+import { Button } from '@/components/Button';
 import { CastRow } from '@/components/CastRow';
 import { Chips } from '@/components/Chips';
 import { DetailActions } from '@/components/DetailActions';
@@ -23,12 +24,12 @@ import { CARD_GAP } from '@/components/Row';
 import { DetailPlaceholder, EpisodeCardsPlaceholder } from '@/components/Skeleton';
 import { Text } from '@/components/Text';
 import { detailView } from '@/detail';
+import type { SavedItem } from '@/downloads';
 import {
   defaultSeasonId,
   episodeLine,
   episodes,
   isItemId,
-  itemDetail,
   landscapeImage,
   playback,
   realSeasons,
@@ -40,18 +41,35 @@ import {
 import { openItem, openPlayer } from '@/navigation';
 import { useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
+import { useItem } from '@/useItem';
 import { useUserFlag } from '@/useUserFlag';
 import { scrollList, spacing } from '@/theme';
 
 export default function SeriesDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const valid = isItemId(id);
-  const { data, error, refresh } = useFetch<BaseItemDto>(valid ? itemDetail(id).path : null);
+  // Offline or failed with episodes of it downloaded: the show's name + poster, and its downloaded episodes.
+  const { item, saved, fromSaved, error, refresh } = useItem(id);
 
-  if (!valid || error?.status === 404) return <Message fill text="This series isn't available." />;
-  if (data) return <Series series={data} />;
+  if (fromSaved && saved) return <SavedSeries saved={saved} />;
+  if (item) return <Series series={item} />;
+  if (!isItemId(id) || error?.status === 404) return <Message fill text="This series isn't available." />;
   if (error) return <Message fill text={loadErrorMessage(error)} retry={refresh} />;
   return <DetailPlaceholder />;
+}
+
+/** A show from its downloads (no seasons, cast or Next Up without the server): opens its downloaded episodes. */
+function SavedSeries({ saved: { item, art } }: { saved: SavedItem }) {
+  const openEpisodes = () =>
+    router.push({ pathname: '/show-downloads/[id]', params: { id: item.Id, name: item.Name } });
+  return (
+    <ScrollView {...scrollList} contentInsetAdjustmentBehavior="never" contentContainerStyle={styles.scroll}>
+      <DetailHero art={art} title={item.Name} subtitle="" />
+      <View style={styles.body}>
+        <Text secondary>Showing the details saved with the download.</Text>
+        <Button title="Downloaded Episodes" onPress={openEpisodes} />
+      </View>
+    </ScrollView>
+  );
 }
 
 function Series({ series }: { series: BaseItemDto }) {
