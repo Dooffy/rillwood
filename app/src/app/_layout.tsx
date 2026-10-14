@@ -13,6 +13,7 @@ import { initDownloads } from '@/downloads';
 import { SignedOutRedirect, tabsTitle } from '@/navigation';
 import { pickerTitle } from '@/pickers';
 import { applyNativeAppearance, useAppearance } from '@/settings';
+import { initSync } from '@/sync';
 import { ColorsContext, palettes, resolveScheme } from '@/theme';
 
 const detailOptions = { headerShown: true, headerTransparent: true, title: '' };
@@ -45,6 +46,11 @@ export default function RootLayout() {
   // Offline mode: is the server there (launch, foreground, account switch, rechecks while offline) - src/connection.ts.
   useEffect(() => {
     initConnection();
+  }, []);
+
+  // Offline progress: replay + saved UserData at launch, foreground, reconnect, account switch - src/sync.ts.
+  useEffect(() => {
+    initSync();
   }, []);
 
   // Upright portrait everywhere; only the player unlocks rotation while it's open. app.json allows all orientations

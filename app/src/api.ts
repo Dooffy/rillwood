@@ -375,11 +375,34 @@ export function authenticateWithQuickConnect(conn: Connection, secret: string, s
 // Endpoints - user data. Both answer the item's new UserData (200; same on 10.11 + 12.1). Unknown id: 404 on 12.x,
 // 500 on 10.11.
 
-/** Mark watched (`POST`) or unwatched (`DELETE`). Either clears the resume point; a season / series marks its episodes. */
-export function setPlayed(conn: Connection, itemId: string, played: boolean) {
+/**
+ * Mark watched (`POST`) or unwatched (`DELETE`). Either clears the resume point; a season / series marks its episodes.
+ * `datePlayed` (ISO): the `LastPlayedDate` to set instead of the server's now (offline sync).
+ */
+export function setPlayed(conn: Connection, itemId: string, played: boolean, datePlayed?: string) {
   return request<UserItemDataDto>(conn, `/UserPlayedItems/${encodeURIComponent(itemId)}`, {
     method: played ? 'POST' : 'DELETE',
+    query: played ? { datePlayed } : undefined,
   });
+}
+
+/** The item's UserData (offline sync, docs/context/sync.md). Unknown id: 404. */
+export function getUserData(conn: Connection, itemId: string) {
+  return request<UserItemDataDto>(conn, `/UserItems/${encodeURIComponent(itemId)}/UserData`);
+}
+
+/** Stored exactly as sent - no resume rules, no checks (offline sync clamps first). Only the fields sent change. */
+export function updateUserData(
+  conn: Connection,
+  itemId: string,
+  body: Pick<UserItemDataDto, 'PlaybackPositionTicks' | 'LastPlayedDate'>,
+) {
+  return request<UserItemDataDto>(conn, `/UserItems/${encodeURIComponent(itemId)}/UserData`, { method: 'POST', body });
+}
+
+/** These items with their UserData, no images; unknown ids are left out. */
+export function getItemsById(conn: Connection, ids: readonly string[]) {
+  return request<ItemsResult>(conn, '/Items', { query: { ids: ids.join(','), enableImages: false } });
 }
 
 /** Add to (`POST`) or remove from (`DELETE`) favourites. */

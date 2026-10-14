@@ -6,6 +6,7 @@ import * as api from '@/api';
 import type { PlaySource } from '@/playback';
 import { createProgress } from '@/player/progress';
 import * as session from '@/session';
+import * as sync from '@/sync';
 import * as useFetch from '@/useFetch';
 
 import { PROGRESS_INTERVAL_MS, useReporting } from './useReporting';
@@ -31,12 +32,18 @@ const start = jest.spyOn(api, 'reportPlaybackStart');
 const progressed = jest.spyOn(api, 'reportPlaybackProgress');
 const stopped = jest.spyOn(api, 'reportPlaybackStopped');
 const invalidate = jest.spyOn(useFetch, 'invalidate');
+const recorded = jest.spyOn(sync, 'recordProgress');
+const cleared = jest.spyOn(sync, 'clearProgress');
+const offline = jest.spyOn(api, 'isOffline');
 
 beforeEach(() => {
   jest.useFakeTimers();
   jest.clearAllMocks();
   [start, progressed, stopped].forEach((m) => m.mockResolvedValue(undefined));
   invalidate.mockImplementation(() => {});
+  recorded.mockImplementation(() => {});
+  cleared.mockImplementation(() => {});
+  offline.mockReturnValue(false);
   jest.spyOn(session, 'getSession').mockReturnValue({ accounts: [account], active: account });
   jest.spyOn(session, 'connectionFor').mockImplementation((a) => ({
     baseUrl: a.server.url,
@@ -195,6 +202,64 @@ describe('useReporting', () => {
     await mount();
     await act(async () => {});
     expect(start).toHaveBeenCalled();
+  });
+
+  describe('offline progress (src/sync.ts)', () => {
+    it('known offline: kept at once, with the runtime and the session start', async () => {
+      jest.setSystemTime(new Date('2026-10-14T10:00:00Z'));
+      offline.mockReturnValue(true);
+      start.mockReturnValue(new Promise(() => {})); // times out later
+      await mount();
+      expect(recorded).toHaveBeenCalledWith({
+        accountId: 'srv.a',
+        itemId: 'i',
+        positionTicks: ticks(40),
+        runtimeTicks: ticks(900),
+        startedAt: '2026-10-14T10:00:00.000Z',
+      });
+    });
+
+    it("a report that can't reach the server is kept; a server error isn't", async () => {
+      start.mockRejectedValue(new api.ApiError('http', 500));
+      progressed.mockRejectedValue(new api.ApiError('network'));
+      const { result } = await mount();
+      await act(async () => {});
+      expect(recorded).not.toHaveBeenCalled();
+      progress.set({ position: 300 });
+      await act(async () => result.current.seeked());
+      expect(recorded).toHaveBeenCalledWith(expect.objectContaining({ positionTicks: ticks(300) }));
+    });
+
+    it('a late failure keeps the runtime of when it was sent (the next episode may have loaded)', async () => {
+      let fail: (e: unknown) => void = () => {};
+      start.mockReturnValue(new Promise((_resolve, reject) => (fail = reject)));
+      await mount();
+      progress.set({ duration: 0 });
+      await act(async () => fail(new api.ApiError('network')));
+      expect(recorded).toHaveBeenCalledWith(expect.objectContaining({ runtimeTicks: ticks(900) }));
+    });
+
+    it('a late failure never puts an older position over a newer one', async () => {
+      let fail: (e: unknown) => void = () => {};
+      start.mockReturnValue(new Promise((_resolve, reject) => (fail = reject)));
+      const { result } = await mount();
+      offline.mockReturnValue(true);
+      progress.set({ position: 500 });
+      await act(async () => result.current.seeked());
+      expect(recorded).toHaveBeenLastCalledWith(expect.objectContaining({ positionTicks: ticks(500) }));
+      await act(async () => fail(new api.ApiError('network')));
+      expect(recorded).toHaveBeenCalledTimes(1);
+    });
+
+    it("back online in the session: a report the server got clears the session's record", async () => {
+      start.mockRejectedValue(new api.ApiError('network'));
+      const { result } = await mount();
+      await act(async () => {});
+      expect(recorded).toHaveBeenCalledTimes(1);
+      await act(async () => result.current.seeked());
+      expect(cleared).toHaveBeenCalledWith('srv.a', 'i', expect.any(String));
+      expect(cleared.mock.calls[0][2]).toBe(recorded.mock.calls[0][0].startedAt);
+    });
   });
 
   it('signed out (no connection) reports nothing', async () => {

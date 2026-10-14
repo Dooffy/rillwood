@@ -1,18 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // One item for a screen: the server's, else the one saved with a download (docs/context/downloads.md, Offline detail).
-// Item detail, series and the player read it.
+// Item detail, series and the player read it. The saved copy carries the progress made offline (`src/sync.ts`).
 import { useMemo } from 'react';
 
 import { useOffline, type ApiError, type BaseItemDto } from '@/api';
 import { savedItem, type SavedItem } from '@/downloads';
 import { isItemId, itemDetail } from '@/items';
 import { useSession } from '@/session';
+import { usePendingProgress, withPendingProgress } from '@/sync';
 import { useFetch } from '@/useFetch';
 
 export type ItemResult = {
-  /** The server's item; offline (known, or the request failed - a 404 too) the saved one. */
+  /** The server's item; offline (known, or the request failed - a 404 too) the saved one, with offline progress. */
   item: BaseItemDto | undefined;
-  /** The copy saved with one of the account's downloads of it (a show: of its episodes), loading or not. */
+  /**
+   * The copy saved with one of the account's downloads of it (a show: of its episodes), loading or not, with the
+   * progress made offline on top.
+   */
   saved: SavedItem | null;
   /** `item` is the saved copy. */
   fromSaved: boolean;
@@ -31,10 +35,16 @@ export function useItem(id: string | undefined, recheck?: unknown): ItemResult {
   const { data, error, refresh } = useFetch<BaseItemDto>(valid ? itemDetail(id).path : null);
   const accountId = useSession().active?.id;
   const offline = useOffline();
-  const saved = useMemo(
+  const onDisk = useMemo(
     () => (valid && accountId ? savedItem(accountId, id) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `recheck` re-reads the disk
     [valid, accountId, id, recheck],
+  );
+
+  const pending = usePendingProgress(accountId, valid ? id : undefined);
+  const saved = useMemo(
+    () => (onDisk && pending ? { ...onDisk, item: withPendingProgress(onDisk.item, pending) } : onDisk),
+    [onDisk, pending],
   );
 
   if (data) return { item: data, saved, fromSaved: false, error: undefined, refresh };

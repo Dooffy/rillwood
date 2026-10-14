@@ -10,6 +10,7 @@ import Downloads from '@/app/(tabs)/downloads';
 import * as store from '@/downloads';
 import { deleteDownloads, downloadId, initDownloads, startDownloads } from '@/downloads';
 import * as session from '@/session';
+import { recordProgress } from '@/sync';
 import type { Account } from '@/session';
 
 import NativeDownloads from '../../modules/downloads';
@@ -271,6 +272,27 @@ describe('Downloads', () => {
     expect(router.push).toHaveBeenCalledWith({ pathname: '/player', params: { id: 'sintel', start: '30' } });
     expect(saved).toHaveBeenCalledWith(account.id, 'sintel');
     expect(api.request).not.toHaveBeenCalled();
+    offline.mockRestore();
+    saved.mockRestore();
+  });
+
+  it('known offline: progress made offline wins over the saved resume point', async () => {
+    const offline = jest.spyOn(api, 'isOffline').mockReturnValue(true);
+    const saved = jest.spyOn(store, 'savedItem').mockReturnValue({
+      item: { ...movie, RunTimeTicks: 8_880_000_000, UserData: { PlaybackPositionTicks: 300_000_000, Played: false } },
+    });
+    await download(movie);
+    await act(() => emit('done', { id: idOf(movie) }));
+    recordProgress({
+      accountId: account.id,
+      itemId: 'sintel',
+      positionTicks: 1_200_000_000,
+      runtimeTicks: 8_880_000_000,
+      startedAt: '2026-10-14T10:00:00.000Z',
+    });
+    await render(<Downloads />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Sintel, 2.1 GB' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/player', params: { id: 'sintel', start: '120' } });
     offline.mockRestore();
     saved.mockRestore();
   });

@@ -2,14 +2,24 @@
 // Playback reporting (docs/context/player.md): `Sessions/Playing` once the file has loaded, `Progress` every 10 s (paused
 // too) + on pause / unpause / seek / track change (leaving the app pauses the player: that pause saves the position), `Stopped` with the last position when the load
 // ends (close, Retry, error). Every report carries the audio / subtitle playing - the server remembers them per item.
-// Best effort: a failed report is dropped (offline progress is M6, docs/context/sync.md); a 401 signs out through the
-// API layer as everywhere else.
+// A report that doesn't reach the server (offline, known or found by the report failing) is kept as offline progress
+// for the replay (`src/sync.ts`, docs/context/sync.md); a 401 signs out through the API layer as everywhere else.
 import { useEffect, useRef } from 'react';
 
-import { reportPlaybackProgress, reportPlaybackStart, reportPlaybackStopped, type PlaybackReport } from '@/api';
+import {
+  ApiError,
+  isOffline,
+  reportPlaybackProgress,
+  reportPlaybackStart,
+  reportPlaybackStopped,
+  type Connection,
+  type PlaybackReport,
+} from '@/api';
+import { secondsToTicks } from '@/items';
 import { playbackReport, type PlaySource, type TrackChoice } from '@/playback';
 import type { ProgressStore } from '@/player/progress';
 import { connectionFor, getSession } from '@/session';
+import { clearProgress, recordProgress } from '@/sync';
 import { invalidate } from '@/useFetch';
 
 export const PROGRESS_INTERVAL_MS = 10_000;
@@ -58,7 +68,7 @@ export function useReporting({
   useEffect(() => {
     const account = getSession().active;
     const conn = account && account.id === accountId ? connectionFor(account) : null;
-    if (!conn || !itemId || !play || !started) return;
+    if (!conn || !accountId || !itemId || !play || !started) return;
     const body = (extra: Extra) =>
       playbackReport(itemId, play, progress.get().position, {
         ...extra,
@@ -66,20 +76,42 @@ export function useReporting({
         SubtitleStreamIndex: tracksNow.current.subtitle,
       });
     const ignore = () => {};
+    // Offline progress: the session start is what the server would stamp as LastPlayedDate. Reports are numbered so a
+    // late failure never writes an older position over a newer one.
+    const startedAt = new Date().toISOString();
+    let numbered = 0;
+    let kept = 0;
+    const keep = (n: number, report: PlaybackReport, runtimeTicks: number) => {
+      if (n < kept) return;
+      kept = n;
+      recordProgress({ accountId, itemId, positionTicks: report.PositionTicks, runtimeTicks, startedAt });
+    };
     // One queue per session: reports reach the server in order, so a late Progress never lands after Stopped (that
     // would revive the session on the dashboard and rewrite the final position). Bodies are taken when queued.
     let queue: Promise<unknown> = Promise.resolve();
-    const enqueue = (call: () => Promise<unknown>) => {
-      queue = queue.then(call).catch(ignore);
-      return queue;
+    const enqueue = (call: (conn: Connection, report: PlaybackReport) => Promise<unknown>, report: PlaybackReport) => {
+      const n = ++numbered;
+      // Taken now, with the body: by a late failure the player may be on the next episode.
+      const runtimeTicks = secondsToTicks(progress.get().duration);
+      // Known offline: kept now, not after the request times out (the app may be killed meanwhile).
+      if (isOffline()) keep(n, report, runtimeTicks);
+      queue = queue
+        .then(() =>
+          call(conn, report).then(
+            () => {
+              // The server has it: what was kept for this session is older.
+              if (n >= kept) clearProgress(accountId, itemId, startedAt);
+            },
+            (e: unknown) => {
+              if (e instanceof ApiError && e.kind === 'network') keep(n, report, runtimeTicks);
+            },
+          ),
+        )
+        .catch(ignore);
     };
-    const send = (extra: Extra) => {
-      const report = body(extra);
-      enqueue(() => reportPlaybackProgress(conn, report));
-    };
+    const send = (extra: Extra) => enqueue(reportPlaybackProgress, body(extra));
 
-    const start = body({ IsPaused: pausedNow.current });
-    enqueue(() => reportPlaybackStart(conn, start));
+    enqueue(reportPlaybackStart, body({ IsPaused: pausedNow.current }));
     report.current = send;
     // Paused too (with IsPaused): the server ends sessions that stop checking in.
     const timer = setInterval(
@@ -91,8 +123,7 @@ export function useReporting({
       clearInterval(timer);
       report.current = null;
       // Last in the queue; then refresh everything showing this item: resume point, Continue Watching, Next Up.
-      const stop = body({});
-      enqueue(() => reportPlaybackStopped(conn, stop).then(() => invalidate()));
+      enqueue((c, stop) => reportPlaybackStopped(c, stop).then(() => invalidate()), body({}));
     };
   }, [accountId, itemId, play, started, progress]);
 

@@ -22,6 +22,9 @@ import {
   request,
   setFavourite,
   setPlayed,
+  getUserData,
+  updateUserData,
+  getItemsById,
   TIMEOUT_MS,
   useOffline,
   type Connection,
@@ -341,6 +344,13 @@ describe('user data endpoints', () => {
     [() => setPlayed(conn, 'abc', false), 'DELETE', '/UserPlayedItems/abc'],
     [() => setFavourite(conn, 'abc', true), 'POST', '/UserFavoriteItems/abc'],
     [() => setFavourite(conn, 'abc', false), 'DELETE', '/UserFavoriteItems/abc'],
+    [
+      () => setPlayed(conn, 'abc', true, '2026-10-14T10:00:00.000Z'),
+      'POST',
+      '/UserPlayedItems/abc?datePlayed=2026-10-14T10%3A00%3A00.000Z',
+    ],
+    [() => getUserData(conn, 'abc'), 'GET', '/UserItems/abc/UserData'],
+    [() => updateUserData(conn, 'abc', { PlaybackPositionTicks: 5 }), 'POST', '/UserItems/abc/UserData'],
   ] as [() => Promise<unknown>, string, string][])(
     '%#: %s %s, header auth, answers the new UserData',
     async (call, method, path) => {
@@ -352,6 +362,23 @@ describe('user data endpoints', () => {
       expect((init?.headers as Record<string, string>).Authorization).toContain('Token="tok-secret"');
     },
   );
+});
+
+describe('offline sync endpoints', () => {
+  it('UserData POST sends the body as is', async () => {
+    fetchMock.mockImplementation(() => reply(200, { Played: false, PlaybackPositionTicks: 5 }));
+    await updateUserData(conn, 'abc', { PlaybackPositionTicks: 5, LastPlayedDate: '2026-10-14T10:00:00.000Z' });
+    expect(JSON.parse(lastCall().init?.body as string)).toEqual({
+      PlaybackPositionTicks: 5,
+      LastPlayedDate: '2026-10-14T10:00:00.000Z',
+    });
+  });
+
+  it('items by id: one comma list, no images', async () => {
+    fetchMock.mockImplementation(() => reply(200, { Items: [], TotalRecordCount: 0 }));
+    await getItemsById(conn, ['a', 'b']);
+    expect(lastCall().url).toBe('https://jf.example.com/Items?ids=a%2Cb&enableImages=false');
+  });
 });
 
 describe('playback endpoints', () => {

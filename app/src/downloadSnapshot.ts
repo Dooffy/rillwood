@@ -5,7 +5,7 @@
 // `Paths.document`.
 import { Directory, File, Paths } from 'expo-file-system';
 
-import type { BaseItemDto, MediaSourceDto } from '@/api';
+import type { BaseItemDto, MediaSourceDto, UserItemDataDto } from '@/api';
 import { backdropImage, imageUrl, posterImage, type ImageRef } from '@/items';
 import { subtitleExtension, subtitleUrl } from '@/playback';
 
@@ -94,4 +94,14 @@ export function readSnapshotItem(path: string): BaseItemDto | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Puts the server's UserData into the saved item (offline sync: watched state and resume point for offline detail and
+ * offload). Written only when it changed; nothing without a saved item.
+ */
+export async function writeSnapshotUserData(path: string, userData: UserItemDataDto) {
+  const item = readSnapshotItem(path);
+  if (!item || JSON.stringify(item.UserData) === JSON.stringify(userData)) return;
+  await fileAt(`${itemFolder(path)}/${ITEM_JSON}`).write(JSON.stringify({ ...item, UserData: userData }));
 }

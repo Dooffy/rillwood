@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { renderHook } from '@testing-library/react-native';
+import { act, renderHook } from '@testing-library/react-native';
 
 import * as api from '@/api';
 import { ApiError, type BaseItemDto } from '@/api';
 import * as downloads from '@/downloads';
 import * as session from '@/session';
 import * as fetching from '@/useFetch';
+import { recordProgress } from '@/sync';
 
 import { useItem } from './useItem';
 
@@ -67,6 +68,21 @@ describe('useItem', () => {
     offline = true;
     const { result } = await renderHook(() => useItem(ID));
     expect(result.current).toMatchObject({ item: saved.item, fromSaved: true });
+  });
+
+  it('the saved copy carries progress made offline, and follows it', async () => {
+    savedItem.mockReturnValue(saved);
+    offline = true;
+    const { result } = await renderHook(() => useItem(ID));
+    expect(result.current.item?.UserData).toBeUndefined();
+    const at = '2026-10-14T10:00:00.000Z';
+    const progress = { accountId: anna.id, itemId: ID, runtimeTicks: 0, startedAt: at };
+    await act(async () => recordProgress({ ...progress, positionTicks: 600 }));
+    expect(result.current.item?.UserData).toEqual({ PlaybackPositionTicks: 600, Played: false, LastPlayedDate: at });
+    await act(async () => recordProgress({ ...progress, positionTicks: 900 }));
+    expect(result.current.item?.UserData?.PlaybackPositionTicks).toBe(900);
+    expect(result.current.saved?.item).toBe(result.current.item);
+    expect(result.current.saved?.art).toBe(saved.art);
   });
 
   it('a failure with nothing saved: the error', async () => {
