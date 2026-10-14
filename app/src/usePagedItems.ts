@@ -5,7 +5,7 @@
 // `updateCached` changes patch the loaded items. A list that failed loads again once the server is back (`onReconnect`).
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 
-import { ApiError, request, type BaseItemDto, type Endpoint, type ItemsResult } from '@/api';
+import { ApiError, isConnectionError, request, type BaseItemDto, type Endpoint, type ItemsResult } from '@/api';
 import { onReconnect } from '@/connection';
 import { mergePage, nextPageStart } from '@/items';
 import { connectionFor, useSession } from '@/session';
@@ -137,7 +137,7 @@ export function usePagedItems(id: string | null, pageAt: (startIndex: number) =>
 
   // Back online: a list that failed for lack of a connection loads again by itself.
   const retryIfFailed = useEffectEvent(() => {
-    if (live.error?.kind === 'network') retry();
+    if (isConnectionError(live.error)) retry();
   });
   useEffect(() => onReconnect(() => retryIfFailed()), []);
 

@@ -45,6 +45,10 @@ export class ApiError extends Error {
   }
 }
 
+/** The server couldn't be reached (no network, server down, timeout, TLS) - not an answer like a 5xx or a 404. */
+export const isConnectionError = (error: unknown): error is ApiError =>
+  error instanceof ApiError && error.kind === 'network';
+
 // Offline flag: true after a network failure, false after any server response. Probes don't touch it.
 
 let offline = false;

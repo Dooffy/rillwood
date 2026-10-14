@@ -349,7 +349,7 @@ describe('ItemDetail', () => {
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
   });
 
-  it('shows a placeholder, then an error with Retry when offline', async () => {
+  it('shows a placeholder, then an error with Retry + Go to Downloads when offline', async () => {
     let fail!: () => void;
     reply = () => new Promise((_, reject) => (fail = () => reject(new ApiError('network'))));
     await render(<ItemDetail />);
@@ -357,9 +357,8 @@ describe('ItemDetail', () => {
     expect(screen.getByLabelText('Loading')).toBeOnTheScreen();
     expect(screen.queryByTestId('spinner')).toBeNull();
     fail();
-    expect(
-      await screen.findByText("Couldn't reach the server. Check your connection and try again."),
-    ).toBeOnTheScreen();
+    expect(await screen.findByText("Check your connection, or watch something you've downloaded.")).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Go to Downloads' })).toBeOnTheScreen();
     reply = () => Promise.resolve(sintel);
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByRole('header', { name: 'Sintel' })).toBeOnTheScreen();

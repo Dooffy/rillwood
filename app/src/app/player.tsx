@@ -25,9 +25,9 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { ApiError, getPlaybackInfo, type BaseItemDto, type ItemsResult } from '@/api';
+import { ApiError, getPlaybackInfo, isConnectionError, type BaseItemDto, type ItemsResult } from '@/api';
 import { Glass } from '@/components/Glass';
-import { Message } from '@/components/Message';
+import { Message, Offline } from '@/components/Message';
 import { PlayerBottom, PlayerControls, PlayerScrubber } from '@/components/PlayerControls';
 import { Spinner } from '@/components/Spinner';
 import { Text } from '@/components/Text';
@@ -74,7 +74,9 @@ import { useItem } from '@/useItem';
 type Choice = Partial<TracksValue> & { id?: string; picks: TrackPicks };
 
 type State =
-  { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; play: PlaySource; start: number };
+  | { status: 'loading' }
+  | { status: 'error'; message: string; connection?: boolean }
+  | { status: 'ready'; play: PlaySource; start: number };
 
 const PLAYBACK_FAILED = "Couldn't play this video. Try again.";
 
@@ -211,7 +213,13 @@ export default function PlayerScreen() {
       })
       .catch((e: unknown) => {
         if (controller.signal.aborted) return;
-        done({ status: 'error', message: playErrorMessage(e instanceof ApiError ? e : new ApiError('network')) });
+        // Out of reach and not downloaded: the offline state (Go to Downloads - what plays). Only a real network
+        // failure says so - a bug in the chain isn't the server being away.
+        done({
+          status: 'error',
+          message: playErrorMessage(e instanceof ApiError ? e : new ApiError('network')),
+          connection: isConnectionError(e),
+        });
       });
     return () => controller.abort();
   }, [key, accountId, id, progress, copy]);
@@ -433,7 +441,12 @@ export default function PlayerScreen() {
               </View>
             )}
             {state.status !== 'error' && (!playing || stalled) && <Spinner fill />}
-            {state.status === 'error' && <Message fill text={state.message} retry={retry} />}
+            {state.status === 'error' &&
+              (state.connection ? (
+                <Offline header retry={retry} />
+              ) : (
+                <Message fill text={state.message} retry={retry} />
+              ))}
           </Animated.View>
         </GestureDetector>
         {releaseHint && (

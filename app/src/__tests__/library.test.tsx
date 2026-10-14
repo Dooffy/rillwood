@@ -223,12 +223,31 @@ describe('Library', () => {
     await waitFor(() => expect(lastQuery()).toMatchObject({ startIndex: 50 }));
   });
 
-  it('shows an error with Retry, and refreshes on pull', async () => {
+  it('server out of reach: the offline state with Retry + Go to Downloads', async () => {
     fail = new ApiError('network');
     await render(<Library />);
-    expect(
-      await screen.findByText("Couldn't reach the server. Check your connection and try again."),
-    ).toBeOnTheScreen();
+    expect(await screen.findByText("Check your connection, or watch something you've downloaded.")).toBeOnTheScreen();
+    expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Go to Downloads' })).toBeOnTheScreen();
+    // Nothing to search, sort or filter.
+    expect(screen.queryByPlaceholderText('Movies, shows, episodes')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sort: Name' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Filters' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Movies' })).toBeNull();
+  });
+
+  it('offline on another type: the chips stay, so the way back to All is there', async () => {
+    await render(<Library />);
+    fail = new ApiError('network');
+    await fireEvent.press(screen.getByRole('button', { name: 'Movies', selected: false }));
+    expect(await screen.findByText("Check your connection, or watch something you've downloaded.")).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'All', selected: false })).toBeOnTheScreen();
+  });
+
+  it('shows an error with Retry, and refreshes on pull', async () => {
+    fail = new ApiError('http', 500);
+    await render(<Library />);
+    expect(await screen.findByText('The server ran into a problem. Try again in a moment.')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
     await fireEvent.press(await screen.findByRole('button', { name: 'Movies, See All' }));
     expect(await screen.findByText('11 movies · by Name')).toBeOnTheScreen();

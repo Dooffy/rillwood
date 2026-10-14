@@ -129,7 +129,7 @@ src/session.ts           session store: accounts (kv-store), tokens (secure-stor
 src/auth.ts              auth flows for the (auth) screens: probe, sign in, Quick Connect
 src/server.ts            server address → probe URLs, min version check (pure)
 src/connection.ts        offline mode: `/System/Info/Public` check at launch, foreground, account switch + backoff while offline; back online → failed screens reload
-src/navigation.ts        resetTo (clear stack), signed-out redirect, openItem, openPlayer
+src/navigation.ts        resetTo (clear stack), signed-out redirect, openItem, openPlayer, openDownloads
 src/useFetch.ts          in-memory cache, abort, invalidate()
 src/useImage.ts          image URL for the active server, sized to the screen scale
 src/useItem.ts           one item for a screen: the server's, else the one saved with a download (detail, series, player)
@@ -154,7 +154,7 @@ src/player/mpv.tsx       mpv adapter
 src/player/controls.ts   player controls logic (pure): seek clamp, pull-to-close threshold, scrubber maths, zoom (pinch, fit inset)
 src/player/progress.ts   position + duration store outside React state (only the controls re-render)
 src/player/useReporting.ts  Sessions/Playing, Progress (10 s, pause, seek, track change, background), Stopped + refetch; reports carry the tracks
-src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List (+ Checkmark, Swatch), StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message, DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing (+ AnimatedProgressRing), SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing, DownloadButton, DownloadRow (+ ShowDownloadRow, DownloadRowGap), DownloadActions (useDownloadActions), SwipeToDelete, StorageBar, PlayerControls (+ PlayerBottom, PlayerScrubber), Glass, TracksMenu, TimingSlider, StepSlider, UpNext, SubtitlePreview, OptionList (+ OptionRow), ItemMenu (+ ItemMenuProvider), Skeleton (CardRowPlaceholder, DetailPlaceholder, EpisodeCardsPlaceholder, EpisodeRowsPlaceholder, PosterGridPlaceholder, PosterRowsPlaceholder)
+src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List (+ Checkmark, Swatch), StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message (+ LoadError, Offline), DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing (+ AnimatedProgressRing), SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing, DownloadButton, DownloadRow (+ ShowDownloadRow, DownloadRowGap), DownloadActions (useDownloadActions), SwipeToDelete, StorageBar, PlayerControls (+ PlayerBottom, PlayerScrubber), Glass, TracksMenu, TimingSlider, StepSlider, UpNext, SubtitlePreview, OptionList (+ OptionRow), ItemMenu (+ ItemMenuProvider), Skeleton (CardRowPlaceholder, DetailPlaceholder, EpisodeCardsPlaceholder, EpisodeRowsPlaceholder, PosterGridPlaceholder, PosterRowsPlaceholder)
 modules/mpv/             vendored native module (+ UPSTREAM.md: upstream repo + commit)
 modules/downloads/       own native background downloader (iOS + Android)
 ```

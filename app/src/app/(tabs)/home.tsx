@@ -4,12 +4,12 @@ import { router } from 'expo-router';
 import { memo, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import { ApiError, type BaseItemDto, type ItemsResult } from '@/api';
+import { ApiError, isConnectionError, type BaseItemDto, type ItemsResult } from '@/api';
 import { Avatar } from '@/components/Avatar';
 import { CardPlaceholder, LANDSCAPE_WIDTH, LandscapeCard, POSTER_WIDTH, PosterCard } from '@/components/Card';
 import { Hero } from '@/components/Hero';
 import { useItemMenu } from '@/components/ItemMenu';
-import { loadErrorMessage, Message } from '@/components/Message';
+import { LoadError, loadErrorMessage, Message, Offline, useHeldOffline } from '@/components/Message';
 import { Row } from '@/components/Row';
 import { Screen } from '@/components/Screen';
 import { CardRowPlaceholder } from '@/components/Skeleton';
@@ -69,6 +69,13 @@ export default function Home() {
     Object.fromEntries((views.data?.Items ?? []).map((v) => [v.Id, latestCounts[countKey(v.Id)]])),
   );
   const { hero } = layout;
+  // Out of reach: Continue Watching and Next Up both failed for lack of a connection. Nothing else loaded (no library
+  // list) → the card alone; else the card on top of what did load (a cached Recently Added row).
+  const offline = useHeldOffline(
+    [resume, next].every((r) => !r.data && isConnectionError(r.error)),
+    loading,
+  );
+  const alone = offline.offline && !views.data;
 
   const landscape = (item: BaseItemDto) => (
     <LandscapeCard
@@ -98,73 +105,89 @@ export default function Home() {
         </Pressable>
       }
     >
-      <ScrollView
-        {...tabList}
-        testID="home-scroll"
-        contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.text} />}
-      >
-        {layout.allFailed ? (
-          <View style={styles.padded}>
-            <Message text={loadErrorMessage(views.error!)} retry={refreshHome} />
-          </View>
-        ) : (
-          <>
-            {layout.empty && (
-              <View style={styles.padded}>
-                <Message text="Nothing to watch yet. Add movies and shows to your Jellyfin server, then pull down to refresh." />
-              </View>
-            )}
-            {hero ? (
-              <View style={styles.padded}>
-                <Hero
-                  eyebrow={layout.heroFromResume ? 'Continue Watching' : 'Up Next'}
-                  {...cardTitles(hero)}
-                  {...playback(hero)}
-                  image={image(backdropImage(hero), width - 2 * spacing.md)}
-                  onPress={() => openItem(hero)}
-                  onLongPress={() => menu(hero)}
-                />
-              </View>
-            ) : (
-              layout.heroPending && (
-                <View testID="hero-placeholder" style={styles.padded}>
-                  <CardPlaceholder shape="landscape" width="100%" />
+      {alone ? (
+        // Nothing to scroll (Retry reloads).
+        <Offline fill busy={offline.busy} retry={refreshHome} />
+      ) : (
+        <ScrollView
+          {...tabList}
+          testID="home-scroll"
+          contentContainerStyle={styles.content}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.text} />}
+        >
+          {layout.allFailed ? (
+            <View style={styles.padded}>
+              <Message text={loadErrorMessage(views.error!)} retry={refreshHome} />
+            </View>
+          ) : (
+            <>
+              {offline.offline && <Offline busy={offline.busy} retry={refreshHome} />}
+              {layout.empty && (
+                <View style={styles.padded}>
+                  <Message text="Nothing to watch yet. Add movies and shows to your Jellyfin server, then pull down to refresh." />
                 </View>
-              )
-            )}
-            <ItemRow
-              title="Continue Watching"
-              shape="landscape"
-              items={layout.resume}
-              error={resume.error}
-              retry={resume.refresh}
-              card={landscape}
-            />
-            <ItemRow
-              title="Next Up"
-              shape="landscape"
-              items={layout.nextUp}
-              error={next.error}
-              retry={next.refresh}
-              card={landscape}
-            />
-            {layout.libraries === undefined ? (
-              <ItemRow
-                title="Recently Added"
-                shape="poster"
-                error={views.error}
-                retry={views.refresh}
-                card={() => null}
-              />
-            ) : (
-              layout.libraries.map((library) => (
-                <LatestRow key={library.Id} library={library} countKey={countKey(library.Id)} onCount={onLatestCount} />
-              ))
-            )}
-          </>
-        )}
-      </ScrollView>
+              )}
+              {hero ? (
+                <View style={styles.padded}>
+                  <Hero
+                    eyebrow={layout.heroFromResume ? 'Continue Watching' : 'Up Next'}
+                    {...cardTitles(hero)}
+                    {...playback(hero)}
+                    image={image(backdropImage(hero), width - 2 * spacing.md)}
+                    onPress={() => openItem(hero)}
+                    onLongPress={() => menu(hero)}
+                  />
+                </View>
+              ) : (
+                layout.heroPending &&
+                !offline.offline && (
+                  <View testID="hero-placeholder" style={styles.padded}>
+                    <CardPlaceholder shape="landscape" width="100%" />
+                  </View>
+                )
+              )}
+              {!offline.offline && (
+                <ItemRow
+                  title="Continue Watching"
+                  shape="landscape"
+                  items={layout.resume}
+                  error={resume.error}
+                  retry={resume.refresh}
+                  card={landscape}
+                />
+              )}
+              {!offline.offline && (
+                <ItemRow
+                  title="Next Up"
+                  shape="landscape"
+                  items={layout.nextUp}
+                  error={next.error}
+                  retry={next.refresh}
+                  card={landscape}
+                />
+              )}
+              {layout.libraries === undefined ? (
+                <ItemRow
+                  title="Recently Added"
+                  shape="poster"
+                  error={views.error}
+                  retry={views.refresh}
+                  card={() => null}
+                />
+              ) : (
+                layout.libraries.map((library) => (
+                  <LatestRow
+                    key={library.Id}
+                    library={library}
+                    countKey={countKey(library.Id)}
+                    onCount={onLatestCount}
+                  />
+                ))
+              )}
+            </>
+          )}
+        </ScrollView>
+      )}
     </Screen>
   );
 }
@@ -218,15 +241,18 @@ type ItemRowProps = {
   card: (item: BaseItemDto) => ReactNode;
 };
 
-/** One shelf: placeholders while loading, error + Retry, hidden when empty, else cards. */
+/**
+ * One shelf: placeholders while loading, error + Retry, hidden when empty, else cards. Out of reach with nothing
+ * loaded: hidden too (the rest of Home stays; all out of reach → the offline state), back by itself on reconnect.
+ */
 function ItemRow({ title, shape, items, error, retry, card }: ItemRowProps) {
-  if (items?.length === 0) return null;
+  if (items?.length === 0 || (!items && isConnectionError(error))) return null;
   return (
     <Row title={title}>
       {items ? (
         items.map(card)
       ) : error ? (
-        <Message text={loadErrorMessage(error)} retry={retry} />
+        <LoadError error={error} retry={retry} />
       ) : (
         <CardRowPlaceholder shape={shape} label={`Loading ${title}`} />
       )}

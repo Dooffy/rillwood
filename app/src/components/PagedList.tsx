@@ -2,7 +2,7 @@
 import { useCallback, type ReactElement } from 'react';
 import { FlatList, RefreshControl, StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import type { BaseItemDto } from '@/api';
+import { isConnectionError, type BaseItemDto } from '@/api';
 import { formatRemaining } from '@/format';
 import { cardTitles, landscapeImage, playback, posterImage, ticksToSeconds } from '@/items';
 import { openItem } from '@/navigation';
@@ -14,7 +14,7 @@ import { spacing, tabList, useColors } from '@/theme';
 import { PosterCard } from './Card';
 import { EPISODE_ROW_STILL, EpisodeRow } from './EpisodeRow';
 import { useItemMenu } from './ItemMenu';
-import { loadErrorMessage, Message } from './Message';
+import { LoadError, loadErrorMessage, Message, Offline, useHeldOffline } from './Message';
 import { CARD_GAP } from './Row';
 import { EpisodeRowsPlaceholder, PosterGridPlaceholder } from './Skeleton';
 import { Spinner } from './Spinner';
@@ -49,6 +49,7 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
   const cardWidth = Math.floor((width - 2 * spacing.md - (COLUMNS - 1) * CARD_GAP) / COLUMNS);
   const posters = layout === 'posters';
   const menu = useItemMenu();
+  const offline = useHeldOffline(list.items.length === 0 && isConnectionError(list.error), list.loading);
 
   const renderItem = useCallback(
     ({ item }: { item: BaseItemDto }) => {
@@ -89,6 +90,9 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
     [posters, cardWidth, image, onOpen, menu],
   );
 
+  // Out of reach with nothing loaded: the offline card alone at the top, nothing to scroll (held while a retry runs).
+  if (offline.offline) return <Offline fill busy={offline.busy} retry={list.retry} />;
+
   // First page: placeholders, an error with Retry, or what an empty list means.
   const empty = list.loading ? (
     posters ? (
@@ -106,7 +110,7 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
   const footer =
     list.items.length === 0 ? undefined : list.error ? (
       <View style={styles.footer}>
-        <Message text={loadErrorMessage(list.error)} retry={list.retry} />
+        <LoadError error={list.error} retry={list.retry} />
       </View>
     ) : list.loading ? (
       <View style={styles.footer}>

@@ -212,13 +212,52 @@ describe('Home', () => {
     expect(calls('/UserItems/Resume')).toBe(1);
   });
 
-  it('shows one error with Retry when the server is unreachable', async () => {
+  it('server out of reach, nothing loaded: one offline state with Retry + Go to Downloads, no row errors', async () => {
     const offline = new ApiError('network');
     routes = { '/UserViews': offline, '/UserItems/Resume': offline, '/Shows/NextUp': offline };
     await render(<Home />);
-    expect(
-      await screen.findByText("Couldn't reach the server. Check your connection and try again."),
-    ).toBeOnTheScreen();
+    expect(await screen.findByText("Check your connection, or watch something you've downloaded.")).toBeOnTheScreen();
+    expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Go to Downloads' })).toBeOnTheScreen();
+  });
+
+  it('a row out of reach is hidden; the rows that loaded stay', async () => {
+    fullServer();
+    routes['/Shows/NextUp'] = new ApiError('network');
+    await render(<Home />);
+    expect(await screen.findByRole('button', { name: /^Continue Watching, Sintel/ })).toBeOnTheScreen();
+    expect(screen.queryByText('Next Up')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+  });
+
+  // Regression: the library list loaded but every other row went offline → Home was blank, no message or Retry.
+  it('library list loaded, the rest out of reach: the card on top, what loaded below', async () => {
+    fullServer();
+    const offline = new ApiError('network');
+    Object.assign(routes, { '/UserItems/Resume': offline, '/Shows/NextUp': offline, 'latest:lib-s': offline });
+    await render(<Home />);
+    expect(await screen.findByText("Check your connection, or watch something you've downloaded.")).toBeOnTheScreen();
+    expect(await screen.findByText('Recently Added in Movies')).toBeOnTheScreen();
+    expect(screen.queryByText('Recently Added in Shows')).toBeNull();
+  });
+
+  it('Retry keeps the card up (Retry busy) while it asks; back online, Home loads', async () => {
+    const offline = new ApiError('network');
+    routes = { '/UserViews': offline, '/UserItems/Resume': offline, '/Shows/NextUp': offline };
+    await render(<Home />);
+    expect(await screen.findByText("Check your connection, or watch something you've downloaded.")).toBeOnTheScreen();
+    routes = { '/UserViews': 'pending', '/UserItems/Resume': 'pending', '/Shows/NextUp': 'pending' };
+    await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
+    expect(screen.getByText("Check your connection, or watch something you've downloaded.")).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeDisabled();
+    expect(screen.queryByTestId('hero-placeholder')).toBeNull();
+  });
+
+  it('shows one error with Retry when the server fails', async () => {
+    const broken = new ApiError('http', 500);
+    routes = { '/UserViews': broken, '/UserItems/Resume': broken, '/Shows/NextUp': broken };
+    await render(<Home />);
+    expect(await screen.findByText('The server ran into a problem. Try again in a moment.')).toBeOnTheScreen();
     expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(1);
     fullServer();
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));

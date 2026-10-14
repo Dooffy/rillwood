@@ -4,15 +4,15 @@ import { renderHook } from '@testing-library/react-native';
 
 import { useSession, type Account } from '@/session';
 
-import { resetTo, tabsTitle, useSignedOutRedirect } from './navigation';
+import { openDownloads, resetTo, tabsTitle, useSignedOutRedirect } from './navigation';
 
 jest.mock('expo-router', () => ({
-  router: { canDismiss: jest.fn(), dismissAll: jest.fn(), replace: jest.fn() },
+  router: { canDismiss: jest.fn(), dismissAll: jest.fn(), replace: jest.fn(), navigate: jest.fn() },
 }));
 jest.mock('@/session', () => ({ useSession: jest.fn() }));
 
 const { router } = jest.requireMock<{
-  router: { canDismiss: jest.Mock; dismissAll: jest.Mock; replace: jest.Mock };
+  router: { canDismiss: jest.Mock; dismissAll: jest.Mock; replace: jest.Mock; navigate: jest.Mock };
 }>('expo-router');
 
 const anna: Account = {
@@ -45,6 +45,22 @@ describe('resetTo', () => {
     resetTo('/server');
     expect(router.dismissAll).not.toHaveBeenCalled();
     expect(router.replace).toHaveBeenCalledWith('/server');
+  });
+});
+
+describe('openDownloads', () => {
+  it('closes what is pushed over the tabs, then shows Downloads', () => {
+    router.canDismiss.mockReturnValue(true);
+    openDownloads();
+    expect(router.dismissAll).toHaveBeenCalledTimes(1);
+    expect(router.navigate).toHaveBeenCalledWith('/downloads');
+  });
+
+  it('from a tab: only switches', () => {
+    router.canDismiss.mockReturnValue(false);
+    openDownloads();
+    expect(router.dismissAll).not.toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith('/downloads');
   });
 });
 
