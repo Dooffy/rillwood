@@ -56,6 +56,12 @@ export function openItem({ Id: id, Type }: BaseItemDto) {
   router.push({ pathname: Type === 'Series' ? '/series/[id]' : '/item/[id]', params: { id } });
 }
 
+/** The Downloads tab, from anywhere: screens pushed over the tabs close first (offline: what still plays). */
+export function openDownloads() {
+  if (router.canDismiss()) router.dismissAll();
+  router.navigate('/downloads');
+}
+
 /** Opens the player (M4) on an item at `start` seconds. */
 export function openPlayer({ Id: id }: Pick<BaseItemDto, 'Id'>, start = 0) {
   router.push({ pathname: '/player', params: { id, start: String(Math.floor(start)) } });

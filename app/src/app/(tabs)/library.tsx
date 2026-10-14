@@ -5,7 +5,7 @@
 import { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
-import type { BaseItemDto, Endpoint, ItemsResult } from '@/api';
+import { isConnectionError, type BaseItemDto, type Endpoint, type ItemsResult } from '@/api';
 import { Button } from '@/components/Button';
 import { LANDSCAPE_WIDTH, LandscapeCard, POSTER_WIDTH, PosterCard } from '@/components/Card';
 import { useItemMenu } from '@/components/ItemMenu';
@@ -14,7 +14,7 @@ import { FilterChips } from '@/components/FilterChips';
 import { FilterButton, FilterSheet } from '@/components/FilterSheet';
 import { ListRow, ListSection } from '@/components/List';
 import { MenuButton } from '@/components/MenuButton';
-import { loadErrorMessage, Message } from '@/components/Message';
+import { loadErrorMessage, Message, Offline, useHeldOffline } from '@/components/Message';
 import { PagedList } from '@/components/PagedList';
 import { Row } from '@/components/Row';
 import { PosterRowsPlaceholder } from '@/components/Skeleton';
@@ -124,6 +124,16 @@ export default function Library() {
   );
   const paged = usePagedItems(all ? null : listKey, (start) => listItems(query, LIBRARY_PAGE_SIZE, start));
   const sortLabel = LIBRARY_SORTS.find((o) => o.key === sort)?.label ?? LIBRARY_SORTS[0].label;
+  const failed = parts.find((p) => p.error && !p.data)?.error;
+  const loaded = parts.every((p) => p.data);
+  const retryAll = () => parts.forEach((p) => p.error && p.refresh());
+  // Out of reach with nothing loaded: the offline card (held while a retry runs). No search, sort or filters to use -
+  // unless there is something to undo (a search typed, another type, filters on), so the screen never gets stuck.
+  const offline = useHeldOffline(
+    all ? !loaded && isConnectionError(failed) : paged.items.length === 0 && isConnectionError(paged.error),
+    all ? parts.some((p) => p.loading) : paged.loading,
+  );
+  const controls = !offline.offline || text !== '' || !all || activeFilters(filters).length > 0;
 
   // Stable, so the paged list keeps its renderer (and cards) while typing.
   const accountId = active?.id;
@@ -187,13 +197,12 @@ export default function Library() {
       />
     );
   } else {
-    const failed = parts.find((p) => p.error && !p.data)?.error;
-    const groups = parts.every((p) => p.data) ? groupResults(parts.flatMap((p) => p.data?.Items ?? [])) : undefined;
+    const groups = loaded ? groupResults(parts.flatMap((p) => p.data?.Items ?? [])) : undefined;
     let content;
     if (!groups) {
       content = failed ? (
         <View style={styles.padded}>
-          <Message text={loadErrorMessage(failed)} retry={() => parts.forEach((p) => p.error && p.refresh())} />
+          <Message text={loadErrorMessage(failed)} retry={retryAll} />
         </View>
       ) : (
         <PosterRowsPlaceholder rows={term ? 3 : 2} />
@@ -236,7 +245,10 @@ export default function Library() {
         </>
       );
     }
-    body = (
+    body = offline.offline ? (
+      // Out of reach with nothing loaded: the offline card alone at the top, nothing to scroll.
+      <Offline fill busy={offline.busy} retry={retryAll} />
+    ) : (
       <ScrollView
         {...tabList}
         testID="library-rows"
@@ -255,43 +267,47 @@ export default function Library() {
       title="Library"
       padded={false}
       right={
-        <>
-          <MenuButton
-            icon={{ ios: 'arrow.up.arrow.down', android: 'sort' }}
-            label={`Sort: ${sortLabel}`}
-            title="Sort by"
-            options={LIBRARY_SORTS}
-            value={sort}
-            onChange={setSort}
-          />
-          <FilterButton
-            value={filters}
-            onPress={() => {
-              setGenresWanted(true);
-              setFiltersOpen(true);
-            }}
-          />
-        </>
+        controls && (
+          <>
+            <MenuButton
+              icon={{ ios: 'arrow.up.arrow.down', android: 'sort' }}
+              label={`Sort: ${sortLabel}`}
+              title="Sort by"
+              options={LIBRARY_SORTS}
+              value={sort}
+              onChange={setSort}
+            />
+            <FilterButton
+              value={filters}
+              onPress={() => {
+                setGenresWanted(true);
+                setFiltersOpen(true);
+              }}
+            />
+          </>
+        )
       }
     >
-      <View style={styles.controls}>
-        <View style={styles.padded}>
-          <SearchField
-            value={text}
-            onChangeText={setText}
-            onSubmit={submit}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            placeholder="Movies, shows, episodes"
-          />
+      {controls && (
+        <View style={styles.controls}>
+          <View style={styles.padded}>
+            <SearchField
+              value={text}
+              onChangeText={setText}
+              onSubmit={submit}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              placeholder="Movies, shows, episodes"
+            />
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scopes}>
+            {SEARCH_SCOPES.map((s) => (
+              <Chip key={s.key} label={s.label} selected={scope === s.key} onPress={() => setScope(s.key)} />
+            ))}
+          </ScrollView>
+          <FilterChips value={filters} onChange={setFilters} />
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scopes}>
-          {SEARCH_SCOPES.map((s) => (
-            <Chip key={s.key} label={s.label} selected={scope === s.key} onPress={() => setScope(s.key)} />
-          ))}
-        </ScrollView>
-        <FilterChips value={filters} onChange={setFilters} />
-      </View>
+      )}
       {body}
       <FilterSheet
         visible={filtersOpen}

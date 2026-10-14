@@ -3,9 +3,19 @@ import { describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { ApiError } from '@/api';
+import * as navigation from '@/navigation';
+import * as session from '@/session';
 import { playErrorMessage } from '@/playback';
 
-import { loadErrorMessage, Message } from './Message';
+import { LoadError, loadErrorMessage, Message, Offline } from './Message';
+
+const anna: session.Account = {
+  id: 'srv.a',
+  server: { id: 'srv', url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' },
+  userId: 'a',
+  userName: 'anna',
+  deviceId: 'dev',
+};
 
 describe('Message', () => {
   it.each([
@@ -38,5 +48,29 @@ describe('Message', () => {
   it('has no Retry without a handler', async () => {
     await render(<Message fill text="This item isn't available." />);
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+  });
+
+  it('server out of reach: Retry + Go to Downloads; a server error: Retry only', async () => {
+    const open = jest.spyOn(navigation, 'openDownloads').mockImplementation(() => {});
+    const retry = jest.fn();
+    const { rerender } = await render(<LoadError fill error={new ApiError('network')} retry={retry} />);
+    expect(screen.getByText("Can't reach the server")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Go to Downloads' }));
+    expect(open).toHaveBeenCalledTimes(1);
+    await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    await rerender(<LoadError error={new ApiError('http', 500)} retry={retry} />);
+    expect(screen.getByText(/^The server ran into a problem/)).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Go to Downloads' })).toBeNull();
+    open.mockRestore();
+  });
+
+  it('offline names the active server', async () => {
+    jest.spyOn(session, 'useSession').mockReturnValue({ accounts: [anna], active: anna });
+    await render(<Offline retry={() => {}} />);
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      "Can't reach Home serverCheck your connection, or watch something you've downloaded.",
+    );
+    jest.mocked(session.useSession).mockRestore();
   });
 });

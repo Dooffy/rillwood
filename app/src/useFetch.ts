@@ -3,7 +3,7 @@
 // another's data, and an account's entries are dropped once it signs out or is removed.
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
-import { ApiError, request, type Query } from '@/api';
+import { ApiError, isConnectionError, request, type Query } from '@/api';
 import { onReconnect } from '@/connection';
 import { connectionFor, getSession, useSession } from '@/session';
 
@@ -190,7 +190,7 @@ export function useFetch<T>(path: string | null, { query, ttl = DEFAULT_TTL_MS }
         if (inflight.get(key) !== shared) return; // superseded: its replacement decides
         inflight.delete(key);
         // Only what the connection broke: a 404 / 5xx / bad answer isn't fixed by being back online.
-        if (e instanceof ApiError && e.kind === 'network') failed.add(key);
+        if (isConnectionError(e)) failed.add(key);
         else failed.delete(key);
       });
       shared = { promise, controller, users: 0 };

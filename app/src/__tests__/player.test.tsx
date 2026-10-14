@@ -228,13 +228,13 @@ describe('Player screen', () => {
   it('network error → Retry asks again and plays', async () => {
     reply = () => Promise.reject(new ApiError('network'));
     await render(<PlayerScreen />);
-    expect(
-      await screen.findByText("Couldn't reach the server. Check your connection and try again."),
-    ).toBeOnTheScreen();
+    expect(await screen.findByText("Check your connection, or watch something you've downloaded.")).toBeOnTheScreen();
+    // Not downloaded and out of reach: the Downloads tab has what plays.
+    expect(screen.getByRole('button', { name: 'Go to Downloads' })).toBeOnTheScreen();
     reply = () => Promise.resolve({ MediaSources: [source] });
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
     expect(request).toHaveBeenCalledTimes(2);
-    expect(screen.queryByText("Couldn't reach the server. Check your connection and try again.")).toBeNull();
+    expect(screen.queryByText("Check your connection, or watch something you've downloaded.")).toBeNull();
     expect(lastPlayer().startSeconds).toBe(40);
   });
 
@@ -291,7 +291,7 @@ describe('Player screen', () => {
     reply = () => Promise.reject(new ApiError('network'));
     await render(<PlayerScreen />);
     expect(StatusBar).toHaveBeenLastCalledWith({ style: 'light', hidden: false }, undefined);
-    expect(await screen.findByText("Couldn't reach the server. Check your connection and try again.")).toHaveStyle({
+    expect(await screen.findByText("Check your connection, or watch something you've downloaded.")).toHaveStyle({
       color: palettes.dark.textSecondary,
     });
   });
@@ -438,7 +438,7 @@ describe('Player screen', () => {
   it('taps before playback starts do nothing; the controls still show when it does', async () => {
     reply = () => Promise.reject(new ApiError('network'));
     await render(<PlayerScreen />);
-    await screen.findByText("Couldn't reach the server. Check your connection and try again.");
+    await screen.findByText("Check your connection, or watch something you've downloaded.");
     await act(() => fireGestureHandler(getByGestureTestId('player-tap')));
     reply = () => Promise.resolve({ MediaSources: [source] });
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));

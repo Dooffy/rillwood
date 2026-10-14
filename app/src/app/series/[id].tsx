@@ -16,7 +16,7 @@ import { DetailHeader } from '@/components/DetailHeader';
 import { DetailHero, HERO_ART_SCALE, LOGO_WIDTH } from '@/components/DetailHero';
 import { EPISODE_CARD_WIDTH, EpisodeCard } from '@/components/EpisodeCard';
 import { useItemMenu } from '@/components/ItemMenu';
-import { loadErrorMessage, Message } from '@/components/Message';
+import { LoadError, loadErrorMessage, Message } from '@/components/Message';
 import { MoreLikeThis } from '@/components/MoreLikeThis';
 import { Overview } from '@/components/Overview';
 import { SeasonMenu } from '@/components/SeasonMenu';
@@ -53,7 +53,7 @@ export default function SeriesDetail() {
   if (fromSaved && saved) return <SavedSeries saved={saved} />;
   if (item) return <Series series={item} />;
   if (!isItemId(id) || error?.status === 404) return <Message fill text="This series isn't available." />;
-  if (error) return <Message fill text={loadErrorMessage(error)} retry={refresh} />;
+  if (error) return <LoadError fill header error={error} retry={refresh} />;
   return <DetailPlaceholder />;
 }
 

@@ -12,7 +12,7 @@ import { DetailActions } from '@/components/DetailActions';
 import { DetailHeader } from '@/components/DetailHeader';
 import { DetailHero, HERO_ART_SCALE, LOGO_WIDTH } from '@/components/DetailHero';
 import { ListRow, ListSection } from '@/components/List';
-import { loadErrorMessage, Message } from '@/components/Message';
+import { LoadError, Message } from '@/components/Message';
 import { MoreLikeThis } from '@/components/MoreLikeThis';
 import { Overview } from '@/components/Overview';
 import { ProgressBar } from '@/components/ProgressBar';
@@ -35,7 +35,7 @@ export default function ItemDetail() {
 
   if (item) return <Detail item={item} saved={fromSaved ? saved : null} />;
   if (!isItemId(id) || error?.status === 404) return <Message fill text="This item isn't available." />;
-  if (error) return <Message fill text={loadErrorMessage(error)} retry={refresh} />;
+  if (error) return <LoadError fill header error={error} retry={refresh} />;
   return <DetailPlaceholder />;
 }
 

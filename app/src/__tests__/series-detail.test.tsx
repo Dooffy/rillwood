@@ -290,9 +290,7 @@ describe('SeriesDetail', () => {
     await render(<SeriesDetail />);
     expect(screen.getByTestId('detail-placeholder')).toBeOnTheScreen();
     await act(async () => fail());
-    expect(
-      await screen.findByText("Couldn't reach the server. Check your connection and try again."),
-    ).toBeOnTheScreen();
+    expect(await screen.findByText("Check your connection, or watch something you've downloaded.")).toBeOnTheScreen();
     routes[`/Items/${SHOW}`] = show;
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByRole('header', { name: show.Name })).toBeOnTheScreen();
@@ -402,9 +400,7 @@ describe('SeriesDetail offline, with episodes downloaded', () => {
     jest.spyOn(downloads, 'savedItem').mockReturnValue(null);
     routes[`/Items/${SHOW}`] = new ApiError('network');
     await render(<SeriesDetail />);
-    expect(
-      await screen.findByText("Couldn't reach the server. Check your connection and try again."),
-    ).toBeOnTheScreen();
+    expect(await screen.findByText("Check your connection, or watch something you've downloaded.")).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeOnTheScreen();
   });
 });
