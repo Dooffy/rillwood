@@ -685,6 +685,10 @@ export function ticksToSeconds(ticks: number): number {
   return ticks / TICKS_PER_SECOND;
 }
 
+export function secondsToTicks(seconds: number): number {
+  return Math.round(seconds * TICKS_PER_SECOND);
+}
+
 export type Playback = {
   /** 0-1, only while in progress. */
   progress?: number;

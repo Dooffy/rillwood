@@ -6,7 +6,7 @@ import type NativeDownloads from '../modules/downloads';
 import type { Task } from '../modules/downloads';
 import type { BaseItemDto, MediaSourceDto } from './api';
 import type * as Store from './downloads';
-import { readSnapshotItem } from './downloadSnapshot';
+import { readSnapshotItem, writeSnapshotUserData } from './downloadSnapshot';
 import type { Account } from './session';
 
 const React = jest.requireActual<typeof import('react')>('react');
@@ -753,6 +753,22 @@ describe('snapshot', () => {
     await flush();
     expect(fetchMock).toHaveBeenCalledWith('https://a1.example/Items/m1', expect.anything());
     expect(dl.getDownload('a1:m1:m1')?.snapshot?.poster).toBe('downloads/a1/m1/poster.jpg');
+  });
+  it("the server's UserData goes into the saved item (offline sync); unchanged or missing → no write", async () => {
+    const json = 'downloads/a1/m1/item.json';
+    mockFiles.set(json, 1);
+    mockTexts.set(
+      json,
+      JSON.stringify({ Id: 'm1', Name: 'Sintel', UserData: { PlaybackPositionTicks: 5, Played: false } }),
+    );
+    const played = { PlaybackPositionTicks: 0, Played: true };
+    await writeSnapshotUserData('downloads/a1/m1/v1.mkv', played);
+    expect(readSnapshotItem('downloads/a1/m1/v1.mkv')).toEqual({ Id: 'm1', Name: 'Sintel', UserData: played });
+    const text = mockTexts.get(json);
+    await writeSnapshotUserData('downloads/a1/m1/v1.mkv', { ...played });
+    expect(mockTexts.get(json)).toBe(text);
+    await writeSnapshotUserData('downloads/a1/none/v1.mkv', played);
+    expect(mockTexts.has('downloads/a1/none/item.json')).toBe(false);
   });
 });
 

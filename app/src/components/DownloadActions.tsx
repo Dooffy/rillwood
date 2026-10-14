@@ -17,6 +17,7 @@ import {
 import { itemDetail, playback } from '@/items';
 import { openPlayer } from '@/navigation';
 import { connectionFor, getSession } from '@/session';
+import { getPendingProgress, withPendingProgress } from '@/sync';
 import { confirmDeleteDownloads, downloadActions } from '@/useDownloadControl';
 
 import { ActionSheet } from './ActionSheet';
@@ -33,7 +34,7 @@ export function useDownloadActions() {
   const remove = useCallback((d: Download) => confirmDeleteDownloads(d.title, [d.id]), []);
 
   // Plays the file on the phone (the player picks the download), from the server's resume point; lookup failed →
-  // from the start. Known offline: the resume point saved with the download, no lookup (no 8 s wait). One at a time;
+  // from the start. Known offline: the resume point saved with the download (+ progress made offline), no lookup (no 8 s wait). One at a time;
   // dropped if the account changed meanwhile.
   const opening = useRef(false);
   const play = useCallback(async (d: Download) => {
@@ -43,8 +44,10 @@ export function useDownloadActions() {
     try {
       const account = getSession().active;
       const conn = account && connectionFor(account);
-      if (isOffline()) start = resumeFrom(account ? savedItem(account.id, d.itemId)?.item : undefined);
-      else if (conn) start = resumeFrom(await request<BaseItemDto>(conn, itemDetail(d.itemId).path));
+      if (isOffline()) {
+        const saved = account && savedItem(account.id, d.itemId);
+        if (saved) start = resumeFrom(withPendingProgress(saved.item, getPendingProgress(account.id, d.itemId)));
+      } else if (conn) start = resumeFrom(await request<BaseItemDto>(conn, itemDetail(d.itemId).path));
     } catch {}
     opening.current = false;
     if (getSession().active?.id === d.accountId) openPlayer({ Id: d.itemId }, start);

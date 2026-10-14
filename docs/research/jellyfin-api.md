@@ -17,7 +17,7 @@ Item ids are identical on both servers (same media paths), so test fixtures can 
 | 7   | `HEAD /Items/{id}/Download` = **405**. GET has Accept-Ranges, Content-Length, Last-Modified, no ETag. Range 206, `If-Range` by date honoured                                        | Downloader must not HEAD                                       |
 | 8   | Same user + same DeviceId re-login revokes the older token. Different users on one DeviceId: 10.11 merges them into **one session**, 12.1 keeps them apart                          | Confirms per-account DeviceId                                  |
 | 9   | `POST /UserItems/{id}/UserData` sets `PlaybackPositionTicks`, `LastPlayedDate`, `Played` exactly as sent, partial bodies OK                                                         | Offline sync route (§6)                                        |
-| 10  | Server resume rules apply on every `Progress`: < 5% -> 0, ≥ 90% -> Played, items < 300s never get a resume point. `LastPlayedDate` + `PlayCount` are set only at `Sessions/Playing` | Client mirrors the rules offline                               |
+| 10  | Server resume rules apply on every `Progress`: < 5% -> 0, ≥ 90% -> Played, items < 300s never get a resume point (Played from 5%). `LastPlayedDate` + `PlayCount` are set only at `Sessions/Playing` | Client mirrors the rules offline                               |
 | 11  | 12.1 `/UserItems/Resume` returns Season + Series rows besides episodes; `mediaTypes=Video` fixes it                                                                                 | Add param                                                      |
 | 12  | `/Items/00000000000000000000000000000000` returns 200 with the root "Media Folders"                                                                                                 | Guard empty ids                                                |
 
@@ -165,7 +165,7 @@ Test file: 7-min `Resume Test (2026)` from `dev/jellyfin/make-test-media.sh` (42
 | -------------------------- | ----- | ---------------------------------------------------------------------------- |
 | `MinResumePct`             | 5     | < 21.0 s -> position dropped                                                 |
 | `MaxResumePct`             | 90    | > 378.0 s -> Played                                                          |
-| `MinResumeDurationSeconds` | 300   | items < 5 min never get a resume point (`Playing` already marks them Played) |
+| `MinResumeDurationSeconds` | 300   | items < 5 min never get a resume point: from 5% a `Progress` marks them Played (30 s item, 12.1: 1 s → nothing, 10 s → Played; `Playing` alone doesn't) |
 
 Online `Playing@0` -> `Progress@X` -> `Stopped@X` (same PlaySessionId), 12.1; 10.11 identical:
 
@@ -221,8 +221,9 @@ Resulting flow (CLAUDE.md §6 Sync): `GET` UserData -> server newer wins -> else
 - `UserPlayedItems` with an older `datePlayed` moves LPD backwards - guarded only by the GET check.
 - Device clock far in the future would always win and pin the item to the top of Resume - clamp `lastPlayedAt <= now`.
 - Use the **local session start** as `lastPlayedAt` to match the server (LPD = `Playing` time).
-- Offline rewatch of an already played item below 90%: POST UserData leaves Played true. Whether to also send `Played:false` is open (CLAUDE.md §11).
-- Items < 300 s: online they become Played at `Playing`; offline rules should mirror this.
+- Offline rewatch of an already played item below 90%: POST UserData leaves Played true. Online the same (12.1, 2026-10-14): `Playing` on a played item → PlayCount +1, LPD = now, Played stays; `Stopped` at 2:00 → Played true + pos 120 s, in Resume. So no `Played:false` on replay.
+- `GET /Items?ids=a,b` answers each item with its UserData (unknown ids left out); `GET /UserItems/{unknown}/UserData` → 404.
+- Items < 300 s: online they become Played at the first `Progress` past 5% (not at `Playing` - retested 2026-10-14); offline rules mirror this.
 - Server thresholds can differ from defaults but are readable only by admins (`/System/Configuration`) - hardcode the defaults.
 
 ## 6. curl examples
