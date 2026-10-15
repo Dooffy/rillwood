@@ -128,7 +128,7 @@ Design + sources: `docs/research/background-downloads.md`.
 - [x] Offline mode UI: screens without cached data point to Downloads (with the connection error UI). Device test OM12-OM16 pending
 - [x] Progress queue + replay per `docs/context/sync.md` (GET then POST, last writer wins on `LastPlayedDate`); watched sync for downloaded items
 - [x] Auto-remove (`src/offload.ts`, decided 2026-10-14): Remove downloads Never / 30 / 90 / 180 days after download + optional Remove watched (6 h / 24 h / 3 days cooldown, Keep toast), Reset Timer per download / show / all, "Expires in 5 days" / "45h" labels, freed-space toast; cleanup after every sync run, skips unfinished / playing. Device test OL1-OL11 pending
-- [ ] Weekly orphan sweep
+- [x] Weekly orphan sweep (`sweepOrphans` in `src/downloads.ts`): after a reconcile, once a week, deletes account / item folders and files under `downloads/` no download in the index owns; never with an unreadable index or when native didn't answer. Device test OS1-OS4 pending
 
 ## M7 - Hardening + release
 
