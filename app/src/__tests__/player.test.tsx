@@ -149,7 +149,7 @@ describe('Player screen', () => {
     it('plays the file on the phone with its saved subtitles - no PlaybackInfo, no auth header', async () => {
       localCopy.mockReturnValue(local());
       await render(<PlayerScreen />);
-      expect(localCopy).toHaveBeenCalledWith('srv.a', ID);
+      expect(localCopy).toHaveBeenCalledWith('srv.a', ID, undefined);
       expect(request).not.toHaveBeenCalled();
       expect(lastPlayer()).toMatchObject({
         source: { uri: 'file:///docs/downloads/srv.a/m/ms.mkv', headers: {} },
@@ -185,6 +185,35 @@ describe('Player screen', () => {
       await act(() => fireEvent.press(screen.getByText('Retry')));
       expect(request).toHaveBeenCalled();
       expect(lastPlayer().source.uri).toMatch(/^https:\/\/jf\.example\.com\/Videos\//);
+    });
+
+    // A Downloads row stands for one version (two versions of a movie downloaded): that one plays, not the newest.
+    it('a version from the route: looked for first on the phone; none there → that version streamed', async () => {
+      useLocalSearchParams.mockReturnValue({ id: ID, start: '0', source: 'ms' });
+      localCopy.mockReturnValue(local());
+      await render(<PlayerScreen />);
+      expect(localCopy).toHaveBeenCalledWith('srv.a', ID, 'ms');
+      expect(lastPlayer().source.uri).toBe('file:///docs/downloads/srv.a/m/ms.mkv');
+
+      await act(() => lastPlayer().onError?.('cannot open'));
+      localCopy.mockReturnValue(null);
+      const other = { ...source, Id: 'other' };
+      reply = () => Promise.resolve({ MediaSources: [other, source], PlaySessionId: 'ps' });
+      await act(() => fireEvent.press(screen.getByText('Retry')));
+      expect(request).toHaveBeenLastCalledWith(
+        expect.anything(),
+        ID,
+        expect.objectContaining({ MediaSourceId: 'ms' }),
+        expect.any(AbortSignal),
+      );
+      expect(lastPlayer().source.uri).toBe(`https://jf.example.com/Videos/${ID}/stream?static=true&mediaSourceId=ms`);
+    });
+
+    it("an empty version (Up Next cleared it) is none: the server's default", async () => {
+      useLocalSearchParams.mockReturnValue({ id: ID, start: '0', source: '' });
+      await render(<PlayerScreen />);
+      expect(localCopy).toHaveBeenCalledWith('srv.a', ID, undefined);
+      expect(request.mock.calls.at(-1)![2]).toEqual(expect.objectContaining({ MediaSourceId: undefined }));
     });
 
     it("the saved item doesn't list that version: streams it", async () => {
@@ -795,7 +824,7 @@ describe('Up Next', () => {
 
     await act(() => lastPlayer().onProgress?.({ position: 1400, duration: 1400 }));
     await act(() => lastPlayer().onEnd?.());
-    expect(router.setParams).toHaveBeenCalledWith({ id: EP2, start: '0' });
+    expect(router.setParams).toHaveBeenCalledWith({ id: EP2, start: '0', source: '' });
     await rerender(<PlayerScreen />);
     // The finished episode is stopped at its end (played), the next one loads from its start.
     expect(stopped).toHaveBeenCalledWith(
@@ -899,7 +928,14 @@ describe('Up Next', () => {
   it('a tap on the tile plays the next episode right away', async () => {
     await playAt(1380);
     await fireEvent.press(screen.getByRole('button', { name: 'Play next episode, S1, E2 · Second' }));
-    expect(router.setParams).toHaveBeenCalledWith({ id: EP2, start: '0' });
+    expect(router.setParams).toHaveBeenCalledWith({ id: EP2, start: '0', source: '' });
+  });
+
+  it("a version picked for this episode (a Downloads row) isn't asked of the next one", async () => {
+    useLocalSearchParams.mockReturnValue({ id: EP1, start: '0', source: 'ms' });
+    await playAt(1380);
+    await fireEvent.press(screen.getByRole('button', { name: 'Play next episode, S1, E2 · Second' }));
+    expect(router.setParams.mock.calls.at(-1)![0]).toHaveProperty('source', '');
   });
 
   it('Hide: the card goes, the end pauses as without a next episode', async () => {
@@ -956,7 +992,7 @@ describe('Up Next', () => {
     try {
       await playAt(1380);
       await fireEvent.press(screen.getByRole('button', { name: 'Play next episode, S1, E2 · Second' }));
-      expect(router.setParams).toHaveBeenCalledWith({ id: EP2, start: '600' });
+      expect(router.setParams).toHaveBeenCalledWith({ id: EP2, start: '600', source: '' });
     } finally {
       episodes[1] = episode(EP2, 2);
     }

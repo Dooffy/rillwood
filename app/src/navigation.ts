@@ -62,7 +62,8 @@ export function openDownloads() {
   router.navigate('/downloads');
 }
 
-/** Opens the player (M4) on an item at `start` seconds. */
-export function openPlayer({ Id: id }: Pick<BaseItemDto, 'Id'>, start = 0) {
-  router.push({ pathname: '/player', params: { id, start: String(Math.floor(start)) } });
+/** Opens the player (M4) on an item at `start` seconds; `source` plays that version (a download's), else the default. */
+export function openPlayer({ Id: id }: Pick<BaseItemDto, 'Id'>, start = 0, source?: string) {
+  const params = { id, start: String(Math.floor(start)) };
+  router.push({ pathname: '/player', params: source ? { ...params, source } : params });
 }

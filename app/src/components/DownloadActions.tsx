@@ -36,7 +36,7 @@ export function useDownloadActions() {
   const close = useCallback(() => setMenu(null), []);
   const remove = useCallback((d: Download) => confirmDeleteDownloads(d.title, [d.id]), []);
 
-  // Plays the file on the phone (the player picks the download), from the server's resume point; lookup failed →
+  // Plays this version's file on the phone, from the server's resume point; lookup failed →
   // from the start. Known offline: the resume point saved with the download (+ progress made offline), no lookup (no 8 s wait). One at a time;
   // dropped if the account changed meanwhile.
   const opening = useRef(false);
@@ -53,7 +53,7 @@ export function useDownloadActions() {
       } else if (conn) start = resumeFrom(await request<BaseItemDto>(conn, itemDetail(d.itemId).path));
     } catch {}
     opening.current = false;
-    if (getSession().active?.id === d.accountId) openPlayer({ Id: d.itemId }, start);
+    if (getSession().active?.id === d.accountId) openPlayer({ Id: d.itemId }, start, d.sourceId);
   }, []);
 
   const sheet = <DownloadMenu of={menu} remove={remove} onClose={close} />;

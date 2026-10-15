@@ -888,6 +888,19 @@ describe('index', () => {
       expect(dl.localCopy('a1', 'm1')?.sourceId).toBe('v2');
     });
 
+    it('a version asked for: that one, not the newest', () => {
+      seed(copy('v1', { downloadedAt: 1 }), copy('v2', { downloadedAt: 2 }));
+      expect(dl.localCopy('a1', 'm1', 'v1')?.sourceId).toBe('v1');
+    });
+
+    it("a version asked for that can't play: the newest other one (offline it still plays)", () => {
+      const gone = copy('v1', { downloadedAt: 1 });
+      mockFiles.delete(gone.path);
+      seed(gone, copy('v2', { downloadedAt: 2 }), copy('v3', { status: 'paused' }));
+      expect(dl.localCopy('a1', 'm1', 'v1')?.sourceId).toBe('v2');
+      expect(dl.localCopy('a1', 'm1', 'v3')?.sourceId).toBe('v2');
+    });
+
     it('a version whose file is gone falls back to an older one', () => {
       const old = copy('v1', { downloadedAt: 1 });
       const gone = copy('v2', { downloadedAt: 2 });

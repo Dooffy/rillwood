@@ -93,7 +93,10 @@ describe("A show's downloads", () => {
     await fireEvent.press(screen.getByRole('menuitem', { name: 'Pause Download' }));
     expect(native.pause).toHaveBeenCalledWith(idOf(e1));
     await fireEvent.press(screen.getByRole('button', { name: '2. Episode 2, 1.1 GB' }));
-    expect(router.push).toHaveBeenCalledWith({ pathname: '/player', params: { id: e2.Id, start: '0' } });
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/player',
+      params: { id: e2.Id, start: '0', source: `${e2.Id}-ms` },
+    });
   });
 
   it('goes back once the last episode is deleted', async () => {
