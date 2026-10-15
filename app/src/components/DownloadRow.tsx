@@ -15,6 +15,7 @@ import { minTouch, pressedOpacity, spacing, useColors } from '@/theme';
 import { Artwork } from './Artwork';
 import { longPressProps } from './Card';
 import { DownloadRing } from './DownloadRing';
+import { EPISODE_ROW_STILL } from './EpisodeRow';
 import { Chevron } from './List';
 import { SwipeToDelete } from './SwipeToDelete';
 import { Text } from './Text';
@@ -44,7 +45,16 @@ export function DownloadRowGap() {
 
 const poster = (d: Download | undefined) => (d?.snapshot?.poster ? documentUri(d.snapshot.poster) : undefined);
 
-/** Poster, title, size + status, then the ring (opens the menu) while it isn't done. Tap plays a ready one. */
+/** An episode's 16:9 art, as its card online: its still, else its backdrop (the show's, mostly). */
+function still(d: Download) {
+  const art = d.snapshot?.still ?? d.snapshot?.backdrop;
+  return art ? documentUri(art) : undefined;
+}
+
+/**
+ * Poster (an episode: its still), title, size + status, then the ring (opens the menu) while it isn't done. Tap plays a
+ * ready one.
+ */
 export const DownloadRow = memo(function DownloadRow({ id, title, onPlay, onDelete, onMenu }: DownloadRowProps) {
   const d = useDownload(id);
   const network = useDownloadNetwork();
@@ -54,6 +64,7 @@ export const DownloadRow = memo(function DownloadRow({ id, title, onPlay, onDele
   const { state, progress } = summarize([d])!;
   const done = state === 'done';
   const name = title ?? d.title;
+  const episode = !!d.seriesId;
   // Auto-remove: "Watched" once the watched rule counts it, then when it goes.
   const watched = done && hours > 0 && watchedSinceReset(d);
   const expires = expiresAt(d, days, hours);
@@ -73,9 +84,15 @@ export const DownloadRow = memo(function DownloadRow({ id, title, onPlay, onDele
           onPress={done ? () => onPlay(d) : undefined}
           style={({ pressed }) => [styles.main, pressed && styles.pressed]}
         >
-          <View style={styles.poster}>
-            <Artwork image={poster(d)} aspectRatio={2 / 3} />
-          </View>
+          {episode ? (
+            <View style={styles.still}>
+              <Artwork image={still(d)} aspectRatio={16 / 9} />
+            </View>
+          ) : (
+            <View style={styles.poster}>
+              <Artwork image={poster(d)} aspectRatio={2 / 3} />
+            </View>
+          )}
           <View style={styles.text}>
             <Text variant="label" numberOfLines={2}>
               {name}
@@ -186,6 +203,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   main: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm + spacing.xs, minHeight: minTouch },
   poster: { width: 56 },
+  still: { width: EPISODE_ROW_STILL },
   text: { flex: 1, gap: spacing.xs / 2 },
   control: { width: minTouch, height: minTouch, alignItems: 'center', justifyContent: 'center' },
   chevron: { width: spacing.lg, alignItems: 'center' },

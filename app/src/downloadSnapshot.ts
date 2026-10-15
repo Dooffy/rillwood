@@ -1,32 +1,36 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Per-download snapshot (docs/context/downloads.md): the item JSON, poster, backdrop and external subtitle files, in
-// the item's folder next to the video - what offline browsing and playback read. Images and subtitle streams are
-// served without auth (docs/context/api.md): no token goes into these requests. Paths stored are relative to
-// `Paths.document`.
+// Per-download snapshot (docs/context/downloads.md): the item JSON, poster, backdrop, an episode's still and external
+// subtitle files, in the item's folder next to the video - what offline browsing and playback read. Images and subtitle
+// streams are served without auth (docs/context/api.md): no token goes into these requests. Paths stored are relative
+// to `Paths.document`.
 import { Directory, File, Paths } from 'expo-file-system';
 
 import type { BaseItemDto, MediaSourceDto, UserItemDataDto } from '@/api';
-import { backdropImage, imageUrl, posterImage, type ImageRef } from '@/items';
+import { backdropImage, imageUrl, landscapeImage, posterImage, type ImageRef } from '@/items';
 import { subtitleExtension, subtitleUrl } from '@/playback';
 
 /** What was saved; `undefined` fields had nothing on the server (no poster, ...) or failed for good (a 404). */
 export type Snapshot = {
   poster?: string;
   backdrop?: string;
+  /** An episode's own 16:9 still (its poster is its show's); none for other types. */
+  still?: string;
   /** External (sidecar) subtitles of the downloaded version, by Jellyfin stream index. */
   subtitles: { index: number; path: string }[];
 };
 
-/** Pixels: a poster sharp at 2:3 card + detail sizes, a backdrop for the full-width hero. */
+/** Pixels: a poster sharp at 2:3 card + detail sizes, a backdrop for the full-width hero, a still for episode rows. */
 const POSTER_PX = 720;
 const BACKDROP_PX = 1920;
+const STILL_PX = 720;
 
 const ITEM_JSON = 'item.json';
 const POSTER = 'poster.jpg';
 const BACKDROP = 'backdrop.jpg';
+const STILL = 'still.jpg';
 
 /** Files in an item folder its versions share (the orphan sweep keeps them while a version is in the index). */
-export const sharedFiles: readonly string[] = [ITEM_JSON, POSTER, BACKDROP];
+export const sharedFiles: readonly string[] = [ITEM_JSON, POSTER, BACKDROP, STILL];
 
 /** `downloads/<account>/<item>` - the folder of a download's `path`. */
 export const itemFolder = (path: string) => path.slice(0, path.lastIndexOf('/'));
@@ -72,6 +76,8 @@ export async function saveSnapshot(
     ref ? { url: imageUrl(baseUrl, ref, px, 1), path: `${folder}/${name}` } : undefined;
   const poster = image(posterImage(item), POSTER_PX, POSTER);
   const backdrop = image(backdropImage(item), BACKDROP_PX, BACKDROP);
+  // What an episode card shows online: its own still, else its show's thumb / backdrop.
+  const still = item.Type === 'Episode' ? image(landscapeImage(item), STILL_PX, STILL) : undefined;
   const subtitles = (source.MediaStreams ?? []).flatMap((s) => {
     // The index goes into a file name: a whole number only (server JSON isn't checked against the type).
     const sidecar = s.Type === 'Subtitle' && s.IsExternal && Number.isInteger(s.Index) && s.Index >= 0;
@@ -80,7 +86,7 @@ export async function saveSnapshot(
     return url ? [{ index: s.Index, url, path: `${subtitlePrefix(path)}${s.Index}.${subtitleExtension(s)}` }] : [];
   });
 
-  const wanted = [poster, backdrop, ...subtitles].filter((a) => a !== undefined);
+  const wanted = [poster, backdrop, still, ...subtitles].filter((a) => a !== undefined);
   const missing = wanted.filter((a) => !fileAt(a.path).exists);
   const results = await Promise.allSettled(
     missing.map((a) => File.downloadFileAsync(a.url, fileAt(a.path), { idempotent: true })),
@@ -91,6 +97,7 @@ export async function saveSnapshot(
   return {
     poster: saved(poster),
     backdrop: saved(backdrop),
+    still: saved(still),
     subtitles: subtitles.filter((s) => saved(s)).map(({ index, path: p }) => ({ index, path: p })),
   };
 }

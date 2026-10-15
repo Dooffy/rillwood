@@ -133,7 +133,7 @@ Design + sources: `docs/research/background-downloads.md`.
 ## M7 - Hardening + release
 
 - [ ] Pre-release improvements:
-  - Offline series: per-episode art - each episode shows its own still (save it with the snapshot), not only the show's poster
+  - [x] Offline series: per-episode art - each episode saves its own still with the snapshot (`still.jpg`) and its Downloads row (a show's screen, Episodes chip) shows it (16:9), not the show's poster. Episodes downloaded before show their backdrop until re-downloaded
   - Storage limit across accounts made explicit: the limit is phone-wide, but the Downloads tab shows only the active account's usage. E.g. a 5 GB limit used up by account 1 → account 2 can't download and doesn't see why. Show the other accounts' share (storage bar + Settings → Storage limit) and name it in the "over the limit" message
 - [ ] Settings: accounts, playback defaults, downloads, cache clear, licenses screen
 - [ ] Perf (FlashList if FlatList stutters, image sizes, cold start <2s), accessibility pass
