@@ -127,7 +127,7 @@ Design + sources: `docs/research/background-downloads.md`.
 - [x] Offline mode state (`src/connection.ts`): the offline flag (any request that can't reach the server sets it, any answer clears it) checked with `/System/Info/Public` at launch, back from the background and on a server switch, rechecked while offline (5 / 10 / 20 s, then every 30 s, on screen only); back online → screens and paged lists that failed for lack of a connection load again. The offline UI above now knows at launch / on return, not only after a failed request. Device test OM1-OM6 pending
 - [x] Offline mode UI: screens without cached data point to Downloads (with the connection error UI). Device test OM12-OM16 pending
 - [x] Progress queue + replay per `docs/context/sync.md` (GET then POST, last writer wins on `LastPlayedDate`); watched sync for downloaded items
-- [ ] Offload settings + `cleanup()` + Keep pin + "Removes in N days" label + freed-GB toast
+- [x] Auto-remove (`src/offload.ts`, decided 2026-10-14): Remove downloads Never / 30 / 90 / 180 days after download + optional Remove watched (6 h / 24 h / 3 days cooldown, Keep toast), Reset Timer per download / show / all, "Expires in 5 days" / "45h" labels, freed-space toast; cleanup after every sync run, skips unfinished / playing. Device test OL1-OL11 pending
 - [ ] Weekly orphan sweep
 
 ## M7 - Hardening + release

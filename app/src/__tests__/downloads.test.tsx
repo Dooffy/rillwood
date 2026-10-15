@@ -10,6 +10,7 @@ import Downloads from '@/app/(tabs)/downloads';
 import * as store from '@/downloads';
 import { deleteDownloads, downloadId, initDownloads, startDownloads } from '@/downloads';
 import * as session from '@/session';
+import { setOffloadDays, setOffloadWatched } from '@/settings';
 import { recordProgress } from '@/sync';
 import type { Account } from '@/session';
 
@@ -65,6 +66,9 @@ const idOf = (item: BaseItemDto) => downloadId(account.id, item.Id, `${item.Id}-
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Auto-remove off: rows show no timer unless a test turns it on.
+  setOffloadDays(0);
+  setOffloadWatched(0);
   // A new account per test: the store outlives a test, and other accounts' downloads never show.
   accounts = [];
   sintel = async () => movie;
@@ -130,7 +134,8 @@ describe('Downloads', () => {
     expect(screen.getByText('No downloads match "zzz".')).toBeOnTheScreen();
 
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-    await fireEvent.press(screen.getByRole('button', { name: 'Delete All Downloads' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'More' }));
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Delete All Downloads' }));
     expect(alert.mock.calls[0][1]).toMatch(/^3 downloads /);
   });
 
@@ -306,6 +311,82 @@ describe('Downloads', () => {
     expect(router.push).toHaveBeenCalledWith({ pathname: '/item/[id]', params: { id: 'sintel' } });
   });
 
+  describe('auto-remove', () => {
+    const DAY = 24 * 60 * 60_000;
+    const T = Date.parse('2026-10-14T12:00:00.000Z');
+    let now: ReturnType<typeof jest.spyOn>;
+    beforeEach(() => {
+      now = jest.spyOn(Date, 'now').mockReturnValue(T);
+    });
+    const finished = async (...items: BaseItemDto[]) => {
+      await download(...items);
+      for (const item of items) await act(() => emit('done', { id: idOf(item) }));
+    };
+
+    it('says when a download expires; Reset Timer starts it again', async () => {
+      setOffloadDays(30);
+      await finished(movie);
+      now.mockReturnValue(T + 26 * DAY + 12 * 60 * 60_000);
+      await render(<Downloads />);
+      const row = screen.getByRole('button', { name: 'Sintel, 2.1 GB, Expires in 3 days' });
+
+      await fireEvent(row, 'longPress');
+      await fireEvent.press(screen.getByRole('menuitem', { name: 'Reset Timer' }));
+      expect(screen.getByRole('button', { name: 'Sintel, 2.1 GB, Expires in 30 days' })).toBeOnTheScreen();
+    });
+
+    it('Remove watched: a watched download says so and goes sooner', async () => {
+      setOffloadDays(0);
+      setOffloadWatched(24);
+      await finished(movie);
+      await render(<Downloads />);
+      expect(screen.getByRole('button', { name: 'Sintel, 2.1 GB' })).toBeOnTheScreen();
+      await act(() => store.setWatched(new Map([[idOf(movie), T + 1]])));
+      expect(screen.getByRole('button', { name: 'Sintel, 2.1 GB · Watched, Expires in 24h' })).toBeOnTheScreen();
+    });
+
+    it('header menu: Reset All Timers asks first, then resets every download with a timer', async () => {
+      setOffloadDays(90);
+      await finished(movie, episode(1));
+      const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      await render(<Downloads />);
+      now.mockReturnValue(T + 10 * DAY);
+
+      await fireEvent.press(screen.getByRole('button', { name: 'More' }));
+      await fireEvent.press(screen.getByRole('menuitem', { name: 'Reset All Timers' }));
+      expect(alert.mock.calls[0].slice(0, 2)).toEqual([
+        'Reset all timers?',
+        '2 downloads start their timer again now and are kept for 90 more days.',
+      ]);
+      const buttons = alert.mock.calls[0][2] as AlertButton[];
+      await act(() => buttons.find((b) => b.text === 'Reset')?.onPress?.());
+      expect(store.getDownload(idOf(movie))?.resetAt).toBe(T + 10 * DAY);
+      expect(store.getDownload(idOf(episode(1)))?.resetAt).toBe(T + 10 * DAY);
+    });
+
+    it("a show's long press: Reset Timers for its episodes, or Delete Downloads", async () => {
+      setOffloadDays(90);
+      await finished(episode(1), episode(2));
+      const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      await render(<Downloads />);
+      const show = screen.getByLabelText(/^Test Show, 2 episodes · 4\.3 GB, Next expires in 90 days$/);
+
+      await fireEvent(show, 'longPress');
+      await fireEvent.press(screen.getByRole('menuitem', { name: 'Reset Timers' }));
+      expect(alert.mock.calls[0][0]).toBe('Reset the timers of Test Show?');
+      await fireEvent(show, 'longPress');
+      await fireEvent.press(screen.getByRole('menuitem', { name: 'Delete Downloads' }));
+      expect(alert.mock.calls[1][0]).toBe('Delete the downloads of Test Show?');
+    });
+
+    it('Never: no timers, no Reset in the menus', async () => {
+      await finished(movie);
+      await render(<Downloads />);
+      await fireEvent(screen.getByRole('button', { name: 'Sintel, 2.1 GB' }), 'longPress');
+      expect(screen.queryByRole('menuitem', { name: 'Reset Timer' })).toBeNull();
+    });
+  });
+
   it('deletes from the long-press menu after asking', async () => {
     await download(movie);
     const id = idOf(movie);
@@ -348,7 +429,8 @@ describe('Downloads', () => {
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     await render(<Downloads />);
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Delete All Downloads' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'More' }));
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Delete All Downloads' }));
     expect(alert.mock.calls[0].slice(0, 2)).toEqual([
       'Delete all downloads?',
       '2 downloads (4.3 GB) are removed from this device. You can download them again.',
@@ -360,7 +442,7 @@ describe('Downloads', () => {
     expect(native.cancel).toHaveBeenCalledWith(idOf(episode(1)));
     expect(native.cancel).not.toHaveBeenCalledWith(otherAccounts);
     expect(screen.getByText(/^Nothing downloaded yet\./)).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Delete All Downloads' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
   });
 
   it('starts unnarrowed after an account switch', async () => {

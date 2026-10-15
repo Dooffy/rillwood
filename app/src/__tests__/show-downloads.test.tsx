@@ -8,6 +8,7 @@ import type { BaseItemDto } from '@/api';
 import ShowDownloads from '@/app/show-downloads/[id]';
 import { downloadId, initDownloads, startDownloads } from '@/downloads';
 import * as session from '@/session';
+import { setOffloadDays, setOffloadWatched } from '@/settings';
 import type { Account } from '@/session';
 
 import NativeDownloads from '../../modules/downloads';
@@ -44,6 +45,9 @@ const idOf = (item: BaseItemDto) => downloadId(account.id, item.Id, `${item.Id}-
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Auto-remove off: rows show no timer unless a test turns it on.
+  setOffloadDays(0);
+  setOffloadWatched(0);
   // A new account per test: the store outlives a test.
   account = {
     id: `srv.u${++seq}`,

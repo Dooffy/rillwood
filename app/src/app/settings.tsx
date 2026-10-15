@@ -14,7 +14,6 @@ import { usePicker } from '@/pickers';
 import { formatDownloadLimit, useDownloadLimit } from '@/settings';
 import { minTouch, radii, spacing, useColors } from '@/theme';
 
-// Remove watched shows the default (CLAUDE.md §2) until offload lands in M6.
 export default function Settings() {
   const subtitleSize = usePicker('subtitle-size').choice?.label;
   const subtitleColour = usePicker('subtitle-colour').choice?.label;
@@ -61,7 +60,8 @@ export default function Settings() {
           value={formatDownloadLimit(downloadLimit)}
           onPress={() => router.push('/download-storage')}
         />
-        <ListRow label="Remove watched" value="After 7 days" />
+        {/* Remove watched sits on the same page, under the days. */}
+        <OptionRow option="offload-days" />
       </ListSection>
       <ListSection title="About">
         <ListRow label="Version" value={Constants.expoConfig?.version ?? '-'} />

@@ -402,6 +402,14 @@ describe('pause / resume / delete', () => {
     expect(native.pause).toHaveBeenCalledTimes(1);
   });
 
+  it('reset timers and watched times (offload) are saved', () => {
+    dl.resetTimers(['a1:m1:m1'], 99);
+    dl.setWatched(new Map([['a1:m1:m1', 1234]]));
+    expect(saved().items[0]).toMatchObject({ resetAt: 99, watchedAt: 1234 });
+    dl.setWatched(new Map([['a1:m1:m1', undefined]]));
+    expect(saved().items[0].watchedAt).toBeUndefined();
+  });
+
   it('delete cancels native, removes the file and the entry', () => {
     mockFiles.set('downloads/a1/m1/m1.mkv', GB);
     dl.deleteDownload('a1:m1:m1');

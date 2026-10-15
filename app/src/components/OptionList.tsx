@@ -27,9 +27,11 @@ export function OptionList<T extends string | number>({
   choices,
   value,
   onChange,
+  title,
   footer,
 }: {
   choices: readonly OptionChoice<T>[];
+  title?: string;
   value: T;
   onChange: (value: T) => void;
   footer?: string;
@@ -37,7 +39,7 @@ export function OptionList<T extends string | number>({
   const c = useColors();
   return (
     <View accessibilityRole="radiogroup">
-      <ListSection footer={footer}>
+      <ListSection title={title} footer={footer}>
         {choices.map((o) => {
           const selected = o.value === value;
           return (

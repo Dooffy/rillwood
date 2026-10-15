@@ -321,6 +321,22 @@ describe('syncProgress (replay)', () => {
     expect(api.getUserData.mock.calls.map((c) => c[1])).toEqual(['film', 'next']);
   });
 
+  it('onSynced: once after every run, the pull included; also when skipped offline', async () => {
+    const synced = jest.fn();
+    const off = sync.onSynced(synced);
+    api.isOffline.mockReturnValueOnce(true);
+    await sync.syncProgress();
+    expect(synced).toHaveBeenCalledTimes(1);
+    record();
+    const first = sync.syncProgress();
+    const second = sync.syncProgress();
+    await Promise.all([first, second]);
+    expect(synced).toHaveBeenCalledTimes(2);
+    off();
+    await sync.syncProgress();
+    expect(synced).toHaveBeenCalledTimes(2);
+  });
+
   it("then the server's UserData goes into the saved items of the account's downloads", async () => {
     mockDownloads.list = [
       { accountId: anna.id, itemId: 'film', path: 'downloads/srv.a/film/v1.mkv' },
@@ -355,6 +371,17 @@ describe('syncProgress (replay)', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it('pullNextRun: the next run pulls within the 10 min (the player closed)', async () => {
+    mockDownloads.list = [{ accountId: anna.id, itemId: 'film', path: 'downloads/srv.a/film/v1.mkv' }];
+    api.getItemsById.mockResolvedValue({ Items: [], TotalRecordCount: 0 });
+    await sync.syncProgress();
+    await sync.syncProgress();
+    expect(api.getItemsById).toHaveBeenCalledTimes(1);
+    sync.pullNextRun(anna.id);
+    await sync.syncProgress();
+    expect(api.getItemsById).toHaveBeenCalledTimes(2);
   });
 
   it('nothing downloaded: no pull request', async () => {

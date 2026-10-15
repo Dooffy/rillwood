@@ -9,6 +9,7 @@ import {
   cancelDownloads,
   pauseDownload,
   resumeDownload,
+  resetTimers,
   savedItem,
   summarize,
   useDownload,
@@ -16,6 +17,8 @@ import {
 } from '@/downloads';
 import { itemDetail, playback } from '@/items';
 import { openPlayer } from '@/navigation';
+import { expiresAt } from '@/offload';
+import { useOffloadDays, useOffloadWatched } from '@/settings';
 import { connectionFor, getSession } from '@/session';
 import { getPendingProgress, withPendingProgress } from '@/sync';
 import { confirmDeleteDownloads, downloadActions } from '@/useDownloadControl';
@@ -72,6 +75,8 @@ function DownloadMenu({
   onClose: () => void;
 }) {
   const d = useDownload(of?.id ?? null);
+  const days = useOffloadDays();
+  const hours = useOffloadWatched();
   const gone = of !== null && d === null;
   useEffect(() => {
     if (gone) onClose();
@@ -80,6 +85,10 @@ function DownloadMenu({
   const actions = d
     ? [
         { label: 'Go to Details', onPress: () => openItemDetail(d.itemId) },
+        // Auto-remove: the timer starts again now.
+        ...(expiresAt(d, days, hours) !== undefined
+          ? [{ label: 'Reset Timer', onPress: () => resetTimers([d.id]) }]
+          : []),
         ...downloadActions({
           available: true,
           summary: summarize([d]),

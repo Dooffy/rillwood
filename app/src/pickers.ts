@@ -8,11 +8,17 @@ import {
   DOWNLOAD_NETWORK_OPTIONS,
   getAppearance,
   getDownloadNetwork,
+  getOffloadDays,
+  getOffloadWatched,
+  OFFLOAD_DAYS,
+  OFFLOAD_WATCHED,
   getSubtitleSample,
   getSubtitleScale,
   getSubtitleStyle,
   setAppearance,
   setDownloadNetwork,
+  setOffloadDays,
+  setOffloadWatched,
   setSubtitleSample,
   setSubtitleScale,
   setSubtitleStyle,
@@ -44,6 +50,10 @@ export type OptionPicker<T extends Value = Value> = {
   /** Subtitle preview above the list. */
   preview?: boolean;
   footer?: string;
+  /** Another option listed under this one on the same page (Remove downloads → Remove watched). */
+  more?: string;
+  /** Section header when two options share a page. */
+  section?: string;
 };
 
 // Checks each entry against its own value type (choices, get and set agree), then files it under the common shape.
@@ -100,6 +110,25 @@ export const PICKERS = {
     set: setDownloadNetwork,
     footer:
       "Wi-Fi only doesn't use mobile data or a personal hotspot. Files that are downloading when you change this start over.",
+  }),
+  'offload-days': option({
+    title: 'Remove downloads',
+    choices: OFFLOAD_DAYS,
+    get: getOffloadDays,
+    set: setOffloadDays,
+    more: 'offload-watched',
+    section: 'After download',
+    footer:
+      "Downloads are removed this long after they finish, watched or not. Changing this, or Reset Timer in a download's menu, starts the timer again.",
+  }),
+  'offload-watched': option({
+    title: 'Remove watched',
+    choices: OFFLOAD_WATCHED,
+    get: getOffloadWatched,
+    set: setOffloadWatched,
+    section: 'After watching',
+    footer:
+      'Removes a download sooner once you watch it to the end. The wait gives you time to keep it if you got to the end by accident. Changing this starts every timer again.',
   }),
 };
 

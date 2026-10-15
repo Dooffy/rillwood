@@ -165,6 +165,25 @@ On 14+ the worker is only the fallback when the UIDT job is refused - no device 
 | OF5 | Download an episode, flight mode, open its show (Home card or the episode's series link) | Show name + poster from the phone, the saved-details line, Downloaded Episodes → the show's downloaded episodes |
 | OF6 | Flight mode, play a downloaded episode from its saved detail                             | Player names it (title) from the saved item; plays the file                                                     |
 
+## Offload (M6)
+
+Time travel: iPhone Settings → General → Date & Time, Set Automatically off, move the date forward, then back to the app (cleanup runs on foreground). Set it back after.
+
+| #    | Steps                                                                                        | Expected                                                                                                                                  |
+| ---- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| OL1  | Default settings (90 days, Remove watched Off), download a movie                             | Settings row "Remove downloads: 90 days"; its page: After download (90 days ✓) + After watching (Off ✓); row "Expires in 90 days" (or 89) |
+| OL2  | Move the date 89 days forward, back to the app                                               | Row "Expires in 23h", orange (hours from 72h)                                                                                             |
+| OL3  | Move it 2 more days forward, back to the app                                                 | Download gone, toast "Removed 1 download - x GB freed."                                                                                   |
+| OL4  | Remove watched 6 hours: play a download to the end (or scrub to the end), close              | Toast "Watched - removed in 6 hours." with Keep; row "x GB · Watched", "Expires in 5h"                                                    |
+| OL5  | Same, tap Keep                                                                               | Toast "Kept for 90 more days."; row back to "Expires in 90 days", no "Watched"                                                            |
+| OL6  | OL4 without Keep, date 7 hours forward, back to the app                                      | Removed, toast                                                                                                                            |
+| OL7  | Remove watched 6 hours, flight mode: play a download to the end, close, date 7 h forward     | Removed offline                                                                                                                           |
+| OL8  | Long press a done row → Reset Timer; long press a show → Reset Timers; header ⋯ → Reset All  | Timers back to the full period (shows ask first)                                                                                          |
+| OL9  | A watched download due: open it in the player, background, date forward, back while it plays | Not removed while the player is open; removed after closing + next foreground                                                             |
+| OL10 | Movie watched on the web last month, download it, Remove watched 6 hours                     | No "Watched", not removed (the watch was before the download)                                                                             |
+| OL11 | Remove downloads Never + Remove watched Off                                                  | No labels, no Reset Timer in menus, nothing removed                                                                                       |
+| OL12 | Downloads at 1 / 35 / 95 days left (180 days), switch to 30 days, back to the app            | Nothing removed; every row "Expires in 30 days"; Never → no labels; 180 days → "Expires in 180 days"                                      |
+
 ## To add with the Android runners (M5)
 
 20GB + 60GB file, Android 16 standby buckets (`am set-standby-bucket`). dataSync timeout (`device_config ... data_sync_fgs_timeout_duration`) only applies to the 14+ fallback - see W7 for the stop / re-run path.

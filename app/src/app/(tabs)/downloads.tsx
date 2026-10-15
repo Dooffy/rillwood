@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, StyleSheet, View, type ListRenderItem } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
 import { useDownloadActions } from '@/components/DownloadActions';
 import { DownloadRow, DownloadRowGap, ShowDownloadRow, type ShowDownloadRowProps } from '@/components/DownloadRow';
 import { Chip } from '@/components/Chip';
@@ -25,10 +26,12 @@ import {
   type DownloadQuery,
   type DownloadScope,
 } from '@/downloadList';
-import { deleteDownloads, useDownloadList } from '@/downloads';
+import { deleteDownloads, getDownload, resetTimers, useDownloadList } from '@/downloads';
 import { formatBytes } from '@/format';
 import { searchTerm } from '@/items';
+import { expiresAt } from '@/offload';
 import { useSession } from '@/session';
+import { useOffloadDays, useOffloadWatched } from '@/settings';
 import { spacing, tabList } from '@/theme';
 import { confirmDeleteDownloads } from '@/useDownloadControl';
 
@@ -60,6 +63,19 @@ type Show = ShowDownloadRowProps['show'];
 const entryKey = (e: DownloadEntry) => (e.kind === 'show' ? `show:${e.seriesId}` : e.id);
 
 /** What an empty list means (only ever narrowed: no downloads at all has its own message). */
+/** Asks, then starts the timers of these downloads again (auto-remove). */
+function confirmResetTimers(name: string | undefined, ids: readonly string[], days: number) {
+  const n = ids.length;
+  Alert.alert(
+    name ? `Reset the timers of ${name}?` : 'Reset all timers?',
+    `${n} ${n === 1 ? 'download starts its' : 'downloads start their'} timer again now${days > 0 ? ` and ${n === 1 ? 'is' : 'are'} kept for ${days} more days` : ''}.`,
+    [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Reset', onPress: () => resetTimers(ids) },
+    ],
+  );
+}
+
 function emptyText({ term, scope }: DownloadQuery): string {
   if (term) return `No downloads match "${term}".`;
   const label = DOWNLOAD_SCOPES.find((s) => s.key === scope)?.label ?? 'items';
@@ -85,21 +101,32 @@ export default function Downloads() {
   const entries = useMemo(() => filterDownloads(list, { term, scope }), [list, term, scope]);
   const free = useFreeSpace(storageKey);
   const { play, remove, openMenu, sheet } = useDownloadActions();
+  const days = useOffloadDays();
+  const hours = useOffloadWatched();
+  // Header menu (everything) or a show's long press.
+  const [menu, setMenu] = useState<{ show?: Show } | null>(null);
+  /** The downloads of these ids auto-remove will take some day (Reset Timer). */
+  const timed = (of: readonly string[]) =>
+    of.filter((id) => {
+      const d = getDownload(id);
+      return !!d && expiresAt(d, days, hours) !== undefined;
+    });
 
   const openShow = useCallback(
     (show: Show) => router.push({ pathname: '/show-downloads/[id]', params: { id: show.seriesId, name: show.name } }),
     [],
   );
   const removeShow = useCallback((show: Show) => confirmDeleteDownloads(show.name, show.ids), []);
+  const showMenu = useCallback((show: Show) => setMenu({ show }), []);
   const accountId = active?.id ?? '';
   const renderEntry = useCallback<ListRenderItem<DownloadEntry>>(
     ({ item: e }) =>
       e.kind === 'show' ? (
-        <ShowDownloadRow accountId={accountId} show={e} onOpen={openShow} onDelete={removeShow} />
+        <ShowDownloadRow accountId={accountId} show={e} onOpen={openShow} onDelete={removeShow} onMenu={showMenu} />
       ) : (
         <DownloadRow id={e.id} title={e.title} onPlay={play} onDelete={remove} onMenu={openMenu} />
       ),
-    [accountId, openShow, removeShow, play, remove, openMenu],
+    [accountId, openShow, removeShow, showMenu, play, remove, openMenu],
   );
 
   // Everything of this account, running ones too.
@@ -113,13 +140,32 @@ export default function Downloads() {
       ],
     );
 
+  // A show's episodes, or (header) every download of the account.
+  const menuIds = menu?.show ? menu.show.ids : ids;
+  const resettable = menu ? timed(menuIds) : [];
+  const menuActions: SheetAction[] = menu
+    ? [
+        ...(resettable.length > 0
+          ? [
+              {
+                label: menu.show ? 'Reset Timers' : 'Reset All Timers',
+                onPress: () => confirmResetTimers(menu.show?.name, resettable, days),
+              },
+            ]
+          : []),
+        menu.show
+          ? { label: 'Delete Downloads', destructive: true, onPress: () => removeShow(menu.show!) }
+          : { label: 'Delete All Downloads', destructive: true, onPress: removeAll },
+      ]
+    : [];
+
   return (
     <GestureHandlerRootView style={styles.root}>
       <Screen
         title="Downloads"
         right={
           ids.length > 0 && (
-            <IconButton icon={{ ios: 'trash', android: 'delete' }} label="Delete All Downloads" onPress={removeAll} />
+            <IconButton icon={{ ios: 'ellipsis', android: 'more_horiz' }} label="More" onPress={() => setMenu({})} />
           )
         }
       >
@@ -151,6 +197,12 @@ export default function Downloads() {
           </>
         )}
         {sheet}
+        <ActionSheet
+          visible={menu !== null}
+          title={menu?.show?.name}
+          actions={menuActions}
+          onClose={() => setMenu(null)}
+        />
       </Screen>
     </GestureHandlerRootView>
   );

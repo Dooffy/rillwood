@@ -14,6 +14,8 @@ const dark = {
   accent: '#FFFFFF',
   onAccent: '#000000',
   danger: '#FF453A',
+  /** Soon (a download expiring within a day). */
+  warning: '#FF9F0A',
   success: '#30D158',
 };
 
@@ -31,6 +33,7 @@ const light: Colors = {
   accent: '#000000',
   onAccent: '#FFFFFF',
   danger: '#FF3B30',
+  warning: '#C93400',
   success: '#34C759',
 };
 

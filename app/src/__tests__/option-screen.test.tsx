@@ -10,7 +10,11 @@ import {
   getSubtitleSample,
   getSubtitleScale,
   getSubtitleStyle,
+  getOffloadDays,
+  getOffloadWatched,
   setAppearance,
+  setOffloadDays,
+  setOffloadWatched,
   setSubtitleSample,
   setSubtitleScale,
   setSubtitleStyle,
@@ -102,5 +106,19 @@ describe('Option screen', () => {
     await render(<Option />);
     expect(screen.queryByRole('radio')).toBeNull();
     expect(screen.getByText("This setting isn't available.")).toBeOnTheScreen();
+  });
+
+  it('remove downloads: the days, then Remove watched on the same page, each under a header', async () => {
+    setOffloadDays(90);
+    setOffloadWatched(0);
+    await renderOption('offload-days');
+    expect(screen.getByRole('radio', { name: '90 days' })).toBeChecked();
+    expect(screen.getAllByRole('header').map((h) => h.props.children)).toEqual(['AFTER DOWNLOAD', 'AFTER WATCHING']);
+    expect(screen.getByRole('radio', { name: 'Off' })).toBeChecked();
+    await fireEvent.press(screen.getByRole('radio', { name: 'Never' }));
+    await fireEvent.press(screen.getByRole('radio', { name: '24 hours' }));
+    expect(getOffloadDays()).toBe(0);
+    expect(getOffloadWatched()).toBe(24);
+    expect(screen.getByRole('radio', { name: '24 hours' })).toBeChecked();
   });
 });

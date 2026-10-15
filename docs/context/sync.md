@@ -23,6 +23,8 @@ Read before working on `src/sync.ts` or anything that writes playback progress o
 
 Sent anything → `invalidate()` (resume points, Continue Watching, Next Up). Then pull (when the replay sent something, else at most every 10 min per account): `GET /Items?ids=<the account's downloaded items>&enableImages=false` (chunks of 100) and the server's UserData goes into each saved `item.json` (`writeSnapshotUserData`, written only when changed) - offline detail and offload read it.
 
+`pullNextRun(account)` (the player closed) makes the next run pull whatever the 10 min. Every run (also one skipped offline) ends with `onSynced` listeners: offload's cleanup (`docs/context/downloads.md`).
+
 A removed account's entries are dropped; a signed-out account's stay for when it signs in again.
 
 ## Rules

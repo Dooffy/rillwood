@@ -34,7 +34,8 @@ import { Text } from '@/components/Text';
 import { TracksMenu, type TracksPage, type TracksValue } from '@/components/TracksMenu';
 import { UpNext } from '@/components/UpNext';
 import { localCopy } from '@/downloads';
-import { cardTitles, isItemId, nextEpisode, nextEpisodes, playback } from '@/items';
+import { cardTitles, isItemId, nextEpisode, nextEpisodes, playback, TICKS_PER_SECOND } from '@/items';
+import { holdPlaying } from '@/offload';
 import {
   carryTracks,
   matchTracks,
@@ -63,6 +64,7 @@ import { createProgress } from '@/player/progress';
 import { useReporting } from '@/player/useReporting';
 import { connectionFor, getSession, useSession } from '@/session';
 import { setVideoZoom, useSubtitleScale, useSubtitleStyle, useVideoZoom } from '@/settings';
+import { resumeRules } from '@/sync';
 import { ColorsContext, palettes, radii, spacing } from '@/theme';
 import { useDebounced } from '@/useDebounced';
 import { useFetch } from '@/useFetch';
@@ -169,6 +171,17 @@ export default function PlayerScreen() {
     speed: choice.speed ?? 1,
     subtitleDelay: picked.subtitleDelay ?? 0,
   };
+
+  // Auto-remove never takes the item away while it plays; watched by the server's rules (≥ 90%), its downloads are
+  // watched from now. Cleanups run before any setup, so the position is still this item's on the way to the next episode.
+  useEffect(() => {
+    if (!accountId || !isItemId(id)) return;
+    const release = holdPlaying(accountId, id);
+    return () => {
+      const { position, duration } = progress.get();
+      release(duration > 0 && resumeRules(position * TICKS_PER_SECOND, duration * TICKS_PER_SECOND).watched);
+    };
+  }, [accountId, id, progress]);
 
   // The only screen that rotates: unlocked while open, back to upright portrait on leave.
   useEffect(() => {

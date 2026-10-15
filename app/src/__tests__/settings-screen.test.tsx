@@ -6,7 +6,14 @@ import { Appearance as RNAppearance } from 'react-native';
 
 import Settings from '@/app/settings';
 import { useSession, type Account } from '@/session';
-import { setAppearance, setDownloadLimit, setDownloadNetwork, setSubtitleScale } from '@/settings';
+import {
+  setAppearance,
+  setDownloadLimit,
+  setDownloadNetwork,
+  setOffloadDays,
+  setOffloadWatched,
+  setSubtitleScale,
+} from '@/settings';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 jest.mock('@/session', () => ({ useSession: jest.fn() }));
@@ -36,6 +43,8 @@ describe('Settings screen', () => {
     setSubtitleScale(1);
     setDownloadNetwork('wifi');
     setDownloadLimit(0);
+    setOffloadDays(90);
+    setOffloadWatched(0);
   });
 
   it('shows the current appearance and opens its list', async () => {
@@ -81,7 +90,8 @@ describe('Settings screen', () => {
     await render(<Settings />);
     expect(screen.getByRole('button', { name: 'Network' })).toHaveAccessibilityValue({ text: 'Wi-Fi only' });
     expect(screen.getByRole('button', { name: 'Storage limit' })).toHaveAccessibilityValue({ text: 'No limit' });
-    expect(screen.getByText('After 7 days')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Remove downloads' })).toHaveAccessibilityValue({ text: '90 days' });
+    expect(screen.queryByRole('button', { name: 'Remove watched' })).toBeNull();
     expect(screen.getByText('Version')).toBeOnTheScreen();
   });
 
@@ -95,5 +105,13 @@ describe('Settings screen', () => {
     expect(router.push).toHaveBeenCalledWith({ pathname: '/option/[key]', params: { key: 'download-network' } });
     await fireEvent.press(screen.getByRole('button', { name: 'Storage limit' }));
     expect(router.push).toHaveBeenCalledWith('/download-storage');
+  });
+
+  it('opens the auto-remove page', async () => {
+    setOffloadDays(30);
+    await render(<Settings />);
+    expect(screen.getByRole('button', { name: 'Remove downloads' })).toHaveAccessibilityValue({ text: '30 days' });
+    await fireEvent.press(screen.getByRole('button', { name: 'Remove downloads' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/option/[key]', params: { key: 'offload-days' } });
   });
 });

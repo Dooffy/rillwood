@@ -52,6 +52,11 @@ export const PULL_EVERY_MS = 10 * 60_000;
 // Last pull per account (this run of the app).
 const pulledAt = new Map<string, number>();
 
+/** The next run pulls the account's saved UserData whatever the 10 min (the player closed: watched state for offload). */
+export function pullNextRun(accountId: string) {
+  pulledAt.delete(accountId);
+}
+
 let queue: Map<string, PendingProgress> | undefined;
 // False when a saved queue exists but can't be read: it isn't overwritten.
 let readable = true;
@@ -226,6 +231,13 @@ async function syncOnce() {
 
 let running: Promise<void> | null = null;
 let again = false;
+const syncedListeners = new Set<() => void>();
+
+/** After every run (also one skipped offline or signed out): saved UserData is as fresh as it gets (offload). */
+export function onSynced(listener: () => void) {
+  syncedListeners.add(listener);
+  return () => syncedListeners.delete(listener);
+}
 
 /** Replays the active account's queue, then pulls UserData into its downloads. One run at a time; a call meanwhile runs again after. */
 export function syncProgress(): Promise<void> {
@@ -240,6 +252,7 @@ export function syncProgress(): Promise<void> {
     } while (again);
   })().finally(() => {
     running = null;
+    syncedListeners.forEach((l) => l());
   });
   return running;
 }
