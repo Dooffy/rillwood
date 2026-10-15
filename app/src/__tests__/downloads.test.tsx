@@ -252,7 +252,10 @@ describe('Downloads', () => {
     await act(() => emit('done', { id: idOf(movie) }));
     await render(<Downloads />);
     await fireEvent.press(screen.getByRole('button', { name: 'Sintel, 2.1 GB' }));
-    expect(router.push).toHaveBeenCalledWith({ pathname: '/player', params: { id: 'sintel', start: '40' } });
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/player',
+      params: { id: 'sintel', start: '40', source: 'sintel-ms' },
+    });
   });
 
   it('plays from the start when the resume point is out of reach', async () => {
@@ -261,7 +264,10 @@ describe('Downloads', () => {
     await act(() => emit('done', { id: idOf(movie) }));
     await render(<Downloads />);
     await fireEvent.press(screen.getByRole('button', { name: 'Sintel, 2.1 GB' }));
-    expect(router.push).toHaveBeenCalledWith({ pathname: '/player', params: { id: 'sintel', start: '0' } });
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/player',
+      params: { id: 'sintel', start: '0', source: 'sintel-ms' },
+    });
   });
 
   it('known offline: plays from the resume point saved with the download, without asking the server', async () => {
@@ -274,7 +280,10 @@ describe('Downloads', () => {
     jest.mocked(api.request).mockClear();
     await render(<Downloads />);
     await fireEvent.press(screen.getByRole('button', { name: 'Sintel, 2.1 GB' }));
-    expect(router.push).toHaveBeenCalledWith({ pathname: '/player', params: { id: 'sintel', start: '30' } });
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/player',
+      params: { id: 'sintel', start: '30', source: 'sintel-ms' },
+    });
     expect(saved).toHaveBeenCalledWith(account.id, 'sintel');
     expect(api.request).not.toHaveBeenCalled();
     offline.mockRestore();
@@ -297,7 +306,10 @@ describe('Downloads', () => {
     });
     await render(<Downloads />);
     await fireEvent.press(screen.getByRole('button', { name: 'Sintel, 2.1 GB' }));
-    expect(router.push).toHaveBeenCalledWith({ pathname: '/player', params: { id: 'sintel', start: '120' } });
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/player',
+      params: { id: 'sintel', start: '120', source: 'sintel-ms' },
+    });
     offline.mockRestore();
     saved.mockRestore();
   });

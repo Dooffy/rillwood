@@ -87,13 +87,16 @@ const PLAYBACK_FAILED = "Couldn't play this video. Try again.";
 // ±10s, pull down closes (the video follows the finger and the screen below shows through). Episodes go on to the next
 // one at the end (Up Next card in the last 30 s, unless hidden). Rotates freely (the rest of the app is portrait).
 export default function PlayerScreen() {
-  const { id, start } = useLocalSearchParams<{ id?: string; start?: string }>();
+  // `source`: the version to play (a Downloads row's), else the newest download or the server's default ('' = none).
+  const params = useLocalSearchParams<{ id?: string; start?: string; source?: string }>();
+  const { id, start } = params;
+  const source = params.source || undefined;
   const accountId = useSession().active?.id;
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [attempt, setAttempt] = useState(0);
   // Answer of the latest request; anything else (new item, account, Retry) shows the spinner until it lands.
-  const key = `${accountId}|${id}|${attempt}`;
+  const key = `${accountId}|${id}|${source}|${attempt}`;
   const [loaded, setLoaded] = useState<{ key: string; state: State }>();
   // Position + duration outside state; a load starts at the route's start, then (Retry) at the last position seen.
   const [progress] = useState(() => createProgress(Number(start) || 0));
@@ -131,12 +134,12 @@ export default function PlayerScreen() {
   // A pull is on: the Up Next tile steps aside (glass can't fade with the video).
   const [pulling, setPulling] = useState(false);
 
-  // A finished download of this item: played from the file (load effect).
-  // Looked up again on Retry: a file gone meanwhile streams instead.
+  // A finished download of this item (`source`'s version first): played from the file (load effect).
+  // Looked up again on Retry: a file gone meanwhile plays another downloaded version, else streams.
   const copy = useMemo(
-    () => (accountId && isItemId(id) ? localCopy(accountId, id) : null),
+    () => (accountId && isItemId(id) ? localCopy(accountId, id, source) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `attempt` (Retry) re-checks the disk
-    [accountId, id, attempt],
+    [accountId, id, source, attempt],
   );
   // Names it (title, next episode): the server's item, else the one saved with a download - also while it loads.
   const named = useItem(id, attempt);
@@ -214,10 +217,10 @@ export default function PlayerScreen() {
     const conn = connectionFor(account);
     if (!conn) return;
     const controller = new AbortController();
-    getPlaybackInfo(conn, id, playbackInfoBody(), controller.signal)
+    getPlaybackInfo(conn, id, playbackInfoBody(source), controller.signal)
       .then((info) => {
         if (!info) throw new ApiError('parse');
-        const result = playSource(conn, id, info);
+        const result = playSource(conn, id, info, source);
         done(
           result.ok
             ? { status: 'ready', play: result.play, start: progress.get().position }
@@ -235,7 +238,7 @@ export default function PlayerScreen() {
         });
       });
     return () => controller.abort();
-  }, [key, accountId, id, progress, copy]);
+  }, [key, accountId, id, source, progress, copy]);
 
   // Auto-hide while playing; paused, scrubbing, the tracks menu or VoiceOver keep the controls up.
   const menuOpen = menu !== null;
@@ -283,7 +286,12 @@ export default function PlayerScreen() {
     // The scrubber goes with the load: a drag cut short this way never reports its end.
     setScrubbing(false);
     // From its own resume point if it was started before.
-    router.setParams({ id: episode.Id, start: String(Math.floor(playback(episode).resumeSeconds ?? 0)) });
+    router.setParams({
+      id: episode.Id,
+      start: String(Math.floor(playback(episode).resumeSeconds ?? 0)),
+      // Its default version: '' as a route param can't come back as the string "undefined".
+      source: '',
+    });
   };
   const touch = () => setTouched((n) => n + 1);
   const seek = (seconds: number) => {

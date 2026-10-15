@@ -211,13 +211,18 @@ export function getDownload(id: string): Download | null {
 }
 
 /**
- * The account's finished download of an item (the newest version) whose file is whole and whose saved item lists it,
- * else null (not downloaded, or the file went missing - the player streams it).
+ * The account's finished download of an item (`sourceId`'s version first, then the newest) whose file is whole and
+ * whose saved item lists it, else null (not downloaded, or the file went missing - the player streams it).
  */
-export function localCopy(accountId: string, itemId: string): (LocalFiles & { item: BaseItemDto }) | null {
+export function localCopy(
+  accountId: string,
+  itemId: string,
+  sourceId?: string,
+): (LocalFiles & { item: BaseItemDto }) | null {
+  const asked = (d: Download) => (d.sourceId === sourceId ? 1 : 0);
   const done = getDownloads()
     .filter((d) => d.accountId === accountId && d.itemId === itemId && d.status === 'done')
-    .sort((a, b) => (b.downloadedAt ?? 0) - (a.downloadedAt ?? 0));
+    .sort((a, b) => asked(b) - asked(a) || (b.downloadedAt ?? 0) - (a.downloadedAt ?? 0));
   for (const d of done) {
     const item = isComplete(d) ? readSnapshotItem(d.path) : null;
     // Versions share the item's saved JSON: a re-save may have dropped this one - an older version may still play.
