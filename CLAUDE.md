@@ -144,7 +144,7 @@ src/useDownloadControl.ts  download from a button / menu: state (item or season)
 src/detail.ts            detailView: everything the detail screen shows, from one item (pure)
 src/playback.ts          PlaybackInfo → play source (pure): device profile, direct play check, stream + sidecar subtitle URLs, track options + `matchTracks` (real mpv ids) + `carryTracks` (picks to the next episode by language)
 src/downloads.ts         store, queue, reconcile, cleanup, storage, weekly orphan sweep
-src/downloadSnapshot.ts  per-download snapshot: item JSON, poster, backdrop, external subtitles next to the file
+src/downloadSnapshot.ts  per-download snapshot: item JSON, poster, backdrop, episode still, external subtitles next to the file
 src/downloadList.ts      Downloads tab (pure): one list per account (a row per movie / show, search + type), a show's seasons, status wording
 src/notificationPermission.ts  Android 13+: notification permission asked once, when the first download starts
 src/sync.ts              offline progress: queue (reports that missed the server), replay for the active account, saved UserData pull

@@ -592,6 +592,32 @@ describe('snapshot', () => {
     expect(readSnapshotItem('downloads/a1/m1/v1.mkv')?.Name).toBe('Sintel');
   });
 
+  it("an episode also saves its own still for its row; its poster is the show's", async () => {
+    const item = {
+      Id: 'e1',
+      Name: 'Pilot',
+      Type: 'Episode',
+      SeriesId: 's1',
+      SeriesPrimaryImageTag: 'sp',
+      ImageTags: { Primary: 'still' },
+      ParentBackdropItemId: 's1',
+      ParentBackdropImageTags: ['sb'],
+    } as BaseItemDto;
+    await dl.startDownloads([{ item, source: { Id: 'e1', Container: 'mkv', Size: GB } as MediaSourceDto }]);
+    await flush();
+    expect(mockFetched).toEqual([
+      'https://a1.example/Items/s1/Images/Primary?fillWidth=720&quality=90&tag=sp',
+      'https://a1.example/Items/s1/Images/Backdrop?fillWidth=1920&quality=90&tag=sb',
+      'https://a1.example/Items/e1/Images/Primary?fillWidth=720&quality=90&tag=still',
+    ]);
+    expect(saved().items[0].snapshot).toEqual({
+      poster: 'downloads/a1/e1/poster.jpg',
+      backdrop: 'downloads/a1/e1/backdrop.jpg',
+      still: 'downloads/a1/e1/still.jpg',
+      subtitles: [],
+    });
+  });
+
   it('a failed snapshot is retried at reconcile from the saved item JSON', async () => {
     mockFailFetch.value = true;
     await dl.startDownloads([sintel()]);

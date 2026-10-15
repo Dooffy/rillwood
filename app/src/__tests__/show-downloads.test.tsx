@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { Paths } from 'expo-file-system';
+import { File, Paths } from 'expo-file-system';
 import { Alert, type AlertButton } from 'react-native';
 
 import type { BaseItemDto } from '@/api';
@@ -97,6 +97,24 @@ describe("A show's downloads", () => {
       pathname: '/player',
       params: { id: e2.Id, start: '0', source: `${e2.Id}-ms` },
     });
+  });
+
+  it("shows each episode's own still, not the show's poster", async () => {
+    // The snapshot's fetches land on disk.
+    const spies = [
+      jest.spyOn(File, 'downloadFileAsync').mockResolvedValue(new File(Paths.document, 'x')),
+      jest.spyOn(File.prototype, 'exists', 'get').mockReturnValue(true),
+      jest.spyOn(File.prototype, 'write').mockResolvedValue(undefined),
+    ];
+    const e1 = { ...episode(1, 1), SeriesPrimaryImageTag: 'sp', ImageTags: { Primary: 'still' } };
+    await download(e1);
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    spies.forEach((s) => s.mockRestore());
+    await render(<ShowDownloads />);
+
+    expect(screen.getByTestId('artwork-image').props.source).toEqual([
+      { uri: expect.stringMatching(/\/show-s1e1\/still\.jpg$/) },
+    ]);
   });
 
   it('goes back once the last episode is deleted', async () => {
