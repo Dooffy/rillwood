@@ -215,6 +215,28 @@ describe('download network setting', () => {
   });
 });
 
+describe('auto-remove settings', () => {
+  beforeEach(() => {
+    Storage.clearSync();
+  });
+
+  it('defaults to 90 days and Remove watched off, also for unknown stored values', () => {
+    expect(load().getOffloadDays()).toBe(90);
+    expect(load().getOffloadWatched()).toBe(0);
+    Storage.setItemSync('settings.offloadDays', '7');
+    Storage.setItemSync('settings.offloadWatched', 'soon');
+    expect(load().getOffloadDays()).toBe(90);
+    expect(load().getOffloadWatched()).toBe(0);
+  });
+
+  it('persists a change; Never (0) is a value of its own', () => {
+    load().setOffloadDays(0);
+    load().setOffloadWatched(24);
+    expect(load().getOffloadDays()).toBe(0);
+    expect(load().getOffloadWatched()).toBe(24);
+  });
+});
+
 describe('download storage limit', () => {
   beforeEach(() => {
     Storage.clearSync();

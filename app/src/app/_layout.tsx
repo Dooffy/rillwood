@@ -7,10 +7,12 @@ import { useEffect, useLayoutEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { ItemMenuProvider } from '@/components/ItemMenu';
+import { OffloadToast } from '@/components/OffloadToast';
 import { ToastProvider } from '@/components/Toast';
 import { initConnection } from '@/connection';
 import { initDownloads } from '@/downloads';
 import { SignedOutRedirect, tabsTitle } from '@/navigation';
+import { initOffload } from '@/offload';
 import { pickerTitle } from '@/pickers';
 import { applyNativeAppearance, useAppearance } from '@/settings';
 import { initSync } from '@/sync';
@@ -49,7 +51,10 @@ export default function RootLayout() {
   }, []);
 
   // Offline progress: replay + saved UserData at launch, foreground, reconnect, account switch - src/sync.ts.
+  // Auto-remove: after every sync run (launch, foreground, reconnect) - src/offload.ts. Before initSync: its launch
+  // run ends with a cleanup.
   useEffect(() => {
+    initOffload();
     initSync();
   }, []);
 
@@ -70,6 +75,7 @@ export default function RootLayout() {
         <ItemMenuProvider>
           <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
           <SignedOutRedirect />
+          <OffloadToast />
           <Stack
             screenOptions={{
               headerShown: false,

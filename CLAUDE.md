@@ -22,7 +22,7 @@ Rillwood is a new, open-source mobile client for Jellyfin servers. Goals: browse
 | | LGPL player builds (iOS dynamic MPVKit, Android optional) - §7, §11 |
 | Background downloads (movie / episode / season), pause/resume, survive app kill | Remote-access relay (separate project) |
 | Offline mode + progress sync on reconnect | Localization (English only in MVP) |
-| Auto-offload downloads (default: 7 days after watched) | |
+| Auto-remove downloads (default: 90 days after download; optional sooner once watched) | |
 
 Platforms: **iOS first**, Android phones in the same release. iPad layout before release (M7).
 
@@ -50,7 +50,7 @@ Platforms: **iOS first**, Android phones in the same release. iPad layout before
 | Downloads | **Own Expo module** `modules/downloads` (Swift + Kotlin, Expo Modules API). Native owns the queue, concurrency (max 2) and resume | No third-party downloader, no system `DownloadManager`. iOS: background `URLSession`; Android 14+: UIDT job, 8-13 (and a refused UIDT job): WorkManager (`androidx.work:work-runtime-ktx`, only inside `modules/downloads`, decided 2026-10-11) + `dataSync` FGS. Design: `docs/context/downloads.md` |
 | Download network | User setting: **Wi-Fi only (default) / Any network** | Enforced natively by `modules/downloads`. No NetInfo |
 | Player | libmpv via a vendored MPL-2.0 Expo module in `modules/mpv` (headers kept) behind own `PlayerEngine` interface (`docs/context/player.md`) | Fallback: `expo-libvlc-player` - under review (`docs/open-items.md`). See §7 - current mpv/FFmpeg builds are GPL, LGPL rebuild post-MVP |
-| Offload cleanup | Runs on app launch + foreground (`AppState` active) | No expo-background-task in MVP |
+| Offload cleanup | Runs after every progress sync run (launch, foreground, reconnect) | No expo-background-task in MVP |
 | Network status | Fail-fast fetch (8s) + `/System/Info/Public` probe on foreground, rechecked while offline (`src/connection.ts`) | |
 | Server target | **Jellyfin 12.1 base**, 12.0 + 10.11.x supported | Warn below 10.10.7. **Header auth only** (no `?api_key=` / `?ApiKey=`). Dev servers: `dev/jellyfin` (Docker, pinned 12.1 + 10.11). API rules: `docs/context/api.md` |
 | Tests | `jest-expo` + `@testing-library/react-native` (dev deps in `app/`), `*.test.ts(x)` next to the code; screen tests in `src/__tests__/` (never put tests in `src/app/` - expo-router treats files there as routes) | Unit tests for pure logic, regression test per bug fix, render tests for non-trivial components. Mock fetch / storage / native modules - shared mocks (kv-store, expo-symbols, safe-area, glass, reanimated + worklets, gesture-handler) in `app/jest.setup.ts`. Native code: manual device test plans in `docs/test-plans/` |
@@ -75,6 +75,7 @@ All values live in `src/theme.ts`. Never hardcode colours, radii or font sizes i
 | Inactive icon | `#8E8E93` | `#8E8E93` |
 | Danger (errors, destructive) | `#FF453A` | `#FF3B30` |
 | Success (status dot: active account) | `#30D158` | `#34C759` |
+| Warning (soon: a download expiring within a day) | `#FF9F0A` | `#C93400` |
 | Backdrop (behind sheets / menus) | `rgba(0,0,0,0.5)` | same (`backdrop`) |
 | On artwork (progress / watched status over images, bottom fade) | fill `#FFFFFF`, track `rgba(255,255,255,0.35)`, fade = black 0 → 0.75 gradient (`backgroundImage`) | same (`onArtwork`) |
 | Accent | White (primary buttons white bg, black text) | Black (black bg, white text) |
@@ -147,14 +148,15 @@ src/downloadSnapshot.ts  per-download snapshot: item JSON, poster, backdrop, ext
 src/downloadList.ts      Downloads tab (pure): one list per account (a row per movie / show, search + type), a show's seasons, status wording
 src/notificationPermission.ts  Android 13+: notification permission asked once, when the first download starts
 src/sync.ts              offline progress: queue (reports that missed the server), replay for the active account, saved UserData pull
-src/settings.ts          user settings in kv-store (appearance, subtitle size + style, video zoom, download network + storage limit; offload later)
+src/offload.ts           auto-remove: timer per download + watched cooldown, expiry labels, cleanup after every sync run, player hold
+src/settings.ts          user settings in kv-store (appearance, subtitle size + style, video zoom, download network + storage limit, auto-remove days + watched cooldown)
 src/pickers.ts           Settings options that open a checkmark list: key → title, choices, get / set
 src/player/Player.tsx    PlayerEngine interface + re-export of active engine
 src/player/mpv.tsx       mpv adapter
 src/player/controls.ts   player controls logic (pure): seek clamp, pull-to-close threshold, scrubber maths, zoom (pinch, fit inset)
 src/player/progress.ts   position + duration store outside React state (only the controls re-render)
 src/player/useReporting.ts  Sessions/Playing, Progress (10 s, pause, seek, track change, background), Stopped + refetch; reports carry the tracks
-src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List (+ Checkmark, Swatch), StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message (+ LoadError, Offline), DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing (+ AnimatedProgressRing), SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing, DownloadButton, DownloadRow (+ ShowDownloadRow, DownloadRowGap), DownloadActions (useDownloadActions), SwipeToDelete, StorageBar, PlayerControls (+ PlayerBottom, PlayerScrubber), Glass, TracksMenu, TimingSlider, StepSlider, UpNext, SubtitlePreview, OptionList (+ OptionRow), ItemMenu (+ ItemMenuProvider), Skeleton (CardRowPlaceholder, DetailPlaceholder, EpisodeCardsPlaceholder, EpisodeRowsPlaceholder, PosterGridPlaceholder, PosterRowsPlaceholder)
+src/components/          Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List (+ Checkmark, Swatch), StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message (+ LoadError, Offline), DetailHero, DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing (+ AnimatedProgressRing), SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing, DownloadButton, DownloadRow (+ ShowDownloadRow, DownloadRowGap), DownloadActions (useDownloadActions), OffloadToast, SwipeToDelete, StorageBar, PlayerControls (+ PlayerBottom, PlayerScrubber), Glass, TracksMenu, TimingSlider, StepSlider, UpNext, SubtitlePreview, OptionList (+ OptionRow), ItemMenu (+ ItemMenuProvider), Skeleton (CardRowPlaceholder, DetailPlaceholder, EpisodeCardsPlaceholder, EpisodeRowsPlaceholder, PosterGridPlaceholder, PosterRowsPlaceholder)
 modules/mpv/             vendored native module (+ UPSTREAM.md: upstream repo + commit)
 modules/downloads/       own native background downloader (iOS + Android)
 ```
@@ -166,7 +168,7 @@ modules/downloads/       own native background downloader (iOS + Android)
 | `api.ts`, `items.ts`, `session.ts`, `auth.ts`, `useFetch.ts`, `useImage.ts`, `usePagedItems.ts`, `userData.ts`, auth / accounts, any server call | `docs/context/api.md` - endpoints, auth header, DeviceId, 401/403, tokens |
 | `src/player/`, player screen | `docs/context/player.md` - `PlayerEngine` contract, resume, reporting, engine issues |
 | `modules/mpv/`, player binaries | `docs/context/mpv.md` - binaries, NDK pin, mpv options, logs |
-| `downloads.ts`, `modules/downloads/`, Downloads screen | `docs/context/downloads.md` - native contract, HTTP resume rules, store, offload |
+| `downloads.ts`, `offload.ts`, `modules/downloads/`, Downloads screen | `docs/context/downloads.md` - native contract, HTTP resume rules, store, offload |
 | `sync.ts`, offline progress | `docs/context/sync.md` - offline sync flow |
 | `dev/jellyfin/`, test media | `docs/context/dev-server.md` |
 | Picking / ticking milestone work | `docs/roadmap.md` (§8) |

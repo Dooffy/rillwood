@@ -49,6 +49,10 @@ export type Download = {
   createdAt: number;
   downloadedAt?: number;
   pinned: boolean;
+  /** Offload: the last Reset Timer (ms) - the timer counts from the later of this and `downloadedAt`. */
+  resetAt?: number;
+  /** Offload: when it was watched (ms; the end of playback here, else the server's / queued date); unset when not. */
+  watchedAt?: number;
   /** Item JSON, poster, backdrop, subtitles saved next to the file; missing → retried at reconcile. */
   snapshot?: Snapshot;
 };
@@ -434,6 +438,16 @@ export function resumeDownloads(ids: readonly string[]) {
     send(stopped);
   });
   for (const d of stopped) if (getDownload(d.id)?.status === 'queued') Downloads.resume(d.id);
+}
+
+/** Reset Timer (offload): the timer starts again now; a watch before it no longer counts. */
+export function resetTimers(ids: readonly string[], now = Date.now()) {
+  batch(() => ids.forEach((id) => patch(id, { resetAt: now })));
+}
+
+/** Offload's watched times by download id (undefined = not watched), saved in one write. */
+export function setWatched(times: ReadonlyMap<string, number | undefined>) {
+  batch(() => times.forEach((watchedAt, id) => patch(id, { watchedAt })));
 }
 
 export function deleteDownloads(ids: readonly string[]) {

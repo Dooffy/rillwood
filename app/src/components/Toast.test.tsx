@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { Pressable, Text } from 'react-native';
 
-import { TOAST_MS, ToastProvider, useToast } from './Toast';
+import { ACTION_TOAST_MS, TOAST_MS, ToastProvider, useToast } from './Toast';
 
 function Trigger({ message }: { message: string }) {
   const show = useToast();
@@ -47,6 +47,33 @@ describe('Toast', () => {
     await act(() => jest.advanceTimersByTime(200));
     expect(screen.getByRole('alert')).toHaveTextContent('Two');
     await act(() => jest.advanceTimersByTime(TOAST_MS));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('a button runs its action and closes the toast; it stays longer', async () => {
+    const keep = jest.fn();
+    function WithAction() {
+      const show = useToast();
+      return (
+        <Pressable onPress={() => show('Watched - removed in 24 hours.', { label: 'Keep', onPress: keep })}>
+          <Text>show action</Text>
+        </Pressable>
+      );
+    }
+    await render(
+      <ToastProvider>
+        <WithAction />
+      </ToastProvider>,
+    );
+    await fireEvent.press(screen.getByText('show action'));
+    await act(() => jest.advanceTimersByTime(TOAST_MS));
+    expect(screen.getByRole('alert')).toHaveTextContent(/Watched - removed in 24 hours\./);
+    await fireEvent.press(screen.getByRole('button', { name: 'Keep' }));
+    expect(keep).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    await fireEvent.press(screen.getByText('show action'));
+    await act(() => jest.advanceTimersByTime(ACTION_TOAST_MS));
     expect(screen.queryByRole('alert')).toBeNull();
   });
 

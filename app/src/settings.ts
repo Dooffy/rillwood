@@ -78,6 +78,8 @@ const SUBTITLE_STYLE_KEY = 'settings.subtitleStyle';
 const VIDEO_ZOOM_KEY = 'settings.videoZoom';
 const DOWNLOAD_NETWORK_KEY = 'settings.downloadNetwork';
 const DOWNLOAD_LIMIT_KEY = 'settings.downloadLimit';
+const OFFLOAD_DAYS_KEY = 'settings.offloadDays';
+const OFFLOAD_WATCHED_KEY = 'settings.offloadWatched';
 
 let appearance: Appearance | undefined;
 let subtitleScale: SubtitleScale | undefined;
@@ -85,6 +87,8 @@ let subtitleStyle: SubtitleStyle | undefined;
 let videoZoom: VideoZoom | undefined;
 let downloadNetwork: DownloadNetwork | undefined;
 let downloadLimit: number | undefined;
+let offloadDays: OffloadDays | undefined;
+let offloadWatched: OffloadWatched | undefined;
 // Preview only, for this session: not saved.
 let subtitleSample: SubtitleSample = 'en';
 const listeners = new Set<() => void>();
@@ -240,6 +244,65 @@ export function setDownloadLimit(gb: number): void {
 
 export function useDownloadLimit(): number {
   return useSyncExternalStore(subscribeSettings, getDownloadLimit);
+}
+
+// Auto-remove (docs/context/downloads.md, Offload): a timer per download from when it finished (or its last reset),
+// and an optional sooner removal once watched - after a cooldown, so reaching the end by accident can be undone.
+export const OFFLOAD_DAYS = [
+  { value: 0, label: 'Never' },
+  { value: 30, label: '30 days' },
+  { value: 90, label: '90 days' },
+  { value: 180, label: '180 days' },
+] as const;
+
+export type OffloadDays = (typeof OFFLOAD_DAYS)[number]['value'];
+
+export const OFFLOAD_WATCHED = [
+  { value: 0, label: 'Off' },
+  { value: 6, label: '6 hours' },
+  { value: 24, label: '24 hours' },
+  { value: 72, label: '3 days' },
+] as const;
+
+/** Hours after watching; 0 = off. */
+export type OffloadWatched = (typeof OFFLOAD_WATCHED)[number]['value'];
+
+/** Days after download (or the last Reset Timer) a download goes; 0 = never. Default 90. */
+export function getOffloadDays(): OffloadDays {
+  if (offloadDays === undefined) {
+    const stored = Storage.getItemSync(OFFLOAD_DAYS_KEY);
+    offloadDays = OFFLOAD_DAYS.find((o) => stored !== null && o.value === Number(stored))?.value ?? 90;
+  }
+  return offloadDays;
+}
+
+export function setOffloadDays(value: OffloadDays): void {
+  Storage.setItemSync(OFFLOAD_DAYS_KEY, String(value));
+  offloadDays = value;
+  listeners.forEach((l) => l());
+}
+
+export function useOffloadDays(): OffloadDays {
+  return useSyncExternalStore(subscribeSettings, getOffloadDays);
+}
+
+/** Hours after watching a download goes; 0 = off (default). */
+export function getOffloadWatched(): OffloadWatched {
+  if (offloadWatched === undefined) {
+    const stored = Storage.getItemSync(OFFLOAD_WATCHED_KEY);
+    offloadWatched = OFFLOAD_WATCHED.find((o) => stored !== null && o.value === Number(stored))?.value ?? 0;
+  }
+  return offloadWatched;
+}
+
+export function setOffloadWatched(value: OffloadWatched): void {
+  Storage.setItemSync(OFFLOAD_WATCHED_KEY, String(value));
+  offloadWatched = value;
+  listeners.forEach((l) => l());
+}
+
+export function useOffloadWatched(): OffloadWatched {
+  return useSyncExternalStore(subscribeSettings, getOffloadWatched);
 }
 
 const LIMIT_STEPS = [5, 10, 15, 20, 25, 30, 40, 50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1000, 1500, 2000];
