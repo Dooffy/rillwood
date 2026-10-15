@@ -23,7 +23,7 @@ import {
 } from '@/downloadSnapshot';
 import { itemDetail } from '@/items';
 import { connectionFor, getSession, subscribeSession, type Account } from '@/session';
-import { getDownloadLimit, getDownloadNetwork, subscribeSettings } from '@/settings';
+import { getDownloadLimit, getDownloadNetwork, limitBytes, subscribeSettings } from '@/settings';
 
 export type DownloadStatus = 'queued' | 'downloading' | 'paused' | 'done' | 'error';
 
@@ -365,7 +365,7 @@ export const downloadsSize = (downloads: Iterable<Download>) => {
 /** The storage limit (Settings, decimal GB) must hold everything downloaded or queued plus `bytes`. */
 function withinLimit(bytes: number): boolean {
   const limit = getDownloadLimit();
-  return limit <= 0 || downloadsSize(store().values()) + bytes <= limit * 1e9;
+  return limit <= 0 || downloadsSize(store().values()) + bytes <= limitBytes(limit);
 }
 
 /** When the last batch was stamped (this run only: a stored time from a wrong clock never pins new ones). */

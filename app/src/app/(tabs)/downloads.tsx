@@ -14,7 +14,7 @@ import { useDownloadActions } from '@/components/DownloadActions';
 import { DownloadRow, DownloadRowGap, ShowDownloadRow, type ShowDownloadRowProps } from '@/components/DownloadRow';
 import { Chip } from '@/components/Chip';
 import { IconButton } from '@/components/IconButton';
-import { Message } from '@/components/Message';
+import { Empty, Message } from '@/components/Message';
 import { Screen } from '@/components/Screen';
 import { SearchField } from '@/components/SearchField';
 import { StorageBar } from '@/components/StorageBar';
@@ -26,12 +26,13 @@ import {
   type DownloadQuery,
   type DownloadScope,
 } from '@/downloadList';
-import { deleteDownloads, getDownload, resetTimers, useDownloadList } from '@/downloads';
+import { deleteDownloads, downloadsSize, getDownload, resetTimers, useDownloadList } from '@/downloads';
 import { formatBytes } from '@/format';
 import { searchTerm } from '@/items';
+import { openLibrary } from '@/navigation';
 import { expiresAt } from '@/offload';
 import { useSession } from '@/session';
-import { useOffloadDays, useOffloadWatched } from '@/settings';
+import { useDownloadLimit, useOffloadDays, useOffloadWatched } from '@/settings';
 import { spacing, tabList } from '@/theme';
 import { confirmDeleteDownloads } from '@/useDownloadControl';
 
@@ -62,7 +63,6 @@ type Show = ShowDownloadRowProps['show'];
 
 const entryKey = (e: DownloadEntry) => (e.kind === 'show' ? `show:${e.seriesId}` : e.id);
 
-/** What an empty list means (only ever narrowed: no downloads at all has its own message). */
 /** Asks, then starts the timers of these downloads again (auto-remove). */
 function confirmResetTimers(name: string | undefined, ids: readonly string[], days: number) {
   const n = ids.length;
@@ -76,6 +76,7 @@ function confirmResetTimers(name: string | undefined, ids: readonly string[], da
   );
 }
 
+/** What an empty list means (only ever narrowed: no downloads at all has its own message). */
 function emptyText({ term, scope }: DownloadQuery): string {
   if (term) return `No downloads match "${term}".`;
   const label = DOWNLOAD_SCOPES.find((s) => s.key === scope)?.label ?? 'items';
@@ -100,6 +101,9 @@ export default function Downloads() {
   // Narrowed on the device; the storage bar and Delete All stay over every download.
   const entries = useMemo(() => filterDownloads(list, { term, scope }), [list, term, scope]);
   const free = useFreeSpace(storageKey);
+  const limit = useDownloadLimit();
+  // The limit counts every account's downloads.
+  const allSize = useMemo(() => downloadsSize(all), [all]);
   const { play, remove, openMenu, sheet } = useDownloadActions();
   const days = useOffloadDays();
   const hours = useOffloadWatched();
@@ -170,11 +174,22 @@ export default function Downloads() {
         }
       >
         {ids.length === 0 || !active ? (
-          <Message text="Nothing downloaded yet. Download movies and episodes from their page to keep them on this device." />
+          <Empty
+            icon={{ ios: 'arrow.down.circle', android: 'download' }}
+            title="No Downloads Yet"
+            text="Movies and episodes you download show up here and play without a connection."
+            action={{ title: 'Browse Library', onPress: openLibrary }}
+          />
         ) : (
           <>
             {/* Stay under the title while the list scrolls. */}
-            <StorageBar used={used} free={free} />
+            <StorageBar
+              used={used}
+              all={allSize}
+              free={free}
+              limit={limit}
+              onPress={() => router.push('/download-storage')}
+            />
             <View style={styles.controls}>
               <SearchField value={text} onChangeText={setText} placeholder="Search downloads" />
               <View style={styles.scopes}>

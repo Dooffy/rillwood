@@ -10,15 +10,15 @@ import Downloads from '@/app/(tabs)/downloads';
 import * as store from '@/downloads';
 import { deleteDownloads, downloadId, initDownloads, startDownloads } from '@/downloads';
 import * as session from '@/session';
-import { setOffloadDays, setOffloadWatched } from '@/settings';
+import { setDownloadLimit, setOffloadDays, setOffloadWatched } from '@/settings';
 import { recordProgress } from '@/sync';
 import type { Account } from '@/session';
 
 import NativeDownloads from '../../modules/downloads';
 
-jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
+jest.mock('expo-router', () => ({ router: { push: jest.fn(), navigate: jest.fn() } }));
 // Swipe actions: the hidden Delete button is rendered (off screen until the row slides).
-const { router } = jest.requireMock<{ router: { push: jest.Mock } }>('expo-router');
+const { router } = jest.requireMock<{ router: { push: jest.Mock; navigate: jest.Mock } }>('expo-router');
 
 const GB = 1024 ** 3;
 // Free space as iOS Settings shows it (the screen and the store's pre-flight read it).
@@ -97,8 +97,23 @@ beforeEach(() => {
 describe('Downloads', () => {
   it('says what to do when nothing is downloaded', async () => {
     await render(<Downloads />);
-    expect(screen.getByText(/^Nothing downloaded yet\./)).toBeOnTheScreen();
+    expect(screen.getByText('No Downloads Yet')).toBeOnTheScreen();
     expect(screen.queryByText('Downloading')).toBeNull();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Browse Library' }));
+    expect(router.navigate).toHaveBeenCalledWith('/library');
+  });
+
+  it('shows the storage limit, free = the device when it has less room than the limit', async () => {
+    setDownloadLimit(200);
+    try {
+      await download(movie);
+      await render(<Downloads />);
+      // 200 GB - 2.1 GB left under the limit, 120 GB on the device.
+      expect(await screen.findByLabelText('Downloads 2.1 GB of 200 GB · 120 GB free')).toBeOnTheScreen();
+    } finally {
+      await act(() => setDownloadLimit(0));
+    }
   });
 
   it('lists movies and shows in one list, newest first, with the storage bar', async () => {
@@ -108,6 +123,8 @@ describe('Downloads', () => {
     await render(<Downloads />);
 
     expect(await screen.findByLabelText(/^Downloads 6\.4 GB · 120 GB free$/)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByLabelText(/^Downloads 6\.4 GB/));
+    expect(router.push).toHaveBeenCalledWith('/download-storage');
     expect(screen.queryByRole('header', { name: 'Downloading' })).toBeNull();
     const rows = screen.getAllByLabelText(/^(Sintel|Test Show), /).map((r) => r.props.accessibilityLabel);
     expect(rows).toEqual(['Sintel, Waiting · 0 MB of 2.1 GB', 'Test Show, 2 episodes · 4.3 GB, Downloading']);
@@ -191,7 +208,7 @@ describe('Downloads', () => {
     await act(() => buttons.find((b) => b.style === 'destructive')?.onPress?.());
     expect(native.cancel).toHaveBeenCalledWith(idOf(episode(1)));
     expect(native.cancel).toHaveBeenCalledWith(idOf(episode(2)));
-    expect(screen.getByText(/^Nothing downloaded yet\./)).toBeOnTheScreen();
+    expect(screen.getByText('No Downloads Yet')).toBeOnTheScreen();
   });
 
   it('shows live progress; the ring opens Pause / Resume', async () => {
@@ -220,7 +237,7 @@ describe('Downloads', () => {
     await fireEvent.press(screen.getByRole('menuitem', { name: 'Cancel Download' }));
     expect(native.cancel).toHaveBeenCalledWith(idOf(movie));
     expect(alert).not.toHaveBeenCalled();
-    expect(screen.getByText(/^Nothing downloaded yet\./)).toBeOnTheScreen();
+    expect(screen.getByText('No Downloads Yet')).toBeOnTheScreen();
   });
 
   it('a row menu closes when its download goes elsewhere and never reopens on a re-download', async () => {
@@ -413,7 +430,7 @@ describe('Downloads', () => {
     await act(() => buttons.find((b) => b.style === 'destructive')?.onPress?.());
 
     expect(native.cancel).toHaveBeenCalledWith(id);
-    expect(screen.getByText(/^Nothing downloaded yet\./)).toBeOnTheScreen();
+    expect(screen.getByText('No Downloads Yet')).toBeOnTheScreen();
   });
 
   it('swipe Delete asks first, running downloads too; Cancel keeps it', async () => {
@@ -429,7 +446,7 @@ describe('Downloads', () => {
     await act(() => buttons.find((b) => b.style === 'destructive')?.onPress?.());
 
     expect(native.cancel).toHaveBeenCalledWith(idOf(movie));
-    expect(screen.getByText(/^Nothing downloaded yet\./)).toBeOnTheScreen();
+    expect(screen.getByText('No Downloads Yet')).toBeOnTheScreen();
   });
 
   it("deletes all of the account's downloads, running ones too, after asking", async () => {
@@ -453,7 +470,7 @@ describe('Downloads', () => {
     expect(native.cancel).toHaveBeenCalledWith(idOf(movie));
     expect(native.cancel).toHaveBeenCalledWith(idOf(episode(1)));
     expect(native.cancel).not.toHaveBeenCalledWith(otherAccounts);
-    expect(screen.getByText(/^Nothing downloaded yet\./)).toBeOnTheScreen();
+    expect(screen.getByText('No Downloads Yet')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
   });
 

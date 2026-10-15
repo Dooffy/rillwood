@@ -43,7 +43,7 @@ describe('detailView', () => {
     expect(view.subtitle).toBe('Movie · Animation · Fantasy');
     expect(view.chips).toEqual(['2010', '12m', at(21, 11), 'PG', '★ 7.3', '4K', '5.1', 'CC']);
     expect(view.playback).toEqual({ played: false });
-    expect(view.media.audio).toEqual({ value: 'English - Dolby Digital - 5.1', count: 1 });
+    expect(view.media.audio).toMatchObject({ value: 'English - Dolby Digital - 5.1', count: 1 });
     expect(view.versions).toBeUndefined();
     expect(view.people.map((p) => p.Name)).toEqual(['Halina Reijn']);
   });

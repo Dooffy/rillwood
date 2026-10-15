@@ -56,6 +56,11 @@ export function openItem({ Id: id, Type }: BaseItemDto) {
   router.push({ pathname: Type === 'Series' ? '/series/[id]' : '/item/[id]', params: { id } });
 }
 
+/** The Library tab (Downloads with nothing in it). */
+export function openLibrary() {
+  router.navigate('/library');
+}
+
 /** The Downloads tab, from anywhere: screens pushed over the tabs close first (offline: what still plays). */
 export function openDownloads() {
   if (router.canDismiss()) router.dismissAll();

@@ -34,10 +34,16 @@ export function ListSection({ title, footer, children }: { title?: string; foote
   );
 }
 
-/** Disclosure chevron for tappable rows and cards. */
-export function Chevron() {
+/** Disclosure chevron for tappable rows and cards; `down` on a row that is open. */
+export function Chevron({ down = false }: { down?: boolean }) {
   const c = useColors();
-  return <SymbolView name={{ ios: 'chevron.right', android: 'chevron_right' }} tintColor={c.iconInactive} size={14} />;
+  return (
+    <SymbolView
+      name={down ? { ios: 'chevron.down', android: 'expand_more' } : { ios: 'chevron.right', android: 'chevron_right' }}
+      tintColor={c.iconInactive}
+      size={14}
+    />
+  );
 }
 
 /** Checkmark on the picked option (option lists, action sheets). */
@@ -55,24 +61,21 @@ export function Swatch({ color }: { color: string }) {
 export type ListRowProps = {
   label: string;
   value?: string;
-  /** Status dot before the value: `active` → green dot + primary text, `muted` → grey dot. */
-  dot?: 'active' | 'muted';
   /** Colour dot before the value (a colour preset). */
   swatch?: string;
   onPress?: () => void;
 };
 
 /** Tappable rows get a chevron; rows without `onPress` show a read-only value. */
-export function ListRow({ label, value, dot, swatch, onPress }: ListRowProps) {
+export function ListRow({ label, value, swatch, onPress }: ListRowProps) {
   const c = useColors();
   const content = (
     <>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, value !== undefined && styles.labelBesideValue]}>{label}</Text>
       {value !== undefined && (
         <View style={styles.value}>
-          {dot && <View style={[styles.dot, { backgroundColor: dot === 'active' ? c.success : c.elevated2 }]} />}
           {swatch && <Swatch color={swatch} />}
-          <Text secondary={dot !== 'active'} numberOfLines={1} style={styles.valueText}>
+          <Text secondary numberOfLines={1} style={styles.valueText}>
             {value}
           </Text>
         </View>
@@ -95,6 +98,29 @@ export function ListRow({ label, value, dot, swatch, onPress }: ListRowProps) {
   );
 }
 
+/** Action row (Sign out, Remove account): a plain tappable label, danger colour when `destructive`, no chevron. */
+export function ListAction({
+  label,
+  destructive,
+  onPress,
+}: {
+  label: string;
+  destructive?: boolean;
+  onPress: () => void;
+}) {
+  const c = useColors();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [styles.row, pressed && { backgroundColor: c.elevated }]}
+    >
+      <Text style={[styles.label, destructive && { color: c.danger }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   section: { gap: spacing.sm },
   title: { paddingHorizontal: spacing.md },
@@ -108,10 +134,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + spacing.xs,
   },
-  // Both shrink: a long value truncates to one line, a long label (user name) wraps.
+  // A label alone (a recent search) wraps.
   label: { flexGrow: 1, flexShrink: 1 },
-  value: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2, flexShrink: 1 },
+  // Next to a value the value gives way first (truncates to one line): "Audio" must not break to "Audi / o". A label
+  // too long for the row anyway (large text) still wraps at 60%.
+  labelBesideValue: { flexGrow: 0, flexShrink: 0, maxWidth: '60%' },
+  value: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.xs + 2, flex: 1 },
   valueText: { flexShrink: 1 },
-  dot: { width: 8, height: 8, borderRadius: radii.pill },
   swatch: { width: 16, height: 16, borderRadius: radii.pill, borderWidth: StyleSheet.hairlineWidth },
 });
+
+/** A list row's box (min height, padding), for rows built on their own (`MediaRow`). */
+export const listRowStyle = styles.row;
+/** A row label next to a value (`MediaRow`). */
+export const listLabelStyle = styles.labelBesideValue;

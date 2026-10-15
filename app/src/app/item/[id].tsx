@@ -12,6 +12,7 @@ import { DetailActions } from '@/components/DetailActions';
 import { DetailHeader } from '@/components/DetailHeader';
 import { DetailHero, HERO_ART_SCALE, LOGO_WIDTH } from '@/components/DetailHero';
 import { ListRow, ListSection } from '@/components/List';
+import { MediaRow } from '@/components/MediaRow';
 import { LoadError, Message } from '@/components/Message';
 import { MoreLikeThis } from '@/components/MoreLikeThis';
 import { Overview } from '@/components/Overview';
@@ -21,7 +22,7 @@ import { Text } from '@/components/Text';
 import { detailView } from '@/detail';
 import type { SavedItem } from '@/downloads';
 import { formatRemaining } from '@/format';
-import { isItemId, type TrackRow } from '@/items';
+import { isItemId } from '@/items';
 import { openItem, openPlayer } from '@/navigation';
 import { useImage } from '@/useImage';
 import { useItem } from '@/useItem';
@@ -107,9 +108,9 @@ function Detail({ item, saved }: { item: BaseItemDto; saved: SavedItem | null })
           {(view.media.video || view.media.audio || view.media.subtitles) && (
             <ListSection title="Media">
               {view.versions && <ListRow label={`Version (${view.versions.count})`} value={view.versions.name} />}
-              {view.media.video && <TrackListRow label="Video" row={view.media.video} />}
-              {view.media.audio && <TrackListRow label="Audio" row={view.media.audio} />}
-              {view.media.subtitles && <TrackListRow label="Subtitles" row={view.media.subtitles} />}
+              {view.media.video && <MediaRow label="Video" row={view.media.video} />}
+              {view.media.audio && <MediaRow label="Audio" row={view.media.audio} />}
+              {view.media.subtitles && <MediaRow label="Subtitles" row={view.media.subtitles} />}
             </ListSection>
           )}
         </View>
@@ -119,11 +120,6 @@ function Detail({ item, saved }: { item: BaseItemDto; saved: SavedItem | null })
       </ScrollView>
     </>
   );
-}
-
-/** "Audio (2)  English - Dolby Digital - 5.1" - what plays by default; picking a track comes with the player. */
-function TrackListRow({ label, row }: { label: string; row: TrackRow }) {
-  return <ListRow label={row.count > 1 ? `${label} (${row.count})` : label} value={row.value} />;
 }
 
 const styles = StyleSheet.create({

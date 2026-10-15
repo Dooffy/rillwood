@@ -5,6 +5,7 @@ import { Storage } from 'expo-sqlite/kv-store';
 import { Appearance as RNAppearance } from 'react-native';
 
 import Settings from '@/app/settings';
+import { ToastProvider } from '@/components/Toast';
 import { useSession, type Account } from '@/session';
 import {
   setAppearance,
@@ -28,6 +29,16 @@ const anna: Account = {
   deviceId: 'dev',
 };
 
+const ben: Account = { ...anna, id: 'srv.b', userId: 'b', userName: 'ben', signedOut: true };
+
+/** Settings uses the toast (switching says so). */
+const renderSettings = () =>
+  render(
+    <ToastProvider>
+      <Settings />
+    </ToastProvider>,
+  );
+
 /** Session with `active` signed in plus any signed-out `others`. */
 function signedIn(active: Account | null, others: Account[] = []) {
   jest.mocked(useSession).mockReturnValue({ accounts: [...(active ? [active] : []), ...others], active });
@@ -49,45 +60,44 @@ describe('Settings screen', () => {
 
   it('shows the current appearance and opens its list', async () => {
     setAppearance('dark');
-    await render(<Settings />);
+    await renderSettings();
     expect(screen.getByRole('button', { name: 'Appearance' })).toHaveAccessibilityValue({ text: 'Dark' });
     await fireEvent.press(screen.getByRole('button', { name: 'Appearance' }));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/option/[key]', params: { key: 'appearance' } });
   });
 
   it('follows an appearance change made in its list', async () => {
-    await render(<Settings />);
+    await renderSettings();
     await act(() => setAppearance('light'));
     expect(screen.getByRole('button', { name: 'Appearance' })).toHaveAccessibilityValue({ text: 'Light' });
   });
 
-  it('shows the current user card and opens Account', async () => {
-    signedIn(anna);
-    await render(<Settings />);
-    expect(screen.getByText('anna')).toBeOnTheScreen();
-    expect(screen.getByText('Home server')).toBeOnTheScreen();
-    expect(screen.getByText('A', { includeHiddenElements: true })).toBeTruthy();
+  it('lists the accounts on top: tap the active one for its details', async () => {
+    signedIn(anna, [ben]);
+    await renderSettings();
+    expect(screen.getByRole('header', { name: 'ACCOUNTS' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'anna, Home server' })).toHaveAccessibilityValue({ text: 'Active' });
+    expect(screen.getByRole('button', { name: 'ben, Home server' })).toHaveAccessibilityValue({ text: 'Signed out' });
     await fireEvent.press(screen.getByRole('button', { name: 'anna, Home server' }));
-    expect(router.push).toHaveBeenCalledWith('/account');
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/account', params: { id: 'srv.a' } });
   });
 
-  it('offers Sign in when signed out', async () => {
-    await render(<Settings />);
-    expect(screen.getByText('Add a Jellyfin server')).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
-    expect(router.push).toHaveBeenCalledWith({ pathname: '/server', params: { onboarding: '1' } });
+  it('offers Add account when signed out with nothing saved', async () => {
+    await renderSettings();
+    await fireEvent.press(screen.getByRole('button', { name: 'Add account' }));
+    expect(router.push).toHaveBeenCalledWith('/server');
   });
 
   it('shows the subtitle size and colour and opens Subtitles', async () => {
     setSubtitleScale(1.25);
-    await render(<Settings />);
+    await renderSettings();
     expect(screen.getByRole('button', { name: 'Subtitles' })).toHaveAccessibilityValue({ text: 'Large, White' });
     await fireEvent.press(screen.getByRole('button', { name: 'Subtitles' }));
     expect(router.push).toHaveBeenCalledWith('/subtitles');
   });
 
   it('shows the download defaults and app version', async () => {
-    await render(<Settings />);
+    await renderSettings();
     expect(screen.getByRole('button', { name: 'Network' })).toHaveAccessibilityValue({ text: 'Wi-Fi only' });
     expect(screen.getByRole('button', { name: 'Storage limit' })).toHaveAccessibilityValue({ text: 'No limit' });
     expect(screen.getByRole('button', { name: 'Remove downloads' })).toHaveAccessibilityValue({ text: '90 days' });
@@ -98,7 +108,7 @@ describe('Settings screen', () => {
   it('opens the download network list and the storage limit', async () => {
     setDownloadNetwork('any');
     setDownloadLimit(50);
-    await render(<Settings />);
+    await renderSettings();
     expect(screen.getByRole('button', { name: 'Network' })).toHaveAccessibilityValue({ text: 'Any network' });
     expect(screen.getByRole('button', { name: 'Storage limit' })).toHaveAccessibilityValue({ text: '50 GB' });
     await fireEvent.press(screen.getByRole('button', { name: 'Network' }));
@@ -109,7 +119,7 @@ describe('Settings screen', () => {
 
   it('opens the auto-remove page', async () => {
     setOffloadDays(30);
-    await render(<Settings />);
+    await renderSettings();
     expect(screen.getByRole('button', { name: 'Remove downloads' })).toHaveAccessibilityValue({ text: '30 days' });
     await fireEvent.press(screen.getByRole('button', { name: 'Remove downloads' }));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/option/[key]', params: { key: 'offload-days' } });

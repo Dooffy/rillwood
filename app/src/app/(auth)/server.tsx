@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { authErrorMessage, probeServer } from '@/auth';
 import { Button } from '@/components/Button';
 import { Page } from '@/components/Page';
-import { AddressExamples, WhereToFindServer } from '@/components/ServerHelp';
+import { WhereToFindServer } from '@/components/ServerHelp';
 import { StepPills } from '@/components/StepPills';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
@@ -13,8 +13,8 @@ import { ONBOARDING, useOnboarding } from '@/navigation';
 import { ONBOARDING_STEPS, serverUrlCandidates } from '@/server';
 
 /**
- * Add server with example addresses and where to find it. From Welcome (`onboarding=1`) it is also step 1 of 2 with an
- * intro; from Accounts it skips the steps.
+ * Add server with where to find the address. From Welcome (`onboarding=1`) it is also step 1 of 2 with an
+ * intro; from Add account it skips the steps.
  */
 export default function Server() {
   const onboarding = useOnboarding();
@@ -31,7 +31,7 @@ export default function Server() {
     [],
   );
 
-  /** Typing or picking an example clears the last error. */
+  /** Typing clears the last error. */
   const editAddress = (text: string) => {
     setAddress(text);
     setError(undefined);
@@ -80,7 +80,6 @@ export default function Server() {
         onSubmitEditing={connect}
         editable={!loading}
       />
-      <AddressExamples onPick={editAddress} />
       <WhereToFindServer />
       <Button title="Continue" onPress={connect} loading={loading} disabled={address.trim() === ''} />
     </Page>

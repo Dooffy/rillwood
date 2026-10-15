@@ -142,6 +142,23 @@ describe('ItemDetail', () => {
     expect(screen.queryByText(/^Version/)).toBeNull();
   });
 
+  it('opens a media row to list every track, default ticked, and closes it again', async () => {
+    await render(<ItemDetail />);
+    const subtitles = await screen.findByRole('button', { name: 'Subtitles (2)' });
+    expect(screen.queryByText('English - SUBRIP')).toBeNull();
+
+    await fireEvent.press(subtitles);
+    expect(screen.getByText('Off')).toBeOnTheScreen();
+    expect(screen.getByText('German - Default - SUBRIP')).toBeOnTheScreen();
+    expect(screen.getByText('English - SUBRIP')).toBeOnTheScreen();
+    expect(subtitles.props.accessibilityState).toMatchObject({ expanded: true });
+
+    await fireEvent.press(subtitles);
+    expect(screen.queryByText('English - SUBRIP')).toBeNull();
+    // One short track: plain row, nothing to open.
+    expect(screen.queryByRole('button', { name: 'Video' })).toBeNull();
+  });
+
   it('lists cast, then crew, without producers', async () => {
     await render(<ItemDetail />);
     expect(await screen.findByLabelText('Halina Reijn, Sintel (voice)')).toBeOnTheScreen();
