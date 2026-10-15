@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { SymbolView } from 'expo-symbols';
-import { useState } from 'react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -45,6 +45,29 @@ export function Message({
 }
 
 /**
+ * A tab with nothing in it yet: the `Offline` card (icon in a circle, title, what shows up here, one filled action),
+ * at the top under the tab's title.
+ */
+export function Empty({
+  icon,
+  title,
+  text,
+  action,
+}: {
+  icon: SymbolName;
+  title: string;
+  text: string;
+  action?: { title: string; onPress: () => void };
+}) {
+  // No own side padding (unlike `Offline`): it sits in a padded `Screen`.
+  return (
+    <StateCard icon={icon} title={title} text={text}>
+      {action && <Button title={action.title} onPress={action.onPress} />}
+    </StateCard>
+  );
+}
+
+/**
  * The one offline state - the server out of reach (no network, server down, timeout, TLS): a card with the wifi icon
  * in a circle, which server, what still works, Retry (filled) and Go to Downloads (text). A page that loaded keeps
  * its content instead; back online, failed screens reload by themselves. Always at the top of the screen: under a
@@ -63,32 +86,63 @@ export function Offline({
   fill?: boolean;
   header?: boolean;
 }) {
-  const c = useColors();
   const { top } = useSafeAreaInsets();
   const server = useSession().active?.server.name ?? 'the server';
   return (
     <View style={[styles.top, fill && styles.grow, header && { paddingTop: top + minTouch + spacing.sm }]}>
-      <View testID="offline" style={[styles.card, { backgroundColor: c.surface }]}>
-        <View style={[styles.ring, { backgroundColor: c.elevated }]}>
-          <SymbolView name={{ ios: 'wifi.slash', android: 'wifi_off' }} tintColor={c.textSecondary} size={30} />
-        </View>
-        <View style={styles.copy} accessible accessibilityRole="alert">
-          <Text variant="button" style={styles.center}>{`Can't reach ${server}`}</Text>
-          <Text variant="caption" secondary style={styles.center}>
-            {"Check your connection, or watch something you've downloaded."}
-          </Text>
-        </View>
-        <View style={styles.actions}>
-          <Button title="Retry" loading={busy} onPress={retry} />
-          <Pressable
-            accessibilityRole="button"
-            onPress={openDownloads}
-            style={({ pressed }) => [styles.link, pressed && styles.pressed]}
-          >
-            <Text variant="button">Go to Downloads</Text>
-          </Pressable>
-        </View>
+      <StateCard
+        testID="offline"
+        alert
+        icon={{ ios: 'wifi.slash', android: 'wifi_off' }}
+        title={`Can't reach ${server}`}
+        text="Check your connection, or watch something you've downloaded."
+      >
+        <Button title="Retry" loading={busy} onPress={retry} />
+        <Pressable
+          accessibilityRole="button"
+          onPress={openDownloads}
+          style={({ pressed }) => [styles.link, pressed && styles.pressed]}
+        >
+          <Text variant="button">Go to Downloads</Text>
+        </Pressable>
+      </StateCard>
+    </View>
+  );
+}
+
+type SymbolName = ComponentProps<typeof SymbolView>['name'];
+
+/** Offline / empty card: icon in a circle, title, caption, actions stretched below. */
+function StateCard({
+  icon,
+  title,
+  text,
+  alert = false,
+  testID,
+  children,
+}: {
+  icon: SymbolName;
+  title: string;
+  text: string;
+  alert?: boolean;
+  testID?: string;
+  children?: ReactNode;
+}) {
+  const c = useColors();
+  return (
+    <View testID={testID} style={[styles.card, { backgroundColor: c.surface }]}>
+      <View style={[styles.ring, { backgroundColor: c.elevated }]}>
+        <SymbolView name={icon} tintColor={c.textSecondary} size={30} />
       </View>
+      <View style={styles.copy} accessible accessibilityRole={alert ? 'alert' : undefined}>
+        <Text variant="button" style={styles.center}>
+          {title}
+        </Text>
+        <Text variant="caption" secondary style={styles.center}>
+          {text}
+        </Text>
+      </View>
+      {children && <View style={styles.actions}>{children}</View>}
     </View>
   );
 }

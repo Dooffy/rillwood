@@ -38,13 +38,8 @@ describe('navigation', () => {
 
   it.each([
     ['Home', <Home key="home" />, 'Settings', '/settings'],
-    [
-      'Settings (signed out)',
-      <Settings key="settings" />,
-      'Sign in',
-      { pathname: '/server', params: { onboarding: '1' } },
-    ],
-    ['Accounts', <Accounts key="accounts" />, 'Add server', '/server'],
+    ['Settings (nothing saved)', <Settings key="settings" />, 'Add account', '/server'],
+    ['Accounts (nothing saved)', <Accounts key="accounts" />, 'Add account', '/server'],
   ])('%s pushes its route', async (_name, ui, button, route) => {
     await renderScreen(ui);
     await fireEvent.press(screen.getByRole('button', { name: button }));

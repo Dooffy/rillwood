@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
+import type { ReactElement } from 'react';
 import { Alert } from 'react-native';
 
 import { ApiError } from '@/api';
@@ -11,6 +12,8 @@ import QuickConnect from '@/app/(auth)/quick-connect';
 import Server from '@/app/(auth)/server';
 import Welcome from '@/app/(auth)/welcome';
 import * as auth from '@/auth';
+import { savedServers } from '@/components/AccountList';
+import { ToastProvider } from '@/components/Toast';
 import {
   addAccount,
   getSession,
@@ -93,7 +96,7 @@ describe('Welcome with saved accounts', () => {
 });
 
 describe('Onboarding steps', () => {
-  it('shows step 1 with an explanation, tappable examples and where to find the address', async () => {
+  it('shows step 1 with an explanation and where to find the address, without example chips', async () => {
     useLocalSearchParams.mockReturnValue({ onboarding: '1' });
     mocked.probeServer.mockResolvedValue(server);
     await render(<Server />);
@@ -101,8 +104,7 @@ describe('Onboarding steps', () => {
     expect(screen.getByText(/plays your own Jellyfin library/)).toBeOnTheScreen();
     expect(screen.getByRole('header', { name: 'Where do I find it?' })).toBeOnTheScreen();
     expect(screen.getByText(/Dashboard - Networking/)).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole('button', { name: 'Use example 192.168.1.10:8096' }));
-    expect(screen.getByLabelText('Server address')).toHaveDisplayValue('192.168.1.10:8096');
+    expect(screen.queryByRole('button', { name: /^Use example/ })).toBeNull();
     await fireEvent.changeText(screen.getByLabelText('Server address'), 'jf.example.com');
     await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/login', params: { url: server.url, onboarding: '1' } });
@@ -138,18 +140,18 @@ describe('Onboarding steps', () => {
     expect(screen.queryByText(/plays your own Jellyfin library/)).toBeNull();
     expect(screen.getByText(/address you use to open Jellyfin/)).toBeOnTheScreen();
     expect(screen.getByRole('header', { name: 'Where do I find it?' })).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole('button', { name: 'Use example jellyfin.example.com' }));
+    await fireEvent.changeText(screen.getByLabelText('Server address'), 'jf.example.com');
     await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/login', params: { url: server.url } });
   });
 });
 
 describe('Add server', () => {
-  it('clears the error when an example is picked', async () => {
+  it('clears the error when the address is edited', async () => {
     await render(<Server />);
     await fireEvent.changeText(screen.getByLabelText('Server address'), 'ftp://nope');
     await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
-    await fireEvent.press(screen.getByRole('button', { name: 'Use example jellyfin.example.com' }));
+    await fireEvent.changeText(screen.getByLabelText('Server address'), 'jf.example.com');
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
@@ -218,8 +220,7 @@ describe('Add server', () => {
     await fireEvent.changeText(screen.getByLabelText('Server address'), 'jf.example.com');
     await submitInOneFrame('Server address', 1);
     expect(screen.getByLabelText('Server address')).toHaveProp('editable', false);
-    await fireEvent.press(screen.getByRole('button', { name: 'Use example 192.168.1.10:8096' }));
-    expect(screen.getByLabelText('Server address')).toHaveDisplayValue('jf.example.com');
+    expect(screen.getByTestId('page-content')).toHaveProp('pointerEvents', 'none');
   });
 
   it('disables Continue until an address is entered', async () => {
@@ -407,133 +408,177 @@ afterEach(async () => {
   await act(() => getSession().accounts.forEach((a) => removeAccount(a.id)));
 });
 
-describe('Accounts', () => {
+/** Account screens use the toast (switching says so). */
+const withToast = (ui: ReactElement) => render(<ToastProvider>{ui}</ToastProvider>);
+
+describe('Accounts list', () => {
   beforeEach(() => seed([server, 'anna'], [server, 'ben'], [other, 'anna']));
 
-  it('groups accounts by server and marks the active one', async () => {
-    await render(<Accounts />);
-    expect(screen.getByRole('header', { name: 'HOME SERVER' })).toBeOnTheScreen();
-    expect(screen.getByRole('header', { name: 'CABIN' })).toBeOnTheScreen();
-    expect(screen.getAllByText('Active')).toHaveLength(1);
-    const [homeAnna, cabinAnna] = screen.getAllByRole('button', { name: 'anna' });
-    expect(within(homeAnna).queryByText('Active')).toBeNull();
-    expect(within(cabinAnna).getByText('Active')).toBeOnTheScreen();
-    // No "Inactive" label - only the current and signed-out accounts are marked.
-    expect(screen.queryByText('Inactive')).toBeNull();
+  it('lists every account with its server and checks the active one', async () => {
+    await withToast(<Accounts />);
+    expect(screen.getByRole('button', { name: 'anna, Home server' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'ben, Home server' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'anna, Cabin' })).toHaveAccessibilityValue({ text: 'Active' });
+    expect(screen.getByRole('button', { name: 'anna, Home server' })).not.toHaveAccessibilityValue({ text: 'Active' });
   });
 
-  it('switches to an account', async () => {
-    await render(<Accounts />);
-    await fireEvent.press(screen.getByRole('button', { name: 'ben' }));
-    await pressAlertButton('Switch to this account');
-    expect(within(screen.getByRole('button', { name: 'ben' })).getByText('Active')).toBeOnTheScreen();
-    expect(screen.getAllByText('Active')).toHaveLength(1);
-  });
-
-  // Regression: switching from the signed-out Accounts screen (stack root) stayed there with no way into the app.
-  it('goes Home after switching while signed out', async () => {
-    await act(() => signOut('cab.anna'));
-    await render(<Accounts />);
-    await fireEvent.press(screen.getByRole('button', { name: 'ben' }));
-    await pressAlertButton('Switch to this account');
+  it('switches with one tap and lands on the new Home', async () => {
+    await withToast(<Accounts />);
+    await fireEvent.press(screen.getByRole('button', { name: 'ben, Home server' }));
+    expect(alert).not.toHaveBeenCalled();
     expect(getSession().active?.id).toBe('srv.ben');
     expect(router.replace).toHaveBeenCalledWith('/home');
+    expect(screen.getByText('Switched to ben')).toBeOnTheScreen();
   });
 
-  it('stays on Accounts when switching while signed in', async () => {
-    await render(<Accounts />);
-    await fireEvent.press(screen.getByRole('button', { name: 'ben' }));
-    await pressAlertButton('Switch to this account');
-    expect(router.replace).not.toHaveBeenCalled();
+  it('opens the details of the active account on tap, any account from its info button', async () => {
+    await withToast(<Accounts />);
+    await fireEvent.press(screen.getByRole('button', { name: 'anna, Cabin' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/account', params: { id: 'cab.anna' } });
+    await fireEvent.press(screen.getByRole('button', { name: 'ben on Home server, details' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/account', params: { id: 'srv.ben' } });
+    expect(getSession().active?.id).toBe('cab.anna');
   });
 
   it('signs a signed-out account back in with its server and username', async () => {
     await act(() => signOut('srv.ben'));
-    await render(<Accounts />);
-    expect(within(screen.getByRole('button', { name: 'ben' })).getByText('Signed out')).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole('button', { name: 'ben' }));
-    await pressAlertButton('Sign in');
+    await withToast(<Accounts />);
+    const ben = screen.getByRole('button', { name: 'ben, Home server' });
+    expect(ben).toHaveAccessibilityValue({ text: 'Signed out' });
+    expect(within(ben).getByText('Sign in')).toBeOnTheScreen();
+    await fireEvent.press(ben);
     expect(router.push).toHaveBeenCalledWith({ pathname: '/login', params: { url: server.url, userName: 'ben' } });
   });
 
-  it('removes an account', async () => {
-    await render(<Accounts />);
-    await fireEvent.press(screen.getByRole('button', { name: 'ben' }));
-    await pressAlertButton('Remove account');
-    expect(screen.queryByRole('button', { name: 'ben' })).toBeNull();
-  });
-
-  it('adds another user on an existing server', async () => {
-    await render(<Accounts />);
-    const [, cabinAddUser] = screen.getAllByRole('button', { name: 'Add user' });
-    await fireEvent.press(cabinAddUser);
+  it('adds an account on a saved server or a new one', async () => {
+    await withToast(<Accounts />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Add account' }));
+    // One entry per server, not per account.
+    expect(screen.getAllByRole('menuitem')).toHaveLength(3);
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Cabin, 10.0.0.2:8096' }));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/login', params: { url: other.url } });
-  });
-
-  it('opens Add server', async () => {
-    await render(<Accounts />);
-    await fireEvent.press(screen.getByRole('button', { name: 'Add server' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Add account' }));
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'New server' }));
     expect(router.push).toHaveBeenCalledWith('/server');
   });
 });
 
+describe('Accounts list, none saved', () => {
+  it('says so and goes straight to Add server', async () => {
+    await withToast(<Accounts />);
+    expect(screen.getByText('No saved accounts. Add one to sign in.')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Add account' }));
+    expect(screen.queryByRole('menuitem')).toBeNull();
+    expect(router.push).toHaveBeenCalledWith('/server');
+  });
+});
+
+describe('savedServers', () => {
+  it('lists each server once', async () => {
+    await seed([server, 'anna'], [other, 'anna'], [server, 'ben']);
+    expect(savedServers(getSession().accounts).map((s) => s.id)).toEqual(['srv', 'cab']);
+  });
+});
+
 describe('Account', () => {
-  it('shows the active user and server details', async () => {
+  const showing = (id?: string) => useLocalSearchParams.mockReturnValue(id ? { id } : {});
+
+  it('shows the active user and server details by default', async () => {
     await seed([server, 'anna']);
-    await render(<Account />);
-    expect(screen.getByText('anna')).toBeOnTheScreen();
-    expect(screen.getByText('Home server')).toBeOnTheScreen();
+    showing();
+    await withToast(<Account />);
+    expect(screen.getByRole('header', { name: 'anna' })).toBeOnTheScreen();
+    expect(screen.getByText('Active on Home server')).toBeOnTheScreen();
     expect(screen.getByText('https://jf.example.com')).toBeOnTheScreen();
     expect(screen.getByText('12.1.0')).toBeOnTheScreen();
+    // Already active: nothing to switch to.
+    expect(screen.queryByRole('button', { name: 'Switch to this account' })).toBeNull();
   });
 
-  it('opens Switch user', async () => {
-    await seed([server, 'anna']);
-    await render(<Account />);
-    await fireEvent.press(screen.getByRole('button', { name: 'Switch user' }));
-    expect(router.push).toHaveBeenCalledWith('/accounts');
+  it('switches to another account', async () => {
+    await seed([server, 'anna'], [server, 'ben']);
+    showing('srv.anna');
+    await withToast(<Account />);
+    expect(screen.getByText('Signed in on Home server')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Switch to this account' }));
+    expect(getSession().active?.id).toBe('srv.anna');
+    expect(router.replace).toHaveBeenCalledWith('/home');
   });
 
-  it('signs out and keeps the account', async () => {
+  it('signs out the active account and hands over to the next signed-in one', async () => {
+    await seed([server, 'anna'], [server, 'ben']);
+    showing('srv.ben');
+    await withToast(<Account />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
+    expect(getSession().active?.id).toBe('srv.anna');
+    expect(getSession().accounts.find((a) => a.id === 'srv.ben')?.signedOut).toBe(true);
+    // As a switch from the list: the new account's Home, the old account's screens gone.
+    expect(router.replace).toHaveBeenCalledWith('/home');
+    expect(router.back).not.toHaveBeenCalled();
+    expect(screen.getByText('Switched to anna')).toBeOnTheScreen();
+  });
+
+  it('signs out the last account and leaves navigation to the signed-out redirect', async () => {
     await seed([server, 'anna']);
-    await render(<Account />);
+    showing();
+    await withToast(<Account />);
     await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
     expect(getSession().active).toBeNull();
     expect(getSession().accounts[0].signedOut).toBe(true);
+    expect(router.back).not.toHaveBeenCalled();
   });
 
-  it('removes the account after confirming and goes back when another is signed in', async () => {
+  it('signs out another account and stays on it', async () => {
+    await seed([server, 'anna'], [server, 'ben']);
+    showing('srv.anna');
+    await withToast(<Account />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
+    expect(getSession().active?.id).toBe('srv.ben');
+    expect(router.back).not.toHaveBeenCalled();
+    expect(screen.getByText('Signed out of Home server')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/login', params: { url: server.url, userName: 'anna' } });
+  });
+
+  it("removes the active account after confirming and lands on the next account's Home", async () => {
     await seed([other, 'ben'], [server, 'anna']);
-    await render(<Account />);
+    showing();
+    await withToast(<Account />);
     await fireEvent.press(screen.getByRole('button', { name: 'Remove account' }));
     expect(alert).toHaveBeenCalledWith('Remove anna?', expect.any(String), expect.any(Array));
     await pressAlertButton('Remove');
-    expect(router.back).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('ben')).toBeOnTheScreen();
+    expect(getSession().active?.id).toBe('cab.ben');
+    expect(router.replace).toHaveBeenCalledWith('/home');
   });
 
   it('leaves navigation to the signed-out redirect when no other account is signed in', async () => {
     await seed([other, 'ben'], [server, 'anna']);
     await act(() => signOut('cab.ben'));
-    await render(<Account />);
+    showing();
+    await withToast(<Account />);
     await fireEvent.press(screen.getByRole('button', { name: 'Remove account' }));
     await pressAlertButton('Remove');
     expect(router.back).not.toHaveBeenCalled();
-    expect(screen.toJSON()).toBeNull();
+    expect(screen.queryByRole('header')).toBeNull();
+  });
+
+  // Signed out already (saved accounts from Welcome): no redirect will come, so back to the list.
+  it('goes back after removing a saved account while signed out', async () => {
+    await seed([server, 'anna']);
+    await act(() => signOut('srv.anna'));
+    showing('srv.anna');
+    await withToast(<Account />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Remove account' }));
+    await pressAlertButton('Remove');
+    expect(router.back).toHaveBeenCalledTimes(1);
   });
 
   it('offers a no-op Cancel', async () => {
     await seed([server, 'anna']);
-    await render(<Account />);
+    showing();
+    await withToast(<Account />);
     await fireEvent.press(screen.getByRole('button', { name: 'Remove account' }));
     expect(alertButtons().find((b) => b.text === 'Cancel')).toEqual({ text: 'Cancel', style: 'cancel' });
-    expect(screen.getByText('anna')).toBeOnTheScreen();
-  });
-});
-
-describe('Accounts, none yet', () => {
-  it('says what to do next', async () => {
-    await render(<Accounts />);
-    expect(screen.getByText('No accounts yet. Add a Jellyfin server to sign in.')).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'anna' })).toBeOnTheScreen();
   });
 });

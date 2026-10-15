@@ -72,13 +72,23 @@ describe('switch, sign out, remove', () => {
     expect(getSession().active?.id).toBe('srv.u1');
   });
 
-  it('signs out: revokes, forgets the token, keeps the record, leaves no active account', () => {
-    signOut('srv.u2');
+  it('signs out: revokes, forgets the token, keeps the record, activates the next signed-in one', () => {
+    expect(signOut('srv.u2')?.id).toBe('srv.u1');
     const { accounts, active } = getSession();
     expect(logout).toHaveBeenCalledWith(expect.objectContaining({ token: 'tok-u2' }));
     expect(secure.has('tok_srv.u2')).toBe(false);
     expect(accounts.find((a) => a.id === 'srv.u2')?.signedOut).toBe(true);
-    expect(active).toBeNull();
+    expect(active?.id).toBe('srv.u1');
+  });
+
+  it('signs out the last signed-in account: no active account', () => {
+    signOut('srv.u1');
+    expect(signOut('srv.u2')).toBeNull();
+    expect(getSession().active).toBeNull();
+  });
+
+  it('keeps the active account when another one signs out', () => {
+    expect(signOut('srv.u1')?.id).toBe('srv.u2');
   });
 
   it('does not switch to a signed-out account', () => {
@@ -139,7 +149,7 @@ describe('switch, sign out, remove', () => {
     writes.mockRestore();
   });
 
-  it('marks the account signed out on a 401 and keeps it', async () => {
+  it('marks the account signed out on a 401 and keeps it, without switching to another', async () => {
     global.fetch = jest.fn(() =>
       Promise.resolve({ ok: false, status: 401, text: async () => '' } as Response),
     ) as unknown as typeof fetch;

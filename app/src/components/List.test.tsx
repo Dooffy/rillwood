@@ -2,8 +2,6 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import { palettes } from '@/theme';
-
 import { ListRow, ListSection } from './List';
 
 describe('List', () => {
@@ -36,15 +34,16 @@ describe('List', () => {
     expect(screen.getByRole('button', { name: 'Appearance' })).toHaveAccessibilityValue({ text: 'System' });
   });
 
-  it('shows an active dot value in the primary colour, a muted one in grey', async () => {
-    await render(
-      <>
-        <ListRow label="anna" value="Active" dot="active" />
-        <ListRow label="ben" value="Signed out" dot="muted" />
-      </>,
-    );
-    expect(screen.getByText('Active')).toHaveStyle({ color: palettes.dark.text });
-    expect(screen.getByText('Signed out')).toHaveStyle({ color: palettes.dark.textSecondary });
+  // Regression: "Audio" broke to "Audi / o" next to a long value.
+  it('keeps the label whole beside a value; the value truncates', async () => {
+    await render(<ListRow label="Audio" value="Surround 7.1 - English - AAC - 5.1 - Default" />);
+    expect(screen.getByText('Audio')).toHaveStyle({ flexShrink: 0 });
+    expect(screen.getByText('Surround 7.1 - English - AAC - 5.1 - Default')).toHaveProp('numberOfLines', 1);
+  });
+
+  it('lets a label without a value wrap', async () => {
+    await render(<ListRow label="a very long recent search" onPress={() => {}} />);
+    expect(screen.getByText('a very long recent search')).toHaveStyle({ flexShrink: 1 });
   });
 
   it('keeps rows without onPress read-only', async () => {

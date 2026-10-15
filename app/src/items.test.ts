@@ -40,6 +40,7 @@ import {
   latest,
   logoImage,
   mediaRows,
+  trackRowExpands,
   nextEpisode,
   nextEpisodes,
   nextUp,
@@ -460,10 +461,19 @@ describe('detail', () => {
   });
 
   it('summarises what plays by default, with track counts', () => {
+    const audio = 'AC3 5.1 @ 640 Kbps - English - Dolby Digital - Default';
     expect(mediaRows(sintelDetail.MediaSources?.[0])).toEqual({
-      video: { value: '4K H264 SDR', count: 1 },
-      audio: { value: 'AC3 5.1 @ 640 Kbps - English - Dolby Digital - Default', count: 1 },
-      subtitles: { value: 'German - Default - SUBRIP', count: 2 },
+      video: { value: '4K H264 SDR', count: 1, tracks: [{ label: '4K H264 SDR', picked: true }] },
+      audio: { value: audio, count: 1, tracks: [{ label: audio, picked: true }] },
+      subtitles: {
+        value: 'German - Default - SUBRIP',
+        count: 2,
+        tracks: [
+          { label: 'Off', picked: false },
+          { label: 'German - Default - SUBRIP', picked: true },
+          { label: 'English - SUBRIP', picked: false },
+        ],
+      },
     });
   });
 
@@ -476,9 +486,30 @@ describe('detail', () => {
         { ...eng },
       ],
     });
-    expect(rows.audio).toEqual({ value: 'English 440Hz - AAC - Mono', count: 2 });
-    expect(rows.subtitles).toEqual({ value: 'Off', count: 1 });
+    expect(rows.audio).toEqual({
+      value: 'English 440Hz - AAC - Mono',
+      count: 2,
+      tracks: [
+        { label: 'English 440Hz - AAC - Mono', picked: true },
+        { label: 'Ukrainian 880Hz - Dolby Digital - Mono', picked: false },
+      ],
+    });
+    expect(rows.subtitles?.value).toBe('Off');
+    expect(rows.subtitles?.count).toBe(1);
+    expect(rows.subtitles?.tracks[0]).toEqual({ label: 'Off', picked: true });
     expect(rows.video).toBeUndefined();
+  });
+
+  it.each([
+    ['Video', '4K H264 SDR', 1, false],
+    ['Audio', 'English - Stereo', 1, false],
+    // Kept low on purpose: a value that may not fit a small phone opens.
+    ['Audio', 'English - Dolby Digital - 5.1', 1, true],
+    // The "Audi / o" row: one track, too long to fit next to its label.
+    ['Audio', 'Surround 7.1 - English - AAC - 5.1 - Default', 1, true],
+    ['Subtitles (2)', 'Off', 2, true],
+  ])('trackRowExpands(%p, %p, %p tracks) → %p', (label, value, count, expands) => {
+    expect(trackRowExpands(label, { value, count, tracks: [] })).toBe(expands);
   });
 
   it('has no rows without a media source', () => {

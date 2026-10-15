@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from '@jest/globals';
 
-import { isOutdatedServer, serverUrlCandidates } from './server';
+import { isOutdatedServer, serverHost, serverUrlCandidates } from './server';
 
 describe('serverUrlCandidates', () => {
   it.each([
@@ -45,5 +45,15 @@ describe('isOutdatedServer', () => {
     ['unknown', false],
   ])('%s → %s', (version, expected) => {
     expect(isOutdatedServer(version)).toBe(expected);
+  });
+});
+
+describe('serverHost', () => {
+  it.each([
+    ['https://jf.example.com/', 'jf.example.com'],
+    ['http://10.0.0.2:8096', '10.0.0.2:8096'],
+    ['https://example.com/jellyfin//', 'example.com/jellyfin'],
+  ])('%s → %s', (url, host) => {
+    expect(serverHost(url)).toBe(host);
   });
 });

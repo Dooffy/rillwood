@@ -1,33 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Address help for Add server: tappable examples and "Where do I find it?". Shown in onboarding and from Accounts.
+// Address help for Add server: "Where do I find it?". Shown in onboarding and from Add account.
 import { SymbolView } from 'expo-symbols';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { minTouch, radii, spacing, useColors } from '@/theme';
+import { radii, spacing, useColors } from '@/theme';
 
 import { Text } from './Text';
-
-const ADDRESS_EXAMPLES = ['192.168.1.10:8096', 'jellyfin.example.com'] as const;
-
-/** Example addresses; tapping one fills the field. */
-export function AddressExamples({ onPick }: { onPick: (address: string) => void }) {
-  const c = useColors();
-  return (
-    <View style={styles.chips}>
-      {ADDRESS_EXAMPLES.map((example) => (
-        <Pressable
-          key={example}
-          accessibilityRole="button"
-          accessibilityLabel={`Use example ${example}`}
-          onPress={() => onPick(example)}
-          style={({ pressed }) => [styles.chip, { backgroundColor: pressed ? c.elevated2 : c.elevated }]}
-        >
-          <Text variant="caption">{example}</Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
 
 const WHERE = [
   'At home: the computer running Jellyfin plus port 8096. Its Dashboard - Networking page shows the address.',
@@ -61,8 +39,6 @@ export function WhereToFindServer() {
 }
 
 const styles = StyleSheet.create({
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: { minHeight: minTouch, paddingHorizontal: spacing.md, borderRadius: radii.pill, justifyContent: 'center' },
   card: { borderRadius: radii.card, padding: spacing.md, gap: spacing.md },
   cardTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   step: { flexDirection: 'row', gap: spacing.sm + spacing.xs },

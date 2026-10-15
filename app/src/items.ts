@@ -359,23 +359,40 @@ export type TrackRow = {
   value: string;
   /** Tracks of this type in the file. */
   count: number;
+  /** Every track in full, file order, the default one picked. Subtitles start with Off. */
+  tracks: { label: string; picked: boolean }[];
 };
 
 export type MediaRows = { video?: TrackRow; audio?: TrackRow; subtitles?: TrackRow };
 
+/**
+ * Label + value chars that surely fit one row on a small phone. A guess, kept low on purpose: opening a row that fits
+ * costs nothing, a cut-off value with no way to read it is the bug.
+ */
+const ROW_FIT_CHARS = 24;
+
+/** A media row opens to list its tracks when there are several, or the default one doesn't fit the row. */
+export function trackRowExpands(label: string, row: TrackRow): boolean {
+  return row.count > 1 || label.length + row.value.length > ROW_FIT_CHARS;
+}
+
 /** Version / audio / subtitle rows for a media source (the first one when the item has several versions). */
 export function mediaRows(source: MediaSourceDto | undefined): MediaRows {
   const streams = source?.MediaStreams ?? [];
-  const count = (type: string) => streams.filter((s) => s.Type === type).length;
-  const video = streams.find((s) => s.Type === 'Video');
-  const audio = defaultAudio(streams);
-  const subtitle = defaultSubtitle(streams);
+  const of = (type: string) => streams.filter((s) => s.Type === type);
+  const row = (type: string, picked: MediaStreamDto | undefined, off?: boolean): TrackRow | undefined => {
+    const tracks = of(type).map((s) => ({ label: streamLabel(s), picked: s === picked }));
+    if (!tracks.length) return undefined;
+    return {
+      value: picked ? streamLabel(picked) : 'Off',
+      count: tracks.length,
+      tracks: off ? [{ label: 'Off', picked: !picked }, ...tracks] : tracks,
+    };
+  };
   return {
-    video: video && { value: streamLabel(video), count: count('Video') },
-    audio: audio && { value: streamLabel(audio), count: count('Audio') },
-    subtitles: count('Subtitle')
-      ? { value: subtitle ? streamLabel(subtitle) : 'Off', count: count('Subtitle') }
-      : undefined,
+    video: row('Video', of('Video')[0]),
+    audio: row('Audio', defaultAudio(streams)),
+    subtitles: row('Subtitle', defaultSubtitle(streams), true),
   };
 }
 

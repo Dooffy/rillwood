@@ -37,3 +37,8 @@ export function isOutdatedServer(version: string): boolean {
   const v = versionNumber(version);
   return v !== null && v < MIN;
 }
+
+/** "https://jf.example.com/" → "jf.example.com" (the server's address without scheme or trailing slash). */
+export function serverHost(url: string): string {
+  return url.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+}

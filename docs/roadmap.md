@@ -134,7 +134,8 @@ Design + sources: `docs/research/background-downloads.md`.
 
 - [ ] Pre-release improvements:
   - [x] Offline series: per-episode art - each episode saves its own still with the snapshot (`still.jpg`) and its Downloads row (a show's screen, Episodes chip) shows it (16:9), not the show's poster. Episodes downloaded before show their backdrop until re-downloaded
-  - Storage limit across accounts made explicit: the limit is phone-wide, but the Downloads tab shows only the active account's usage. E.g. a 5 GB limit used up by account 1 → account 2 can't download and doesn't see why. Show the other accounts' share (storage bar + Settings → Storage limit) and name it in the "over the limit" message
+  - [x] Pre-release cleanup: Media rows open to list every track (label never wraps), Downloads empty state = the Offline card, no address example chips on Add server, storage bar shows the limit ("12.3 GB of 50 GB · 37.7 GB free", tap → Storage limit), accounts list on top of Settings (tap switches, (i) details, sign out hands over to the next account)
+  - [ ] Storage limit across accounts made explicit (storage bar done - under a limit it counts every account; Settings → Storage limit + the "over the limit" toast left): the limit is phone-wide, but the Downloads tab shows only the active account's usage. E.g. a 5 GB limit used up by account 1 → account 2 can't download and doesn't see why. Show the other accounts' share (storage bar + Settings → Storage limit) and name it in the "over the limit" message
 - [ ] Settings: accounts, playback defaults, downloads, cache clear, licenses screen
 - [ ] Perf (FlashList if FlatList stutters, image sizes, cold start <2s), accessibility pass
 - [ ] iPad layout for every screen (`supportsTablet` is off today): adaptive grids, readable-width forms and pages, landscape, split view / Stage Manager sizes

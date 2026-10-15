@@ -18,10 +18,12 @@ export type ProgressBarProps = {
   progress: number;
   /** Drawn over artwork: white on a translucent track, in both themes, a little thicker. */
   overArtwork?: boolean;
+  /** Warning fill (storage over its limit). */
+  warning?: boolean;
 };
 
 /** Thin watched-progress bar (white fill in the dark palette). */
-export function ProgressBar({ progress, overArtwork = false }: ProgressBarProps) {
+export function ProgressBar({ progress, overArtwork = false, warning = false }: ProgressBarProps) {
   const c = useColors();
   const p = clamp01(progress);
   return (
@@ -33,7 +35,10 @@ export function ProgressBar({ progress, overArtwork = false }: ProgressBarProps)
     >
       <View
         testID="progress-fill"
-        style={[styles.fill, { width: `${p * 100}%`, backgroundColor: overArtwork ? onArtwork.fill : c.text }]}
+        style={[
+          styles.fill,
+          { width: `${p * 100}%`, backgroundColor: overArtwork ? onArtwork.fill : warning ? c.warning : c.text },
+        ]}
       />
     </View>
   );

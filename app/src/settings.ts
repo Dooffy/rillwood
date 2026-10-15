@@ -326,6 +326,9 @@ export function downloadLimitStep(steps: readonly number[], gb: number): number 
   return best;
 }
 
+/** The storage limit in bytes (decimal GB, as the slider shows); 0 = none. */
+export const limitBytes = (gb: number) => gb * 1e9;
+
 /** "50 GB", "1.5 TB", "No limit". */
 export const formatDownloadLimit = (gb: number) => (gb <= 0 ? 'No limit' : gb >= 1000 ? `${gb / 1000} TB` : `${gb} GB`);
 

@@ -139,22 +139,25 @@ export function switchAccount(id: string) {
   save(getSession().accounts, id);
 }
 
-function markSignedOut(id: string) {
+/** `handOver`: the active account signing out activates the next signed-in one (a 401 doesn't - no silent switch). */
+function markSignedOut(id: string, handOver = false) {
   // A burst of parallel 401s signs out once.
   if (!tokens.has(id)) return;
   forgetToken(id);
   const { accounts, active } = getSession();
-  save(
-    accounts.map((a) => (a.id === id ? { ...a, signedOut: true } : a)),
-    active?.id,
-  );
+  const next = accounts.map((a) => (a.id === id ? { ...a, signedOut: true } : a));
+  save(next, handOver && active?.id === id ? next.find((a) => !a.signedOut)?.id : active?.id);
 }
 
-/** Revokes the token and keeps the account (and its downloads) for signing in again. */
-export function signOut(id: string) {
+/**
+ * Revokes the token and keeps the account (and its downloads) for signing in again. Signing out the active account
+ * activates the next signed-in one, as removing does. Returns the active account afterwards (null = signed out).
+ */
+export function signOut(id: string): Account | null {
   const account = getSession().accounts.find((a) => a.id === id);
   if (account) revoke(account);
-  markSignedOut(id);
+  markSignedOut(id, true);
+  return getSession().active;
 }
 
 /**
