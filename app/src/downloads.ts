@@ -17,7 +17,8 @@ import {
   onDisk,
   readSnapshotItem,
   saveSnapshot,
-  subtitlePrefix,
+  sharedFiles,
+  versionFile,
   type Snapshot,
 } from '@/downloadSnapshot';
 import { itemDetail } from '@/items';
@@ -480,7 +481,7 @@ const hasVersion = (d: Download) =>
 
 /**
  * Files of a download that's gone from the index: the item's whole folder (item JSON, images) with its last version,
- * else only this version's video + subtitles.
+ * else only this version's video, `.part` + subtitles.
  */
 function removeFiles(d: Download) {
   try {
@@ -490,10 +491,8 @@ function removeFiles(d: Download) {
       folder.delete();
       return;
     }
-    const subs = subtitlePrefix(d.path);
     for (const f of folder.list()) {
-      const path = `${itemFolder(d.path)}/${f.name}`;
-      if (f instanceof File && (path === d.path || path.startsWith(subs))) f.delete();
+      if (f instanceof File && versionFile(d.path, `${itemFolder(d.path)}/${f.name}`)) f.delete();
     }
   } catch {}
 }
@@ -605,7 +604,58 @@ async function run() {
   });
   if (lost.length > 0) send(lost);
 
+  sweepOrphans();
   void retrySnapshots();
+}
+
+const SWEEP_KEY = 'dlSweep';
+const WEEK = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Weekly, after a reconcile (native answered, unknown tasks cancelled): deletes what under `downloads/` no download
+ * in the index owns - a folder no download's path runs through, a file that isn't a version's own (`versionFile`) or
+ * its item's shared snapshot (`sharedFiles`): a delete the app was killed in, a version's leftovers. Never with an
+ * unreadable or never saved index. A snapshot still writing for a deleted download cleans up after itself (`snapshot`).
+ */
+function sweepOrphans() {
+  const items = store();
+  if (!readable) return;
+  const now = Date.now();
+  const last = Number(Storage.getItemSync(SWEEP_KEY) ?? 0);
+  // A stamp from the future (clock moved back) doesn't hold it off.
+  if (last <= now && now - last < WEEK) return;
+  // An index never saved (lost kv-store) would take every file: wait for the first download to write one.
+  if (Storage.getItemSync(KEY) === null) return;
+  Storage.setItemSync(SWEEP_KEY, String(now));
+
+  const folders = new Map<string, Download[]>();
+  const kept = new Set<string>(); // folders a download's path runs through
+  for (const d of items.values()) {
+    const folder = itemFolder(d.path);
+    const group = folders.get(folder);
+    if (group) group.push(d);
+    else folders.set(folder, [d]);
+    for (let f = folder; f.includes('/'); f = itemFolder(f)) kept.add(f);
+  }
+  const owned = (path: string, name: string) => {
+    const group = folders.get(itemFolder(path));
+    return !!group && (sharedFiles.includes(name) || group.some((d) => versionFile(d.path, path)));
+  };
+  const walk = (dir: Directory, path: string) => {
+    for (const entry of dir.list()) {
+      const p = `${path}/${entry.name}`;
+      try {
+        if (entry instanceof Directory) {
+          if (kept.has(p)) walk(entry, p);
+          else entry.delete();
+        } else if (!owned(p, entry.name)) entry.delete();
+      } catch {} // one that can't be read or deleted doesn't stop the rest
+    }
+  };
+  try {
+    const root = new Directory(Paths.document, 'downloads');
+    if (root.exists) walk(root, 'downloads');
+  } catch {}
 }
 
 let retrying = false;

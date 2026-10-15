@@ -22,12 +22,21 @@ const POSTER_PX = 720;
 const BACKDROP_PX = 1920;
 
 const ITEM_JSON = 'item.json';
+const POSTER = 'poster.jpg';
+const BACKDROP = 'backdrop.jpg';
+
+/** Files in an item folder its versions share (the orphan sweep keeps them while a version is in the index). */
+export const sharedFiles: readonly string[] = [ITEM_JSON, POSTER, BACKDROP];
 
 /** `downloads/<account>/<item>` - the folder of a download's `path`. */
 export const itemFolder = (path: string) => path.slice(0, path.lastIndexOf('/'));
 
 /** A version's subtitle files start with this (`<folder>/<source>.sub-`): named after the video, a safe segment. */
 export const subtitlePrefix = (path: string) => `${path.slice(0, path.lastIndexOf('.'))}.sub-`;
+
+/** Whether a file is one of a version's own (not shared): its video, Android `.part`, subtitles. */
+export const versionFile = (path: string, file: string) =>
+  file === path || file === `${path}.part` || file.startsWith(subtitlePrefix(path));
 
 const fileAt = (path: string) => new File(Paths.document, path);
 
@@ -61,8 +70,8 @@ export async function saveSnapshot(
 
   const image = (ref: ImageRef | undefined, px: number, name: string) =>
     ref ? { url: imageUrl(baseUrl, ref, px, 1), path: `${folder}/${name}` } : undefined;
-  const poster = image(posterImage(item), POSTER_PX, 'poster.jpg');
-  const backdrop = image(backdropImage(item), BACKDROP_PX, 'backdrop.jpg');
+  const poster = image(posterImage(item), POSTER_PX, POSTER);
+  const backdrop = image(backdropImage(item), BACKDROP_PX, BACKDROP);
   const subtitles = (source.MediaStreams ?? []).flatMap((s) => {
     // The index goes into a file name: a whole number only (server JSON isn't checked against the type).
     const sidecar = s.Type === 'Subtitle' && s.IsExternal && Number.isInteger(s.Index) && s.Index >= 0;

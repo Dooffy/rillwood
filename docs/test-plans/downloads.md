@@ -185,6 +185,17 @@ Time travel: iPhone Settings → General → Date & Time, Set Automatically off,
 | OL11 | Remove downloads Never + Remove watched Off                                                  | No labels, no Reset Timer in menus, nothing removed                                                                                       |
 | OL12 | Downloads at 1 / 35 / 95 days left (180 days), switch to 30 days, back to the app            | Nothing removed; every row "Expires in 30 days"; Never → no labels; 180 days → "Expires in 180 days"                                      |
 
+## Orphan sweep (M6)
+
+Stray files: iOS a file-sharing dev build (`RILLWOOD_FILE_SHARING=1`, Files app → On My iPhone → Rillwood → `downloads/`); Android `adb shell run-as app.rillwood.client touch files/downloads/<path>`. Time travel as in Offload; the sweep runs after the reconcile at launch / back from the background, at most once a week.
+
+| #   | Steps                                                                                                                                             | Expected                                                                                                                                                      |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OS1 | Install the build, launch once (the first sweep runs at once - nothing stray yet), download a movie; start a second, big one and leave it running | -                                                                                                                                                             |
+| OS2 | Add `junk.mkv` to the movie's item folder and a folder `downloads/<account>/stray/` with a file; kill + relaunch                                  | Still there (swept less than a week ago)                                                                                                                      |
+| OS3 | Date 8 days forward, back to the app                                                                                                              | `junk.mkv` and `stray/` gone; the movie's video, `item.json`, poster, backdrop, subtitles stay; the running download keeps going (Android: its `.part` stays) |
+| OS4 | Play the movie; check the running one                                                                                                             | Plays with subtitles and art; the running one finishes and plays                                                                                              |
+
 ## To add with the Android runners (M5)
 
 20GB + 60GB file, Android 16 standby buckets (`am set-standby-bucket`). dataSync timeout (`device_config ... data_sync_fgs_timeout_duration`) only applies to the 14+ fallback - see W7 for the stop / re-run path.

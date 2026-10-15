@@ -66,19 +66,34 @@ jest.mock('expo-file-system', () => {
       this.path = path;
       mockDirs.add(path);
     }
+    get name() {
+      return this.path.slice(this.path.lastIndexOf('/') + 1);
+    }
     get exists() {
       return mockDirs.has(this.path);
     }
     create() {
       mockDirs.add(this.path);
     }
+    // Direct children, like the real one: files in it and its sub-folders (from deeper files too).
     list() {
-      return [...mockFiles.keys()].filter((f) => f.startsWith(`${this.path}/`)).map((f) => new File('docs', f));
+      const prefix = `${this.path}/`;
+      const files: File[] = [];
+      const dirs = new Set<string>();
+      for (const p of [...mockFiles.keys(), ...mockDirs]) {
+        if (!p.startsWith(prefix)) continue;
+        const rest = p.slice(prefix.length);
+        if (rest.includes('/')) dirs.add(rest.slice(0, rest.indexOf('/')));
+        else if (mockFiles.has(p)) files.push(new File('docs', p));
+        else dirs.add(rest);
+      }
+      return [...files, ...[...dirs].map((d) => new Directory('docs', `${prefix}${d}`))];
     }
     delete() {
-      mockDirs.delete(this.path);
+      const inside = (p: string) => p === this.path || p.startsWith(`${this.path}/`);
+      [...mockDirs].filter(inside).forEach((d) => mockDirs.delete(d));
       mockDeletedDirs.push(this.path);
-      for (const f of this.list()) mockFiles.delete(f.path);
+      [...mockFiles.keys()].filter(inside).forEach((f) => mockFiles.delete(f));
     }
   }
   return {
@@ -826,6 +841,94 @@ describe('reconcile', () => {
   it('runs once at a time', async () => {
     await Promise.all([dl.reconcile(), dl.reconcile()]);
     expect(native.getTasks).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('orphan sweep', () => {
+  const WEEK = 7 * 24 * 60 * 60 * 1000;
+  const disk = () => [...mockFiles.keys()].sort();
+
+  beforeEach(async () => {
+    // Two versions of m1 (one still running on Android: its `.part`), with their snapshot.
+    await dl.startDownloads([
+      movie('m1', GB),
+      { ...movie('m1', GB), source: { Id: 'v2', Size: GB } as MediaSourceDto },
+    ]);
+    for (const f of [
+      'downloads/a1/m1/m1.mkv',
+      'downloads/a1/m1/v2.bin.part',
+      'downloads/a1/m1/m1.sub-3.srt',
+      'downloads/a1/m1/item.json',
+      'downloads/a1/m1/poster.jpg',
+      'downloads/a1/m1/backdrop.jpg',
+    ])
+      mockFiles.set(f, 1);
+  });
+
+  it('deletes folders and files no download owns, keeps every version and its snapshot', async () => {
+    mockFiles.set('downloads/a1/m1/old.mkv', 1); // a deleted version's video
+    mockFiles.set('downloads/a1/m1/old.sub-2.srt', 1);
+    mockFiles.set('downloads/a1/gone/gone.mkv', 1); // an item deleted while the app was killed
+    mockFiles.set('downloads/a1/gone/item.json', 1);
+    mockFiles.set('downloads/a2/x/x.mkv', 1); // an account's leftovers
+    mockFiles.set('downloads/stray.tmp', 1);
+
+    await dl.reconcile();
+
+    expect(disk()).toEqual([
+      'downloads/a1/m1/backdrop.jpg',
+      'downloads/a1/m1/item.json',
+      'downloads/a1/m1/m1.mkv',
+      'downloads/a1/m1/m1.sub-3.srt',
+      'downloads/a1/m1/poster.jpg',
+      'downloads/a1/m1/v2.bin.part',
+    ]);
+  });
+
+  it('deleting one version takes its own files, `.part` included; the shared snapshot stays', () => {
+    dl.deleteDownload('a1:m1:v2');
+    expect(disk()).not.toContain('downloads/a1/m1/v2.bin.part');
+    expect(disk()).toContain('downloads/a1/m1/item.json');
+  });
+
+  it('runs once a week', async () => {
+    await dl.reconcile();
+    mockFiles.set('downloads/a1/gone/gone.mkv', 1);
+    await dl.reconcile();
+    expect(disk()).toContain('downloads/a1/gone/gone.mkv');
+
+    Storage.setItemSync('dlSweep', String(Date.now() - WEEK));
+    await dl.reconcile();
+    expect(disk()).not.toContain('downloads/a1/gone/gone.mkv');
+  });
+
+  it('runs when the last one is stamped in the future (clock moved back)', async () => {
+    Storage.setItemSync('dlSweep', String(Date.now() + WEEK));
+    mockFiles.set('downloads/a1/gone/gone.mkv', 1);
+    await dl.reconcile();
+    expect(disk()).not.toContain('downloads/a1/gone/gone.mkv');
+  });
+
+  it("deletes nothing when native doesn't answer", async () => {
+    mockFiles.set('downloads/a1/gone/gone.mkv', 1);
+    native.getTasks.mockRejectedValueOnce(new Error('gone'));
+    await dl.reconcile();
+    expect(disk()).toContain('downloads/a1/gone/gone.mkv');
+    expect(Storage.getItemSync('dlSweep')).toBeNull();
+  });
+
+  it('deletes nothing while the index was never saved (lost kv-store)', async () => {
+    fresh();
+    await dl.reconcile();
+    expect(disk()).toContain('downloads/a1/m1/m1.mkv');
+    expect(Storage.getItemSync('dlSweep')).toBeNull();
+  });
+
+  it('deletes nothing with an unreadable index', async () => {
+    fresh();
+    Storage.setItemSync('dl', '{bad');
+    await dl.reconcile();
+    expect(disk()).toContain('downloads/a1/m1/m1.mkv');
   });
 });
 
