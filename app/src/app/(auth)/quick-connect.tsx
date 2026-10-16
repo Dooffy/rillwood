@@ -43,7 +43,7 @@ export default function QuickConnect() {
   }
 
   return (
-    <Page>
+    <Page narrow>
       {onboarding && <StepPills steps={ONBOARDING_STEPS} current={1} />}
       <Text secondary>
         On a device that is already signed in, open Jellyfin and go to Settings - Quick Connect, then enter this code.

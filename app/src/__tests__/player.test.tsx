@@ -454,12 +454,23 @@ describe('Player screen', () => {
     expect(router.back).not.toHaveBeenCalled();
   });
 
-  it('the only screen that rotates: unlocked while open, upright portrait again on leave', async () => {
+  it('the only screen that rotates on a phone: unlocked while open, upright portrait again on leave', async () => {
+    const size = jest.spyOn(Dimensions, 'get').mockReturnValue({ width: 390, height: 844, scale: 3, fontScale: 1 });
     const lock = jest.spyOn(ScreenOrientation, 'lockAsync').mockResolvedValue();
     const { unmount } = await render(<PlayerScreen />);
     expect(lock).toHaveBeenLastCalledWith(ScreenOrientation.OrientationLock.DEFAULT);
     await unmount();
     expect(lock).toHaveBeenLastCalledWith(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+    size.mockRestore();
+  });
+
+  it('leaves a tablet free to rotate after closing', async () => {
+    const size = jest.spyOn(Dimensions, 'get').mockReturnValue({ width: 834, height: 1194, scale: 2, fontScale: 1 });
+    const lock = jest.spyOn(ScreenOrientation, 'lockAsync').mockResolvedValue();
+    const { unmount } = await render(<PlayerScreen />);
+    await unmount();
+    expect(lock).not.toHaveBeenCalledWith(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+    size.mockRestore();
   });
 
   // Regression: taps during loading toggled the hidden "shown" flag (and swallowed Retry on Android), so the controls

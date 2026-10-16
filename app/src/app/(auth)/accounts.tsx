@@ -8,7 +8,7 @@ import { useSession } from '@/session';
 export default function Accounts() {
   const { accounts } = useSession();
   return (
-    <Page>
+    <Page narrow>
       {/* The last saved one removed from its details. */}
       {accounts.length === 0 && <Message text="No saved accounts. Add one to sign in." />}
       <AccountsSection />

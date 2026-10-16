@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { useCallback, type ReactElement } from 'react';
-import { FlatList, RefreshControl, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { isConnectionError, type BaseItemDto } from '@/api';
 import { formatRemaining } from '@/format';
@@ -18,12 +18,22 @@ import { LoadError, loadErrorMessage, Message, Offline, useHeldOffline } from '.
 import { CARD_GAP } from './Row';
 import { EpisodeRowsPlaceholder, PosterGridPlaceholder } from './Skeleton';
 import { Spinner } from './Spinner';
+import { useTabContentWidth } from './TabsSidebar';
 
-const COLUMNS = 3;
+/** A phone's poster column count (about 111 pt each); wider lists add columns. */
+const MIN_COLUMNS = 3;
+/** Posters in a wider grid stay about this wide - a bit over a Home row poster (`POSTER_WIDTH`), as the grid fills the screen. */
+const POSTER_TARGET = 140;
+
+/** Poster columns for a list this wide: 3 on phones, more on tablets (5 in iPad portrait, 6 beside the landscape sidebar). */
+function gridColumns(listWidth: number): number {
+  const fit = Math.floor((listWidth - 2 * spacing.md + CARD_GAP) / (POSTER_TARGET + CARD_GAP));
+  return Math.max(MIN_COLUMNS, fit);
+}
 
 export type PagedListProps = {
   list: PagedItems;
-  /** posters: 3-column grid (movies, shows); episodes: one row each. */
+  /** posters: grid (movies, shows; 3 columns on phones, more on tablets); episodes: one row each. */
   layout: 'posters' | 'episodes';
   /** Scrolls with the list (summary line). */
   header?: ReactElement;
@@ -44,9 +54,11 @@ export type PagedListProps = {
 export function PagedList({ list, layout, header, emptyText, listKey, testID, onOpen }: PagedListProps) {
   const c = useColors();
   const image = useImage();
-  const { width } = useWindowDimensions();
+  // A tab screen: the sidebar takes part of the window in tablet landscape.
+  const width = useTabContentWidth();
   const { refreshing, onRefresh } = usePullToRefresh(list.loading, list.refresh);
-  const cardWidth = Math.floor((width - 2 * spacing.md - (COLUMNS - 1) * CARD_GAP) / COLUMNS);
+  const columns = gridColumns(width);
+  const cardWidth = Math.floor((width - 2 * spacing.md - (columns - 1) * CARD_GAP) / columns);
   const posters = layout === 'posters';
   const menu = useItemMenu();
   const offline = useHeldOffline(list.items.length === 0 && isConnectionError(list.error), list.loading);
@@ -96,7 +108,7 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
   // First page: placeholders, an error with Retry, or what an empty list means.
   const empty = list.loading ? (
     posters ? (
-      <PosterGridPlaceholder columns={COLUMNS} width={cardWidth} />
+      <PosterGridPlaceholder columns={columns} width={cardWidth} />
     ) : (
       <EpisodeRowsPlaceholder />
     )
@@ -121,11 +133,12 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
   return (
     <FlatList
       {...tabList}
-      key={`${layout}|${listKey}`}
+      // A new column count needs a new list (FlatList can't change numColumns in place).
+      key={`${layout}|${listKey}|${posters ? columns : 1}`}
       testID={testID}
       data={list.items}
       keyExtractor={(item) => item.Id}
-      numColumns={posters ? COLUMNS : 1}
+      numColumns={posters ? columns : 1}
       columnWrapperStyle={posters ? styles.columns : undefined}
       contentContainerStyle={styles.content}
       ListHeaderComponent={header}
@@ -134,7 +147,7 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
       onEndReached={list.loadMore}
       onEndReachedThreshold={0.5}
       // A full first screen on tall phones.
-      initialNumToRender={posters ? COLUMNS * 4 : 8}
+      initialNumToRender={posters ? columns * 4 : 8}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.text} />}

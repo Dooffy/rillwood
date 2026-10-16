@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Design tokens (CLAUDE.md §3). Screens use these, never raw values.
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useSyncExternalStore } from 'react';
+import { Dimensions } from 'react-native';
 
 const dark = {
   background: '#000000',
@@ -101,6 +102,59 @@ export const type = {
 } as const;
 
 export const minTouch = 44;
+
+/** Width from which a screen uses its wide (tablet) layout: Android's sw600dp, every iPad. */
+export const WIDE_MIN_WIDTH = 600;
+
+/** Widest a column of content gets on a wide screen, so lines and fields stay readable: forms (auth) and pages. */
+export const readableWidth = { form: 480, page: 680 } as const;
+
+type Size = { width: number; height: number };
+
+export function isWide(width: number): boolean {
+  return width >= WIDE_MIN_WIDTH;
+}
+
+/** A wide window wider than tall: a tablet in landscape (fixed tabs sidebar, Home hero beside its text). */
+export function isWideLandscape(width: number, height: number): boolean {
+  return isWide(width) && width > height;
+}
+
+/**
+ * A tablet: the screen's short side is tablet-sized (every iPad; the largest phone is 440 pt). The screen, not the
+ * window: a narrow Split View window on an iPad is still a tablet, a phone turned sideways in the player is not.
+ */
+export function isTabletScreen({ width, height }: Size): boolean {
+  return isWide(Math.min(width, height));
+}
+
+const subscribeWindow = (onChange: () => void) => {
+  const sub = Dimensions.addEventListener('change', onChange);
+  return () => sub.remove();
+};
+
+/**
+ * A yes / no about a tablet's window - always no on a phone, so a phone turned in the player never switches the
+ * screens under it. Re-renders only when the answer flips, not on every resize (Split View drags).
+ */
+function useTabletWindowIs(test: (window: Size) => boolean): boolean {
+  return useSyncExternalStore(
+    subscribeWindow,
+    () => isTabletScreen(Dimensions.get('screen')) && test(Dimensions.get('window')),
+  );
+}
+
+const wideWindow = ({ width }: Size) => isWide(width);
+const wideLandscapeWindow = ({ width, height }: Size) => isWideLandscape(width, height);
+
+/** Tablet-sized window (follows rotation and Split View / Stage Manager resizes). */
+export function useWide(): boolean {
+  return useTabletWindowIs(wideWindow);
+}
+
+export function useWideLandscape(): boolean {
+  return useTabletWindowIs(wideLandscapeWindow);
+}
 
 /** Opacity of a pressed button, card or row. */
 export const pressedOpacity = 0.5;

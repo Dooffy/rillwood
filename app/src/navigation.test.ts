@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { renderHook } from '@testing-library/react-native';
 
 import { useSession, type Account } from '@/session';
+import { palettes } from '@/theme';
 
-import { openDownloads, resetTo, tabsTitle, useSignedOutRedirect } from './navigation';
+import { readablePage, openDownloads, resetTo, tabsTitle, useSignedOutRedirect } from './navigation';
 
 jest.mock('expo-router', () => ({
   router: { canDismiss: jest.fn(), dismissAll: jest.fn(), replace: jest.fn(), navigate: jest.fn() },
@@ -107,5 +108,18 @@ describe('tabsTitle', () => {
 
   it('falls back to Home for an unknown route name', () => {
     expect(tabsTitle(tabs('nope'))).toBe('Home');
+  });
+});
+
+describe('readablePage', () => {
+  it('large title on phones, a plain centred title over the readable column on wide screens', () => {
+    expect(readablePage('Sign in', false, palettes.dark)).toEqual({
+      headerShown: true,
+      headerLargeTitle: true,
+      title: 'Sign in',
+    });
+    const wide = readablePage('Sign in', true, palettes.dark);
+    expect(wide).toMatchObject({ title: 'Sign in', headerStyle: { backgroundColor: palettes.dark.background } });
+    expect(wide).not.toHaveProperty('headerLargeTitle');
   });
 });
