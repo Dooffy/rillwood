@@ -33,6 +33,18 @@ describe('storageSummary', () => {
     expect(storageSummary({ used: 1e9, all: 1e9, limit: 5 }).text).toBe('Downloads 1 GB of 5 GB · 4 GB free');
   });
 
+  it('with a limit and several accounts: the total says it counts them all', () => {
+    expect(storageSummary({ used: 5e9, all: 15e9, free: 100e9, limit: 50, shared: true }).text).toBe(
+      'Downloads 15 GB all accounts of 50 GB · 35 GB free',
+    );
+  });
+
+  it('no limit and several accounts: only this account, no "all accounts"', () => {
+    expect(storageSummary({ used: 5e9, all: 15e9, free: 100e9, limit: 0, shared: true }).text).toBe(
+      'Downloads 5 GB · 100 GB free',
+    );
+  });
+
   it('over a lowered limit: says so, warning bar', () => {
     expect(storageSummary({ used: 54e9, all: 54e9, free: 100e9, limit: 50 })).toEqual({
       text: 'Downloads 54 GB of 50 GB · over the limit',

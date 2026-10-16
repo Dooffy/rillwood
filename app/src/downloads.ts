@@ -460,6 +460,14 @@ export function deleteDownloads(ids: readonly string[]) {
   batch(() => ids.forEach(deleteDownload));
 }
 
+/** An account's downloads, every status. */
+export const accountDownloads = (accountId: string) => getDownloads().filter((d) => d.accountId === accountId);
+
+/** Sign out / Remove account (Account screen): its downloads go with it - nobody can open them without it. */
+export function deleteAccountDownloads(accountId: string) {
+  deleteDownloads(accountDownloads(accountId).map((d) => d.id));
+}
+
 /** Stops the ones not finished yet and deletes them with their partial files (Cancel Download); done ones stay. */
 export function cancelDownloads(ids: readonly string[]) {
   deleteDownloads(ids.filter((id) => getDownload(id)?.status !== 'done'));

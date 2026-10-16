@@ -24,10 +24,12 @@ describe('Download storage screen', () => {
     setDownloadLimit(0);
   });
 
-  it('shows no limit at the end and what downloads take', async () => {
+  it('shows no limit at the end, that it is phone-wide, and what downloads take', async () => {
     await render(<DownloadStorage />);
     expect(slider()).toHaveAccessibilityValue({ text: 'No limit' });
-    expect(screen.getByText(/Downloads take 12.2 GB/)).toBeOnTheScreen();
+    expect(
+      screen.getByText(/^Applies to every account on this phone\. Downloads take 12.2 GB across all accounts/),
+    ).toBeOnTheScreen();
   });
 
   it('saves a stop: one less than no limit is the biggest that fits the disk', async () => {

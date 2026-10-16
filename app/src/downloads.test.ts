@@ -425,6 +425,16 @@ describe('pause / resume / delete', () => {
     expect(saved().items[0].watchedAt).toBeUndefined();
   });
 
+  it("deletes one account's downloads (sign out / remove), other accounts' stay", async () => {
+    mockSession.accounts = [account('a1'), account('a2')];
+    mockSession.active = mockSession.accounts[1];
+    await dl.startDownloads([movie('m2', GB)]);
+    expect(dl.accountDownloads('a1').map((d) => d.id)).toEqual(['a1:m1:m1']);
+    dl.deleteAccountDownloads('a1');
+    expect(native.cancel).toHaveBeenCalledWith('a1:m1:m1');
+    expect(dl.getDownloads().map((d) => d.id)).toEqual(['a2:m2:m2']);
+  });
+
   it('delete cancels native, removes the file and the entry', () => {
     mockFiles.set('downloads/a1/m1/m1.mkv', GB);
     dl.deleteDownload('a1:m1:m1');

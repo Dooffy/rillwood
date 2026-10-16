@@ -116,6 +116,22 @@ describe('Downloads', () => {
     }
   });
 
+  it('with several accounts the limit total says it counts them all', async () => {
+    setDownloadLimit(200);
+    try {
+      const first = account;
+      signIn(newAccount());
+      await download(movie);
+      signIn(first);
+      await download(movie);
+      await render(<Downloads />);
+      // Earlier tests' accounts keep their downloads in the store: only the wording is checked.
+      expect(await screen.findByLabelText(/^Downloads [\d.]+ GB all accounts of 200 GB · /)).toBeOnTheScreen();
+    } finally {
+      await act(() => setDownloadLimit(0));
+    }
+  });
+
   it('lists movies and shows in one list, newest first, with the storage bar', async () => {
     await download(episode(1), episode(2));
     await download(movie);

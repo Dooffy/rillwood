@@ -40,7 +40,7 @@ export default function DownloadStorage() {
         />
       </View>
       <Text variant="caption" secondary style={styles.footer}>
-        {`Downloads take ${formatBytes(used)}, counting files still downloading. A new download doesn't start if it would go over the limit; what's already downloaded stays.`}
+        {`Applies to every account on this phone. Downloads take ${formatBytes(used)} across all accounts, counting files still downloading. A new download doesn't start if it would go over the limit; what's already downloaded stays.`}
       </Text>
     </Page>
   );

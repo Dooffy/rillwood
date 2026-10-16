@@ -17,14 +17,16 @@ export type Storage = {
   free?: number;
   /** Storage limit in decimal GB, 0 = none (Settings). */
   limit: number;
+  /** More than one account on the phone: the limit's total says it counts them all. */
+  shared?: boolean;
 };
 
 /**
  * What the bar says and fills (pure). No limit: the account's downloads vs free space. With a limit (phone-wide):
  * every account's downloads of the limit, free = what's left under it or on the device, whichever is less; the bar
- * fills against downloads + that free.
+ * fills against downloads + that free. Several accounts: "15 GB all accounts of 50 GB".
  */
-export function storageSummary({ used, all, free, limit }: Storage): {
+export function storageSummary({ used, all, free, limit, shared }: Storage): {
   text: string;
   progress?: number;
   over: boolean;
@@ -41,7 +43,7 @@ export function storageSummary({ used, all, free, limit }: Storage): {
   const room = Math.max(0, cap - all);
   const left = free === undefined ? room : Math.min(room, free);
   return {
-    text: `Downloads ${formatBytes(all)} of ${formatBytes(cap)} · ${over ? 'over the limit' : `${formatBytes(left)} free`}`,
+    text: `Downloads ${formatBytes(all)}${shared ? ' all accounts' : ''} of ${formatBytes(cap)} · ${over ? 'over the limit' : `${formatBytes(left)} free`}`,
     // Against the room actually reachable: a 50 GB limit with 10 GB left on the phone fills like 10 GB would.
     progress: over ? 1 : all / (all + left || 1),
     over,

@@ -11,7 +11,7 @@ import { ApiError, logout, onUnauthorized, type AuthenticationResult, type Conne
 /** A probed Jellyfin server. `id` is the server's own id (`ServerId`). */
 export type Server = { id: string; url: string; name: string; version: string };
 
-/** One user on one server. `signedOut`: token gone (401 or sign out); the record and its downloads stay. */
+/** One user on one server. `signedOut`: token gone (401 or sign out); the record stays (a 401 keeps its downloads too). */
 export type Account = {
   id: string;
   server: Server;
@@ -150,7 +150,7 @@ function markSignedOut(id: string, handOver = false) {
 }
 
 /**
- * Revokes the token and keeps the account (and its downloads) for signing in again. Signing out the active account
+ * Revokes the token and keeps the account for signing in again (the Account screen deletes its downloads first). Signing out the active account
  * activates the next signed-in one, as removing does. Returns the active account afterwards (null = signed out).
  */
 export function signOut(id: string): Account | null {
