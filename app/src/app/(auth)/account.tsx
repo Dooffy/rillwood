@@ -2,6 +2,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Alert, StyleSheet, View } from 'react-native';
 
+import { accountDownloads, deleteAccountDownloads } from '@/downloads';
+import { formatBytes } from '@/format';
 import { removeAccount, signOut, useSession, type Account as SavedAccount } from '@/session';
 import { accountStatus, signInAgain, useSwitchAccount, type AccountStatus } from '@/components/AccountList';
 import { Avatar } from '@/components/Avatar';
@@ -45,20 +47,50 @@ export default function Account() {
     } else router.back();
   };
 
-  const remove = () =>
+  // Sign out / remove take the account's downloads with them. Read at the tap (the screen doesn't show them);
+  // '' when it has none.
+  const downloadsLine = () => {
+    const downloads = accountDownloads(account.id);
+    if (downloads.length === 0) return '';
+    const count = downloads.length === 1 ? 'Its download' : `Its ${downloads.length} downloads`;
+    // What's on the phone: an unfinished one only has its bytes so far.
+    const bytes = downloads.reduce((sum, d) => sum + (d.status === 'done' ? d.total : d.bytes), 0);
+    return `${count} (${formatBytes(bytes)}) will be deleted from this phone.`;
+  };
+
+  const remove = () => {
+    const line = downloadsLine();
     Alert.alert(
       `Remove ${account.userName}?`,
-      `You'll need to sign in again to use ${account.server.name} with this account.`,
+      `You'll need to sign in again to use ${account.server.name} with this account.${line && ` ${line}`}`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove', style: 'destructive', onPress: () => leave(removeAccount(account.id)) },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            deleteAccountDownloads(account.id);
+            leave(removeAccount(account.id));
+          },
+        },
       ],
     );
+  };
 
   // Signing out another account keeps this screen (it now reads Signed out).
-  const signOutHere = () => {
+  const signOutNow = () => {
+    deleteAccountDownloads(account.id);
     const next = signOut(account.id);
     if (isActive) leave(next);
+  };
+  // Asks only when downloads would go.
+  const signOutHere = () => {
+    const line = downloadsLine();
+    if (!line) return signOutNow();
+    Alert.alert(`Sign out of ${account.userName}?`, line, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign Out', style: 'destructive', onPress: signOutNow },
+    ]);
   };
 
   return (
@@ -87,7 +119,7 @@ export default function Account() {
         footer={
           account.signedOut
             ? 'Remove forgets this account on this device.'
-            : 'Sign out keeps the account here so you can sign back in. Remove forgets it on this device.'
+            : "Sign out keeps the account here so you can sign back in. Remove forgets it on this device. Both delete the account's downloads."
         }
       >
         {account.signedOut ? (

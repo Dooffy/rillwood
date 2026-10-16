@@ -84,7 +84,7 @@ function emptyText({ term, scope }: DownloadQuery): string {
 }
 
 export default function Downloads() {
-  const { active } = useSession();
+  const { active, accounts } = useSession();
   const all = useDownloadList();
   const [text, setText] = useState('');
   const [scope, setScope] = useState<DownloadScope>('all');
@@ -188,6 +188,7 @@ export default function Downloads() {
               all={allSize}
               free={free}
               limit={limit}
+              shared={accounts.length > 1}
               onPress={() => router.push('/download-storage')}
             />
             <View style={styles.controls}>

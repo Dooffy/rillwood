@@ -4,6 +4,7 @@
 // queue. Everything runs on `queue` (also the session's delegate queue).
 import Foundation
 import Network
+import UIKit
 
 final class DownloadsSession: NSObject, URLSessionDownloadDelegate {
   static let identifier = "app.rillwood.client.downloads"
@@ -19,6 +20,12 @@ final class DownloadsSession: NSObject, URLSessionDownloadDelegate {
   // A connection error while the path is blocked restarts without using a retry - not at once, in case the path is
   // wrong about the route to the server (no tight loop).
   private static let blockedRestartDelay: TimeInterval = 30
+  // The daemon can hold a transfer whose server went quiet for days (it retries on its own until the resource
+  // timeout) - the row would sit at "20 of 23 GB". No bytes for this long while the network is fine → stopped with
+  // its resume data and sent through the retry budget, then error(network); Resume carries on from the bytes kept.
+  private static let stallTimeout: TimeInterval = 300
+  private static let stallCheckInterval: TimeInterval = 30
+  private static let connections = 2
 
   let queue = DispatchQueue(label: "app.rillwood.client.downloads")
   private let store = DownloadsStore()
@@ -32,6 +39,12 @@ final class DownloadsSession: NSObject, URLSessionDownloadDelegate {
   private let monitor = NWPathMonitor()
   private var path: NWPath?
   private var onEvent: ((String, [String: Any?]) -> Void)?
+  private var stallTimer: DispatchSourceTimer?
+  // On screen: progress events only flow reliably then (in the background - e.g. lock-screen audio keeps the app
+  // running - they're held back, so moving transfers would look stalled).
+  private var foreground = false
+  // Per watched task: its byte marker and since when it hasn't moved.
+  private var stallSeen: [String: (marker: Int64, since: Date)] = [:]
 
   // MARK: - Calls from the module / app delegate
 
@@ -42,7 +55,7 @@ final class DownloadsSession: NSObject, URLSessionDownloadDelegate {
       let config = URLSessionConfiguration.background(withIdentifier: Self.identifier)
       config.sessionSendsLaunchEvents = true
       config.isDiscretionary = false
-      config.httpMaximumConnectionsPerHost = 2
+      config.httpMaximumConnectionsPerHost = Self.connections
       // Requests carry the network rule; the session must allow both.
       config.allowsCellularAccess = true
       config.allowsExpensiveNetworkAccess = true
@@ -56,6 +69,23 @@ final class DownloadsSession: NSObject, URLSessionDownloadDelegate {
         self?.updateNetworkWait()
       }
       monitor.start(queue: queue)
+      let timer = DispatchSource.makeTimerSource(queue: queue)
+      timer.schedule(
+        deadline: .now() + Self.stallCheckInterval, repeating: Self.stallCheckInterval, leeway: .seconds(5))
+      timer.setEventHandler { [weak self] in self?.checkStalls() }
+      timer.resume()
+      stallTimer = timer
+      DispatchQueue.main.async {
+        let center = NotificationCenter.default
+        center.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: nil) { _ in
+          self.queue.async { self.foreground = true }
+        }
+        center.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: nil) { _ in
+          self.queue.async { self.foreground = false }
+        }
+        let active = UIApplication.shared.applicationState == .active
+        self.queue.async { self.foreground = active }
+      }
     }
   }
 
@@ -88,15 +118,7 @@ final class DownloadsSession: NSObject, URLSessionDownloadDelegate {
       r.state = .paused
       r.reason = .user
       guard let task = detach(&r) else { return }
-      pausing.insert(id)
-      task.cancel(byProducingResumeData: { data in
-        self.queue.async {
-          self.pausing.remove(id)
-          guard let r = self.store.record(id) else { return }
-          if let data { self.store.saveResumeData(data, for: id) }
-          if r.isActive && self.tasks[id] == nil { self.startTask(id) }  // resumed meanwhile
-        }
-      })
+      cancelKeepingData(id, task) { self.startTask(id) }  // resumed meanwhile
     }
   }
 
@@ -211,15 +233,61 @@ final class DownloadsSession: NSObject, URLSessionDownloadDelegate {
     store.cellular = cellular
     updateNetworkWait()
     for id in Array(tasks.keys) {
-      guard var r = store.record(id) else { continue }
-      detach(&r)?.cancel(byProducingResumeData: { data in
-        self.queue.async {
-          guard let r = self.store.record(id) else { return }
-          if let data { self.store.saveResumeData(data, for: id) }
-          if r.isActive && r.taskId == nil { self.startTask(id) }
-        }
-      })
+      guard var r = store.record(id), let task = detach(&r) else { continue }
+      cancelKeepingData(id, task) { self.startTask(id) }
     }
+  }
+
+  /// Cancels a detached task keeping its resume data (startTask resumes from it), then `next` if the record is still
+  /// active with no task. A resume meanwhile waits for the data (`pausing`).
+  private func cancelKeepingData(_ id: String, _ task: URLSessionDownloadTask, then next: @escaping () -> Void) {
+    pausing.insert(id)
+    task.cancel(byProducingResumeData: { data in
+      self.queue.async {
+        self.pausing.remove(id)
+        guard let r = self.store.record(id) else { return }
+        if let data { self.store.saveResumeData(data, for: id) }
+        if r.isActive && self.tasks[id] == nil { next() }
+      }
+    })
+  }
+
+  // MARK: - Stall
+
+  /// Watched: tasks that had bytes (`running`), and ones restarted by a retry (`attempts > 0`) once their delay is
+  /// over while a connection is free - never a task only queued behind the two running ones. Only while the app is
+  /// on screen: back on it, the clock starts again (bytes the daemon wrote meanwhile land with the next events).
+  private func checkStalls() {
+    guard foreground, !tasks.isEmpty, !networkBlocked else {
+      stallSeen = [:]
+      return
+    }
+    let now = Date()
+    let running = tasks.keys.filter { store.record($0)?.state == .running }.count
+    var next: [String: (marker: Int64, since: Date)] = [:]
+    for (id, task) in tasks {
+      guard let r = store.record(id), r.isActive,
+        r.state == .running || (r.attempts > 0 && running < Self.connections),
+        (task.earliestBeginDate ?? now) <= now
+      else { continue }
+      let marker = r.bytes &+ task.countOfBytesReceived
+      guard let seen = stallSeen[id], seen.marker == marker else {
+        next[id] = (marker, now)
+        continue
+      }
+      if now.timeIntervalSince(seen.since) >= Self.stallTimeout {
+        stall(id)
+      } else {
+        next[id] = seen
+      }
+    }
+    stallSeen = next
+  }
+
+  /// Stops the task keeping its resume data, then a retry (startTask resumes from the data).
+  private func stall(_ id: String) {
+    guard var r = store.record(id), let task = detach(&r) else { return }
+    cancelKeepingData(id, task) { self.retry(id, status: nil, message: "No data for \(Int(Self.stallTimeout)) s") }
   }
 
   // MARK: - Network wait

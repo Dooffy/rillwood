@@ -13,6 +13,8 @@ import Server from '@/app/(auth)/server';
 import Welcome from '@/app/(auth)/welcome';
 import * as auth from '@/auth';
 import { savedServers } from '@/components/AccountList';
+import * as downloads from '@/downloads';
+import type { Download } from '@/downloads';
 import { ToastProvider } from '@/components/Toast';
 import {
   addAccount,
@@ -571,6 +573,84 @@ describe('Account', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Remove account' }));
     await pressAlertButton('Remove');
     expect(router.back).toHaveBeenCalledTimes(1);
+  });
+
+  describe('with downloads', () => {
+    const saved = (accountId: string, n: number): Download => ({
+      id: `${accountId}:m${n}:m${n}`,
+      accountId,
+      itemId: `m${n}`,
+      sourceId: `m${n}`,
+      title: `Movie ${n}`,
+      path: `downloads/${n}.mkv`,
+      status: 'done',
+      bytes: 2e9,
+      total: 2e9,
+      createdAt: 0,
+      pinned: false,
+    });
+    let list: jest.SpiedFunction<typeof downloads.accountDownloads>;
+    let remove: jest.SpiedFunction<typeof downloads.deleteAccountDownloads>;
+    beforeEach(() => {
+      list = jest
+        .spyOn(downloads, 'accountDownloads')
+        .mockImplementation((id) =>
+          [
+            saved('srv.anna', 1),
+            saved('srv.anna', 2),
+            { ...saved('srv.ben', 3), status: 'paused' as const, bytes: 5e8 },
+          ].filter((d) => d.accountId === id),
+        );
+      remove = jest.spyOn(downloads, 'deleteAccountDownloads').mockImplementation(() => {});
+    });
+    afterEach(() => {
+      list.mockRestore();
+      remove.mockRestore();
+    });
+
+    it("asks before signing out and deletes only the account's downloads", async () => {
+      await seed([server, 'anna'], [server, 'ben']);
+      showing('srv.anna');
+      await withToast(<Account />);
+      await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
+      expect(alert).toHaveBeenCalledWith(
+        'Sign out of anna?',
+        'Its 2 downloads (4 GB) will be deleted from this phone.',
+        expect.any(Array),
+      );
+      // Not before the answer.
+      expect(getSession().accounts.find((a) => a.id === 'srv.anna')?.signedOut).toBeFalsy();
+      await pressAlertButton('Sign Out');
+      expect(remove).toHaveBeenCalledWith('srv.anna');
+      expect(getSession().accounts.find((a) => a.id === 'srv.anna')?.signedOut).toBe(true);
+    });
+
+    it('keeps the account and its downloads on Cancel', async () => {
+      await seed([server, 'anna'], [server, 'ben']);
+      showing('srv.anna');
+      await withToast(<Account />);
+      await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
+      // Cancel only dismisses (no handler).
+      expect(alertButtons().find((b) => b.text === 'Cancel')).toEqual({ text: 'Cancel', style: 'cancel' });
+      expect(remove).not.toHaveBeenCalled();
+      expect(getSession().accounts.find((a) => a.id === 'srv.anna')?.signedOut).toBeFalsy();
+    });
+
+    // A paused one counts the bytes it has so far.
+    it('says the downloads go when removing and deletes them', async () => {
+      await seed([server, 'anna'], [server, 'ben']);
+      showing('srv.ben');
+      await withToast(<Account />);
+      await fireEvent.press(screen.getByRole('button', { name: 'Remove account' }));
+      expect(alert).toHaveBeenCalledWith(
+        'Remove ben?',
+        "You'll need to sign in again to use Home server with this account. Its download (500 MB) will be deleted from this phone.",
+        expect.any(Array),
+      );
+      await pressAlertButton('Remove');
+      expect(remove).toHaveBeenCalledWith('srv.ben');
+      expect(getSession().accounts.map((a) => a.id)).toEqual(['srv.anna']);
+    });
   });
 
   it('offers a no-op Cancel', async () => {
