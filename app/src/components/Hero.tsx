@@ -1,44 +1,57 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { pressedOpacity, spacing } from '@/theme';
+import { pressedOpacity, spacing, useWideLandscape } from '@/theme';
 
 import { Artwork } from './Artwork';
 import { cardLabel, type CardProps, longPressProps } from './Card';
 import { Text } from './Text';
+
+/**
+ * Share of the row the artwork takes when the text sits beside it: a tablet in landscape, where a full-width 16:9
+ * hero would fill the screen.
+ */
+export const HERO_SIDE_SHARE = 0.6;
+export const HERO_SIDE_ART = `${HERO_SIDE_SHARE * 100}%` as const;
 
 export type HeroProps = Omit<CardProps, 'width'> & {
   /** Small line above the title: "Continue Watching", "Up Next". */
   eyebrow: string;
 };
 
-/** Full-width 16:9 card at the top of Home (Up Next): backdrop with progress, then eyebrow, title, subtitle. */
+/**
+ * 16:9 card at the top of Home (Up Next): backdrop with progress, then eyebrow, title, subtitle. Full width with the
+ * text under it; a tablet in landscape puts the text beside it.
+ */
 export function Hero({ eyebrow, ...props }: HeroProps) {
   const { title, subtitle, image, progress, remainingSeconds, played, onPress, onLongPress } = props;
+  const beside = useWideLandscape();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${eyebrow}, ${cardLabel(props)}`}
       {...longPressProps(onLongPress)}
       onPress={onPress}
-      style={({ pressed }) => [styles.hero, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.hero, beside && styles.row, pressed && styles.pressed]}
     >
-      <Artwork
-        image={image}
-        aspectRatio={16 / 9}
-        progress={progress}
-        remainingSeconds={remainingSeconds}
-        played={played}
-      />
-      <View>
+      <View testID="hero-art" style={beside ? styles.sideArt : styles.fullArt}>
+        <Artwork
+          image={image}
+          aspectRatio={16 / 9}
+          progress={progress}
+          remainingSeconds={remainingSeconds}
+          played={played}
+        />
+      </View>
+      <View style={beside && styles.sideText}>
         <Text variant="caption" secondary numberOfLines={1}>
           {eyebrow}
         </Text>
-        <Text variant="sectionHeader" numberOfLines={1}>
+        <Text variant="sectionHeader" numberOfLines={beside ? 2 : 1}>
           {title}
         </Text>
         {subtitle !== undefined && (
-          <Text secondary numberOfLines={1}>
+          <Text secondary numberOfLines={beside ? 2 : 1}>
             {subtitle}
           </Text>
         )}
@@ -49,5 +62,9 @@ export function Hero({ eyebrow, ...props }: HeroProps) {
 
 const styles = StyleSheet.create({
   hero: { gap: spacing.sm },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+  fullArt: { width: '100%' },
+  sideArt: { width: HERO_SIDE_ART },
+  sideText: { flex: 1, gap: spacing.xs },
   pressed: { opacity: pressedOpacity },
 });

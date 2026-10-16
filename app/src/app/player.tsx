@@ -36,6 +36,7 @@ import { UpNext } from '@/components/UpNext';
 import { localCopy } from '@/downloads';
 import { cardTitles, isItemId, nextEpisode, nextEpisodes, playback, TICKS_PER_SECOND } from '@/items';
 import { holdPlaying } from '@/offload';
+import { lockAppOrientation } from '@/orientation';
 import {
   carryTracks,
   matchTracks,
@@ -186,12 +187,11 @@ export default function PlayerScreen() {
     };
   }, [accountId, id, progress]);
 
-  // The only screen that rotates: unlocked while open, back to upright portrait on leave.
+  // The only screen that rotates on a phone: unlocked while open, back to the app's lock on leave (upright portrait on
+  // phones, still free on tablets).
   useEffect(() => {
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.DEFAULT).catch(() => {});
-    return () => {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-    };
+    return lockAppOrientation;
   }, []);
 
   // The next episode starts at its own start. Runs after the reporting cleanup (every cleanup runs before any setup),

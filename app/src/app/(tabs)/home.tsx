@@ -2,17 +2,18 @@
 // Home: Up Next hero, Continue Watching, Next Up, Recently Added per library (docs/context/api.md, Home data).
 import { router } from 'expo-router';
 import { memo, useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ApiError, isConnectionError, type BaseItemDto, type ItemsResult } from '@/api';
 import { Avatar } from '@/components/Avatar';
 import { CardPlaceholder, LANDSCAPE_WIDTH, LandscapeCard, POSTER_WIDTH, PosterCard } from '@/components/Card';
-import { Hero } from '@/components/Hero';
+import { Hero, HERO_SIDE_ART, HERO_SIDE_SHARE } from '@/components/Hero';
 import { useItemMenu } from '@/components/ItemMenu';
 import { LoadError, loadErrorMessage, Message, Offline, useHeldOffline } from '@/components/Message';
 import { Row } from '@/components/Row';
 import { Screen } from '@/components/Screen';
 import { CardRowPlaceholder } from '@/components/Skeleton';
+import { useTabContentWidth } from '@/components/TabsSidebar';
 import {
   backdropImage,
   cardTitles,
@@ -32,7 +33,7 @@ import { useSession } from '@/session';
 import { invalidate, useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
 import { usePullToRefresh } from '@/usePullToRefresh';
-import { minTouch, pressedOpacity, spacing, tabList, useColors } from '@/theme';
+import { minTouch, pressedOpacity, spacing, tabList, useColors, useWideLandscape } from '@/theme';
 
 /** Pull to refresh / Retry: refetch every Home row, failed ones too. */
 function refreshHome() {
@@ -44,7 +45,11 @@ export default function Home() {
   const c = useColors();
   const image = useImage();
   const menu = useItemMenu();
-  const { width } = useWindowDimensions();
+  const rowWidth = useTabContentWidth() - 2 * spacing.md;
+  // Tablet landscape: the hero (and its placeholder) shares the row with its text.
+  const beside = useWideLandscape();
+  // The hero image at the width it's drawn: the row, or its share beside the text.
+  const heroWidth = Math.round(beside ? rowWidth * HERO_SIDE_SHARE : rowWidth);
   const views = useFetch<ItemsResult>(userViews.path, { query: userViews.query });
   const resume = useFetch<ItemsResult>(continueWatching.path, { query: continueWatching.query });
   const next = useFetch<ItemsResult>(nextUp.path, { query: nextUp.query });
@@ -133,7 +138,7 @@ export default function Home() {
                     eyebrow={layout.heroFromResume ? 'Continue Watching' : 'Up Next'}
                     {...cardTitles(hero)}
                     {...playback(hero)}
-                    image={image(backdropImage(hero), width - 2 * spacing.md)}
+                    image={image(backdropImage(hero), heroWidth)}
                     onPress={() => openItem(hero)}
                     onLongPress={() => menu(hero)}
                   />
@@ -142,7 +147,7 @@ export default function Home() {
                 layout.heroPending &&
                 !offline.offline && (
                   <View testID="hero-placeholder" style={styles.padded}>
-                    <CardPlaceholder shape="landscape" width="100%" />
+                    <CardPlaceholder shape="landscape" width={beside ? HERO_SIDE_ART : '100%'} />
                   </View>
                 )
               )}

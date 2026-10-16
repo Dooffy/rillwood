@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import type { ReactElement } from 'react';
 import { act, fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react-native';
-import type { RefreshControlProps } from 'react-native';
+import { Dimensions, StyleSheet, type RefreshControlProps } from 'react-native';
 
 import * as api from '@/api';
 import { ApiError, type BaseItemDto, type Query, type RequestOptions } from '@/api';
@@ -119,6 +119,26 @@ describe('Library', () => {
       expect.objectContaining({ includeItemTypes: 'Movie', sortBy: 'SortName', limit: 20 }),
       expect.objectContaining({ includeItemTypes: 'Series', sortBy: 'SortName', limit: 20 }),
     ]);
+  });
+
+  // The tablet landscape sidebar narrows the list below the window: columns follow the width the tab gets.
+  it('lays the grid out for the width the tab gets', async () => {
+    const window = Dimensions.get('window');
+    await render(<Library />);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Movies, See All' }));
+    await screen.findByText('11 movies · by Name');
+    const posterWidth = () =>
+      StyleSheet.flatten(screen.getByRole('button', { name: 'Sintel, 2010' }).props.style).width as number;
+    // Phone: 3 columns. iPad portrait: 5. iPad landscape: 6 beside the sidebar.
+    for (const [width, height, expected] of [
+      [390, 844, 111],
+      [834, 1194, 150],
+      [1194, 834, 140],
+    ] as const) {
+      await act(() => Dimensions.set({ window: { ...window, width, height } }));
+      expect(posterWidth()).toBe(expected);
+    }
+    await act(() => Dimensions.set({ window }));
   });
 
   it('See All on Movies opens every movie as a grid, sorted by name', async () => {

@@ -139,7 +139,12 @@ Design + sources: `docs/research/background-downloads.md`.
   - [ ] Storage limit across accounts made explicit (storage bar + Storage limit page wording done; the "over the limit" toast left): name the other accounts' share in the "over the limit" message
 - [ ] Settings: accounts, playback defaults, downloads, cache clear, licenses screen
 - [ ] Perf (FlashList if FlatList stutters, image sizes, cold start <2s), accessibility pass
-- [ ] iPad layout for every screen (`supportsTablet` is off today): adaptive grids, readable-width forms and pages, landscape, split view / Stage Manager sizes
+- [ ] iPad layout for every screen: adaptive grids, readable-width forms and pages, landscape, split view / Stage Manager sizes
+  - [x] Wide breakpoint (`useWide`, 600 pt) + readable widths; `Page` centres its content (forms 480, pages 680)
+  - [x] Sign-in flow: Add server / Sign in / Quick Connect / Accounts in the form column under a plain centred title; Welcome splits in landscape (wall left, copy right)
+  - [x] Tabs as a fixed left sidebar on tablets in landscape (`TabsSidebar`, always shown; portrait: native `sidebarAdaptable`); Library grid columns from the width the tab gets (3 on phones, 6 beside the landscape sidebar, 5 in portrait); Home hero beside its text in landscape
+  - [ ] Home rows, Downloads, detail + series, player, Settings split view
+  - [x] `supportsTablet` on + tablets rotate everywhere (`src/orientation.ts`; phones stay upright, player excepted)
 - [ ] Splash light + dark variant (black only today; icon + splash mark done in M2), screenshots, privacy policy ("connects to your own server")
 - [ ] `/update-modules`: vendored modules, native binaries + Expo packages current, no blockers
 - [ ] CI native + playback checks (skill to create later):
