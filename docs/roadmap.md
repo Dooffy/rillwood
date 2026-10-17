@@ -144,7 +144,8 @@ Design + sources: `docs/research/background-downloads.md`.
   - [x] Sign-in flow: Add server / Sign in / Quick Connect / Accounts in the form column under a plain centred title; Welcome splits in landscape (wall left, copy right)
   - [x] Tabs as a fixed left sidebar on tablets in landscape (`TabsSidebar`, always shown; portrait: native `sidebarAdaptable`); Library grid columns from the width the tab gets (3 on phones, 6 beside the landscape sidebar, 5 in portrait); Home hero beside its text in landscape
   - [x] Home rows fit whole cards across the row (posters as the Library grid, landscape cards about 220 pt; placeholders fill the row); Downloads in two columns with search + chips on one line; a show's downloads in the readable column
-  - [ ] Detail + series, player, Settings split view
+  - [x] Detail + series: landscape hero strip (16:9, at most 60% of the window height, title left), body in one column, Play from Start a round button in the row
+  - [ ] Player, Settings split view
   - [x] `supportsTablet` on + tablets rotate everywhere (`src/orientation.ts`; phones stay upright, player excepted)
 - [ ] Splash light + dark variant (black only today; icon + splash mark done in M2), screenshots, privacy policy ("connects to your own server")
 - [ ] `/update-modules`: vendored modules, native binaries + Expo packages current, no blockers
@@ -180,3 +181,4 @@ Design + sources: `docs/research/background-downloads.md`.
 - [ ] Research Apple TV (tvOS) + Google TV / Android TV apps: focus navigation (every card is already `Pressable`), RN TV support, player on TV, store requirements
 - [ ] Kids mode (post-MVP): a simpler, YouTube-like look for children - big thumbnails in one feed, minimal chrome, only their allowed libraries / parental rating; switch in and out from the profile
 - [ ] Download space limit setting: the user picks the most space downloads may use (e.g. 5 / 10 / 25 / 50 GB / no limit), used bytes shown against it; the pre-flight refuses past the limit as well as on free space
+- [ ] Pick audio / subtitles on the detail screen (idea, every device): tap a track in the expanded Media list to tick it, Play / Resume starts with it (`openPlayer` passes the Jellyfin indexes, the player already takes them). The pick lasts while the page is open; the player's reports save it on the server once it plays. Today the list only shows the server's defaults, picks happen in the player's tracks menu

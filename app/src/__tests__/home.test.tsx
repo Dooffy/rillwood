@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import type { ReactElement } from 'react';
 import { act, fireEvent, render as rtlRender, screen, waitFor, within } from '@testing-library/react-native';
-import { Dimensions, StyleSheet, type RefreshControlProps } from 'react-native';
+import { StyleSheet, type RefreshControlProps } from 'react-native';
 
 import * as api from '@/api';
 import { ApiError, type BaseItemDto, type RequestOptions } from '@/api';
@@ -10,6 +10,7 @@ import Home from '@/app/(tabs)/home';
 import { ItemMenuProvider } from '@/components/ItemMenu';
 import { ToastProvider } from '@/components/Toast';
 import * as session from '@/session';
+import { resetDevice, setDevice } from '@/testDevice';
 
 const render = (ui: ReactElement) =>
   rtlRender(
@@ -111,17 +112,7 @@ beforeEach(() => {
   });
 });
 
-// Jest's default window (750 x 1334) counts as a tablet; tests that size cards say which device.
-const defaultWindow = Dimensions.get('window');
-const defaultScreen = Dimensions.get('screen');
-const device = (width: number, height: number) =>
-  act(() =>
-    Dimensions.set({ window: { ...defaultWindow, width, height }, screen: { ...defaultScreen, width, height } }),
-  );
-
-afterEach(() => {
-  Dimensions.set({ window: defaultWindow, screen: defaultScreen });
-});
+afterEach(resetDevice);
 
 function refreshControl() {
   return (screen.getByTestId('home-scroll').props.refreshControl as { props: RefreshControlProps }).props;
@@ -186,7 +177,7 @@ describe('Home', () => {
   });
 
   it('sizes images to the card, with the tag and no token', async () => {
-    await device(390, 844);
+    await setDevice(390, 844);
     await render(<Home />);
     await screen.findByText('Recently Added in Shows');
     const sources = screen.getAllByTestId('artwork-image').map((n) => (n.props.source as { uri: string }[])[0].uri);
@@ -201,7 +192,7 @@ describe('Home', () => {
   it('fits whole cards across the row on tablets', async () => {
     const width = (name: string | RegExp) =>
       StyleSheet.flatten(screen.getByRole('button', { name }).props.style).width as number;
-    await device(390, 844);
+    await setDevice(390, 844);
     await render(<Home />);
     await screen.findByText('Recently Added in Shows');
     // Phone: the default sizes, the next card peeking in.
@@ -211,7 +202,7 @@ describe('Home', () => {
       [834, 1194, 150, 259],
       [1194, 834, 140, 292],
     ] as const) {
-      await device(w, h);
+      await setDevice(w, h);
       expect([width('Test Show'), width(/^Test Show, S1:E2/)]).toEqual([poster, landscape]);
     }
     const sources = screen.getAllByTestId('artwork-image').map((n) => (n.props.source as { uri: string }[])[0].uri);
@@ -220,7 +211,7 @@ describe('Home', () => {
 
   it('fills a tablet row with placeholders while it loads', async () => {
     routes = { '/UserViews': 'pending', '/UserItems/Resume': 'pending', '/Shows/NextUp': 'pending' };
-    await device(1194, 834);
+    await setDevice(1194, 834);
     await render(<Home />);
     const row = screen.getByLabelText('Loading Recently Added');
     expect(within(row).getAllByTestId('card-placeholder', { includeHiddenElements: true })).toHaveLength(6);
