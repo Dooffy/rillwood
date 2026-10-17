@@ -143,7 +143,8 @@ Design + sources: `docs/research/background-downloads.md`.
   - [x] Wide breakpoint (`useWide`, 600 pt) + readable widths; `Page` centres its content (forms 480, pages 680)
   - [x] Sign-in flow: Add server / Sign in / Quick Connect / Accounts in the form column under a plain centred title; Welcome splits in landscape (wall left, copy right)
   - [x] Tabs as a fixed left sidebar on tablets in landscape (`TabsSidebar`, always shown; portrait: native `sidebarAdaptable`); Library grid columns from the width the tab gets (3 on phones, 6 beside the landscape sidebar, 5 in portrait); Home hero beside its text in landscape
-  - [ ] Home rows, Downloads, detail + series, player, Settings split view
+  - [x] Home rows fit whole cards across the row (posters as the Library grid, landscape cards about 220 pt; placeholders fill the row); Downloads in two columns with search + chips on one line; a show's downloads in the readable column
+  - [ ] Detail + series, player, Settings split view
   - [x] `supportsTablet` on + tablets rotate everywhere (`src/orientation.ts`; phones stay upright, player excepted)
 - [ ] Splash light + dark variant (black only today; icon + splash mark done in M2), screenshots, privacy policy ("connects to your own server")
 - [ ] `/update-modules`: vendored modules, native binaries + Expo packages current, no blockers

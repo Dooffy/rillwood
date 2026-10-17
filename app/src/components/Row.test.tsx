@@ -3,7 +3,7 @@ import { describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { Text } from './Text';
-import { Row } from './Row';
+import { CARD_GAP, fitCards, Row } from './Row';
 
 describe('Row', () => {
   it('renders the header and its cards', async () => {
@@ -29,5 +29,22 @@ describe('Row', () => {
     expect(screen.getByText('See All')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Continue Watching, See All' }));
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('fitCards', () => {
+  it('fits as many whole cards as stay at least the target wide, the row ending on a card edge', () => {
+    // iPad portrait row (802): 5 posters; landscape beside the sidebar (902): 6.
+    expect(fitCards(802, 140)).toEqual({ count: 5, width: 150 });
+    expect(fitCards(902, 140)).toEqual({ count: 6, width: 140 });
+    const { count, width } = fitCards(802, 220);
+    expect(count * width + (count - 1) * CARD_GAP).toBeLessThanOrEqual(802);
+    expect(width).toBeGreaterThanOrEqual(220);
+  });
+
+  it('keeps the minimum count, narrower, when the row is too small', () => {
+    // Phone grid (358): 3 columns of 111, not 2 of 140+.
+    expect(fitCards(358, 140, 3)).toEqual({ count: 3, width: 111 });
+    expect(fitCards(100, 220)).toEqual({ count: 1, width: 100 });
   });
 });

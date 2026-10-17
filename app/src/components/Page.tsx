@@ -17,6 +17,9 @@ type PageProps = {
 /** A page's padding and the space between its blocks: a stack screen built on a list instead of `Page` uses them too. */
 export const pageContent = { padding: spacing.md, gap: spacing.lg } as const;
 
+/** A page's column: full width on phones, centred at `readableWidth.page` on wide screens (lists built like a page too). */
+export const pageColumn = { width: '100%', maxWidth: readableWidth.page, alignSelf: 'center' } as const;
+
 /** Stack page under a native large-title header (settings, auth). Wide screens: a centred, readable column. */
 export function Page({ form = false, busy = false, narrow = form, children }: PageProps) {
   useEffect(() => {
@@ -44,6 +47,6 @@ export function Page({ form = false, busy = false, narrow = form, children }: Pa
 
 const styles = StyleSheet.create({
   // Phones are narrower than both widths: no change there.
-  content: { ...pageContent, width: '100%', maxWidth: readableWidth.page, alignSelf: 'center' },
+  content: { ...pageContent, ...pageColumn },
   narrow: { maxWidth: readableWidth.form },
 });

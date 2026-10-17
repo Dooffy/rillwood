@@ -11,25 +11,17 @@ import { useImage } from '@/useImage';
 import { usePullToRefresh } from '@/usePullToRefresh';
 import { spacing, tabList, useColors } from '@/theme';
 
-import { PosterCard } from './Card';
+import { PosterCard, WIDE_POSTER_WIDTH } from './Card';
 import { EPISODE_ROW_STILL, EpisodeRow } from './EpisodeRow';
 import { useItemMenu } from './ItemMenu';
 import { LoadError, loadErrorMessage, Message, Offline, useHeldOffline } from './Message';
-import { CARD_GAP } from './Row';
+import { CARD_GAP, fitCards } from './Row';
 import { EpisodeRowsPlaceholder, PosterGridPlaceholder } from './Skeleton';
 import { Spinner } from './Spinner';
 import { useTabContentWidth } from './TabsSidebar';
 
-/** A phone's poster column count (about 111 pt each); wider lists add columns. */
+/** A phone's poster column count (about 111 pt each); wider lists add columns (5 in iPad portrait, 6 beside the sidebar). */
 const MIN_COLUMNS = 3;
-/** Posters in a wider grid stay about this wide - a bit over a Home row poster (`POSTER_WIDTH`), as the grid fills the screen. */
-const POSTER_TARGET = 140;
-
-/** Poster columns for a list this wide: 3 on phones, more on tablets (5 in iPad portrait, 6 beside the landscape sidebar). */
-function gridColumns(listWidth: number): number {
-  const fit = Math.floor((listWidth - 2 * spacing.md + CARD_GAP) / (POSTER_TARGET + CARD_GAP));
-  return Math.max(MIN_COLUMNS, fit);
-}
 
 export type PagedListProps = {
   list: PagedItems;
@@ -57,8 +49,7 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
   // A tab screen: the sidebar takes part of the window in tablet landscape.
   const width = useTabContentWidth();
   const { refreshing, onRefresh } = usePullToRefresh(list.loading, list.refresh);
-  const columns = gridColumns(width);
-  const cardWidth = Math.floor((width - 2 * spacing.md - (columns - 1) * CARD_GAP) / columns);
+  const { count: columns, width: cardWidth } = fitCards(width - 2 * spacing.md, WIDE_POSTER_WIDTH, MIN_COLUMNS);
   const posters = layout === 'posters';
   const menu = useItemMenu();
   const offline = useHeldOffline(list.items.length === 0 && isConnectionError(list.error), list.loading);
