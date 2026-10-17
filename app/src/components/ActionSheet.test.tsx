@@ -2,6 +2,8 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 
+import { backdrop } from '@/theme';
+
 import { ActionSheet } from './ActionSheet';
 import { Text } from './Text';
 
@@ -67,5 +69,26 @@ describe('ActionSheet', () => {
     const list = screen.getByTestId('action-sheet-list');
     expect(within(list).getByRole('menuitem', { name: 'Track 30' })).toBeOnTheScreen();
     expect(within(list).queryByText('Subtitles')).toBeNull();
+  });
+
+  it('anchored (tablet popover): hangs under its button, no dimming, no Cancel unless given', async () => {
+    const onClose = jest.fn();
+    const sheet = (closeLabel?: string) => (
+      <ActionSheet
+        visible
+        anchor={{ top: 80, right: 24 }}
+        actions={[{ label: 'Audio', onPress: () => {} }]}
+        closeLabel={closeLabel}
+        onClose={onClose}
+      />
+    );
+    await render(sheet());
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    expect(screen.getByTestId('action-sheet')).toHaveStyle({ position: 'absolute', top: 80, right: 24 });
+    expect(screen.getByRole('button', { name: 'Close' })).not.toHaveStyle({ backgroundColor: backdrop });
+    await fireEvent.press(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    await render(sheet('Done'));
+    expect(screen.getByRole('button', { name: 'Done' })).toBeOnTheScreen();
   });
 });

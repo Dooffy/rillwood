@@ -13,23 +13,22 @@ export type IconButtonProps = {
   onPress: () => void;
   /** plain: no circle (header bar buttons, where iOS draws its own). glass: over video (player). */
   variant?: 'primary' | 'secondary' | 'plain' | 'glass';
-  /** Bigger circle (the player's play / pause). */
-  large?: boolean;
+  /** Bigger circle: the player's play / pause (large), its centre buttons on tablets (large, play / pause xlarge). */
+  size?: 'large' | 'xlarge';
   /** Toggle (watched, favourite): on = the filled look, read out as selected. */
   selected?: boolean;
 };
 
 /** Round icon button (Apple TV style). */
-export function IconButton({ icon, label, onPress, variant = 'secondary', selected, large }: IconButtonProps) {
+export function IconButton({ icon, label, onPress, variant = 'secondary', selected, size }: IconButtonProps) {
   const c = useColors();
   const primary = variant === 'primary' || selected === true;
-  const size = large ? styles.large : undefined;
-  const iconSize = large ? 30 : 20;
+  const { box, icon: iconSize } = SIZES[size ?? 'regular'];
   if (variant === 'glass') {
     // No pressed opacity on glass (Apple: glass must stay opaque); the glass gives its own press feedback.
     return (
       <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress}>
-        <Glass interactive style={[styles.base, size]}>
+        <Glass interactive style={[styles.base, box]}>
           <SymbolView name={icon} tintColor={c.text} size={iconSize} />
         </Glass>
       </Pressable>
@@ -43,7 +42,7 @@ export function IconButton({ icon, label, onPress, variant = 'secondary', select
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
-        size,
+        box,
         variant !== 'plain' && { backgroundColor: primary ? c.accent : c.elevated },
         pressed && styles.pressed,
       ]}
@@ -53,6 +52,12 @@ export function IconButton({ icon, label, onPress, variant = 'secondary', select
   );
 }
 
+const SIZES = {
+  regular: { box: undefined, icon: 20 },
+  large: { box: { width: minTouch * 1.6, height: minTouch * 1.6 }, icon: 30 },
+  xlarge: { box: { width: minTouch * 2, height: minTouch * 2 }, icon: 36 },
+} as const;
+
 const styles = StyleSheet.create({
   base: {
     width: minTouch,
@@ -61,6 +66,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  large: { width: minTouch * 1.6, height: minTouch * 1.6 },
   pressed: { opacity: pressedOpacity },
 });

@@ -12,6 +12,8 @@ import { Text } from './Text';
 const ROW_HEIGHT = 56;
 /** Landscape / wide screens: centred, no wider than the iOS action sheet. */
 const MAX_WIDTH = 500;
+/** A menu anchored to its button (tablets): iPad popover width. */
+const POPOVER_WIDTH = 320;
 
 export type SheetAction = {
   label: string;
@@ -31,23 +33,21 @@ export type ActionSheetProps = {
   actions?: SheetAction[];
   /** Content over the actions (a control that applies as it changes, rather than a pick). */
   children?: ReactNode;
-  /** The bottom button: "Cancel" by default, "Done" for a sheet whose content applies as it changes. */
+  /**
+   * The bottom button: "Cancel" by default, "Done" for a sheet whose content applies as it changes. An anchored menu has
+   * none unless given (a tap outside closes it, as an iPad popover).
+   */
   closeLabel?: string;
+  /** Hang the menu from this point instead (its top-right corner, from the screen's top-right): under its button. */
+  anchor?: { top: number; right: number };
   onClose: () => void;
 };
 
 /**
  * Bottom sheet of optional content, actions + Cancel (or `closeLabel`) - iOS action sheet look, both platforms. Picking an
- * action closes it first.
+ * action closes it first. With `anchor`, a menu under its button instead (tablets: the player's tracks menu).
  */
-export function ActionSheet({
-  visible,
-  title,
-  actions = [],
-  children,
-  closeLabel = 'Cancel',
-  onClose,
-}: ActionSheetProps) {
+export function ActionSheet({ visible, title, actions = [], children, closeLabel, anchor, onClose }: ActionSheetProps) {
   const c = useColors();
   const insets = useSafeAreaInsets();
   // iOS can't present another screen (the player is a full-screen modal) while this one is still closing: the picked
@@ -58,6 +58,7 @@ export function ActionSheet({
     pending.current = null;
     action?.();
   };
+  const close = closeLabel ?? (anchor ? undefined : 'Cancel');
   const pick = (action: SheetAction) => {
     pending.current = action.onPress;
     onClose();
@@ -73,18 +74,29 @@ export function ActionSheet({
       onRequestClose={onClose}
       onDismiss={runPending}
     >
-      <Pressable accessibilityLabel="Close" accessibilityRole="button" style={styles.backdrop} onPress={onClose} />
+      {/* A popover doesn't dim what's behind it. */}
+      <Pressable
+        accessibilityLabel="Close"
+        accessibilityRole="button"
+        style={[StyleSheet.absoluteFill, !anchor && styles.backdrop]}
+        onPress={onClose}
+      />
       {/* Never past the safe area: a long list (subtitles in landscape) scrolls instead. */}
       <View
-        style={[
-          styles.sheet,
-          {
-            paddingTop: insets.top + spacing.sm,
-            paddingBottom: insets.bottom + spacing.sm,
-            paddingLeft: insets.left + spacing.sm,
-            paddingRight: insets.right + spacing.sm,
-          },
-        ]}
+        testID="action-sheet"
+        style={
+          anchor
+            ? [styles.popover, { top: anchor.top, right: anchor.right, bottom: insets.bottom + spacing.sm }]
+            : [
+                styles.sheet,
+                {
+                  paddingTop: insets.top + spacing.sm,
+                  paddingBottom: insets.bottom + spacing.sm,
+                  paddingLeft: insets.left + spacing.sm,
+                  paddingRight: insets.right + spacing.sm,
+                },
+              ]
+        }
       >
         <View
           accessibilityRole="menu"
@@ -128,25 +140,27 @@ export function ActionSheet({
             </ScrollView>
           )}
         </View>
-        <Pressable
-          accessibilityRole="button"
-          onPress={onClose}
-          style={({ pressed }) => [
-            styles.group,
-            styles.width,
-            styles.cancel,
-            { backgroundColor: pressed ? c.elevated2 : c.elevated },
-          ]}
-        >
-          <Text variant="button">{closeLabel}</Text>
-        </Pressable>
+        {close !== undefined && (
+          <Pressable
+            accessibilityRole="button"
+            onPress={onClose}
+            style={({ pressed }) => [
+              styles.group,
+              styles.width,
+              styles.cancel,
+              { backgroundColor: pressed ? c.elevated2 : c.elevated },
+            ]}
+          >
+            <Text variant="button">{close}</Text>
+          </Pressable>
+        )}
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: backdrop },
+  backdrop: { backgroundColor: backdrop },
   // box-none: taps outside the groups reach the backdrop.
   sheet: {
     ...StyleSheet.absoluteFill,
@@ -155,6 +169,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     pointerEvents: 'box-none',
   },
+  popover: { position: 'absolute', width: POPOVER_WIDTH, gap: spacing.sm, pointerEvents: 'box-none' },
   group: { borderRadius: radii.card, overflow: 'hidden' },
   width: { width: '100%', maxWidth: MAX_WIDTH },
   // Shrinks below its content when the screen is short; the actions scroll, the title stays.

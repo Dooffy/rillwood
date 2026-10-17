@@ -64,10 +64,12 @@ export type ListRowProps = {
   /** Colour dot before the value (a colour preset). */
   swatch?: string;
   onPress?: () => void;
+  /** The page it opens is the one shown beside the list (Settings split view on tablets). */
+  selected?: boolean;
 };
 
 /** Tappable rows get a chevron; rows without `onPress` show a read-only value. */
-export function ListRow({ label, value, swatch, onPress }: ListRowProps) {
+export function ListRow({ label, value, swatch, onPress, selected }: ListRowProps) {
   const c = useColors();
   const content = (
     <>
@@ -90,8 +92,13 @@ export function ListRow({ label, value, swatch, onPress }: ListRowProps) {
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityValue={value === undefined ? undefined : { text: value }}
+      accessibilityState={selected === undefined ? undefined : { selected }}
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && { backgroundColor: c.elevated }]}
+      style={({ pressed }) => [
+        styles.row,
+        selected && { backgroundColor: c.elevated },
+        pressed && { backgroundColor: selected ? c.elevated2 : c.elevated },
+      ]}
     >
       {content}
     </Pressable>

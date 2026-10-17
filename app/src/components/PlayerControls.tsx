@@ -3,6 +3,7 @@
 // scrubber at the bottom (`PlayerScrubber` in `PlayerBottom`, placed by the screen: the bottom stack also holds the Up
 // Next card, which stays mounted while the controls come and go). No dimming layer - the glass keeps the controls
 // readable over the video. The screen decides when they show; before playback starts (loading, error) only the top bar.
+// Tablets: wider margins and bigger centre buttons (the same layout, sized for the screen).
 import { useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, View, type GestureResponderEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +16,7 @@ import { formatClock } from '@/format';
 import { positionAt, SEEK_STEP } from '@/player/controls';
 import { useProgress, type ProgressStore } from '@/player/progress';
 import type { VideoZoom } from '@/player/Player';
-import { minTouch, onArtwork, radii, spacing } from '@/theme';
+import { minTouch, onArtwork, radii, spacing, useWide } from '@/theme';
 
 export type PlayerControlsProps = {
   title?: string;
@@ -36,7 +37,8 @@ export type PlayerControlsProps = {
 export function PlayerControls(props: PlayerControlsProps) {
   const { title, subtitle, started, paused, onClose, onTracks, zoom, onToggleZoom, onTogglePause, onSeekBy } = props;
   const insets = useSafeAreaInsets();
-  const sides = sidePadding(insets);
+  const wide = useWide();
+  const sides = sidePadding(insets, wide);
   const filled = zoom === 'fill';
   return (
     // box-none: touches between the controls reach the video (tap to hide, pull down to close).
@@ -87,24 +89,26 @@ export function PlayerControls(props: PlayerControlsProps) {
         )}
       </View>
       {started && (
-        <View style={styles.center} pointerEvents="box-none">
+        <View style={[styles.center, wide && styles.centerWide]} pointerEvents="box-none">
           <IconButton
             icon={{ ios: 'gobackward.10', android: 'replay_10' }}
             label={`Back ${SEEK_STEP} seconds`}
             variant="glass"
+            size={wide ? 'large' : undefined}
             onPress={() => onSeekBy(-SEEK_STEP)}
           />
           <IconButton
             icon={paused ? { ios: 'play.fill', android: 'play_arrow' } : { ios: 'pause.fill', android: 'pause' }}
             label={paused ? 'Play' : 'Pause'}
             variant="glass"
-            large
+            size={wide ? 'xlarge' : 'large'}
             onPress={onTogglePause}
           />
           <IconButton
             icon={{ ios: 'goforward.10', android: 'forward_10' }}
             label={`Forward ${SEEK_STEP} seconds`}
             variant="glass"
+            size={wide ? 'large' : undefined}
             onPress={() => onSeekBy(SEEK_STEP)}
           />
         </View>
@@ -113,17 +117,27 @@ export function PlayerControls(props: PlayerControlsProps) {
   );
 }
 
-const sidePadding = (insets: { left: number; right: number }) => ({
-  paddingLeft: insets.left + spacing.md,
-  paddingRight: insets.right + spacing.md,
+/** Space between the controls and the screen's sides: wider on tablets. */
+const playerSide = (wide: boolean) => (wide ? spacing.lg : spacing.md);
+
+/** Where the tracks menu hangs on tablets: under the top bar's right end (the "⋯" button). */
+export const tracksAnchor = (insets: { top: number; right: number }) => ({
+  top: insets.top + spacing.sm + minTouch + spacing.sm,
+  right: insets.right + playerSide(true),
+});
+
+const sidePadding = (insets: { left: number; right: number }, wide: boolean) => ({
+  paddingLeft: insets.left + playerSide(wide),
+  paddingRight: insets.right + playerSide(wide),
 });
 
 /** Bottom edge of the player, clear of the safe area: the Up Next card over the scrubber panel. */
 export function PlayerBottom({ children }: { children: ReactNode }) {
   const insets = useSafeAreaInsets();
+  const wide = useWide();
   return (
     <View
-      style={[styles.bottom, sidePadding(insets), { paddingBottom: insets.bottom + spacing.md }]}
+      style={[styles.bottom, sidePadding(insets, wide), { paddingBottom: insets.bottom + playerSide(wide) }]}
       pointerEvents="box-none"
     >
       {children}
@@ -223,6 +237,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.lg * 2,
   },
+  centerWide: { gap: spacing.lg * 3 },
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, gap: spacing.sm },
   panel: { paddingHorizontal: spacing.md, paddingBottom: spacing.sm, borderRadius: radii.cardLarge },
   // Full touch height around a thin bar.

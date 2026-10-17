@@ -18,6 +18,7 @@ import type { PlayerProps } from '@/player/Player';
 import * as session from '@/session';
 import * as settings from '@/settings';
 import { palettes } from '@/theme';
+import { resetDevice, setDevice, TABLET_LANDSCAPE } from '@/testDevice';
 
 jest.mock('expo-router', () => ({
   router: { back: jest.fn(), setParams: jest.fn() },
@@ -709,6 +710,18 @@ describe('Player screen', () => {
       jest.useRealTimers();
     }
   });
+  it('tablet: the tracks menu hangs under its button without Cancel', async () => {
+    await setDevice(...TABLET_LANDSCAPE);
+    try {
+      await renderPlaying();
+      await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));
+      expect(screen.getByTestId('action-sheet')).toHaveStyle({ position: 'absolute' });
+      expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    } finally {
+      resetDevice();
+    }
+  });
+
   it('subtitle timing: only while subtitles are on, goes to the player', async () => {
     await renderPlaying();
     await fireEvent.press(screen.getByRole('button', { name: 'Audio, subtitles and speed' }));

@@ -145,7 +145,7 @@ Design + sources: `docs/research/background-downloads.md`.
   - [x] Tabs as a fixed left sidebar on tablets in landscape (`TabsSidebar`, always shown; portrait: native `sidebarAdaptable`); Library grid columns from the width the tab gets (3 on phones, 6 beside the landscape sidebar, 5 in portrait); Home hero beside its text in landscape
   - [x] Home rows fit whole cards across the row (posters as the Library grid, landscape cards about 220 pt; placeholders fill the row); Downloads in two columns with search + chips on one line; a show's downloads in the readable column
   - [x] Detail + series: landscape hero strip (16:9, at most 60% of the window height, title left), body in one column, Play from Start a round button in the row
-  - [ ] Player, Settings split view
+  - [x] Player + Settings: player on tablets has wider margins, bigger centre buttons and the tracks menu under its button (no Cancel, a tap outside closes); Settings in landscape is a split view (list left, the page a row opens on the right, the active account's details first; Subtitles → Size goes over it with a back button). Portrait keeps one column. Tested in Jest only
   - [x] `supportsTablet` on + tablets rotate everywhere (`src/orientation.ts`; phones stay upright, player excepted)
 - [ ] Splash light + dark variant (black only today; icon + splash mark done in M2), screenshots, privacy policy ("connects to your own server")
 - [ ] `/update-modules`: vendored modules, native binaries + Expo packages current, no blockers
