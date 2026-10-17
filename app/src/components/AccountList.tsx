@@ -12,6 +12,7 @@ import { ActionSheet } from './ActionSheet';
 import { Avatar } from './Avatar';
 import { IconButton } from './IconButton';
 import { Checkmark, ListRow, ListSection } from './List';
+import { useSettingsLink } from './SettingsLink';
 import { Text } from './Text';
 import { useToast } from './Toast';
 
@@ -22,10 +23,6 @@ export function savedServers(accounts: Account[]): Server[] {
   const servers = new Map<string, Server>();
   for (const a of accounts) if (!servers.has(a.server.url)) servers.set(a.server.url, a.server);
   return [...servers.values()];
-}
-
-function openAccount(account: Account) {
-  router.push({ pathname: '/account', params: { id: account.id } });
 }
 
 export type AccountStatus = 'active' | 'signedIn' | 'signedOut';
@@ -58,12 +55,14 @@ export function useSwitchAccount() {
 export function AccountsSection() {
   const { accounts, active } = useSession();
   const switchTo = useSwitchAccount();
+  const link = useSettingsLink();
   const [adding, setAdding] = useState(false);
   const servers = savedServers(accounts);
+  const details = (a: Account) => ({ page: 'account', id: a.id }) as const;
 
   const press = (a: Account) => {
     if (a.signedOut) signInAgain(a);
-    else if (a.id === active?.id) openAccount(a);
+    else if (a.id === active?.id) link.open(details(a));
     else switchTo(a);
   };
 
@@ -74,7 +73,14 @@ export function AccountsSection() {
     <>
       <ListSection title="Accounts">
         {accounts.map((a) => (
-          <AccountRow key={a.id} account={a} status={accountStatus(a, active?.id)} onPress={() => press(a)} />
+          <AccountRow
+            key={a.id}
+            account={a}
+            status={accountStatus(a, active?.id)}
+            selected={link.selected(details(a))}
+            onPress={() => press(a)}
+            onDetails={() => link.open(details(a))}
+          />
         ))}
         <ListRow label="Add account" onPress={add} />
       </ListSection>
@@ -101,18 +107,28 @@ const STATUS_VALUE: Record<AccountStatus, string | undefined> = {
   signedOut: 'Signed out',
 };
 
-function AccountRow({ account, status, onPress }: { account: Account; status: AccountStatus; onPress: () => void }) {
+type AccountRowProps = {
+  account: Account;
+  status: AccountStatus;
+  /** Its details are the page shown beside the list (tablet split view). */
+  selected?: boolean;
+  onPress: () => void;
+  onDetails: () => void;
+};
+
+function AccountRow({ account, status, selected, onPress, onDetails }: AccountRowProps) {
   const c = useColors();
   const { userName, server } = account;
   const value = STATUS_VALUE[status];
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, selected && { backgroundColor: c.elevated }]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${userName}, ${server.name}`}
         accessibilityValue={value ? { text: value } : undefined}
+        accessibilityState={selected === undefined ? undefined : { selected }}
         onPress={onPress}
-        style={({ pressed }) => [styles.main, pressed && { backgroundColor: c.elevated }]}
+        style={({ pressed }) => [styles.main, pressed && { backgroundColor: selected ? c.elevated2 : c.elevated }]}
       >
         <Avatar name={userName} size={AVATAR_SIZE} />
         <View style={styles.text}>
@@ -128,7 +144,7 @@ function AccountRow({ account, status, onPress }: { account: Account; status: Ac
         variant="plain"
         icon={{ ios: 'info.circle', android: 'info' }}
         label={`${userName} on ${server.name}, details`}
-        onPress={() => openAccount(account)}
+        onPress={onDetails}
       />
     </View>
   );

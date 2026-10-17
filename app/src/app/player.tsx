@@ -28,7 +28,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { ApiError, getPlaybackInfo, isConnectionError, type BaseItemDto, type ItemsResult } from '@/api';
 import { Glass } from '@/components/Glass';
 import { Message, Offline } from '@/components/Message';
-import { PlayerBottom, PlayerControls, PlayerScrubber } from '@/components/PlayerControls';
+import { PlayerBottom, PlayerControls, PlayerScrubber, tracksAnchor } from '@/components/PlayerControls';
 import { Spinner } from '@/components/Spinner';
 import { Text } from '@/components/Text';
 import { TracksMenu, type TracksPage, type TracksValue } from '@/components/TracksMenu';
@@ -66,7 +66,7 @@ import { useReporting } from '@/player/useReporting';
 import { connectionFor, getSession, useSession } from '@/session';
 import { setVideoZoom, useSubtitleScale, useSubtitleStyle, useVideoZoom } from '@/settings';
 import { resumeRules } from '@/sync';
-import { ColorsContext, palettes, radii, spacing } from '@/theme';
+import { ColorsContext, palettes, radii, spacing, useWide } from '@/theme';
 import { useDebounced } from '@/useDebounced';
 import { useFetch } from '@/useFetch';
 import { useItem } from '@/useItem';
@@ -95,6 +95,7 @@ export default function PlayerScreen() {
   const accountId = useSession().active?.id;
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const wide = useWide();
   const [attempt, setAttempt] = useState(0);
   // Answer of the latest request; anything else (new item, account, Retry) shows the spinner until it lands.
   const key = `${accountId}|${id}|${source}|${attempt}`;
@@ -503,6 +504,8 @@ export default function PlayerScreen() {
           <TracksMenu
             page={menu}
             onPage={setMenu}
+            // Tablets: under the button that opened it (the top bar's right end).
+            anchor={wide ? tracksAnchor(insets) : undefined}
             audio={options.audio}
             subtitles={options.subtitles}
             value={tracks}

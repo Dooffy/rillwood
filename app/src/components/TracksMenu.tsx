@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Player tracks menu on the shared ActionSheet: a main page (audio, subtitles, speed with their current value) that opens
 // one list per setting (subtitle timing: a slider, only while subtitles are on). The screen owns the page so a pick can
-// close one sheet and open the next. How subtitles look is set in Settings → Subtitles.
+// close one sheet and open the next. How subtitles look is set in Settings → Subtitles. Tablets: a menu under its button
+// (`anchor`) instead of a bottom sheet.
 import type { ReactNode } from 'react';
 
-import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
+import { ActionSheet, type ActionSheetProps, type SheetAction } from '@/components/ActionSheet';
 import { TimingSlider } from '@/components/TimingSlider';
 import { formatDelay } from '@/format';
 import type { TrackChoice, TrackOption } from '@/playback';
@@ -32,6 +33,7 @@ export function TracksMenu({
   subtitles,
   value,
   onChange,
+  anchor,
 }: {
   page: TracksPage | null;
   onPage: (page: TracksPage | null) => void;
@@ -39,6 +41,7 @@ export function TracksMenu({
   subtitles: TrackOption[];
   value: TracksValue;
   onChange: (next: Partial<TracksValue>) => void;
+  anchor?: ActionSheetProps['anchor'];
 }) {
   const subtitleChoices = [{ id: -1, index: -1, label: 'Off' }, ...subtitles];
   const label = (options: TrackOption[], index: number | undefined) => options.find((t) => t.index === index)?.label;
@@ -92,6 +95,7 @@ export function TracksMenu({
       title={shown.title}
       actions={shown.actions}
       closeLabel={shown.closeLabel}
+      anchor={anchor}
       onClose={() => onPage(null)}
     >
       {shown.content}

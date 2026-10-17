@@ -6,6 +6,7 @@ import { useEffect, useLayoutEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { ItemMenuProvider } from '@/components/ItemMenu';
+import { SETTINGS_TITLES } from '@/components/SettingsLink';
 import { OffloadToast } from '@/components/OffloadToast';
 import { ToastProvider } from '@/components/Toast';
 import { initConnection } from '@/connection';
@@ -87,13 +88,13 @@ export default function RootLayout() {
             <Stack.Screen name="item/[id]" options={detailOptions} />
             <Stack.Screen name="series/[id]" options={detailOptions} />
             <Stack.Screen name="settings" options={pageOf('Settings')} />
-            <Stack.Screen name="subtitles" options={pageOf('Subtitles')} />
+            <Stack.Screen name="subtitles" options={pageOf(SETTINGS_TITLES.subtitles)} />
             {/* A show's downloaded episodes (Downloads tab): the show's name comes with the link. */}
             <Stack.Screen
               name="show-downloads/[id]"
               options={({ route }) => page((route.params as { name?: string } | undefined)?.name ?? 'Downloads')}
             />
-            <Stack.Screen name="download-storage" options={pageOf('Storage limit')} />
+            <Stack.Screen name="download-storage" options={pageOf(SETTINGS_TITLES.storage)} />
             {/* An option's checkmark list: a plain title, as iOS Settings subscreens. */}
             <Stack.Screen name="option/[key]" options={({ route }) => plainPage(pickerTitle(route.params), c)} />
             <Stack.Screen

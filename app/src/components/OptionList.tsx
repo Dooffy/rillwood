@@ -1,24 +1,27 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // iOS Settings style choices: `OptionRow` shows an option's current value and opens its checkmark list
-// (`/option/[key]`), `OptionList` is that list - one tap saves.
-import { router } from 'expo-router';
+// (`/option/[key]`, or the split view's pane on tablets), `OptionList` is that list - one tap saves.
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { type OptionChoice, type PickerKey, PICKERS, usePicker } from '@/pickers';
 import { minTouch, spacing, useColors } from '@/theme';
 
 import { Checkmark, ListRow, ListSection, Swatch } from './List';
+import { useSettingsLink } from './SettingsLink';
 import { Text } from './Text';
 
 /** A row that opens the option's list, with the current choice as its value. */
 export function OptionRow({ option }: { option: PickerKey }) {
   const { choice } = usePicker(option);
+  const link = useSettingsLink();
+  const to = { page: 'option', key: option } as const;
   return (
     <ListRow
       label={PICKERS[option].title}
       value={choice?.label}
       swatch={choice?.swatch}
-      onPress={() => router.push({ pathname: '/option/[key]', params: { key: option } })}
+      selected={link.selected(to)}
+      onPress={() => link.open(to)}
     />
   );
 }

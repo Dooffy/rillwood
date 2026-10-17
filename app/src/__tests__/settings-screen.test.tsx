@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { Storage } from 'expo-sqlite/kv-store';
 import { Appearance as RNAppearance } from 'react-native';
@@ -15,6 +15,7 @@ import {
   setOffloadWatched,
   setSubtitleScale,
 } from '@/settings';
+import { resetDevice, setDevice, TABLET_LANDSCAPE, TABLET_PORTRAIT } from '@/testDevice';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 jest.mock('@/session', () => ({ useSession: jest.fn() }));
@@ -123,5 +124,74 @@ describe('Settings screen', () => {
     expect(screen.getByRole('button', { name: 'Remove downloads' })).toHaveAccessibilityValue({ text: '30 days' });
     await fireEvent.press(screen.getByRole('button', { name: 'Remove downloads' }));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/option/[key]', params: { key: 'offload-days' } });
+  });
+
+  describe('on a tablet in landscape: split view', () => {
+    beforeEach(async () => {
+      await setDevice(...TABLET_LANDSCAPE);
+      signedIn(anna, [ben]);
+    });
+    afterEach(resetDevice);
+
+    const row = (name: string) => screen.getByRole('button', { name });
+
+    it("shows the active account's details beside the list, its row selected", async () => {
+      await renderSettings();
+      expect(screen.getByText('Active on Home server')).toBeOnTheScreen();
+      expect(row('anna, Home server')).toBeSelected();
+      expect(row('Subtitles')).not.toBeSelected();
+    });
+
+    it('opens a row in the pane, not a new screen', async () => {
+      await renderSettings();
+      await fireEvent.press(row('Storage limit'));
+      expect(router.push).not.toHaveBeenCalled();
+      expect(screen.getByRole('header', { name: 'Storage limit' })).toBeOnTheScreen();
+      expect(screen.getByRole('adjustable', { name: 'Download storage limit' })).toBeOnTheScreen();
+      expect(row('Storage limit')).toBeSelected();
+      expect(screen.queryByText('Active on Home server')).toBeNull();
+    });
+
+    it('a page opened from the pane goes over it with a back button; a list row starts over', async () => {
+      await renderSettings();
+      await fireEvent.press(row('Subtitles'));
+      await fireEvent.press(row('Size'));
+      expect(router.push).not.toHaveBeenCalled();
+      expect(screen.getByRole('header', { name: 'Size' })).toBeOnTheScreen();
+      // The list keeps Subtitles selected.
+      expect(row('Subtitles')).toBeSelected();
+      await fireEvent.press(row('Back to Subtitles'));
+      expect(screen.getByRole('header', { name: 'Subtitles' })).toBeOnTheScreen();
+      await fireEvent.press(row('Size'));
+      await fireEvent.press(row('Appearance'));
+      expect(screen.getByRole('header', { name: 'Appearance' })).toBeOnTheScreen();
+      expect(screen.queryByRole('button', { name: /^Back to/ })).toBeNull();
+    });
+
+    it('(i) on another account shows its details', async () => {
+      await renderSettings();
+      await fireEvent.press(row('ben on Home server, details'));
+      expect(screen.getByText('Signed out of Home server')).toBeOnTheScreen();
+      expect(row('ben, Home server')).toBeSelected();
+    });
+
+    it('an account gone while shown: back to the active one', async () => {
+      const view = await renderSettings();
+      await fireEvent.press(row('ben on Home server, details'));
+      signedIn(anna);
+      await view.rerender(
+        <ToastProvider>
+          <Settings />
+        </ToastProvider>,
+      );
+      expect(screen.getByText('Active on Home server')).toBeOnTheScreen();
+    });
+
+    it('portrait keeps one column: rows open their screen', async () => {
+      await setDevice(...TABLET_PORTRAIT);
+      await renderSettings();
+      await fireEvent.press(row('Subtitles'));
+      expect(router.push).toHaveBeenCalledWith('/subtitles');
+    });
   });
 });

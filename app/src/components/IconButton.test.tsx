@@ -19,6 +19,13 @@ describe('IconButton', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
+  it('grows for the player: large and xlarge', async () => {
+    await render(<IconButton icon={icon} label="Pause" size="large" onPress={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Pause' })).toHaveStyle({ width: minTouch * 1.6 });
+    await render(<IconButton icon={icon} label="Play" size="xlarge" onPress={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Play' })).toHaveStyle({ width: minTouch * 2, height: minTouch * 2 });
+  });
+
   it('uses the elevated surface by default and the accent for primary', async () => {
     await render(<IconButton icon={icon} label="Add" onPress={() => {}} />);
     expect(screen.getByRole('button')).toHaveStyle({ backgroundColor: colors.elevated });
