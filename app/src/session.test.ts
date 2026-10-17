@@ -117,7 +117,7 @@ describe('switch, sign out, remove', () => {
   it('ignores a late 401 for a token that was already replaced', async () => {
     const oldConn = connectionFor(getSession().active!)!;
     await addAccount(server, auth('u2', 'fresh'), 'dev-2b');
-    global.fetch = jest.fn(() =>
+    globalThis.fetch = jest.fn(() =>
       Promise.resolve({ ok: false, status: 401, text: async () => '' } as Response),
     ) as unknown as typeof fetch;
     await request(oldConn, '/UserViews').catch(() => {});
@@ -138,7 +138,7 @@ describe('switch, sign out, remove', () => {
   });
 
   it('signs out once for a burst of parallel 401s', async () => {
-    global.fetch = jest.fn(() =>
+    globalThis.fetch = jest.fn(() =>
       Promise.resolve({ ok: false, status: 401, text: async () => '' } as Response),
     ) as unknown as typeof fetch;
     const conn = connectionFor(getSession().active!)!;
@@ -150,7 +150,7 @@ describe('switch, sign out, remove', () => {
   });
 
   it('marks the account signed out on a 401 and keeps it, without switching to another', async () => {
-    global.fetch = jest.fn(() =>
+    globalThis.fetch = jest.fn(() =>
       Promise.resolve({ ok: false, status: 401, text: async () => '' } as Response),
     ) as unknown as typeof fetch;
     const conn = connectionFor(getSession().active!)!;

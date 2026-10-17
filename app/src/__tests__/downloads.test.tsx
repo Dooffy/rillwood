@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { Paths } from 'expo-file-system';
-import { Alert, type AlertButton } from 'react-native';
+import { Alert, Dimensions, StyleSheet, type AlertButton } from 'react-native';
 
 import * as api from '@/api';
 import type { BaseItemDto } from '@/api';
@@ -94,7 +94,39 @@ beforeEach(() => {
   jest.spyOn(Paths, 'totalDiskSpace', 'get').mockReturnValue(1000 * GB);
 });
 
+// Jest's default window (750 x 1334) counts as a tablet; tests that lay out columns say which device.
+const defaultWindow = Dimensions.get('window');
+const defaultScreen = Dimensions.get('screen');
+const device = (width: number, height: number) =>
+  act(() =>
+    Dimensions.set({ window: { ...defaultWindow, width, height }, screen: { ...defaultScreen, width, height } }),
+  );
+
+afterEach(() => {
+  Dimensions.set({ window: defaultWindow, screen: defaultScreen });
+});
+
 describe('Downloads', () => {
+  // Tablets: two columns of the tab's width (less the sidebar in landscape); a lone last row stays one column wide.
+  it('lays the rows out in two columns on tablets', async () => {
+    await download(movie, episode(1));
+    await device(390, 844);
+    await render(<Downloads />);
+    const widths = () =>
+      screen.getAllByTestId('download-cell').map((n) => StyleSheet.flatten(n.props.style)?.width as number | undefined);
+    expect(widths()).toEqual([undefined, undefined]);
+    // iPad portrait: (834 - 2 x 16 - 24) / 2. Landscape beside the sidebar: (934 - 2 x 16 - 24) / 2.
+    for (const [w, h, cell] of [
+      [834, 1194, 389],
+      [1194, 834, 439],
+    ] as const) {
+      await device(w, h);
+      expect(widths()).toEqual([cell, cell]);
+    }
+    // The storage limit counts every account's downloads: leave none for the next tests.
+    await act(() => deleteDownloads([idOf(movie), idOf(episode(1))]));
+  });
+
   it('says what to do when nothing is downloaded', async () => {
     await render(<Downloads />);
     expect(screen.getByText('No Downloads Yet')).toBeOnTheScreen();

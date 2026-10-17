@@ -9,7 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useDownloadActions } from '@/components/DownloadActions';
 import { DOWNLOAD_ROW_GAP, DownloadRow, DownloadRowGap } from '@/components/DownloadRow';
-import { pageContent } from '@/components/Page';
+import { pageColumn, pageContent } from '@/components/Page';
 import { Message } from '@/components/Message';
 import { Text } from '@/components/Text';
 import { episodeCount, episodeTitle, showSeasons, type DownloadSeason } from '@/downloadList';
@@ -78,6 +78,7 @@ export default function ShowDownloads() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   // A page's padding; a season header a page's block gap below what's above it, a row gap above its first episode.
-  content: { padding: pageContent.padding },
+  // Wide screens: a centred, readable column, like a `Page`.
+  content: { padding: pageContent.padding, ...pageColumn },
   season: { paddingTop: pageContent.gap, paddingBottom: DOWNLOAD_ROW_GAP },
 });

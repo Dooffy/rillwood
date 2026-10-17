@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import type { ReactElement } from 'react';
 import { act, fireEvent, render as rtlRender, screen, waitFor, within } from '@testing-library/react-native';
-import type { RefreshControlProps } from 'react-native';
+import { Dimensions, StyleSheet, type RefreshControlProps } from 'react-native';
 
 import * as api from '@/api';
 import { ApiError, type BaseItemDto, type RequestOptions } from '@/api';
@@ -111,6 +111,18 @@ beforeEach(() => {
   });
 });
 
+// Jest's default window (750 x 1334) counts as a tablet; tests that size cards say which device.
+const defaultWindow = Dimensions.get('window');
+const defaultScreen = Dimensions.get('screen');
+const device = (width: number, height: number) =>
+  act(() =>
+    Dimensions.set({ window: { ...defaultWindow, width, height }, screen: { ...defaultScreen, width, height } }),
+  );
+
+afterEach(() => {
+  Dimensions.set({ window: defaultWindow, screen: defaultScreen });
+});
+
 function refreshControl() {
   return (screen.getByTestId('home-scroll').props.refreshControl as { props: RefreshControlProps }).props;
 }
@@ -174,14 +186,44 @@ describe('Home', () => {
   });
 
   it('sizes images to the card, with the tag and no token', async () => {
+    await device(390, 844);
     await render(<Home />);
     await screen.findByText('Recently Added in Shows');
     const sources = screen.getAllByTestId('artwork-image').map((n) => (n.props.source as { uri: string }[])[0].uri);
     expect(sources).toContain(
-      'https://jf.example.com/Items/sintel/Images/Backdrop?fillWidth=1440&quality=90&tag=bd-sintel',
+      'https://jf.example.com/Items/sintel/Images/Backdrop?fillWidth=720&quality=90&tag=bd-sintel',
     );
     expect(sources).toContain('https://jf.example.com/Items/show/Images/Primary?fillWidth=240&quality=90&tag=p-show');
     expect(sources.join(' ')).not.toMatch(/tok-secret|api_?key/i);
+  });
+
+  // Tablets: whole cards across the row (the tab's width: less the sidebar in landscape), images at the drawn width.
+  it('fits whole cards across the row on tablets', async () => {
+    const width = (name: string | RegExp) =>
+      StyleSheet.flatten(screen.getByRole('button', { name }).props.style).width as number;
+    await device(390, 844);
+    await render(<Home />);
+    await screen.findByText('Recently Added in Shows');
+    // Phone: the default sizes, the next card peeking in.
+    expect([width('Test Show'), width(/^Test Show, S1:E2/)]).toEqual([120, 260]);
+    // iPad portrait (802 pt row): 5 posters, 3 landscape cards. Landscape beside the sidebar (902): 6 and 3.
+    for (const [w, h, poster, landscape] of [
+      [834, 1194, 150, 259],
+      [1194, 834, 140, 292],
+    ] as const) {
+      await device(w, h);
+      expect([width('Test Show'), width(/^Test Show, S1:E2/)]).toEqual([poster, landscape]);
+    }
+    const sources = screen.getAllByTestId('artwork-image').map((n) => (n.props.source as { uri: string }[])[0].uri);
+    expect(sources.some((uri) => uri.includes('/show/Images/Primary?fillWidth=') && !uri.includes('=240&'))).toBe(true);
+  });
+
+  it('fills a tablet row with placeholders while it loads', async () => {
+    routes = { '/UserViews': 'pending', '/UserItems/Resume': 'pending', '/Shows/NextUp': 'pending' };
+    await device(1194, 834);
+    await render(<Home />);
+    const row = screen.getByLabelText('Loading Recently Added');
+    expect(within(row).getAllByTestId('card-placeholder', { includeHiddenElements: true })).toHaveLength(6);
   });
 
   it('uses the next episode as the hero when nothing is in progress', async () => {

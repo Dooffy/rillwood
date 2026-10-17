@@ -28,7 +28,7 @@ jest.mock('./session', () => ({
 
 // The server: there (answers) or not (fetch fails, as with no network).
 let serverUp = true;
-const fetchMock = jest.fn(() =>
+const fetchMock = jest.fn((_url: string, _init?: RequestInit) =>
   serverUp
     ? Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve('{"Id":"srv","Version":"12.1.0"}') })
     : Promise.reject(new TypeError('Network request failed')),
@@ -54,7 +54,7 @@ beforeEach(() => {
   jest.resetModules();
   serverUp = true;
   fetchMock.mockClear();
-  global.fetch = fetchMock as unknown as typeof fetch;
+  globalThis.fetch = fetchMock as unknown as typeof fetch;
   mockSession.state = { accounts: [home], active: home };
   mockSession.listeners.clear();
   /* eslint-disable @typescript-eslint/no-require-imports -- fresh module state per test */

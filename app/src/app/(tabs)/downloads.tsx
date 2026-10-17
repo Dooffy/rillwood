@@ -2,7 +2,8 @@
 // Downloads tab (docs/context/downloads.md, Downloads screen): the active account's downloads in one list, newest
 // first - a row per movie, a row per show (opens its episodes), running ones with their ring. Swipe left to delete.
 // Search (on the device) + All / Movies / Shows chips narrow the list; Episodes lists every episode on its own row.
-// A FlatList (100+ shows stay smooth); it re-renders on structure only, each row reads its own progress.
+// A FlatList (100+ shows stay smooth); it re-renders on structure only, each row reads its own progress. Tablets: two
+// columns, search and chips on one line.
 import { router } from 'expo-router';
 import { getFreeDiskStorageAsync } from 'expo-file-system/legacy';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -18,6 +19,7 @@ import { Empty, Message } from '@/components/Message';
 import { Screen } from '@/components/Screen';
 import { SearchField } from '@/components/SearchField';
 import { StorageBar } from '@/components/StorageBar';
+import { useTabContentWidth } from '@/components/TabsSidebar';
 import {
   DOWNLOAD_SCOPES,
   downloadList,
@@ -33,7 +35,7 @@ import { openLibrary } from '@/navigation';
 import { expiresAt } from '@/offload';
 import { useSession } from '@/session';
 import { useDownloadLimit, useOffloadDays, useOffloadWatched } from '@/settings';
-import { spacing, tabList } from '@/theme';
+import { spacing, tabList, useWide } from '@/theme';
 import { confirmDeleteDownloads } from '@/useDownloadControl';
 
 /**
@@ -60,6 +62,9 @@ function useFreeSpace(key: string): number | undefined {
 }
 
 type Show = ShowDownloadRowProps['show'];
+
+/** Tablets: space between the two columns - rows have no card behind them, so wider than the row gap. */
+const COLUMN_GAP = spacing.lg;
 
 const entryKey = (e: DownloadEntry) => (e.kind === 'show' ? `show:${e.seriesId}` : e.id);
 
@@ -123,14 +128,22 @@ export default function Downloads() {
   const removeShow = useCallback((show: Show) => confirmDeleteDownloads(show.name, show.ids), []);
   const showMenu = useCallback((show: Show) => setMenu({ show }), []);
   const accountId = active?.id ?? '';
+  const wide = useWide();
+  const columns = wide ? 2 : 1;
+  // A fixed width, not flex: a lone last row stays one column wide.
+  const tabWidth = useTabContentWidth();
+  const cellWidth = wide ? Math.floor((tabWidth - 2 * spacing.md - COLUMN_GAP) / 2) : undefined;
   const renderEntry = useCallback<ListRenderItem<DownloadEntry>>(
-    ({ item: e }) =>
-      e.kind === 'show' ? (
-        <ShowDownloadRow accountId={accountId} show={e} onOpen={openShow} onDelete={removeShow} onMenu={showMenu} />
-      ) : (
-        <DownloadRow id={e.id} title={e.title} onPlay={play} onDelete={remove} onMenu={openMenu} />
-      ),
-    [accountId, openShow, removeShow, showMenu, play, remove, openMenu],
+    ({ item: e }) => (
+      <View testID="download-cell" style={cellWidth !== undefined && { width: cellWidth }}>
+        {e.kind === 'show' ? (
+          <ShowDownloadRow accountId={accountId} show={e} onOpen={openShow} onDelete={removeShow} onMenu={showMenu} />
+        ) : (
+          <DownloadRow id={e.id} title={e.title} onPlay={play} onDelete={remove} onMenu={openMenu} />
+        )}
+      </View>
+    ),
+    [cellWidth, accountId, openShow, removeShow, showMenu, play, remove, openMenu],
   );
 
   // Everything of this account, running ones too.
@@ -191,8 +204,10 @@ export default function Downloads() {
               shared={accounts.length > 1}
               onPress={() => router.push('/download-storage')}
             />
-            <View style={styles.controls}>
-              <SearchField value={text} onChangeText={setText} placeholder="Search downloads" />
+            <View style={[styles.controls, wide && styles.controlsWide]}>
+              <View style={wide && styles.search}>
+                <SearchField value={text} onChangeText={setText} placeholder="Search downloads" />
+              </View>
               <View style={styles.scopes}>
                 {DOWNLOAD_SCOPES.map((s) => (
                   <Chip key={s.key} label={s.label} selected={scope === s.key} onPress={() => setScope(s.key)} />
@@ -201,6 +216,11 @@ export default function Downloads() {
             </View>
             <FlatList
               {...tabList}
+              // numColumns can't change on a mounted list: crossing the wide width (Split View) remounts it, back at the
+              // top. Rotating an iPad doesn't (two columns either way).
+              key={columns}
+              numColumns={columns}
+              columnWrapperStyle={wide ? styles.columns : undefined}
               data={entries}
               keyExtractor={entryKey}
               renderItem={renderEntry}
@@ -227,6 +247,9 @@ export default function Downloads() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   controls: { gap: spacing.sm },
+  controlsWide: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  search: { flex: 1 },
   scopes: { flexDirection: 'row', gap: spacing.sm },
+  columns: { gap: COLUMN_GAP },
   list: { paddingTop: spacing.sm, paddingBottom: spacing.md },
 });

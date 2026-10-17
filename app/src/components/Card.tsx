@@ -94,6 +94,13 @@ const MediaCard = memo(function MediaCard({
 export const POSTER_WIDTH = 120;
 export const LANDSCAPE_WIDTH = 260;
 
+/**
+ * Tablets: cards about this wide, as many whole ones as fit the row (`fitCards`). Posters a bit over a phone's (the
+ * Library grid too); landscape cards a bit under, so iPad portrait gets three across, not two big ones.
+ */
+export const WIDE_POSTER_WIDTH = 140;
+export const WIDE_LANDSCAPE_WIDTH = 220;
+
 /** 2:3 poster with title + subtitle under it (library grid, Recently Added). */
 export function PosterCard({ width = POSTER_WIDTH, ...props }: CardProps) {
   return <MediaCard {...props} width={width} aspectRatio={2 / 3} />;
