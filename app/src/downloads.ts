@@ -61,7 +61,10 @@ export type Download = {
 export type DownloadRequest = { item: BaseItemDto; source: MediaSourceDto };
 
 export type StartResult =
-  { ok: true; started: number; skipped: number } | { ok: false; problem: 'signedOut' | 'space' | 'limit' };
+  | { ok: true; started: number; skipped: number }
+  | { ok: false; problem: 'signedOut' | 'space' }
+  /** `others`: bytes saved accounts' downloads take of the limit when they're what tips it over (else 0): the toast says so. */
+  | { ok: false; problem: 'limit'; others: number };
 
 const KEY = 'dl';
 const VERSION = 1;
@@ -368,6 +371,22 @@ function withinLimit(bytes: number): boolean {
   return limit <= 0 || downloadsSize(store().values()) + bytes <= limitBytes(limit);
 }
 
+/**
+ * Bytes the other saved accounts' downloads take of the limit, when this account's own downloads + `bytes` would fit
+ * without them; 0 when the batch is over on its own. Leftovers of accounts no longer saved don't count (the user can't
+ * see or free them - the weekly sweep does).
+ */
+function othersShare(accountId: string, bytes: number): number {
+  const saved = new Set(getSession().accounts.map((a) => a.id));
+  let mine = 0;
+  let others = 0;
+  for (const d of store().values()) {
+    if (d.accountId === accountId) mine += d.total;
+    else if (saved.has(d.accountId)) others += d.total;
+  }
+  return mine + bytes <= limitBytes(getDownloadLimit()) ? others : 0;
+}
+
 /** When the last batch was stamped (this run only: a stored time from a wrong clock never pins new ones). */
 let lastStart = 0;
 
@@ -410,7 +429,7 @@ export async function startDownloads(requests: DownloadRequest[]): Promise<Start
   const downloads = [...fresh.values()];
   if (downloads.length > 0) {
     const bytes = downloadsSize(downloads);
-    if (!withinLimit(bytes)) return { ok: false, problem: 'limit' };
+    if (!withinLimit(bytes)) return { ok: false, problem: 'limit', others: othersShare(account.id, bytes) };
     if (!hasSpace(free, bytes)) return { ok: false, problem: 'space' };
     put(downloads);
     send(downloads);
