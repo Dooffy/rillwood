@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, renderHook } from '@testing-library/react-native';
 
 import type NativeDownloads from '../modules/downloads';
@@ -267,11 +267,35 @@ describe('startDownloads', () => {
     settings.setDownloadLimit(10);
     expect((await dl.startDownloads([movie('m1', 6 * GB)])).ok).toBe(true);
     // 6 + 4 GiB = 10.7 GB > 10 GB
-    expect(await dl.startDownloads([movie('m2', 4 * GB)])).toEqual({ ok: false, problem: 'limit' });
+    expect(await dl.startDownloads([movie('m2', 4 * GB)])).toEqual({ ok: false, problem: 'limit', others: 0 });
     expect(dl.getDownload('a1:m2:m2')).toBeNull();
     expect((await dl.startDownloads([movie('m3', 3 * GB)])).ok).toBe(true);
     settings.setDownloadLimit(0);
     expect((await dl.startDownloads([movie('m2', 4 * GB)])).ok).toBe(true);
+  });
+
+  describe("over the limit: other saved accounts' share, when it's what tips it over", () => {
+    beforeEach(async () => {
+      settings.setDownloadLimit(10);
+      await dl.startDownloads([movie('m1', 6 * GB)]);
+      mockSession.accounts = [account('a1'), account('a2')];
+      mockSession.active = mockSession.accounts[1];
+      await dl.startDownloads([movie('m2', GB)]);
+    });
+    afterEach(() => settings.setDownloadLimit(0));
+
+    it("a2's own 1 GiB + 3 GiB would fit: a1's 6 GiB are named", async () => {
+      expect(await dl.startDownloads([movie('m3', 3 * GB)])).toEqual({ ok: false, problem: 'limit', others: 6 * GB });
+    });
+
+    it('a batch over the limit on its own blames no one', async () => {
+      expect(await dl.startDownloads([movie('m3', 10 * GB)])).toEqual({ ok: false, problem: 'limit', others: 0 });
+    });
+
+    it("leftovers of an account no longer saved don't count", async () => {
+      mockSession.accounts = [account('a2')];
+      expect(await dl.startDownloads([movie('m3', 3 * GB)])).toEqual({ ok: false, problem: 'limit', others: 0 });
+    });
   });
 
   it('a request with nothing new never fails on the limit', async () => {

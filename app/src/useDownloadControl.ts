@@ -18,7 +18,9 @@ import {
   useDownloadSummary,
   useHasDownloads,
   type DownloadSummary,
+  type StartResult,
 } from '@/downloads';
+import { formatBytes } from '@/format';
 import { currentUser, downloadSources, itemDetail, seasonFiles } from '@/items';
 import { askNotificationsOnce } from '@/notificationPermission';
 import { connectionFor, getSession, useSession } from '@/session';
@@ -31,8 +33,27 @@ export const DOWNLOAD_FAILED = "Couldn't start the download. Check the connectio
 export const DOWNLOAD_NOT_ALLOWED = "This account isn't allowed to download.";
 export const DOWNLOAD_NO_SPACE = 'Not enough free space on this device.';
 export const DOWNLOAD_OVER_LIMIT = 'This would go over your download storage limit. Change it in Settings.';
-const PROBLEMS = { space: DOWNLOAD_NO_SPACE, limit: DOWNLOAD_OVER_LIMIT, signedOut: DOWNLOAD_FAILED };
 export const DOWNLOAD_NOTHING = "Nothing to download - the server didn't send a file.";
+
+/** The limit counts every account: name the share other accounts' downloads take of it, when they take any. */
+export function overLimitMessage(others: number): string {
+  if (others <= 0) return DOWNLOAD_OVER_LIMIT;
+  return `This would go over your download storage limit - other accounts' downloads take ${formatBytes(others)} of it. Change it in Settings.`;
+}
+
+function startProblem(result: Extract<StartResult, { ok: false }>): string {
+  switch (result.problem) {
+    case 'limit':
+      return overLimitMessage(result.others);
+    case 'space':
+      return DOWNLOAD_NO_SPACE;
+    case 'signedOut':
+      return DOWNLOAD_FAILED;
+    default:
+      // A new problem kind fails to compile here until it has a message.
+      return result satisfies never;
+  }
+}
 
 export type DownloadControl = {
   /** Offer Download: a downloadable type the user may download, or something of it is already here. */
@@ -118,7 +139,7 @@ export function useDownloadControl(item: BaseItemDto | undefined): DownloadContr
           return;
         }
         return startDownloads(requests).then((result) => {
-          if (!result.ok) return toast(PROBLEMS[result.problem]);
+          if (!result.ok) return toast(startProblem(result));
           // Download on a partial season also resumes its paused / failed episodes.
           resumeDownloads(requests.map((r) => downloadId(account.id, r.item.Id, r.source.Id)));
           void askNotificationsOnce();
