@@ -797,12 +797,12 @@ describe('snapshot', () => {
   });
 
   it('retries from the server when the item JSON was never written', async () => {
-    const fetchMock = jest.fn(async () => ({
+    const fetchMock = jest.fn(async (_url: string, _init?: RequestInit) => ({
       ok: true,
       status: 200,
       text: async () => JSON.stringify({ ...sintel().item, MediaSources: [{ ...sintel().source, Id: 'm1' }] }),
     }));
-    global.fetch = fetchMock as unknown as typeof fetch;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
     mockFailFetch.value = true;
     await dl.startDownloads([{ ...sintel(), source: { ...sintel().source, Id: 'm1' } }]);
     await flush();
