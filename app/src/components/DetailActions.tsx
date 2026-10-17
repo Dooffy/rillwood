@@ -2,7 +2,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import type { UserFlag } from '@/items';
-import { spacing } from '@/theme';
+import { spacing, useWide } from '@/theme';
 
 import { Button } from './Button';
 import { IconButton } from './IconButton';
@@ -20,12 +20,16 @@ export type DetailActionsProps = {
   onMark: (flag: UserFlag, value: boolean) => void;
 };
 
-/** Play capsule with round watched + favourite toggles (filled when on; the label says what a tap does). */
+/**
+ * Play capsule with round watched + favourite toggles (filled when on; the label says what a tap does). Wide screens:
+ * Play as wide as its title, Play from Start a round button in the row - a column-wide capsule would be giant.
+ */
 export function DetailActions({ playTitle, onPlay, onStartOver, played, favourite, onMark }: DetailActionsProps) {
+  const wide = useWide();
   return (
     <View style={styles.actions}>
       <View style={styles.row}>
-        <View style={styles.play}>
+        <View style={!wide && styles.play}>
           <Button
             title={playTitle}
             icon={{ ios: 'play.fill', android: 'play_arrow' }}
@@ -33,6 +37,13 @@ export function DetailActions({ playTitle, onPlay, onStartOver, played, favourit
             onPress={() => onPlay?.()}
           />
         </View>
+        {wide && onStartOver && (
+          <IconButton
+            icon={{ ios: 'arrow.counterclockwise', android: 'replay' }}
+            label="Play from Start"
+            onPress={onStartOver}
+          />
+        )}
         <IconButton
           icon={{ ios: 'checkmark', android: 'check' }}
           label={played ? 'Mark as unwatched' : 'Mark as watched'}
@@ -46,7 +57,7 @@ export function DetailActions({ playTitle, onPlay, onStartOver, played, favourit
           onPress={() => onMark('favourite', !favourite)}
         />
       </View>
-      {onStartOver && <Button title="Play from Start" variant="secondary" onPress={onStartOver} />}
+      {!wide && onStartOver && <Button title="Play from Start" variant="secondary" onPress={onStartOver} />}
     </View>
   );
 }

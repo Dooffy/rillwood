@@ -52,7 +52,16 @@ No commits ahead of base → nothing to PR, stop.
    Missing → offer `TZ=UTC git rebase --signoff <base-remote>/main`, then a force-with-lease push (ask first).
 3. **Commit format** - subjects start with `[FEAT]`, `[ISSUE]`, `[CHORE]`, `[DOCS]` or `[REFACTOR]`, with a blank line before the bullets (a subject containing ` - ` bullets means it's missing). Flag mismatches; don't rewrite history unless asked.
 4. **No AI attribution** - no `Co-Authored-By: Claude` or "Generated with" lines in commits. Flag if present.
-5. **Checks pass** - app changed → in `app/`: `npm run check`. CI (`.github/workflows/ci.yml`) re-runs everything on push. Web changed → in `web/`: `npm run lint --if-present` and `npm run typecheck --if-present`. Failing → stop and report.
+5. **Checks pass** - run the whole CI matrix (`.github/workflows/ci.yml`) locally before pushing, so a red check never first shows up on the PR. App changed → in `app/`:
+   ```bash
+   npm run check   # lint, typecheck, format, unit tests
+   # the rest of the CI matrix, in parallel
+   npx --no-install expo-doctor > /tmp/rw-doctor.log 2>&1 & d=$!
+   npm run licenses > /tmp/rw-licences.log 2>&1 & l=$!
+   npm run bundle:check > /tmp/rw-bundle.log 2>&1 & b=$!
+   wait $d; echo "doctor $?"; wait $l; echo "licences $?"; wait $b; echo "bundle $?"
+   ```
+   Non-zero → show the tail of that log. Expo doctor checks package versions against Expo's online list, so it can start failing with no local change (e.g. a new expected `jest` version) - fix with `npx expo install --check`, keeping dev tools in `devDependencies`. Web changed → in `web/`: `npm run lint --if-present` and `npm run typecheck --if-present`. Failing → stop and report.
 
 ---
 

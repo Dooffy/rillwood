@@ -13,7 +13,7 @@ import { CastRow } from '@/components/CastRow';
 import { Chips } from '@/components/Chips';
 import { DetailActions } from '@/components/DetailActions';
 import { DetailHeader } from '@/components/DetailHeader';
-import { DetailHero, HERO_ART_SCALE, LOGO_WIDTH } from '@/components/DetailHero';
+import { DetailHero, LOGO_WIDTH, useHeroLayout } from '@/components/DetailHero';
 import { EPISODE_CARD_WIDTH, EpisodeCard } from '@/components/EpisodeCard';
 import { useItemMenu } from '@/components/ItemMenu';
 import { LoadError, loadErrorMessage, Message } from '@/components/Message';
@@ -75,7 +75,7 @@ function SavedSeries({ saved: { item, art } }: { saved: SavedItem }) {
 function Series({ series }: { series: BaseItemDto }) {
   const image = useImage();
   const mark = useUserFlag();
-  const { width } = useWindowDimensions();
+  const hero = useHeroLayout();
   const nextRequest = seriesNextUp(series.Id);
   const seasonList = useFetch<ItemsResult>(seasons(series.Id).path);
   const next = useFetch<ItemsResult>(nextRequest.path, { query: nextRequest.query });
@@ -98,7 +98,7 @@ function Series({ series }: { series: BaseItemDto }) {
       {/* The hero runs under the transparent header (back + download over the art). */}
       <ScrollView {...scrollList} contentInsetAdjustmentBehavior="never" contentContainerStyle={styles.scroll}>
         <DetailHero
-          art={image(view.art, width * HERO_ART_SCALE)}
+          art={image(view.art, hero.artWidth)}
           logo={image(view.logo, LOGO_WIDTH)}
           title={series.Name}
           subtitle={view.subtitle}

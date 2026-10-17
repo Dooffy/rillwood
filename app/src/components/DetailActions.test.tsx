@@ -1,12 +1,28 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { describe, expect, it, jest } from '@jest/globals';
+import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+
+import { PHONE, resetDevice, setDevice, TABLET_PORTRAIT } from '@/testDevice';
 
 import { DetailActions } from './DetailActions';
 
 const off = { played: false, favourite: false, onMark: () => {} };
 
+afterEach(resetDevice);
+
 describe('DetailActions', () => {
+  // Phones: a full-width "Play from Start" capsule under the row. Tablets: a round button in the row (no text).
+  it('puts Play from Start in the row on tablets, under it on phones', async () => {
+    const props = { playTitle: 'Resume', onPlay: () => {}, onStartOver: () => {}, ...off };
+    await setDevice(...PHONE);
+    const { rerender } = await render(<DetailActions {...props} />);
+    expect(screen.getByText('Play from Start')).toBeOnTheScreen();
+    await setDevice(...TABLET_PORTRAIT);
+    await rerender(<DetailActions {...props} />);
+    expect(screen.queryByText('Play from Start')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Play from Start' })).toBeOnTheScreen();
+  });
+
   it('plays and starts over', async () => {
     const onPlay = jest.fn();
     const onStartOver = jest.fn();

@@ -3,14 +3,14 @@
 // More Like This. Data rules: docs/context/api.md (Detail). Header ↓ downloads it (docs/context/downloads.md).
 // Offline (or the server failing) with a download of it: the item saved with the download instead of an error.
 import { useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import type { BaseItemDto } from '@/api';
 import { CastRow } from '@/components/CastRow';
 import { Chips } from '@/components/Chips';
 import { DetailActions } from '@/components/DetailActions';
 import { DetailHeader } from '@/components/DetailHeader';
-import { DetailHero, HERO_ART_SCALE, LOGO_WIDTH } from '@/components/DetailHero';
+import { DetailHero, LOGO_WIDTH, useHeroLayout } from '@/components/DetailHero';
 import { ListRow, ListSection } from '@/components/List';
 import { MediaRow } from '@/components/MediaRow';
 import { LoadError, Message } from '@/components/Message';
@@ -44,7 +44,7 @@ export default function ItemDetail() {
 function Detail({ item, saved }: { item: BaseItemDto; saved: SavedItem | null }) {
   const image = useImage();
   const mark = useUserFlag();
-  const { width } = useWindowDimensions();
+  const hero = useHeroLayout();
   const view = detailView(item);
   const { progress, resumeSeconds = 0, remainingSeconds = 0, played } = view.playback;
   const inProgress = progress !== undefined;
@@ -58,7 +58,7 @@ function Detail({ item, saved }: { item: BaseItemDto; saved: SavedItem | null })
       {/* The hero runs under the transparent header (back + download over the art). */}
       <ScrollView {...scrollList} contentInsetAdjustmentBehavior="never" contentContainerStyle={styles.scroll}>
         <DetailHero
-          art={saved ? saved.art : image(view.art, width * HERO_ART_SCALE)}
+          art={saved ? saved.art : image(view.art, hero.artWidth)}
           logo={saved ? undefined : image(view.logo, LOGO_WIDTH)}
           title={item.Name}
           subtitle={view.subtitle}

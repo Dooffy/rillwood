@@ -7,7 +7,7 @@ import { StyleSheet, View, type DimensionValue, type ViewProps } from 'react-nat
 import { minTouch, radii, spacing, useColors } from '@/theme';
 
 import { CardPlaceholder } from './Card';
-import { HERO_RATIO } from './DetailHero';
+import { useHeroLayout } from './DetailHero';
 import { EPISODE_CARD_WIDTH } from './EpisodeCard';
 import { EPISODE_ROW_STILL } from './EpisodeRow';
 import { CARD_GAP } from './Row';
@@ -86,9 +86,10 @@ export function CardRowPlaceholder({
 
 /** Movie / episode / series detail before the item loads: hero art, title, the action row, overview lines. */
 export function DetailPlaceholder() {
+  const hero = useHeroLayout();
   return (
     <Loading testID="detail-placeholder" style={styles.detail}>
-      <Bone aspectRatio={1 / HERO_RATIO} />
+      <Bone height={hero.height} />
       <View style={styles.body}>
         <View style={styles.title}>
           <Bone width="60%" height={28} />
