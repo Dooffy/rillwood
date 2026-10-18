@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { Pressable, Text } from 'react-native';
+import { AccessibilityInfo, Pressable, Text } from 'react-native';
 
-import { ACTION_TOAST_MS, TOAST_MS, ToastProvider, useToast } from './Toast';
+import { ACTION_TOAST_MS, SCREEN_READER_ACTION_TOAST_MS, TOAST_MS, ToastProvider, useToast } from './Toast';
 
 function Trigger({ message }: { message: string }) {
   const show = useToast();
@@ -75,6 +75,29 @@ describe('Toast', () => {
     await fireEvent.press(screen.getByText('show action'));
     await act(() => jest.advanceTimersByTime(ACTION_TOAST_MS));
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('with a screen reader on, a toast with a button stays longer still', async () => {
+    jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(true);
+    function WithAction() {
+      const show = useToast();
+      return (
+        <Pressable onPress={() => show('Watched - removed in 24 hours.', { label: 'Keep', onPress: () => {} })}>
+          <Text>show action</Text>
+        </Pressable>
+      );
+    }
+    await render(
+      <ToastProvider>
+        <WithAction />
+      </ToastProvider>,
+    );
+    await act(async () => {});
+    await fireEvent.press(screen.getByText('show action'));
+    await act(() => jest.advanceTimersByTime(ACTION_TOAST_MS));
+    expect(screen.getByRole('button', { name: 'Keep' })).toBeOnTheScreen();
+    await act(() => jest.advanceTimersByTime(SCREEN_READER_ACTION_TOAST_MS - ACTION_TOAST_MS));
+    expect(screen.queryByRole('button', { name: 'Keep' })).toBeNull();
   });
 
   it('throws outside the provider', async () => {

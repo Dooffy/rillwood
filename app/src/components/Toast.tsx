@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { minTouch, pressedOpacity, radii, spacing, useColors } from '@/theme';
@@ -10,6 +10,8 @@ import { Text } from './Text';
 export const TOAST_MS = 3000;
 /** A toast with a button stays longer: time to reach it. */
 export const ACTION_TOAST_MS = 6000;
+/** With VoiceOver / TalkBack on, longer still: the message is read first, then the button has to be found. */
+export const SCREEN_READER_ACTION_TOAST_MS = 15000;
 
 /** A button on the toast ("Keep"): pressing it runs it and closes the toast. */
 export type ToastAction = { label: string; onPress: () => void };
@@ -24,11 +26,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const insets = useSafeAreaInsets();
   const c = useColors();
+  const screenReader = useRef(false);
+
+  useEffect(() => {
+    AccessibilityInfo.isScreenReaderEnabled()
+      .then((on) => (screenReader.current = on))
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('screenReaderChanged', (on) => (screenReader.current = on));
+    return () => sub.remove();
+  }, []);
 
   const show = useCallback<ShowToast>((message, action) => {
     clearTimeout(timer.current);
     setToast({ message, action });
-    timer.current = setTimeout(() => setToast(null), action ? ACTION_TOAST_MS : TOAST_MS);
+    const ms = !action ? TOAST_MS : screenReader.current ? SCREEN_READER_ACTION_TOAST_MS : ACTION_TOAST_MS;
+    timer.current = setTimeout(() => setToast(null), ms);
   }, []);
 
   useEffect(() => () => clearTimeout(timer.current), []);

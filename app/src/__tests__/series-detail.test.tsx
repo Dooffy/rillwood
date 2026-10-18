@@ -355,7 +355,7 @@ describe('SeriesDetail', () => {
     const setPlayed = jest.spyOn(api, 'setPlayed').mockReturnValue(new Promise(() => {}));
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     await render(<SeriesDetail />);
-    await fireEvent.press(await screen.findByRole('button', { name: 'Mark as unwatched', selected: true }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Watched', selected: true }));
     expect(alert).toHaveBeenCalledWith(`Mark ${show.Name} as unwatched?`, expect.any(String), expect.any(Array));
     expect(setPlayed).not.toHaveBeenCalled();
     const buttons = alert.mock.calls[0][2] as AlertButton[];

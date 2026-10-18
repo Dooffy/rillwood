@@ -77,7 +77,7 @@ function Detail({ item, saved }: { item: BaseItemDto; saved: SavedItem | null })
           {inProgress && (
             <View style={styles.progress}>
               <View style={styles.bar}>
-                <ProgressBar progress={progress} />
+                <ProgressBar progress={progress} label="Watched" />
               </View>
               {left && (
                 <Text variant="caption" secondary>

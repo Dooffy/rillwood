@@ -143,6 +143,7 @@ export function ActionSheet({ visible, title, actions = [], children, closeLabel
         {close !== undefined && (
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel={close}
             onPress={onClose}
             style={({ pressed }) => [
               styles.group,

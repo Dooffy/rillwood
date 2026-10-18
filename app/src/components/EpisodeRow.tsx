@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { formatRemaining, spokenRemaining } from '@/format';
 import { pressedOpacity, spacing } from '@/theme';
 
 import { Artwork } from './Artwork';
@@ -15,8 +16,8 @@ export type EpisodeRowProps = {
   title: string;
   /** "S1:E2 · Pilot". */
   subtitle?: string;
-  /** Runtime or time left: "45m". */
-  meta?: string;
+  /** Runtime: shown "45m", spoken "45 minutes". */
+  runtimeSeconds?: number;
   image?: string;
   progress?: number;
   remainingSeconds?: number;
@@ -28,11 +29,16 @@ export type EpisodeRowProps = {
 
 /** Episode in a vertical list (Library, Episodes type): 16:9 still with progress, show, episode line, runtime. */
 export function EpisodeRow(props: EpisodeRowProps) {
-  const { title, subtitle, meta, image, progress, remainingSeconds, played, onPress, onLongPress } = props;
+  const { title, subtitle, runtimeSeconds, image, progress, remainingSeconds, played, onPress, onLongPress } = props;
+  const runtime = runtimeSeconds !== undefined ? formatRemaining(runtimeSeconds) : undefined;
+  const spokenRuntime = runtimeSeconds !== undefined ? spokenRemaining(runtimeSeconds) : undefined;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={cardLabel({ title, subtitle, progress, remainingSeconds, played, onPress })}
+      // The runtime too, as on screen ("45m" may be read as metres).
+      accessibilityLabel={[cardLabel({ title, subtitle, progress, remainingSeconds, played, onPress }), spokenRuntime]
+        .filter(Boolean)
+        .join(', ')}
       {...longPressProps(onLongPress)}
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
@@ -55,9 +61,9 @@ export function EpisodeRow(props: EpisodeRowProps) {
             {subtitle}
           </Text>
         )}
-        {meta !== undefined && (
+        {runtime !== undefined && (
           <Text variant="caption" secondary>
-            {meta}
+            {runtime}
           </Text>
         )}
       </View>

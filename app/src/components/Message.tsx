@@ -100,6 +100,7 @@ export function Offline({
         <Button title="Retry" loading={busy} onPress={retry} />
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel="Go to Downloads"
           onPress={openDownloads}
           style={({ pressed }) => [styles.link, pressed && styles.pressed]}
         >

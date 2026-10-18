@@ -58,20 +58,20 @@ describe('PosterCard', () => {
     await render(<PosterCard title="Dune" played progress={0.5} onPress={() => {}} />);
     expect(screen.getByTestId('artwork-played')).toHaveTextContent('Watched');
     expect(screen.getByTestId('artwork-fade')).toBeOnTheScreen();
-    expect(screen.queryByRole('progressbar')).toBeNull();
+    expect(screen.queryByTestId('progress-bar')).toBeNull();
   });
 
   it('shows progress over the placeholder when the image is missing', async () => {
     await render(<PosterCard title="Dune" progress={0.5} onPress={() => {}} />);
     expect(screen.getByTestId('artwork-placeholder')).toBeOnTheScreen();
-    expect(screen.getByRole('progressbar')).toBeOnTheScreen();
+    expect(screen.getByTestId('progress-bar')).toBeOnTheScreen();
   });
 });
 
 describe('LandscapeCard', () => {
   it('shows the progress bar over the image while in progress', async () => {
     await render(<LandscapeCard title="Episode 3" subtitle="12 min left" progress={0.6} onPress={() => {}} />);
-    expect(screen.getByRole('progressbar')).toHaveAccessibilityValue({ min: 0, max: 100, now: 60 });
+    expect(screen.getByTestId('progress-fill')).toHaveStyle({ width: '60%' });
     expect(screen.getByTestId('artwork-fade')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Episode 3, 12 min left, 60% watched' })).toBeOnTheScreen();
   });
@@ -83,7 +83,7 @@ describe('LandscapeCard', () => {
 
   it('has no progress bar when not started', async () => {
     await render(<LandscapeCard title="Episode 4" onPress={() => {}} />);
-    expect(screen.queryByRole('progressbar')).toBeNull();
+    expect(screen.queryByTestId('progress-bar')).toBeNull();
     expect(screen.queryByTestId('artwork-fade')).toBeNull();
   });
 });

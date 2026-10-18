@@ -63,7 +63,7 @@ describe('FilterSheet', () => {
     );
     expect(screen.getByRole('button', { name: '4K', selected: true })).toBeOnTheScreen();
     expect(screen.queryByText('GENRES')).toBeNull();
-    await fireEvent.press(screen.getByRole('button', { name: 'Reset' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Reset filters' }));
     expect(screen.getByRole('button', { name: '4K', selected: false })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Show Results' })).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Close filters' }));

@@ -46,13 +46,14 @@ export function DetailActions({ playTitle, onPlay, onStartOver, played, favourit
         )}
         <IconButton
           icon={{ ios: 'checkmark', android: 'check' }}
-          label={played ? 'Mark as unwatched' : 'Mark as watched'}
+          // A toggle: one name, its state from `selected` ("Watched, selected"), not a second time in the label.
+          label="Watched"
           selected={played}
           onPress={() => onMark('played', !played)}
         />
         <IconButton
           icon={{ ios: favourite ? 'heart.fill' : 'heart', android: favourite ? 'favorite' : 'favorite_border' }}
-          label={favourite ? 'Remove from favourites' : 'Add to favourites'}
+          label="Favourite"
           selected={favourite}
           onPress={() => onMark('favourite', !favourite)}
         />

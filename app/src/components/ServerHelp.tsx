@@ -27,7 +27,9 @@ export function WhereToFindServer() {
       {WHERE.map((line, i) => (
         <View key={line} style={styles.step}>
           <View style={[styles.number, { backgroundColor: c.elevated2 }]}>
-            <Text variant="caption">{i + 1}</Text>
+            <Text variant="caption" maxFontSizeMultiplier={1.5}>
+              {i + 1}
+            </Text>
           </View>
           <Text variant="caption" secondary style={styles.stepText}>
             {line}
@@ -42,6 +44,6 @@ const styles = StyleSheet.create({
   card: { borderRadius: radii.card, padding: spacing.md, gap: spacing.md },
   cardTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   step: { flexDirection: 'row', gap: spacing.sm + spacing.xs },
-  number: { width: 24, height: 24, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
+  number: { minWidth: 24, minHeight: 24, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   stepText: { flex: 1 },
 });
