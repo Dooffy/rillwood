@@ -13,6 +13,7 @@ import {
   playbackReport,
   pictureAspect,
   playErrorMessage,
+  preferredTracks,
   playSource,
   streamUrl,
   streamAuthHeader,
@@ -458,5 +459,57 @@ describe('matchTracks', () => {
   it('und matches any language; no language lining up falls back to position, never an empty menu', () => {
     expect(matchTracks(play, { audio: [{ id: 1, lang: 'und' }], subs: [] }).audio).toEqual([play.audio[0]]);
     expect(matchTracks(play, { audio: [{ id: 1, lang: 'ger' }], subs: [] }).audio).toEqual([play.audio[0]]);
+  });
+});
+
+describe('preferredTracks', () => {
+  const track = (index: number, lang?: string, forced?: boolean) => ({
+    id: index,
+    index,
+    label: `#${index}`,
+    lang,
+    forced,
+  });
+  const play = {
+    audio: [track(1, 'eng'), track(2, 'jpn')],
+    subtitles: [track(3, 'eng', true), track(4, 'eng'), track(5, 'ger'), track(6, 'jpn', true)],
+    defaultAudio: 1,
+    defaultSubtitle: -1,
+  };
+  const server = { audio: [], subtitleMode: 'server', subtitle: [] } as const;
+
+  it("Server default: the server's tracks", () => {
+    expect(preferredTracks(play, server)).toEqual({ audio: 1, subtitle: -1 });
+    expect(preferredTracks({ ...play, defaultSubtitle: 5 }, server)).toEqual({ audio: 1, subtitle: 5 });
+  });
+
+  it("audio: the first track in the language (any case), else the server's", () => {
+    expect(preferredTracks(play, { ...server, audio: ['jpn', 'ja'] }).audio).toBe(2);
+    expect(
+      preferredTracks({ ...play, audio: [track(1, 'ENG'), track(2, 'JA')] }, { ...server, audio: ['jpn', 'ja'] }).audio,
+    ).toBe(2);
+    expect(preferredTracks(play, { ...server, audio: ['fre', 'fra', 'fr'] }).audio).toBe(1);
+  });
+
+  it('subtitles Off: none, whatever the server picked', () => {
+    expect(preferredTracks({ ...play, defaultSubtitle: 4 }, { ...server, subtitleMode: 'off' }).subtitle).toBe(-1);
+  });
+
+  it("Forced only: a forced track in the subtitle language, else the audio's; none without one", () => {
+    expect(preferredTracks(play, { ...server, subtitleMode: 'forced' }).subtitle).toBe(3);
+    expect(preferredTracks(play, { ...server, audio: ['jpn'], subtitleMode: 'forced' }).subtitle).toBe(6);
+    expect(preferredTracks(play, { ...server, subtitleMode: 'forced', subtitle: ['ger'] }).subtitle).toBe(-1);
+  });
+
+  it("On: a full track in the language, else a forced one, else none; Server default: the server's pick or the first full", () => {
+    expect(preferredTracks(play, { ...server, subtitleMode: 'on', subtitle: ['eng'] }).subtitle).toBe(4);
+    expect(preferredTracks(play, { ...server, subtitleMode: 'on', subtitle: ['jpn'] }).subtitle).toBe(6);
+    expect(preferredTracks(play, { ...server, subtitleMode: 'on', subtitle: ['kor'] }).subtitle).toBe(-1);
+    expect(preferredTracks({ ...play, defaultSubtitle: 5 }, { ...server, subtitleMode: 'on' }).subtitle).toBe(5);
+    expect(preferredTracks(play, { ...server, subtitleMode: 'on' }).subtitle).toBe(4);
+  });
+
+  it('a file without subtitles: none', () => {
+    expect(preferredTracks({ ...play, subtitles: [] }, { ...server, subtitleMode: 'on' }).subtitle).toBe(-1);
   });
 });

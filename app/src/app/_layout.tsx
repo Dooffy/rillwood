@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { Stack } from 'expo-router';
+import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { useEffect, useLayoutEffect } from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 
 import { ItemMenuProvider } from '@/components/ItemMenu';
 import { SETTINGS_TITLES } from '@/components/SettingsLink';
@@ -19,6 +20,12 @@ import { pickerTitle } from '@/pickers';
 import { applyNativeAppearance, useAppearance } from '@/settings';
 import { initSync } from '@/sync';
 import { ColorsContext, palettes, resolveScheme, useWide } from '@/theme';
+
+// Posters and backdrops on disk: Android's cache (Glide) keeps the most recent 250 MB on its own; iOS (SDWebImage) has
+// no size limit by default, so cap it (iOS-only API). No Clear cache button - the OS may purge both when space runs
+// low (CLAUDE.md §2).
+const IMAGE_CACHE_BYTES = 500 * 1024 * 1024;
+if (Platform.OS === 'ios') Image.configureCache({ maxDiskSize: IMAGE_CACHE_BYTES });
 
 const detailOptions = { headerShown: true, headerTransparent: true, title: '' };
 

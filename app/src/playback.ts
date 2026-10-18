@@ -243,6 +243,55 @@ function sameTrack(options: TrackOption[], pick: TrackPick): TrackOption | undef
   );
 }
 
+/**
+ * Playback defaults from Settings (`src/settings.ts`): language codes (every way a file may tag the language; empty =
+ * Server default) and the subtitle mode.
+ */
+export type TrackPrefs = {
+  audio: readonly string[];
+  subtitleMode: 'server' | 'off' | 'forced' | 'on';
+  subtitle: readonly string[];
+};
+
+const inLanguage = (codes: readonly string[]) => (t: TrackOption) =>
+  t.lang !== undefined && codes.includes(t.lang.toLowerCase());
+
+/**
+ * First tracks of a load from the Settings defaults; the server's (`defaultAudio` / `defaultSubtitle`) where a setting
+ * is Server default or the file has no match. Audio: the first track in the language. Subtitles: Off = none; Forced
+ * only = a forced track in the subtitle language (Server default: the audio's), else none; On = a full track in the
+ * language, else a forced one, else none (Server default: the server's pick, else the first full track).
+ */
+export function preferredTracks(
+  play: Pick<PlaySource, 'audio' | 'subtitles' | 'defaultAudio' | 'defaultSubtitle'>,
+  prefs: TrackPrefs,
+): { audio?: number; subtitle: number } {
+  const match = prefs.audio.length > 0 ? play.audio.find(inLanguage(prefs.audio)) : undefined;
+  const audio = match?.index ?? play.defaultAudio;
+  const subs = play.subtitles;
+  const full = subs.filter((t) => !t.forced);
+  const forced = subs.filter((t) => t.forced);
+  const pick = (): number | undefined => {
+    switch (prefs.subtitleMode) {
+      case 'server':
+        return play.defaultSubtitle;
+      case 'off':
+        return -1;
+      case 'forced': {
+        const lang = play.audio.find((t) => t.index === audio)?.lang;
+        const codes = prefs.subtitle.length > 0 ? prefs.subtitle : lang ? [lang.toLowerCase()] : [];
+        return forced.find(inLanguage(codes))?.index;
+      }
+      case 'on':
+        if (prefs.subtitle.length === 0) {
+          return play.defaultSubtitle >= 0 ? play.defaultSubtitle : full[0]?.index;
+        }
+        return (full.find(inLanguage(prefs.subtitle)) ?? forced.find(inLanguage(prefs.subtitle)))?.index;
+    }
+  };
+  return { audio, subtitle: pick() ?? -1 };
+}
+
 /** Sidecar subtitle files of a source (embedded ones are in the file - mpv finds those itself). */
 export function externalSubs(baseUrl: string, itemId: string, source: MediaSourceDto): ExternalSub[] {
   return (source.MediaStreams ?? []).flatMap((s) => {

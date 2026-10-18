@@ -5,6 +5,17 @@ import { useSyncExternalStore } from 'react';
 
 import {
   APPEARANCE_OPTIONS,
+  AUTOPLAY_NEXT_OPTIONS,
+  getAudioLanguage,
+  getAutoplayNext,
+  getSubtitleLanguage,
+  getSubtitleMode,
+  LANGUAGES,
+  setAudioLanguage,
+  setAutoplayNext,
+  setSubtitleLanguage,
+  setSubtitleMode,
+  SUBTITLE_MODES,
   DOWNLOAD_NETWORK_OPTIONS,
   getAppearance,
   getDownloadNetwork,
@@ -102,6 +113,38 @@ export const PICKERS = {
     set: setSubtitleSample,
     preview: true,
     footer: 'Only for this preview. Subtitles play in the language of the track you pick.',
+  }),
+  'autoplay-next': option({
+    title: 'Autoplay next episode',
+    choices: AUTOPLAY_NEXT_OPTIONS,
+    get: getAutoplayNext,
+    set: setAutoplayNext,
+    footer: 'Off: Up Next still shows at the end of an episode, and waits for a tap.',
+  }),
+  'audio-language': option({
+    title: 'Audio language',
+    choices: LANGUAGES,
+    get: getAudioLanguage,
+    set: setAudioLanguage,
+    footer:
+      "Plays the first audio track in this language, else the video's default. Server default follows your Jellyfin account's preference.",
+  }),
+  'subtitle-mode': option({
+    title: 'Show subtitles',
+    choices: SUBTITLE_MODES,
+    get: getSubtitleMode,
+    set: setSubtitleMode,
+    more: 'subtitle-language',
+    footer:
+      'Forced only: subtitles just for parts in another language. Server default follows your Jellyfin account. Tracks you pick in the player carry on to the next episode.',
+  }),
+  'subtitle-language': option({
+    title: 'Subtitle language',
+    choices: LANGUAGES,
+    get: getSubtitleLanguage,
+    set: setSubtitleLanguage,
+    section: 'Language',
+    footer: "For On and Forced only. Server default: the server's pick, or for Forced only the audio's language.",
   }),
   'download-network': option({
     title: 'Network',

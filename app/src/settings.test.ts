@@ -7,9 +7,11 @@ import { Appearance as RNAppearance } from 'react-native';
 import {
   setAppearance,
   setSubtitleScale,
+  setAutoplayNext,
   setSubtitleStyle,
   setVideoZoom,
   useAppearance,
+  useAutoplayNext,
   useSubtitleScale,
   useSubtitleStyle,
   useVideoZoom,
@@ -189,12 +191,12 @@ describe('subtitle style setting', () => {
 });
 
 describe('subtitle preview language', () => {
-  it('starts in English and is never saved', () => {
-    const { getSubtitleSample, setSubtitleSample } = load();
+  it('English only for now, never saved', () => {
+    const { getSubtitleSample, setSubtitleSample, SUBTITLE_SAMPLES } = load();
+    expect(SUBTITLE_SAMPLES.map((s) => s.value)).toEqual(['en']);
+    setSubtitleSample('en');
     expect(getSubtitleSample()).toBe('en');
-    setSubtitleSample('ko');
-    expect(getSubtitleSample()).toBe('ko');
-    expect(load().getSubtitleSample()).toBe('en');
+    expect(Storage.getItemSync('settings.subtitleSample')).toBeNull();
   });
 });
 
@@ -280,5 +282,41 @@ describe('download storage limit', () => {
     expect(formatDownloadLimit(0)).toBe('No limit');
     expect(formatDownloadLimit(50)).toBe('50 GB');
     expect(formatDownloadLimit(1500)).toBe('1.5 TB');
+  });
+});
+
+describe('playback defaults', () => {
+  beforeEach(() => {
+    Storage.clearSync();
+  });
+
+  it('default to autoplay on and Server default, also for unknown stored values', () => {
+    Storage.setItemSync('settings.audioLanguage', 'xx');
+    Storage.setItemSync('settings.subtitleMode', 'always');
+    const s = load();
+    expect(s.getAutoplayNext()).toBe('on');
+    expect(s.getAudioLanguage()).toBe('server');
+    expect(s.getSubtitleMode()).toBe('server');
+    expect(s.getSubtitleLanguage()).toBe('server');
+    expect(s.getTrackPrefs()).toEqual({ audio: [], subtitleMode: 'server', subtitle: [] });
+  });
+
+  it('persist, and give every code of the picked language', () => {
+    const s = load();
+    s.setAutoplayNext('off');
+    s.setAudioLanguage('eng');
+    s.setSubtitleMode('on');
+    s.setSubtitleLanguage('eng');
+    const again = load();
+    expect(again.getAutoplayNext()).toBe('off');
+    expect(again.getTrackPrefs()).toEqual({ audio: ['eng', 'en'], subtitleMode: 'on', subtitle: ['eng', 'en'] });
+  });
+
+  it('re-render useAutoplayNext subscribers on change', async () => {
+    setAutoplayNext('on');
+    const { result } = await renderHook(() => useAutoplayNext());
+    expect(result.current).toBe('on');
+    await act(() => setAutoplayNext('off'));
+    expect(result.current).toBe('off');
   });
 });

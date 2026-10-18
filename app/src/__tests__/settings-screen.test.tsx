@@ -62,6 +62,7 @@ describe('Settings screen', () => {
   it('shows the current appearance and opens its list', async () => {
     setAppearance('dark');
     await renderSettings();
+    expect(screen.getByRole('header', { name: 'DISPLAY' })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Appearance' })).toHaveAccessibilityValue({ text: 'Dark' });
     await fireEvent.press(screen.getByRole('button', { name: 'Appearance' }));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/option/[key]', params: { key: 'appearance' } });
@@ -116,6 +117,15 @@ describe('Settings screen', () => {
     expect(router.push).toHaveBeenCalledWith({ pathname: '/option/[key]', params: { key: 'download-network' } });
     await fireEvent.press(screen.getByRole('button', { name: 'Storage limit' }));
     expect(router.push).toHaveBeenCalledWith('/download-storage');
+  });
+
+  it('shows the playback defaults and opens their lists', async () => {
+    await renderSettings();
+    expect(screen.getByRole('header', { name: 'PLAYBACK' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Autoplay next episode' })).toHaveAccessibilityValue({ text: 'On' });
+    expect(screen.getByRole('button', { name: 'Audio language' })).toHaveAccessibilityValue({ text: 'Server default' });
+    await fireEvent.press(screen.getByRole('button', { name: 'Show subtitles' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/option/[key]', params: { key: 'subtitle-mode' } });
   });
 
   it('opens Licences', async () => {

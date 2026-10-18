@@ -132,15 +132,17 @@ Design + sources: `docs/research/background-downloads.md`.
 
 ## M7 - Hardening + release
 
-- [ ] Pre-release improvements:
+- [x] Pre-release improvements:
   - [x] Offline series: per-episode art - each episode saves its own still with the snapshot (`still.jpg`) and its Downloads row (a show's screen, Episodes chip) shows it (16:9), not the show's poster. Episodes downloaded before show their backdrop until re-downloaded
   - [x] Pre-release cleanup: Media rows open to list every track (label never wraps), Downloads empty state = the Offline card, no address example chips on Add server, storage bar shows the limit ("12.3 GB of 50 GB · 37.7 GB free", tap → Storage limit), accounts list on top of Settings (tap switches, (i) details, sign out hands over to the next account)
   - [x] Account downloads + stalled transfers: Sign out / Remove account delete the account's downloads (confirm names count + size; a 401 sign-out keeps them); storage bar "15 GB all accounts of 50 GB" with more than one account; Storage limit page says it applies to every account; iOS stall timeout (no bytes 5 min → retries → Failed - network, bytes kept). Device tests D18-D20, O1-O4 pending
   - [x] Storage limit across accounts made explicit: storage bar + Storage limit page wording; the "over the limit" toast names the other accounts' share ("other accounts' downloads take 12.3 GB of it")
-- [ ] Settings: accounts, playback defaults, downloads, cache clear, licenses screen
+- [x] Settings: accounts, playback defaults, downloads, cache, licenses screen
+  - [x] Playback defaults (phone-wide): Autoplay next episode (Off: Up Next waits for a tap), Audio language, Show subtitles (Server default / Off / Forced only / On) + Subtitle language on the same page (languages: Server default + English until localisation); Server default keeps Jellyfin's per-user pick (`preferredTracks`). Picks in the player still carry to the next episode. Jest only - device check pending
+  - [x] Image cache: no Clear cache button - Android (Glide) keeps the latest 250 MB, iOS capped at 500 MB (`Image.configureCache`); OS may purge both. Subtitle preview text English only until localisation
   - [x] Licences screen: Settings → About → Licences - Rillwood (GPL text + App Store permission), native parts on this platform (mpv module, MPVKit / libmpv, WorkManager, Noto fonts) with the FFmpeg credit line, every production npm package grouped by repository; an entry shows its source, packages and full licence text. Data from `scripts/generate-licences.mjs` on postinstall (`src/licences.json`, gitignored). Add the source repository link to the Rillwood entry once the repo is public
 - [ ] Perf (FlashList if FlatList stutters, image sizes, cold start <2s), accessibility pass
-- [ ] iPad layout for every screen: adaptive grids, readable-width forms and pages, landscape, split view / Stage Manager sizes
+- [x] iPad layout for every screen: adaptive grids, readable-width forms and pages, landscape, split view / Stage Manager sizes
   - [x] Wide breakpoint (`useWide`, 600 pt) + readable widths; `Page` centres its content (forms 480, pages 680)
   - [x] Sign-in flow: Add server / Sign in / Quick Connect / Accounts in the form column under a plain centred title; Welcome splits in landscape (wall left, copy right)
   - [x] Tabs as a fixed left sidebar on tablets in landscape (`TabsSidebar`, always shown; portrait: native `sidebarAdaptable`); Library grid columns from the width the tab gets (3 on phones, 6 beside the landscape sidebar, 5 in portrait); Home hero beside its text in landscape

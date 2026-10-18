@@ -12,7 +12,11 @@ import {
   getSubtitleStyle,
   getOffloadDays,
   getOffloadWatched,
+  getSubtitleLanguage,
+  getSubtitleMode,
   setAppearance,
+  setSubtitleLanguage,
+  setSubtitleMode,
   setOffloadDays,
   setOffloadWatched,
   setSubtitleSample,
@@ -87,18 +91,13 @@ describe('Option screen', () => {
     expect(getSubtitleStyle()).toEqual({ font: 'sans-serif', color: '#FFEB3B', edge: 'box' });
   });
 
-  it('preview text: other scripts in the bundled iOS face, not saved', async () => {
+  it('preview text: English only for now, in the picked face', async () => {
     setSubtitleStyle({ font: 'serif' });
     await renderOption('subtitle-sample');
-    await fireEvent.press(screen.getByRole('radio', { name: '日本語' }));
-    expect(getSubtitleSample()).toBe('ja');
-    expect(previewText(/字幕はこのように/)).toMatchObject({ fontFamily: 'NotoSansCJKsc-Regular' });
-    await fireEvent.press(screen.getByRole('radio', { name: 'العربية' }));
-    expect(previewText(/هكذا تبدو الترجمة/)).toMatchObject({
-      fontFamily: 'NotoSansArabic-Regular',
-      writingDirection: 'rtl',
-    });
-    expect(getSubtitleStyle()).toEqual({ font: 'serif', color: '#FFFFFF', edge: 'outline' });
+    expect(screen.getAllByRole('radio')).toHaveLength(1);
+    await fireEvent.press(screen.getByRole('radio', { name: 'English' }));
+    expect(getSubtitleSample()).toBe('en');
+    expect(previewText(/Subtitles look like this/)).toMatchObject({ fontFamily: 'NotoSerif-Regular' });
   });
 
   it('an unknown option shows nothing', async () => {
@@ -120,5 +119,17 @@ describe('Option screen', () => {
     expect(getOffloadDays()).toBe(0);
     expect(getOffloadWatched()).toBe(24);
     expect(screen.getByRole('radio', { name: '24 hours' })).toBeChecked();
+  });
+
+  it('show subtitles: the mode, then the language under it', async () => {
+    setSubtitleMode('server');
+    setSubtitleLanguage('server');
+    await renderOption('subtitle-mode');
+    expect(screen.getAllByRole('header').map((h) => h.props.children)).toEqual(['LANGUAGE']);
+    expect(screen.getAllByRole('radio', { name: 'Server default' })).toHaveLength(2);
+    await fireEvent.press(screen.getByRole('radio', { name: 'On' }));
+    await fireEvent.press(screen.getByRole('radio', { name: 'English' }));
+    expect(getSubtitleMode()).toBe('on');
+    expect(getSubtitleLanguage()).toBe('eng');
   });
 });
