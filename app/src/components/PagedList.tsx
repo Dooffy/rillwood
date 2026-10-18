@@ -130,7 +130,10 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
       numColumns={posters ? columns : 1}
       columnWrapperStyle={posters ? styles.columns : undefined}
       contentContainerStyle={styles.content}
+      // Separators, not `gap`: gap would also space the placeholders that stand in for off-screen rows.
+      ItemSeparatorComponent={RowGap}
       ListHeaderComponent={header}
+      ListHeaderComponentStyle={styles.header}
       ListEmptyComponent={empty}
       ListFooterComponent={footer}
       onEndReached={list.loadMore}
@@ -145,8 +148,15 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
   );
 }
 
+/** Space between rows (grid rows or episode rows). */
+function RowGap() {
+  return <View style={styles.rowGap} />;
+}
+
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: spacing.md, paddingBottom: spacing.lg, gap: spacing.md },
+  content: { paddingHorizontal: spacing.md, paddingBottom: spacing.lg },
+  header: { paddingBottom: spacing.md },
+  rowGap: { height: spacing.md },
   columns: { gap: CARD_GAP },
   footer: { paddingVertical: spacing.md },
 });

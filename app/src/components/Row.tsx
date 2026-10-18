@@ -24,11 +24,13 @@ export type RowProps = {
   /** Opens the full list; the header gets "See All ›". */
   onPress?: () => void;
   /** Cards, scrolled horizontally. */
-  children: ReactNode;
+  children?: ReactNode;
+  /** A long shelf: its own horizontal list (virtualised, `rowListContent`) instead of `children` in a ScrollView. */
+  list?: ReactNode;
 };
 
 /** Home / detail shelf: section header (20/700, "See All ›" when tappable) over a horizontal list of cards. */
-export function Row({ title, onPress, children }: RowProps) {
+export function Row({ title, onPress, children, list }: RowProps) {
   return (
     <View style={styles.row}>
       {/* The title stays a header for VoiceOver's headings rotor; See All is its own button beside it. */}
@@ -51,9 +53,11 @@ export function Row({ title, onPress, children }: RowProps) {
           </Pressable>
         )}
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.list}>
-        {children}
-      </ScrollView>
+      {list ?? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.list}>
+          {children}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -74,3 +78,6 @@ const styles = StyleSheet.create({
   pressed: { opacity: pressedOpacity },
   list: { paddingHorizontal: spacing.md, gap: CARD_GAP },
 });
+
+/** Padding and card gap of a shelf's own horizontal list (`Row` `list`). */
+export const rowListContent = styles.list;

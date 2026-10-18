@@ -4,7 +4,7 @@
 // The screen plays the next episode at the end unless the card was hidden or autoplay is off (Settings): then the card
 // has no countdown and waits for a tap.
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, View } from 'react-native';
 import { Easing, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -15,7 +15,7 @@ import { AnimatedProgressRing } from '@/components/ProgressRing';
 import { Text } from '@/components/Text';
 import { episodeLine, landscapeImage } from '@/items';
 import { UP_NEXT_SECONDS, upNextCountdown } from '@/player/controls';
-import { useProgress, type ProgressStore } from '@/player/progress';
+import type { ProgressStore } from '@/player/progress';
 import { backdrop, minTouch, pressedOpacity, radii, spacing, useColors } from '@/theme';
 import { useImage } from '@/useImage';
 
@@ -34,13 +34,25 @@ export type UpNextProps = {
   onHide: () => void;
 };
 
+/** The countdown as a string snapshot ("left|fill", "" outside the window): equal strings don't re-render. */
+function useCountdown(store: ProgressStore) {
+  const snapshot = useSyncExternalStore(store.subscribe, () => {
+    const { position, duration } = store.get();
+    const c = upNextCountdown(position, duration);
+    return c ? `${c.left}|${c.fill}` : '';
+  });
+  if (!snapshot) return undefined;
+  const [left, fill] = snapshot.split('|').map(Number);
+  return { left, fill };
+}
+
 /**
- * Nothing until the last `UP_NEXT_SECONDS`; re-renders with the position, not the screen. Mounted for the whole
- * episode, so VoiceOver hears "Up next" once per next episode, not each time a seek crosses into the window.
+ * Nothing until the last `UP_NEXT_SECONDS`, and no re-render before then; then with each position update (the ring
+ * re-syncs to it), not the screen. Mounted for the whole episode, so VoiceOver hears "Up next" once per next episode,
+ * not each time a seek crosses into the window.
  */
 export function UpNext(props: UpNextProps) {
-  const { position, duration } = useProgress(props.progress);
-  const countdown = upNextCountdown(position, duration);
+  const countdown = useCountdown(props.progress);
   const line = episodeLine(props.next);
   const showing = countdown !== undefined;
   const announced = useRef<string>(undefined);

@@ -7,6 +7,8 @@ import { Avatar } from './Avatar';
 import { Text } from './Text';
 
 export const PERSON_SIZE = 72;
+/** A card's width: the photo plus room for the name under it. */
+export const PERSON_CARD_WIDTH = PERSON_SIZE + spacing.md;
 
 /** Cast / crew entry: round photo (initials without one), name, role. Not tappable - no person screen yet. */
 export function PersonCard({ name, role, image }: { name: string; role?: string; image?: string }) {
@@ -26,6 +28,6 @@ export function PersonCard({ name, role, image }: { name: string; role?: string;
 }
 
 const styles = StyleSheet.create({
-  card: { width: PERSON_SIZE + spacing.md, alignItems: 'center', gap: spacing.xs },
+  card: { width: PERSON_CARD_WIDTH, alignItems: 'center', gap: spacing.xs },
   center: { textAlign: 'center' },
 });
