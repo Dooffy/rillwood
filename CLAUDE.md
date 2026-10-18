@@ -257,7 +257,7 @@ eas build -p android --profile production --local --output app.aab  # → Play C
 - TypeScript strict; no `any` in api.ts DTOs.
 - No tokens in URLs, logs or persisted paths. No `console.*` in committed code.
 - Relative file paths only; resolve against `Paths.document` at runtime.
-- Every tappable card is `Pressable` (future TV focus).
+- Every tappable card is `Pressable` (future TV focus). Cards in lists take the `item` + one stable `onOpen` / `onMenu` per list (`ItemHandlers`, `src/components/Card.tsx`), not a closure per card - the memoised card then skips re-renders.
 - Async submit locks the whole form, not just the button: `<Page form busy={loading}>` (blocks every touch, dismisses the keyboard), fields `editable={!loading}`, the button `loading`, and a ref guard against a double submit in one frame. Results that land after the screen is left must not navigate or set state.
 - Hyphens, not em dashes, in UI copy and docs.
 - Run `npm run check` in `app/` (lint, typecheck, format, tests) before calling a task done; CI also runs doctor, bundle and licence checks. New logic ships with tests; bug fixes ship with a regression test.

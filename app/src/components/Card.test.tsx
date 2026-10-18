@@ -2,6 +2,8 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import type { BaseItemDto } from '@/api';
+
 import { CardPlaceholder, cardLabel, LANDSCAPE_WIDTH, LandscapeCard, POSTER_WIDTH, PosterCard } from './Card';
 
 describe('cardLabel', () => {
@@ -104,5 +106,29 @@ describe('CardPlaceholder', () => {
   it('fills its parent for the hero', async () => {
     await render(<CardPlaceholder shape="landscape" width="100%" />);
     expect(screen.getByTestId('card-placeholder', { includeHiddenElements: true })).toHaveStyle({ width: '100%' });
+  });
+});
+
+describe('item handlers', () => {
+  it("passes the card's item to onOpen and onMenu (one stable handler per list)", async () => {
+    const item: BaseItemDto = { Id: 'i1', Name: 'Dune', Type: 'Movie' };
+    const onOpen = jest.fn();
+    const onMenu = jest.fn();
+    await render(<PosterCard title="Dune" item={item} onOpen={onOpen} onMenu={onMenu} />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Dune' }));
+    await fireEvent(screen.getByRole('button', { name: 'Dune' }), 'longPress');
+    expect(onOpen).toHaveBeenCalledWith(item);
+    expect(onMenu).toHaveBeenCalledWith(item);
+  });
+
+  it('onPress / onLongPress win over the item handlers', async () => {
+    const onPress = jest.fn();
+    const onOpen = jest.fn();
+    await render(
+      <PosterCard title="Dune" item={{ Id: 'i1', Name: 'Dune', Type: 'Movie' }} onOpen={onOpen} onPress={onPress} />,
+    );
+    await fireEvent.press(screen.getByRole('button', { name: 'Dune' }));
+    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onOpen).not.toHaveBeenCalled();
   });
 });

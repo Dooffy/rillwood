@@ -53,12 +53,23 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
   const menu = useItemMenu();
   const offline = useHeldOffline(list.items.length === 0 && isConnectionError(list.error), list.loading);
 
+  // One handler pair for every card (memoised cards keep their props).
+  const openCard = useCallback(
+    (item: BaseItemDto) => {
+      onOpen?.(item);
+      openItem(item);
+    },
+    [onOpen],
+  );
+  const menuCard = useCallback(
+    (item: BaseItemDto) => {
+      onOpen?.(item);
+      menu(item);
+    },
+    [onOpen, menu],
+  );
   const renderItem = useCallback(
     ({ item }: { item: BaseItemDto }) => {
-      const open = () => {
-        onOpen?.(item);
-        openItem(item);
-      };
       if (posters) {
         return (
           <PosterCard
@@ -66,11 +77,9 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
             {...playback(item)}
             width={cardWidth}
             image={image(posterImage(item), cardWidth)}
-            onPress={open}
-            onLongPress={() => {
-              onOpen?.(item);
-              menu(item);
-            }}
+            item={item}
+            onOpen={openCard}
+            onMenu={menuCard}
           />
         );
       }
@@ -80,15 +89,13 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
           {...playback(item)}
           runtimeSeconds={item.RunTimeTicks ? ticksToSeconds(item.RunTimeTicks) : undefined}
           image={image(landscapeImage(item), EPISODE_ROW_STILL)}
-          onPress={open}
-          onLongPress={() => {
-            onOpen?.(item);
-            menu(item);
-          }}
+          item={item}
+          onOpen={openCard}
+          onMenu={menuCard}
         />
       );
     },
-    [posters, cardWidth, image, onOpen, menu],
+    [posters, cardWidth, image, openCard, menuCard],
   );
 
   // Out of reach with nothing loaded: the offline card alone at the top, nothing to scroll (held while a retry runs).

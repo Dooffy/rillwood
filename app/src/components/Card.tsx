@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { memo } from 'react';
+
+import type { BaseItemDto } from '@/api';
 import { Pressable, StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
 
 import { spokenRemaining } from '@/format';
@@ -20,10 +22,34 @@ export type CardProps = {
   remainingSeconds?: number;
   played?: boolean;
   width?: number;
-  onPress: () => void;
+  onPress?: () => void;
   /** Long press (VoiceOver: the "More" action): the item's menu. */
   onLongPress?: () => void;
+} & ItemHandlers;
+
+/**
+ * The item a card stands for and handlers that take it, instead of `onPress` / `onLongPress` closures: one stable
+ * handler for every card of a list, so the memoised card skips re-rendering when its list renders.
+ */
+export type ItemHandlers = {
+  item?: BaseItemDto;
+  onOpen?: (item: BaseItemDto) => void;
+  onMenu?: (item: BaseItemDto) => void;
 };
+
+/** `onPress` / `onLongPress`, else the item handlers bound to the item. */
+export function itemPress({
+  item,
+  onOpen,
+  onMenu,
+  onPress,
+  onLongPress,
+}: ItemHandlers & Pick<CardProps, 'onPress' | 'onLongPress'>) {
+  return {
+    press: onPress ?? (item && onOpen ? () => onOpen(item) : undefined),
+    longPress: onLongPress ?? (item && onMenu ? () => onMenu(item) : undefined),
+  };
+}
 
 /** "Dune, 2021, 40% watched, 32 minutes left" - what VoiceOver reads for a card. */
 export function cardLabel({ title, subtitle, progress, remainingSeconds, played }: CardProps): string {
@@ -60,13 +86,14 @@ const MediaCard = memo(function MediaCard({
   width,
   ...props
 }: CardProps & { aspectRatio: number; width: number }) {
-  const { title, subtitle, image, progress, remainingSeconds, played, onPress, onLongPress } = props;
+  const { title, subtitle, image, progress, remainingSeconds, played } = props;
+  const { press, longPress } = itemPress(props);
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={cardLabel(props)}
-      {...longPressProps(onLongPress)}
-      onPress={onPress}
+      {...longPressProps(longPress)}
+      onPress={press}
       style={({ pressed }) => [styles.card, { width }, pressed && styles.pressed]}
     >
       <Artwork
