@@ -1,0 +1,15 @@
+{
+  "name": "rillwood-web",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro build"
+  },
+  "dependencies": {
+    "astro": "7.3.5"
+  }
+}
