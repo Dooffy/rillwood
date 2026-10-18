@@ -154,7 +154,10 @@ Design + sources: `docs/research/background-downloads.md`.
   - [x] Detail + series: landscape hero strip (16:9, at most 60% of the window height, title left), body in one column, Play from Start a round button in the row
   - [x] Player + Settings: player on tablets has wider margins, bigger centre buttons and the tracks menu under its button (no Cancel, a tap outside closes); Settings in landscape is a split view (list left, the page a row opens on the right, the active account's details first; Subtitles → Size goes over it with a back button). Portrait keeps one column. Tested in Jest only
   - [x] `supportsTablet` on + tablets rotate everywhere (`src/orientation.ts`; phones stay upright, player excepted)
-- [ ] Splash light + dark variant (black only today; icon + splash mark done in M2), screenshots, privacy policy ("connects to your own server")
+- [ ] Splash, screenshots, privacy policy
+  - [x] Splash light + dark: white with the black pebble mark / black with the white one (`expo-splash-screen` `dark`), follows the system appearance. Native rebuild - device check pending
+  - [ ] Screenshots
+  - [ ] Privacy policy ("connects to your own server")
 - [ ] `/update-modules`: vendored modules, native binaries + Expo packages current, no blockers
 - [ ] CI native + playback checks (skill to create later):
   - Android native build + vendored Kotlin unit tests on `ubuntu-latest`, path-filtered to `app/modules/**` + native config
