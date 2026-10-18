@@ -4,7 +4,7 @@
 // The header ↓ downloads the selected season. ✓ / ♥ mark the whole show; the season menu marks a season. Data rules:
 // docs/context/api.md (Series data), downloads: docs/context/downloads.md.
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import type { BaseItemDto, ItemsResult } from '@/api';
@@ -186,11 +186,9 @@ function SeriesPlay({
 
 /** One season's episodes as horizontal cards, scrolled to the next episode; ⋯ / long press open its actions. */
 function EpisodeCards({ seriesId, seasonId, startAt }: { seriesId: string; seasonId: string; startAt?: string }) {
-  const image = useImage();
   const { width } = useWindowDimensions();
   const request = episodes(seriesId, seasonId);
   const { data, error, refresh } = useFetch<ItemsResult>(request.path, { query: request.query });
-  const menu = useItemMenu();
 
   if (!data) {
     return error ? (
@@ -237,29 +235,34 @@ function EpisodeCards({ seriesId, seasonId, startAt }: { seriesId: string; seaso
         offset: (EPISODE_CARD_WIDTH + CARD_GAP) * index,
         index,
       })}
-      renderItem={({ item: ep }) => {
-        const state = playback(ep);
-        return (
-          <EpisodeCard
-            episode={ep.IndexNumber}
-            title={ep.Name}
-            overview={ep.Overview}
-            image={image(landscapeImage(ep), EPISODE_CARD_WIDTH)}
-            progress={state.progress}
-            remainingSeconds={state.remainingSeconds}
-            runtimeSeconds={ep.RunTimeTicks ? ticksToSeconds(ep.RunTimeTicks) : undefined}
-            played={state.played}
-            favourite={ep.UserData?.IsFavorite === true}
-            overviewLines={withOverviews}
-            onPress={() => openItem(ep)}
-            onPlay={() => openPlayer(ep, state.resumeSeconds ?? 0)}
-            onMore={() => menu(ep, episodeLine(ep))}
-          />
-        );
-      }}
+      renderItem={({ item: ep }) => <SeasonEpisode ep={ep} withOverviews={withOverviews} />}
     />
   );
 }
+
+/** One episode card, memoised on the episode: the season list re-rendering doesn't redraw every card. */
+const SeasonEpisode = memo(function SeasonEpisode({ ep, withOverviews }: { ep: BaseItemDto; withOverviews: boolean }) {
+  const image = useImage();
+  const menu = useItemMenu();
+  const state = playback(ep);
+  return (
+    <EpisodeCard
+      episode={ep.IndexNumber}
+      title={ep.Name}
+      overview={ep.Overview}
+      image={image(landscapeImage(ep), EPISODE_CARD_WIDTH)}
+      progress={state.progress}
+      remainingSeconds={state.remainingSeconds}
+      runtimeSeconds={ep.RunTimeTicks ? ticksToSeconds(ep.RunTimeTicks) : undefined}
+      played={state.played}
+      favourite={ep.UserData?.IsFavorite === true}
+      overviewLines={withOverviews}
+      onPress={() => openItem(ep)}
+      onPlay={() => openPlayer(ep, state.resumeSeconds ?? 0)}
+      onMore={() => menu(ep, episodeLine(ep))}
+    />
+  );
+});
 
 function CardGap() {
   return <View style={styles.gap} />;

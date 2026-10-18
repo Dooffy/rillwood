@@ -25,8 +25,9 @@ export function MoreLikeThis({ id }: { id: string }) {
           {...cardTitles(item)}
           played={item.UserData?.Played}
           image={image(posterImage(item), POSTER_WIDTH)}
-          onPress={() => openItem(item)}
-          onLongPress={() => menu(item)}
+          item={item}
+          onOpen={openItem}
+          onMenu={menu}
         />
       ))}
     </Row>

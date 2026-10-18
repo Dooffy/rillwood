@@ -145,21 +145,30 @@ export default function Library() {
     const now = searchTerm(text);
     if (accountId && now) addRecentSearch(accountId, now);
   };
-  const open = (item: BaseItemDto) => {
-    remember();
-    openItem(item);
-  };
+  // Stable (per search term): the memoised cards skip re-rendering while the screen does.
+  const open = useCallback(
+    (item: BaseItemDto) => {
+      remember();
+      openItem(item);
+    },
+    [remember],
+  );
+  const onMenu = useCallback(
+    (item: BaseItemDto) => {
+      remember();
+      menu(item);
+    },
+    [remember, menu],
+  );
   const poster = (item: BaseItemDto) => (
     <PosterCard
       key={item.Id}
       {...cardTitles(item)}
       {...playback(item)}
       image={image(posterImage(item), POSTER_WIDTH)}
-      onPress={() => open(item)}
-      onLongPress={() => {
-        remember();
-        menu(item);
-      }}
+      item={item}
+      onOpen={open}
+      onMenu={onMenu}
     />
   );
 
@@ -233,11 +242,9 @@ export default function Library() {
                   {...cardTitles(ep)}
                   {...playback(ep)}
                   image={image(landscapeImage(ep), LANDSCAPE_WIDTH)}
-                  onPress={() => open(ep)}
-                  onLongPress={() => {
-                    remember();
-                    menu(ep);
-                  }}
+                  item={ep}
+                  onOpen={open}
+                  onMenu={onMenu}
                 />
               ))}
             </Row>

@@ -145,6 +145,7 @@ Design + sources: `docs/research/background-downloads.md`.
   - [x] Licences off the launch path (JSON read on first use) + virtualised Licences list (SectionList, memoised rows)
   - [x] Accessibility fixes: progress bars inside cards hidden from screen readers (the standalone one says "Watched"), font scaling capped on badges / avatar initials / step numbers + chip and step rows wrap, row titles stay headers beside See All, Watched / Favourite toggles read their state once, labels on Cancel / Reset filters / Go to Downloads, Overview expanded state, episode runtime spoken in minutes, action toasts stay 15 s with a screen reader on
   - [x] Lists: virtualised Cast & Crew (100+ people), separators instead of `gap` on paged lists, memoised episode rows, Up Next idle until its last 30 s. Phone backdrops stay at the cover-crop size (needed for the 4:5 hero)
+  - [x] Memoised cards actually skip re-renders: cards and episode rows take the item + one stable `onOpen` / `onMenu` per list (Home, Library, More Like This, paged lists); season episode cards memoised on the episode
 - [x] iPad layout for every screen: adaptive grids, readable-width forms and pages, landscape, split view / Stage Manager sizes
   - [x] Wide breakpoint (`useWide`, 600 pt) + readable widths; `Page` centres its content (forms 480, pages 680)
   - [x] Sign-in flow: Add server / Sign in / Quick Connect / Accounts in the form column under a plain centred title; Welcome splits in landscape (wall left, copy right)

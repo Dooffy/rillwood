@@ -108,8 +108,9 @@ export default function Home() {
       {...playback(item)}
       width={cards.width}
       image={image(landscapeImage(item), cards.width)}
-      onPress={() => openItem(item)}
-      onLongPress={() => menu(item)}
+      item={item}
+      onOpen={openItem}
+      onMenu={menu}
     />
   );
 
@@ -258,8 +259,9 @@ const LatestRow = memo(function LatestRow({ library, countKey, posterCount, post
           played={item.UserData?.Played}
           width={posterWidth}
           image={image(posterImage(item), posterWidth)}
-          onPress={() => openItem(item)}
-          onLongPress={() => menu(item)}
+          item={item}
+          onOpen={openItem}
+          onMenu={menu}
         />
       )}
     />

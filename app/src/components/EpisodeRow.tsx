@@ -6,7 +6,7 @@ import { formatRemaining, spokenRemaining } from '@/format';
 import { pressedOpacity, spacing } from '@/theme';
 
 import { Artwork } from './Artwork';
-import { cardLabel, longPressProps } from './Card';
+import { cardLabel, itemPress, longPressProps, type ItemHandlers } from './Card';
 import { Text } from './Text';
 
 /** Still width in an episode list (points); image URLs are sized from it. */
@@ -23,26 +23,27 @@ export type EpisodeRowProps = {
   progress?: number;
   remainingSeconds?: number;
   played?: boolean;
-  onPress: () => void;
+  onPress?: () => void;
   /** Long press (VoiceOver: "More"): the item's menu. */
   onLongPress?: () => void;
-};
+} & ItemHandlers;
 
 /** Episode in a vertical list (Library, Episodes type): 16:9 still with progress, show, episode line, runtime. */
 // Memoised: rows of a long paged list (`PagedList`) skip re-rendering when the list renders.
 export const EpisodeRow = memo(function EpisodeRow(props: EpisodeRowProps) {
-  const { title, subtitle, runtimeSeconds, image, progress, remainingSeconds, played, onPress, onLongPress } = props;
+  const { title, subtitle, runtimeSeconds, image, progress, remainingSeconds, played } = props;
+  const { press, longPress } = itemPress(props);
   const runtime = runtimeSeconds !== undefined ? formatRemaining(runtimeSeconds) : undefined;
   const spokenRuntime = runtimeSeconds !== undefined ? spokenRemaining(runtimeSeconds) : undefined;
   return (
     <Pressable
       accessibilityRole="button"
       // The runtime too, as on screen ("45m" may be read as metres).
-      accessibilityLabel={[cardLabel({ title, subtitle, progress, remainingSeconds, played, onPress }), spokenRuntime]
+      accessibilityLabel={[cardLabel({ title, subtitle, progress, remainingSeconds, played }), spokenRuntime]
         .filter(Boolean)
         .join(', ')}
-      {...longPressProps(onLongPress)}
-      onPress={onPress}
+      {...longPressProps(longPress)}
+      onPress={press}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
       <View style={styles.still}>
