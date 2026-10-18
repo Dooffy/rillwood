@@ -12,6 +12,7 @@ import { ToastProvider } from '@/components/Toast';
 import { initConnection } from '@/connection';
 import { initDownloads } from '@/downloads';
 import { page, plainPage, readablePage, SignedOutRedirect, tabsTitle } from '@/navigation';
+import { licenceById } from '@/licences';
 import { initOffload } from '@/offload';
 import { lockAppOrientation } from '@/orientation';
 import { pickerTitle } from '@/pickers';
@@ -97,6 +98,14 @@ export default function RootLayout() {
             <Stack.Screen name="download-storage" options={pageOf(SETTINGS_TITLES.storage)} />
             {/* An option's checkmark list: a plain title, as iOS Settings subscreens. */}
             <Stack.Screen name="option/[key]" options={({ route }) => plainPage(pickerTitle(route.params), c)} />
+            <Stack.Screen name="licences" options={pageOf(SETTINGS_TITLES.licences)} />
+            {/* One licence: a plain title, package names can be long. */}
+            <Stack.Screen
+              name="licence/[id]"
+              options={({ route }) =>
+                plainPage(licenceById((route.params as { id?: string } | undefined)?.id)?.name ?? '', c)
+              }
+            />
             <Stack.Screen
               name="player"
               options={{

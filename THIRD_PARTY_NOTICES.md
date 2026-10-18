@@ -1,6 +1,6 @@
 # Third-party notices
 
-Third-party code and binaries bundled with Rillwood that aren't npm dependencies. npm licences are checked by `npm run licenses` in `app/`.
+Third-party code and binaries bundled with Rillwood that aren't npm dependencies. npm licences are checked by `npm run licenses` in `app/`. The app lists all of these in Settings → Licences - keep the native list in `app/scripts/generate-licences.mjs` in step with this file.
 
 ## Vendored source
 

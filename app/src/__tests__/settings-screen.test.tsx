@@ -118,6 +118,12 @@ describe('Settings screen', () => {
     expect(router.push).toHaveBeenCalledWith('/download-storage');
   });
 
+  it('opens Licences', async () => {
+    await renderSettings();
+    await fireEvent.press(screen.getByRole('button', { name: 'Licences' }));
+    expect(router.push).toHaveBeenCalledWith('/licences');
+  });
+
   it('opens the auto-remove page', async () => {
     setOffloadDays(30);
     await renderSettings();
@@ -166,6 +172,18 @@ describe('Settings screen', () => {
       await fireEvent.press(row('Appearance'));
       expect(screen.getByRole('header', { name: 'Appearance' })).toBeOnTheScreen();
       expect(screen.queryByRole('button', { name: /^Back to/ })).toBeNull();
+    });
+
+    it('Licences opens in the pane, an entry over it', async () => {
+      await renderSettings();
+      await fireEvent.press(row('Licences'));
+      expect(screen.getByRole('header', { name: 'Licences' })).toBeOnTheScreen();
+      await fireEvent.press(row('Rillwood'));
+      expect(router.push).not.toHaveBeenCalled();
+      expect(screen.getByRole('header', { name: 'Rillwood' })).toBeOnTheScreen();
+      expect(screen.getByText(/^Additional permission under GNU GPL/)).toBeOnTheScreen();
+      await fireEvent.press(row('Back to Licences'));
+      expect(screen.getByRole('header', { name: 'Licences' })).toBeOnTheScreen();
     });
 
     it('(i) on another account shows its details', async () => {

@@ -1,21 +1,27 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The pages Settings opens (an account, Subtitles, an option's list, Storage limit). Phones push their screen; the
-// tablet split view (`SettingsSplit`) shows them beside the list instead, through this context.
+// The pages Settings opens (an account, Subtitles, an option's list, Storage limit, Licences). Phones push their
+// screen; the tablet split view (`SettingsSplit`) shows them beside the list instead, through this context.
 import { router } from 'expo-router';
 import { createContext, useContext } from 'react';
 
 import type { PickerKey } from '@/pickers';
 
 export type SettingsLink =
-  { page: 'account'; id: string } | { page: 'subtitles' } | { page: 'option'; key: PickerKey } | { page: 'storage' };
+  | { page: 'account'; id: string }
+  | { page: 'subtitles' }
+  | { page: 'option'; key: PickerKey }
+  | { page: 'storage' }
+  | { page: 'licences' }
+  | { page: 'licence'; id: number };
 
 /** Headings of the pages with a fixed title (screen header on phones, pane heading on tablets). */
-export const SETTINGS_TITLES = { subtitles: 'Subtitles', storage: 'Storage limit' } as const;
+export const SETTINGS_TITLES = { subtitles: 'Subtitles', storage: 'Storage limit', licences: 'Licences' } as const;
 
 /** One string per page, to compare links. */
 export function linkKey(link: SettingsLink): string {
   if (link.page === 'account') return `account:${link.id}`;
   if (link.page === 'option') return `option:${link.key}`;
+  if (link.page === 'licence') return `licence:${link.id}`;
   return link.page;
 }
 
@@ -23,7 +29,9 @@ export function linkKey(link: SettingsLink): string {
 function push(link: SettingsLink) {
   if (link.page === 'account') router.push({ pathname: '/account', params: { id: link.id } });
   else if (link.page === 'option') router.push({ pathname: '/option/[key]', params: { key: link.key } });
-  else router.push(link.page === 'subtitles' ? '/subtitles' : '/download-storage');
+  else if (link.page === 'licence') router.push({ pathname: '/licence/[id]', params: { id: String(link.id) } });
+  else
+    router.push(({ subtitles: '/subtitles', storage: '/download-storage', licences: '/licences' } as const)[link.page]);
 }
 
 type Pane = {

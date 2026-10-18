@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Settings subpages, each its own screen on phones (`/subtitles`, `/option/[key]`, `/download-storage`) and the pane
+// Settings subpages, each its own screen on phones (`/subtitles`, `/option/[key]`, `/download-storage`, `/licences`,
+// `/licence/[id]`) and the pane
 // beside Settings on tablets (`SettingsSplit`).
 import { Paths } from 'expo-file-system';
 import { useMemo } from 'react';
@@ -7,6 +8,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { downloadsSize, useDownloadList } from '@/downloads';
 import { formatBytes } from '@/format';
+import { licenceById, licenceSections, type Licence } from '@/licences';
 import { isPickerKey, usePicker, type PickerKey } from '@/pickers';
 import {
   downloadLimitStep,
@@ -17,9 +19,10 @@ import {
 } from '@/settings';
 import { spacing } from '@/theme';
 
-import { ListSection } from './List';
+import { ListRow, ListSection } from './List';
 import { Message } from './Message';
 import { OptionList, OptionRow } from './OptionList';
+import { useSettingsLink } from './SettingsLink';
 import { StepSlider } from './StepSlider';
 import { SubtitlePreview } from './SubtitlePreview';
 import { Text } from './Text';
@@ -105,7 +108,82 @@ export function StorageSettings() {
   );
 }
 
+/** Credit for FFmpeg inside the player binaries (both platforms); changes with the LGPL rebuild (CLAUDE.md §7). */
+const FFMPEG_CREDIT =
+  'This app uses code of FFmpeg (ffmpeg.org) licensed under the GPL-3.0. Its source is at the links of the player libraries above.';
+
+/** Settings → Licences: Rillwood's licence, its native parts on this platform, then every npm package. */
+export function LicencesSettings() {
+  const { app, native, packages } = licenceSections;
+  return (
+    <>
+      <ListSection>
+        <LicenceRow licence={app} />
+      </ListSection>
+      <ListSection title="Native components" footer={FFMPEG_CREDIT}>
+        {native.map((l) => (
+          <LicenceRow key={l.id} licence={l} />
+        ))}
+      </ListSection>
+      <ListSection title="Packages">
+        {packages.map((l) => (
+          <LicenceRow key={l.id} licence={l} />
+        ))}
+      </ListSection>
+    </>
+  );
+}
+
+function LicenceRow({ licence }: { licence: Licence }) {
+  const link = useSettingsLink();
+  const to = { page: 'licence', id: licence.id } as const;
+  return (
+    <ListRow label={licence.name} value={licence.licence} selected={link.selected(to)} onPress={() => link.open(to)} />
+  );
+}
+
+/** One entry of Settings → Licences: its licence, source, packages and full licence texts. */
+export function LicenceSettings({ id }: { id: number }) {
+  const licence = licenceById(id);
+  // A link to an entry this build doesn't have.
+  if (!licence) return <Message fill text="This licence isn't available." />;
+  const { url, note, packages = [], texts } = licence;
+  return (
+    <>
+      <ListSection footer={note}>
+        <ListRow label="Licence" value={licence.licence} />
+      </ListSection>
+      {url && (
+        <Text variant="caption" secondary selectable style={styles.footer}>
+          {`Source: ${url}`}
+        </Text>
+      )}
+      {packages.length > 1 && (
+        <Text variant="caption" secondary selectable style={styles.footer}>
+          {`Packages:\n${packages.join('\n')}`}
+        </Text>
+      )}
+      {texts.length === 0 && (
+        <Text variant="caption" secondary style={styles.footer}>
+          The package ships no licence file.
+        </Text>
+      )}
+      {texts.map((text, i) => (
+        <View key={i} style={styles.licenceText}>
+          {/* A paragraph per Text: one very long Text can stop drawing on Android. */}
+          {text.split(/\n\s*\n/).map((paragraph, j) => (
+            <Text key={j} variant="caption" selectable>
+              {paragraph}
+            </Text>
+          ))}
+        </View>
+      ))}
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
   slider: { paddingTop: spacing.md },
   footer: { paddingHorizontal: spacing.md },
+  licenceText: { gap: spacing.sm, paddingHorizontal: spacing.md, paddingTop: spacing.md },
 });
