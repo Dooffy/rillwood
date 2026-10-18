@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { Page } from '@/components/Page';
-import { LicencesSettings } from '@/components/SettingsPages';
+import { LicencesList } from '@/components/LicencesList';
 
-/** Settings → Licences (tablets in landscape show it beside Settings instead). */
+/** Settings → Licences (tablets in landscape show it beside Settings instead). A list that scrolls itself, no `Page`. */
 export default function Licences() {
-  return (
-    <Page>
-      <LicencesSettings />
-    </Page>
-  );
+  return <LicencesList />;
 }

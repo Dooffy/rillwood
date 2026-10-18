@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Settings subpages, each its own screen on phones (`/subtitles`, `/option/[key]`, `/download-storage`, `/licences`,
-// `/licence/[id]`) and the pane
+// Settings subpages, each its own screen on phones (`/subtitles`, `/option/[key]`, `/download-storage`,
+// `/licence/[id]`; the Licences list is `LicencesList`) and the pane
 // beside Settings on tablets (`SettingsSplit`).
 import { Paths } from 'expo-file-system';
 import { useMemo } from 'react';
@@ -8,7 +8,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { downloadsSize, useDownloadList } from '@/downloads';
 import { formatBytes } from '@/format';
-import { licenceById, licenceSections, type Licence } from '@/licences';
+import { licenceById } from '@/licences';
 import { isPickerKey, usePicker, type PickerKey } from '@/pickers';
 import {
   downloadLimitStep,
@@ -22,7 +22,6 @@ import { spacing } from '@/theme';
 import { ListRow, ListSection } from './List';
 import { Message } from './Message';
 import { OptionList, OptionRow } from './OptionList';
-import { useSettingsLink } from './SettingsLink';
 import { StepSlider } from './StepSlider';
 import { SubtitlePreview } from './SubtitlePreview';
 import { Text } from './Text';
@@ -105,40 +104,6 @@ export function StorageSettings() {
         {`Applies to every account on this phone. Downloads take ${formatBytes(used)} across all accounts, counting files still downloading. A new download doesn't start if it would go over the limit; what's already downloaded stays.`}
       </Text>
     </>
-  );
-}
-
-/** Credit for FFmpeg inside the player binaries (both platforms); changes with the LGPL rebuild (CLAUDE.md §7). */
-const FFMPEG_CREDIT =
-  'This app uses code of FFmpeg (ffmpeg.org) licensed under the GPL-3.0. Its source is at the links of the player libraries above.';
-
-/** Settings → Licences: Rillwood's licence, its native parts on this platform, then every npm package. */
-export function LicencesSettings() {
-  const { app, native, packages } = licenceSections;
-  return (
-    <>
-      <ListSection>
-        <LicenceRow licence={app} />
-      </ListSection>
-      <ListSection title="Native components" footer={FFMPEG_CREDIT}>
-        {native.map((l) => (
-          <LicenceRow key={l.id} licence={l} />
-        ))}
-      </ListSection>
-      <ListSection title="Packages">
-        {packages.map((l) => (
-          <LicenceRow key={l.id} licence={l} />
-        ))}
-      </ListSection>
-    </>
-  );
-}
-
-function LicenceRow({ licence }: { licence: Licence }) {
-  const link = useSettingsLink();
-  const to = { page: 'licence', id: licence.id } as const;
-  return (
-    <ListRow label={licence.name} value={licence.licence} selected={link.selected(to)} onPress={() => link.open(to)} />
   );
 }
 

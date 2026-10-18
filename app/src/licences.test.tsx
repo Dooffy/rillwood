@@ -3,42 +3,58 @@ import { describe, expect, it, jest } from '@jest/globals';
 import { render, screen } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
-import { LicenceSettings, LicencesSettings } from '@/components/SettingsPages';
-import { LICENCES, licenceById, licenceSections } from '@/licences';
+import { LicencesList } from '@/components/LicencesList';
+import { LicenceSettings } from '@/components/SettingsPages';
+import { licenceById, licences, licenceSections } from '@/licences';
 
-jest.mock('./licences.json', () => ({
-  app: { name: 'Rillwood', licence: 'GPL-3.0-or-later', texts: [0] },
-  native: [
-    { name: 'Both', licence: 'MPL-2.0', url: 'https://example.com/both', texts: [1] },
-    { name: 'iOS only', licence: 'GPL-3.0', platform: 'ios', texts: [0] },
-    { name: 'Android only', licence: 'GPL-3.0', platform: 'android', texts: [0] },
-  ],
-  packages: [
-    {
-      name: 'org/mono',
-      licence: 'MIT',
-      url: 'https://example.com/mono',
-      packages: ['a 1.0.0', 'b 2.0.0'],
-      texts: [2],
-    },
-    { name: 'bare', licence: 'ISC', packages: ['bare 1.0.0'], texts: [] },
-  ],
-  texts: ['GPL text\n\nSecond paragraph', 'MPL text', 'MIT text'],
-}));
+let mockDataReads = 0;
+jest.mock('./licences.json', () => {
+  mockDataReads++;
+  return {
+    app: { name: 'Rillwood', licence: 'GPL-3.0-or-later', texts: [0] },
+    native: [
+      { name: 'Both', licence: 'MPL-2.0', url: 'https://example.com/both', texts: [1] },
+      { name: 'iOS only', licence: 'GPL-3.0', platform: 'ios', texts: [0] },
+      { name: 'Android only', licence: 'GPL-3.0', platform: 'android', texts: [0] },
+    ],
+    packages: [
+      {
+        name: 'org/mono',
+        licence: 'MIT',
+        url: 'https://example.com/mono',
+        packages: ['a 1.0.0', 'b 2.0.0'],
+        texts: [2],
+      },
+      { name: 'bare', licence: 'ISC', packages: ['bare 1.0.0'], texts: [] },
+    ],
+    texts: ['GPL text\n\nSecond paragraph', 'MPL text', 'MIT text'],
+  };
+});
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 
 describe('licences', () => {
+  it('reads the data on first use, not on import', () => {
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- isolateModules needs a sync require
+      const fresh: typeof import('@/licences') = require('@/licences');
+      const before = mockDataReads;
+      fresh.licences();
+      fresh.licenceSections();
+      expect(mockDataReads).toBe(before + 1);
+    });
+  });
+
   it('numbers every entry and resolves its texts', () => {
-    expect(LICENCES.map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5]);
-    expect(LICENCES[0].texts).toEqual(['GPL text\n\nSecond paragraph']);
-    expect(LICENCES[4].texts).toEqual(['MIT text']);
+    expect(licences().map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(licences()[0].texts).toEqual(['GPL text\n\nSecond paragraph']);
+    expect(licences()[4].texts).toEqual(['MIT text']);
   });
 
   it("lists only this platform's native parts", () => {
     expect(Platform.OS).toBe('ios');
-    expect(licenceSections.native.map((l) => l.name)).toEqual(['Both', 'iOS only']);
-    expect(licenceSections.packages.map((l) => l.name)).toEqual(['org/mono', 'bare']);
+    expect(licenceSections().native.map((l) => l.name)).toEqual(['Both', 'iOS only']);
+    expect(licenceSections().packages.map((l) => l.name)).toEqual(['org/mono', 'bare']);
   });
 
   it('finds an entry by a route param', () => {
@@ -53,7 +69,7 @@ describe('licences', () => {
 
 describe('Licences page', () => {
   it('lists Rillwood, the native parts with the FFmpeg credit, then the packages', async () => {
-    await render(<LicencesSettings />);
+    await render(<LicencesList />);
     expect(screen.getByRole('button', { name: 'Rillwood' })).toHaveAccessibilityValue({ text: 'GPL-3.0-or-later' });
     expect(screen.getByRole('button', { name: 'iOS only' })).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Android only' })).toBeNull();

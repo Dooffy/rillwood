@@ -14,7 +14,8 @@ import { AccountDetails } from './AccountDetails';
 import { IconButton } from './IconButton';
 import { pageColumn, pageContent } from './Page';
 import { linkKey, SETTINGS_TITLES, SettingsPaneContext, type SettingsLink } from './SettingsLink';
-import { LicenceSettings, LicencesSettings, OptionSettings, StorageSettings, SubtitlesSettings } from './SettingsPages';
+import { LicencesList } from './LicencesList';
+import { LicenceSettings, OptionSettings, StorageSettings, SubtitlesSettings } from './SettingsPages';
 import { Text } from './Text';
 
 /** Width of the list side (iPad Settings). */
@@ -32,7 +33,6 @@ function PaneContent({ link }: { link: SettingsLink }) {
   if (link.page === 'account') return <AccountDetails id={link.id} onBack={() => {}} />;
   if (link.page === 'subtitles') return <SubtitlesSettings />;
   if (link.page === 'option') return <OptionSettings option={link.key} />;
-  if (link.page === 'licences') return <LicencesSettings />;
   if (link.page === 'licence') return <LicenceSettings id={link.id} />;
   return <StorageSettings />;
 }
@@ -50,6 +50,22 @@ export function SettingsSplit({ children }: { children: ReactNode }) {
   const stack = opened.length > 0 && !gone ? opened : fallback;
   const shown = stack.at(-1);
   const heading = shown && title(shown);
+  const headingRow = (heading !== undefined || stack.length > 1) && (
+    <View style={styles.heading}>
+      {stack.length > 1 && (
+        <IconButton
+          icon={{ ios: 'chevron.left', android: 'arrow_back' }}
+          label={`Back to ${title(stack[stack.length - 2]) ?? 'Account'}`}
+          onPress={() => setOpened(stack.slice(0, -1))}
+        />
+      )}
+      {heading !== undefined && (
+        <Text variant="largeTitle" accessibilityRole="header" numberOfLines={1} style={styles.title}>
+          {heading}
+        </Text>
+      )}
+    </View>
+  );
 
   return (
     <View style={styles.root}>
@@ -66,33 +82,25 @@ export function SettingsSplit({ children }: { children: ReactNode }) {
         </ScrollView>
       </SettingsPaneContext.Provider>
       <SettingsPaneContext.Provider value={{ open: (link) => setOpened([...stack, link]) }}>
-        {shown && (
-          <ScrollView
-            // A new page starts at the top.
-            key={stack.map(linkKey).join('/')}
-            {...scrollList}
-            contentInsetAdjustmentBehavior="automatic"
-            style={styles.pane}
-            contentContainerStyle={[pageContent, pageColumn]}
-          >
-            {(heading !== undefined || stack.length > 1) && (
-              <View style={styles.heading}>
-                {stack.length > 1 && (
-                  <IconButton
-                    icon={{ ios: 'chevron.left', android: 'arrow_back' }}
-                    label={`Back to ${title(stack[stack.length - 2]) ?? 'Account'}`}
-                    onPress={() => setOpened(stack.slice(0, -1))}
-                  />
-                )}
-                {heading !== undefined && (
-                  <Text variant="largeTitle" accessibilityRole="header" numberOfLines={1} style={styles.title}>
-                    {heading}
-                  </Text>
-                )}
-              </View>
-            )}
-            <PaneContent link={shown} />
-          </ScrollView>
+        {shown?.page === 'licences' ? (
+          // A list that scrolls itself (virtualised): the heading rides on top of it.
+          <View key={stack.map(linkKey).join('/')} style={styles.pane}>
+            <LicencesList header={headingRow} />
+          </View>
+        ) : (
+          shown && (
+            <ScrollView
+              // A new page starts at the top.
+              key={stack.map(linkKey).join('/')}
+              {...scrollList}
+              contentInsetAdjustmentBehavior="automatic"
+              style={styles.pane}
+              contentContainerStyle={[pageContent, pageColumn]}
+            >
+              {headingRow}
+              <PaneContent link={shown} />
+            </ScrollView>
+          )
         )}
       </SettingsPaneContext.Provider>
     </View>

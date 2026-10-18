@@ -142,6 +142,7 @@ Design + sources: `docs/research/background-downloads.md`.
   - [x] Image cache: no Clear cache button - Android (Glide) keeps the latest 250 MB, iOS capped at 500 MB (`Image.configureCache`); OS may purge both. Subtitle preview text English only until localisation
   - [x] Licences screen: Settings → About → Licences - Rillwood (GPL text + App Store permission), native parts on this platform (mpv module, MPVKit / libmpv, WorkManager, Noto fonts) with the FFmpeg credit line, every production npm package grouped by repository; an entry shows its source, packages and full licence text. Data from `scripts/generate-licences.mjs` on postinstall (`src/licences.json`, gitignored). Add the source repository link to the Rillwood entry once the repo is public
 - [ ] Perf (FlashList if FlatList stutters, image sizes, cold start <2s), accessibility pass
+  - [x] Licences off the launch path (JSON read on first use) + virtualised Licences list (SectionList, memoised rows)
 - [x] iPad layout for every screen: adaptive grids, readable-width forms and pages, landscape, split view / Stage Manager sizes
   - [x] Wide breakpoint (`useWide`, 600 pt) + readable widths; `Page` centres its content (forms 480, pages 680)
   - [x] Sign-in flow: Add server / Sign in / Quick Connect / Accounts in the form column under a plain centred title; Welcome splits in landscape (wall left, copy right)
