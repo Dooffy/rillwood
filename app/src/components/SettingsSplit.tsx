@@ -5,6 +5,7 @@
 import { useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { licenceById } from '@/licences';
 import { PICKERS } from '@/pickers';
 import { useSession } from '@/session';
 import { scrollList, spacing, useColors } from '@/theme';
@@ -13,7 +14,7 @@ import { AccountDetails } from './AccountDetails';
 import { IconButton } from './IconButton';
 import { pageColumn, pageContent } from './Page';
 import { linkKey, SETTINGS_TITLES, SettingsPaneContext, type SettingsLink } from './SettingsLink';
-import { OptionSettings, StorageSettings, SubtitlesSettings } from './SettingsPages';
+import { LicenceSettings, LicencesSettings, OptionSettings, StorageSettings, SubtitlesSettings } from './SettingsPages';
 import { Text } from './Text';
 
 /** Width of the list side (iPad Settings). */
@@ -22,13 +23,17 @@ const LIST_WIDTH = 380;
 /** The pane's heading; the account page has its profile on top instead. */
 function title(link: SettingsLink): string | undefined {
   if (link.page === 'account') return undefined;
-  return link.page === 'option' ? PICKERS[link.key].title : SETTINGS_TITLES[link.page];
+  if (link.page === 'option') return PICKERS[link.key].title;
+  if (link.page === 'licence') return licenceById(link.id)?.name;
+  return SETTINGS_TITLES[link.page];
 }
 
 function PaneContent({ link }: { link: SettingsLink }) {
   if (link.page === 'account') return <AccountDetails id={link.id} onBack={() => {}} />;
   if (link.page === 'subtitles') return <SubtitlesSettings />;
   if (link.page === 'option') return <OptionSettings option={link.key} />;
+  if (link.page === 'licences') return <LicencesSettings />;
+  if (link.page === 'licence') return <LicenceSettings id={link.id} />;
   return <StorageSettings />;
 }
 

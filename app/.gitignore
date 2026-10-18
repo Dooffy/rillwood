@@ -47,3 +47,6 @@ coverage/
 
 # Gradle output of local Expo modules
 modules/*/android/build/
+
+# Settings → Licences data, written on postinstall (scripts/generate-licences.mjs)
+src/licences.json

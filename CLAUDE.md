@@ -124,6 +124,7 @@ src/app/                 expo-router
   show-downloads/[id].tsx  a show's downloaded episodes by season (from its Downloads row)
   option/[key].tsx       one option's checkmark list (appearance, subtitle options, download network), preview on top for subtitles
   download-storage.tsx   Settings → Storage limit: step slider for the downloads' space limit
+  licences.tsx, licence/[id].tsx  Settings → Licences: the list, one entry (source, packages, full texts)
 src/theme.ts             design tokens
 src/format.ts            display formatting (time left, clock, subtitle timing, file size)
 src/api.ts               fetch client + endpoints + DTO types
@@ -153,6 +154,7 @@ src/downloadList.ts      Downloads tab (pure): one list per account (a row per m
 src/notificationPermission.ts  Android 13+: notification permission asked once, when the first download starts
 src/sync.ts              offline progress: queue (reports that missed the server), replay for the active account, saved UserData pull
 src/offload.ts           auto-remove: timer per download + watched cooldown, expiry labels, cleanup after every sync run, player hold
+src/licences.ts          Settings → Licences data (`src/licences.json`, written on install by `scripts/generate-licences.mjs`)
 src/settings.ts          user settings in kv-store (appearance, subtitle size + style, video zoom, download network + storage limit, auto-remove days + watched cooldown)
 src/pickers.ts           Settings options that open a checkmark list: key → title, choices, get / set
 src/player/Player.tsx    PlayerEngine interface + re-export of active engine
@@ -160,7 +162,7 @@ src/player/mpv.tsx       mpv adapter
 src/player/controls.ts   player controls logic (pure): seek clamp, pull-to-close threshold, scrubber maths, zoom (pinch, fit inset)
 src/player/progress.ts   position + duration store outside React state (only the controls re-render)
 src/player/useReporting.ts  Sessions/Playing, Progress (10 s, pause, seek, track change, background), Stopped + refetch; reports carry the tracks
-src/components/          TabsSidebar (+ useTabContentWidth), AccountList (AccountsSection: Settings + saved accounts), Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List (+ Checkmark, Swatch), StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message (+ LoadError, Offline, Empty), DetailHero (+ useHeroLayout), DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing (+ AnimatedProgressRing), SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing, DownloadButton, DownloadRow (+ ShowDownloadRow, DownloadRowGap), DownloadActions (useDownloadActions), OffloadToast, SwipeToDelete, StorageBar, MediaRow, PlayerControls (+ PlayerBottom, PlayerScrubber), Glass, TracksMenu, TimingSlider, StepSlider, UpNext, SubtitlePreview, OptionList (+ OptionRow), SettingsLink (useSettingsLink), SettingsSplit, SettingsPages (SubtitlesSettings, OptionSettings, StorageSettings), AccountDetails, ItemMenu (+ ItemMenuProvider), Skeleton (CardRowPlaceholder, DetailPlaceholder, EpisodeCardsPlaceholder, EpisodeRowsPlaceholder, PosterGridPlaceholder, PosterRowsPlaceholder)
+src/components/          TabsSidebar (+ useTabContentWidth), AccountList (AccountsSection: Settings + saved accounts), Avatar, Button, IconButton, Text, TextField, Toast, Spinner, Screen, Page, List (+ Checkmark, Swatch), StepPills, ServerHelp, LogoMark, Segmented, Card (PosterCard, LandscapeCard, CardPlaceholder), Hero, Chips, PersonCard, Message (+ LoadError, Offline, Empty), DetailHero (+ useHeroLayout), DetailHeader, DetailActions, Overview, CastRow, MoreLikeThis, EpisodeCard, ActionSheet, SeasonMenu, MenuButton, ProgressRing (+ AnimatedProgressRing), SearchField, Chip, FilterSheet (+ FilterButton), FilterChips, PagedList, EpisodeRow, Artwork, Row, ProgressBar, DownloadRing, DownloadButton, DownloadRow (+ ShowDownloadRow, DownloadRowGap), DownloadActions (useDownloadActions), OffloadToast, SwipeToDelete, StorageBar, MediaRow, PlayerControls (+ PlayerBottom, PlayerScrubber), Glass, TracksMenu, TimingSlider, StepSlider, UpNext, SubtitlePreview, OptionList (+ OptionRow), SettingsLink (useSettingsLink), SettingsSplit, SettingsPages (SubtitlesSettings, OptionSettings, StorageSettings, LicencesSettings, LicenceSettings), AccountDetails, ItemMenu (+ ItemMenuProvider), Skeleton (CardRowPlaceholder, DetailPlaceholder, EpisodeCardsPlaceholder, EpisodeRowsPlaceholder, PosterGridPlaceholder, PosterRowsPlaceholder)
 modules/mpv/             vendored native module (+ UPSTREAM.md: upstream repo + commit)
 modules/downloads/       own native background downloader (iOS + Android)
 ```
@@ -206,7 +208,8 @@ Keep non-route code out of `src/app/`. `app/` and `web/` are independent project
 - **Player binaries:** the MVP uses the current prebuilt GPL builds (MPVKit fork on iOS, `dev.jdtech.mpv:libmpv` on Android; flags in `modules/mpv/UPSTREAM.md`). Post-MVP: rebuild **without** `enable-gpl` / `make gpl`, no `--enable-nonfree`, no libx264 / libsmbclient; dynamic framework on iOS (§11). Record exact binary provenance and publish build scripts / source per release.
 - **Never add other GPL-only third-party libs to the iOS build** (e.g. `expo-mpv` npm is GPL-3.0-only) - the MPVKit exception above is the only one.
 - `THIRD_PARTY_NOTICES.md` (repo root) lists vendored source + native binaries - update it with every vendored component or binary change. Check for upstream / binary updates with `/update-modules` before every release.
-- To add: `CONTRIBUTING.md` (DCO sign-off, contributions under GPL-3.0-or-later + exception), `TRADEMARKS.md` (forks welcome, rename + re-icon), in-app licenses screen (`react-native-legal` + manual native entries, FFmpeg LGPL credit line).
+- To add: `CONTRIBUTING.md` (DCO sign-off, contributions under GPL-3.0-or-later + exception), `TRADEMARKS.md` (forks welcome, rename + re-icon).
+- In-app licences screen (Settings → Licences): `scripts/generate-licences.mjs` writes `src/licences.json` on postinstall (gitignored) from the production npm packages + a hand-kept native list - keep that list in step with `THIRD_PARTY_NOTICES.md`. The FFmpeg credit line (`SettingsPages.tsx`) says GPL-3.0 until the LGPL rebuild. No `react-native-legal`.
 - CI: `npm run licenses` fails on any GPL/AGPL-only production dependency (LGPL and `X OR GPL` dual licences allowed). Native binaries (MPVKit, libmpv) aren't npm deps - verify them by hand (§11).
 - Repo must be **public** before any build reaches external testers (exception requires public Corresponding Source).
 

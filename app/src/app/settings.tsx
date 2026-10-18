@@ -31,6 +31,7 @@ function SettingsList() {
   const link = useSettingsLink();
   const subtitles = { page: 'subtitles' } as const;
   const storage = { page: 'storage' } as const;
+  const licences = { page: 'licences' } as const;
 
   return (
     <>
@@ -57,6 +58,7 @@ function SettingsList() {
       </ListSection>
       <ListSection title="About">
         <ListRow label="Version" value={Constants.expoConfig?.version ?? '-'} />
+        <ListRow label="Licences" selected={link.selected(licences)} onPress={() => link.open(licences)} />
       </ListSection>
     </>
   );

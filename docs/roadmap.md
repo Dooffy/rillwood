@@ -138,6 +138,7 @@ Design + sources: `docs/research/background-downloads.md`.
   - [x] Account downloads + stalled transfers: Sign out / Remove account delete the account's downloads (confirm names count + size; a 401 sign-out keeps them); storage bar "15 GB all accounts of 50 GB" with more than one account; Storage limit page says it applies to every account; iOS stall timeout (no bytes 5 min → retries → Failed - network, bytes kept). Device tests D18-D20, O1-O4 pending
   - [x] Storage limit across accounts made explicit: storage bar + Storage limit page wording; the "over the limit" toast names the other accounts' share ("other accounts' downloads take 12.3 GB of it")
 - [ ] Settings: accounts, playback defaults, downloads, cache clear, licenses screen
+  - [x] Licences screen: Settings → About → Licences - Rillwood (GPL text + App Store permission), native parts on this platform (mpv module, MPVKit / libmpv, WorkManager, Noto fonts) with the FFmpeg credit line, every production npm package grouped by repository; an entry shows its source, packages and full licence text. Data from `scripts/generate-licences.mjs` on postinstall (`src/licences.json`, gitignored). Add the source repository link to the Rillwood entry once the repo is public
 - [ ] Perf (FlashList if FlatList stutters, image sizes, cold start <2s), accessibility pass
 - [ ] iPad layout for every screen: adaptive grids, readable-width forms and pages, landscape, split view / Stage Manager sizes
   - [x] Wide breakpoint (`useWide`, 600 pt) + readable widths; `Page` centres its content (forms 480, pages 680)
