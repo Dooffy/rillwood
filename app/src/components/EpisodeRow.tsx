@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { formatRemaining, spokenRemaining } from '@/format';
@@ -28,7 +29,8 @@ export type EpisodeRowProps = {
 };
 
 /** Episode in a vertical list (Library, Episodes type): 16:9 still with progress, show, episode line, runtime. */
-export function EpisodeRow(props: EpisodeRowProps) {
+// Memoised: rows of a long paged list (`PagedList`) skip re-rendering when the list renders.
+export const EpisodeRow = memo(function EpisodeRow(props: EpisodeRowProps) {
   const { title, subtitle, runtimeSeconds, image, progress, remainingSeconds, played, onPress, onLongPress } = props;
   const runtime = runtimeSeconds !== undefined ? formatRemaining(runtimeSeconds) : undefined;
   const spokenRuntime = runtimeSeconds !== undefined ? spokenRemaining(runtimeSeconds) : undefined;
@@ -69,7 +71,7 @@ export function EpisodeRow(props: EpisodeRowProps) {
       </View>
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + spacing.xs },
