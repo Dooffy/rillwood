@@ -1,0 +1,90 @@
+---
+// SPDX-License-Identifier: GPL-3.0-or-later
+import Base from '../layouts/Base.astro';
+import { href } from '../site';
+
+const features = [
+  ['Plays your files as they are', 'MKV and every common video, audio and subtitle format, straight from your server. No transcoding.'],
+  ['Downloads for offline', 'Movies, episodes or whole seasons download in the background and keep going after the app closes.'],
+  ['Works offline', 'Browse and play your downloads without a connection. Watch progress syncs when you are back online.'],
+  ['Cleans up after itself', 'Downloads remove themselves after 90 days, or sooner once watched if you choose, so storage stays free.'],
+  ['All your servers', 'Several servers and accounts, switch in a tap. Sign in with a password or Quick Connect.'],
+  ['iPhone, iPad and Android', 'Built for phones, with layouts for iPad in portrait, landscape and Split View.'],
+];
+---
+
+<Base
+  title="Rillwood"
+  description="A fast, open-source Jellyfin client for iPhone, iPad and Android. Plays every file as it is and downloads for offline."
+>
+  <section class="hero">
+    <picture>
+      <source srcset={href('logo-mark-dark.svg')} media="(prefers-color-scheme: dark)" />
+      <img src={href('logo-mark-light.svg')} alt="" width="96" height="96" />
+    </picture>
+    <h1>Your Jellyfin library, fast and offline.</h1>
+    <p class="secondary lead">
+      Rillwood is a free, open-source client for your own Jellyfin server. It plays every file as it is and downloads
+      for when you are away from home.
+    </p>
+    <p class="soon">Coming soon to the App Store and Google Play.</p>
+  </section>
+
+  <ul class="features">
+    {
+      features.map(([title, text]) => (
+        <li>
+          <h2>{title}</h2>
+          <p class="secondary">{text}</p>
+        </li>
+      ))
+    }
+  </ul>
+
+  <h2>No accounts, no tracking</h2>
+  <p class="secondary">
+    Rillwood talks only to the servers you add. It has no analytics, no ads and nothing to sign up for. See the <a
+      href={href('privacy')}>privacy policy</a
+    >.
+  </p>
+</Base>
+
+<style>
+  .hero img {
+    margin-top: 48px;
+    display: block;
+  }
+  .hero h1 {
+    margin-top: 24px;
+  }
+  .lead {
+    font-size: 20px;
+  }
+  .soon {
+    display: inline-block;
+    background: var(--surface);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-weight: 600;
+  }
+  .features {
+    list-style: none;
+    padding: 0;
+    margin: 32px 0 0;
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+  .features li {
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .features h2 {
+    margin: 0 0 4px;
+    font-size: 17px;
+  }
+  .features p {
+    margin: 0;
+  }
+</style>

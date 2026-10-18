@@ -54,7 +54,8 @@ Platforms: **iOS first**, Android phones in the same release. iPad layout before
 | Network status | Fail-fast fetch (8s) + `/System/Info/Public` probe on foreground, rechecked while offline (`src/connection.ts`) | |
 | Server target | **Jellyfin 12.1 base**, 12.0 + 10.11.x supported | Warn below 10.10.7. **Header auth only** (no `?api_key=` / `?ApiKey=`). Dev servers: `dev/jellyfin` (Docker, pinned 12.1 + 10.11). API rules: `docs/context/api.md` |
 | Tests | `jest-expo` + `@testing-library/react-native` (dev deps in `app/`), `*.test.ts(x)` next to the code; screen tests in `src/__tests__/` (never put tests in `src/app/` - expo-router treats files there as routes) | Unit tests for pure logic, regression test per bug fix, render tests for non-trivial components. Mock fetch / storage / native modules - shared mocks (kv-store, expo-symbols, safe-area, glass, reanimated + worklets, gesture-handler) in `app/jest.setup.ts`. Native code: manual device test plans in `docs/test-plans/` |
-| CI | GitHub Actions, GitHub-hosted `ubuntu-latest`, `.github/workflows/ci.yml`. Runs on every branch push + PRs to `main` | One independent runner per check (matrix, `fail-fast: false`): Lint, Typecheck, Format, Unit tests (+ coverage), Expo doctor, Bundle (iOS + Android), Licences. Plus Commit format + DCO: `[PREFIX]` format, blank line, DCO, no AI attribution |
+| CI | GitHub Actions, GitHub-hosted `ubuntu-latest`, `.github/workflows/ci.yml`. Runs on every branch push + PRs to `main` | One independent runner per check (matrix, `fail-fast: false`): Lint, Typecheck, Format, Unit tests (+ coverage), Expo doctor, Bundle (iOS + Android), Licences. Plus Website build (`web/`) and Commit format + DCO: `[PREFIX]` format, blank line, DCO, no AI attribution |
+| Website | `web/`: **Astro** (pinned exact, static output, no client JS), GitHub Pages via `.github/workflows/pages.yml` on `web/**` changes to `main` | Landing + privacy policy (the store listings' privacy URL - keep it true to the app). App tokens restated in plain CSS (`Base.astro`), light + dark from `prefers-color-scheme`. Address from the Pages settings (`SITE_URL` / `BASE_PATH`), repo links from the workflow (`PUBLIC_REPO_URL`). No other web deps without approval |
 | Builds | `eas build --local` (or prebuild + Xcode/Gradle), manual upload (Transporter / Play Console) | See §9 Xcode 27 note |
 | License | **GPL-3.0-or-later + App Store additional permission** (§7) | DCO, no CLA |
 
@@ -99,7 +100,7 @@ Repo layout:
 ```
 /
   app/        mobile app (Expo SDK 58, iOS + Android) - everything in §2-§9 lives here
-  web/        static project website (landing, privacy policy, docs) - added later
+  web/        static project website (Astro): src/pages/index.astro (landing), privacy.astro (privacy policy), src/layouts/Base.astro, public/ (marks, favicon)
   dev/        local dev tooling: dev/jellyfin = pinned Jellyfin servers + test media generator
   docs/       project docs: architecture, decisions, test plans, release process
   .github/    CI workflow + scripts
