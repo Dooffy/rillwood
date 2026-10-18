@@ -29,31 +29,28 @@ export type RowProps = {
 
 /** Home / detail shelf: section header (20/700, "See All ›" when tappable) over a horizontal list of cards. */
 export function Row({ title, onPress, children }: RowProps) {
-  const heading = (
-    <Text variant="sectionHeader" accessibilityRole={onPress ? undefined : 'header'} numberOfLines={1}>
-      {title}
-    </Text>
-  );
   return (
     <View style={styles.row}>
-      {onPress ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${title}, See All`}
-          onPress={onPress}
-          style={({ pressed }) => [styles.header, styles.wide, pressed && styles.pressed]}
-        >
-          {heading}
-          <View style={styles.seeAll}>
+      {/* The title stays a header for VoiceOver's headings rotor; See All is its own button beside it. */}
+      <View style={styles.header}>
+        <Text variant="sectionHeader" accessibilityRole="header" numberOfLines={1} style={styles.title}>
+          {title}
+        </Text>
+        {onPress && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${title}, See All`}
+            hitSlop={spacing.sm}
+            onPress={onPress}
+            style={({ pressed }) => [styles.seeAll, pressed && styles.pressed]}
+          >
             <Text variant="label" secondary>
               See All
             </Text>
             <Chevron />
-          </View>
-        </Pressable>
-      ) : (
-        <View style={styles.header}>{heading}</View>
-      )}
+          </Pressable>
+        )}
+      </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.list}>
         {children}
       </ScrollView>
@@ -69,11 +66,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs + 2,
     paddingHorizontal: spacing.md,
-    alignSelf: 'flex-start',
+    justifyContent: 'space-between',
   },
-  // Tappable header: title left, See All right, across the row.
-  wide: { alignSelf: 'stretch', justifyContent: 'space-between' },
-  seeAll: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  title: { flexShrink: 1 },
+  // A touch target tall (the header's height); `hitSlop` widens it.
+  seeAll: { minHeight: minTouch, flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   pressed: { opacity: pressedOpacity },
   list: { paddingHorizontal: spacing.md, gap: CARD_GAP },
 });

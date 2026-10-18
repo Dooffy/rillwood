@@ -72,7 +72,12 @@ export function FilterSheet({ visible, value, genres, onApply, onClose, countEnd
       <Pressable accessibilityRole="button" accessibilityLabel="Close" style={styles.backdrop} onPress={onClose} />
       <View style={[styles.sheet, { backgroundColor: c.surface, paddingBottom: insets.bottom + spacing.sm }]}>
         <View style={styles.header}>
-          <Pressable accessibilityRole="button" onPress={() => setDraft(NO_FILTERS)} style={styles.headerButton}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Reset filters"
+            onPress={() => setDraft(NO_FILTERS)}
+            style={styles.headerButton}
+          >
             <Text secondary>Reset</Text>
           </Pressable>
           <Text variant="button" accessibilityRole="header">
@@ -160,7 +165,8 @@ export function FilterButton({ value, onPress }: { value: Filters; onPress: () =
           importantForAccessibility="no-hide-descendants"
           accessibilityElementsHidden
         >
-          <Text variant="caption" style={[styles.badgeText, { color: palettes.dark.text }]}>
+          {/* Grows a little with the text size, never past the button it sits on. */}
+          <Text variant="caption" maxFontSizeMultiplier={1.4} style={[styles.badgeText, { color: palettes.dark.text }]}>
             {on}
           </Text>
         </View>
@@ -175,13 +181,13 @@ const styles = StyleSheet.create({
     top: -spacing.xs,
     right: -spacing.xs,
     minWidth: BADGE_SIZE,
-    height: BADGE_SIZE,
+    minHeight: BADGE_SIZE,
     paddingHorizontal: spacing.xs,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeText: { fontWeight: type.button.fontWeight, lineHeight: BADGE_SIZE },
+  badgeText: { fontWeight: type.button.fontWeight },
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: backdrop },
   sheet: {
     position: 'absolute',

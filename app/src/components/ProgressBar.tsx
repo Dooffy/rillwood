@@ -20,17 +20,28 @@ export type ProgressBarProps = {
   overArtwork?: boolean;
   /** Warning fill (storage over its limit). */
   warning?: boolean;
+  /**
+   * Standalone bar: its own accessibility element ("Watched, 40%"). Without one it is hidden from screen readers - inside
+   * a card or button whose label already says it (TalkBack would stop on an unlabelled nested element).
+   */
+  label?: string;
 };
 
 /** Thin watched-progress bar (white fill in the dark palette). */
-export function ProgressBar({ progress, overArtwork = false, warning = false }: ProgressBarProps) {
+export function ProgressBar({ progress, overArtwork = false, warning = false, label }: ProgressBarProps) {
   const c = useColors();
   const p = clamp01(progress);
   return (
     <View
-      accessible
-      accessibilityRole="progressbar"
-      accessibilityValue={{ min: 0, max: 100, now: Math.round(p * 100) }}
+      testID="progress-bar"
+      {...(label
+        ? {
+            accessible: true,
+            accessibilityRole: 'progressbar',
+            accessibilityLabel: label,
+            accessibilityValue: { min: 0, max: 100, now: Math.round(p * 100) },
+          }
+        : { accessible: false })}
       style={[styles.track, overArtwork ? styles.overArtwork : { backgroundColor: c.elevated2 }]}
     >
       <View

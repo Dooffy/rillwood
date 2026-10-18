@@ -16,6 +16,7 @@ export function Overview({ text }: { text: string }) {
       disabled={!clampable}
       accessibilityRole={clampable ? 'button' : undefined}
       accessibilityHint={clampable ? (expanded ? 'Shows less' : 'Shows the whole overview') : undefined}
+      accessibilityState={clampable ? { expanded } : undefined}
       onPress={() => setExpanded((e) => !e)}
     >
       <Text numberOfLines={clampable && !expanded ? 3 : undefined}>{text}</Text>

@@ -3,7 +3,6 @@ import { useCallback, type ReactElement } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { isConnectionError, type BaseItemDto } from '@/api';
-import { formatRemaining } from '@/format';
 import { cardTitles, landscapeImage, playback, posterImage, ticksToSeconds } from '@/items';
 import { openItem } from '@/navigation';
 import type { PagedItems } from '@/usePagedItems';
@@ -75,12 +74,11 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
           />
         );
       }
-      const runtime = item.RunTimeTicks ? formatRemaining(ticksToSeconds(item.RunTimeTicks)) : undefined;
       return (
         <EpisodeRow
           {...cardTitles(item)}
           {...playback(item)}
-          meta={runtime}
+          runtimeSeconds={item.RunTimeTicks ? ticksToSeconds(item.RunTimeTicks) : undefined}
           image={image(landscapeImage(item), EPISODE_ROW_STILL)}
           onPress={open}
           onLongPress={() => {

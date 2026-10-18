@@ -36,7 +36,8 @@ export function StepPills({ steps, current }: { steps: readonly string[]; curren
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  // Wraps at large text sizes instead of running off the screen.
+  row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
   line: { width: spacing.lg, height: 2 },
   pill: { minHeight: 32, paddingHorizontal: spacing.md, borderRadius: radii.pill, justifyContent: 'center' },
 });

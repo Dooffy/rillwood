@@ -267,19 +267,19 @@ describe('ItemDetail', () => {
   it('marks as watched at once, before the server answers', async () => {
     const setPlayed = jest.spyOn(api, 'setPlayed').mockReturnValue(new Promise(() => {}));
     await render(<ItemDetail />);
-    await fireEvent.press(await screen.findByRole('button', { name: 'Mark as watched', selected: false }));
-    expect(screen.getByRole('button', { name: 'Mark as unwatched', selected: true })).toBeOnTheScreen();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Watched', selected: false }));
+    expect(screen.getByRole('button', { name: 'Watched', selected: true })).toBeOnTheScreen();
     expect(setPlayed).toHaveBeenCalledWith(expect.objectContaining({ accountId: expect.any(String) }), sintel.Id, true);
   });
 
   it('puts a failed favourite back and says why', async () => {
     jest.spyOn(api, 'setFavourite').mockRejectedValue(new ApiError('network'));
     await render(<ItemDetail />);
-    await fireEvent.press(await screen.findByRole('button', { name: 'Add to favourites' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Favourite' }));
     expect(
       await screen.findByText("Couldn't add to favourites. Check your connection and try again."),
     ).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Add to favourites', selected: false })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Favourite', selected: false })).toBeOnTheScreen();
   });
 
   it('names the directors and shows More Like This', async () => {
@@ -347,7 +347,7 @@ describe('ItemDetail', () => {
     reply = () => Promise.resolve({ ...sintel, UserData: { PlaybackPositionTicks: 0, Played: true } });
     await render(<ItemDetail />);
     // The filled ✓ says it; no separate label.
-    expect(await screen.findByRole('button', { name: 'Mark as unwatched', selected: true })).toBeOnTheScreen();
+    expect(await screen.findByRole('button', { name: 'Watched', selected: true })).toBeOnTheScreen();
     expect(screen.queryByText('✓ Watched')).toBeNull();
     expect(screen.getByRole('button', { name: 'Play' })).toBeOnTheScreen();
   });

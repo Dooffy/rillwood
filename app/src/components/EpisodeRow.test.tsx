@@ -11,7 +11,7 @@ describe('EpisodeRow', () => {
       <EpisodeRow
         title="Test Show"
         subtitle="S1:E2 · Pilot"
-        meta="45m"
+        runtimeSeconds={2700}
         progress={0.5}
         remainingSeconds={1350}
         onPress={onPress}
@@ -19,7 +19,7 @@ describe('EpisodeRow', () => {
     );
     expect(screen.getByText('45m')).toBeOnTheScreen();
     await fireEvent.press(
-      screen.getByRole('button', { name: 'Test Show, S1:E2 · Pilot, 50% watched, 23 minutes left' }),
+      screen.getByRole('button', { name: 'Test Show, S1:E2 · Pilot, 50% watched, 23 minutes left, 45 minutes' }),
     );
     expect(onPress).toHaveBeenCalledTimes(1);
   });

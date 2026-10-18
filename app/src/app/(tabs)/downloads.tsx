@@ -249,7 +249,8 @@ const styles = StyleSheet.create({
   controls: { gap: spacing.sm },
   controlsWide: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   search: { flex: 1 },
-  scopes: { flexDirection: 'row', gap: spacing.sm },
+  // Wraps at large text sizes.
+  scopes: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   columns: { gap: COLUMN_GAP },
   list: { paddingTop: spacing.sm, paddingBottom: spacing.md },
 });

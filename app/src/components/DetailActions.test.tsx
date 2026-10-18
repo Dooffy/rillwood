@@ -39,11 +39,11 @@ describe('DetailActions', () => {
     expect(screen.queryByRole('button', { name: 'Play from Start' })).toBeNull();
   });
 
-  it('toggles watched and favourite on: the label says what a tap does', async () => {
+  it('toggles watched and favourite on: one name each, the state read from selected', async () => {
     const onMark = jest.fn();
     await render(<DetailActions playTitle="Play" played={false} favourite={false} onMark={onMark} />);
-    await fireEvent.press(screen.getByRole('button', { name: 'Mark as watched', selected: false }));
-    await fireEvent.press(screen.getByRole('button', { name: 'Add to favourites', selected: false }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Watched', selected: false }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Favourite', selected: false }));
     expect(onMark.mock.calls).toEqual([
       ['played', true],
       ['favourite', true],
@@ -53,8 +53,8 @@ describe('DetailActions', () => {
   it('toggles them off when on (filled, read as selected)', async () => {
     const onMark = jest.fn();
     await render(<DetailActions playTitle="Play" played favourite onMark={onMark} />);
-    await fireEvent.press(screen.getByRole('button', { name: 'Mark as unwatched', selected: true }));
-    await fireEvent.press(screen.getByRole('button', { name: 'Remove from favourites', selected: true }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Watched', selected: true }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Favourite', selected: true }));
     expect(onMark.mock.calls).toEqual([
       ['played', false],
       ['favourite', false],

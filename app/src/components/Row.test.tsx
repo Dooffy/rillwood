@@ -19,13 +19,14 @@ describe('Row', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('makes the header a button when it opens the full list', async () => {
+  it('adds a See All button beside the header when it opens the full list (the title stays a header)', async () => {
     const onPress = jest.fn();
     await render(
       <Row title="Continue Watching" onPress={onPress}>
         <Text>Episode 3</Text>
       </Row>,
     );
+    expect(screen.getByRole('header', { name: 'Continue Watching' })).toBeOnTheScreen();
     expect(screen.getByText('See All')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Continue Watching, See All' }));
     expect(onPress).toHaveBeenCalledTimes(1);

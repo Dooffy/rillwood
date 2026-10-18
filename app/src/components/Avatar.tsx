@@ -47,7 +47,10 @@ export function Avatar({ name, image, size = 60 }: { name?: string; image?: stri
           onError={() => setFailed(image)}
         />
       ) : letters ? (
-        <Text style={{ fontWeight: type.button.fontWeight, fontSize: size * 0.4 }}>{letters}</Text>
+        // Sized to the circle, not the text setting (the name is spoken by the avatar's button).
+        <Text maxFontSizeMultiplier={1} style={{ fontWeight: type.button.fontWeight, fontSize: size * 0.4 }}>
+          {letters}
+        </Text>
       ) : (
         <SymbolView name={{ ios: 'person.fill', android: 'person' }} tintColor={c.textSecondary} size={size * 0.5} />
       )}
