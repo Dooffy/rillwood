@@ -98,6 +98,10 @@ beforeEach(() => {
   settings.setSubtitleScale(1);
   settings.setSubtitleStyle(settings.DEFAULT_SUBTITLE_STYLE);
   settings.setVideoZoom('fit');
+  settings.setAutoplayNext('on');
+  settings.setAudioLanguage('server');
+  settings.setSubtitleMode('server');
+  settings.setSubtitleLanguage('server');
 });
 // Reporting is tested on its own (src/player/useReporting.test.ts); here only that the screen drives it.
 const started = jest.spyOn(api, 'reportPlaybackStart').mockResolvedValue();
@@ -962,6 +966,19 @@ describe('Up Next', () => {
     expect(router.setParams.mock.calls.at(-1)![0]).toHaveProperty('source', '');
   });
 
+  it('autoplay off: no countdown, the end pauses, a tap plays the next episode', async () => {
+    settings.setAutoplayNext('off');
+    await playAt(1388.2);
+    expect(screen.getByText('Up Next')).toBeOnTheScreen();
+    expect(screen.queryByText('Up Next · 12s')).toBeNull();
+    await act(() => lastPlayer().onProgress?.({ position: 1400, duration: 1400 }));
+    await act(() => lastPlayer().onEnd?.());
+    expect(router.setParams).not.toHaveBeenCalled();
+    expect(lastPlayer().paused).toBe(true);
+    await fireEvent.press(screen.getByRole('button', { name: 'Play next episode, S1, E2 · Second' }));
+    expect(router.setParams).toHaveBeenCalledWith(expect.objectContaining({ id: EP2 }));
+  });
+
   it('Hide: the card goes, the end pauses as without a next episode', async () => {
     await playAt(1380);
     await fireEvent.press(screen.getByRole('button', { name: 'Hide Up Next' }));
@@ -1059,5 +1076,30 @@ describe('Up Next', () => {
     await act(() => lastPlayer().onProgress?.({ position: 1385, duration: 1400 }));
     expect(screen.getByText('S1, E2 · Second')).toBeOnTheScreen();
     expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('playback defaults (Settings)', () => {
+  it("Server default keeps the server's tracks", async () => {
+    await renderPlaying();
+    expect(lastPlayer()).toMatchObject({ audioTrack: 1, subtitleTrack: -1 });
+  });
+
+  it('subtitles On picks a track: the first full one with Server default, none in another language', async () => {
+    settings.setSubtitleMode('on');
+    await renderPlaying();
+    expect(lastPlayer().subtitleTrack).toBe(1);
+    settings.setSubtitleLanguage('eng');
+    await renderPlaying();
+    // The file only has German subtitles.
+    expect(lastPlayer().subtitleTrack).toBe(-1);
+  });
+
+  it('subtitles Off wins over the server default', async () => {
+    reply = () =>
+      Promise.resolve({ MediaSources: [{ ...source, DefaultSubtitleStreamIndex: 2 }], PlaySessionId: 'ps' });
+    settings.setSubtitleMode('off');
+    await renderPlaying();
+    expect(lastPlayer().subtitleTrack).toBe(-1);
   });
 });

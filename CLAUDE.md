@@ -46,7 +46,7 @@ Platforms: **iOS first**, Android phones in the same release. iPad layout before
 | Orientation | `expo-screen-orientation` | Phones: upright portrait everywhere (config plugin `initialOrientation: PORTRAIT_UP` + `lockAppOrientation` in the root layout); the player unlocks (`DEFAULT`) while open and re-locks on leave. Tablets (screen's short side ≥ 600 pt, `src/orientation.ts`) rotate everywhere; `supportsTablet: true`. `app.json` `orientation: default` so the player can rotate. Native-stack / tabs `orientation` options don't hold in dev-client builds - don't use them |
 | Glass | `expo-glass-effect` (`Glass` primitive) | Player controls over video: Liquid Glass on iOS 26+, translucent fill (`glassFallback`) elsewhere. Glass never under opacity < 1 - hide by unmounting |
 | Background playback | Pause when the app is left (both platforms); iOS lock-screen / headphones Play carries on with audio (`UIBackgroundModes: audio`) | Video track off in the background (I2). Keep playing on leave (a setting) and PiP are post-MVP. Rules: `docs/context/player.md` |
-| Images | `expo-image`, `cachePolicy="memory-disk"` | Disk keeps posters offline, memory avoids re-decoding on scroll |
+| Images | `expo-image`, `cachePolicy="memory-disk"` | Disk keeps posters offline, memory avoids re-decoding on scroll. Caches clean themselves, no Clear cache button: Android (Glide) keeps the latest 250 MB, iOS capped at 500 MB (`Image.configureCache`, root layout); the OS may purge both when low on space. Downloads keep their own artwork copies |
 | Downloads | **Own Expo module** `modules/downloads` (Swift + Kotlin, Expo Modules API). Native owns the queue, concurrency (max 2) and resume | No third-party downloader, no system `DownloadManager`. iOS: background `URLSession`; Android 14+: UIDT job, 8-13 (and a refused UIDT job): WorkManager (`androidx.work:work-runtime-ktx`, only inside `modules/downloads`, decided 2026-10-11) + `dataSync` FGS. Design: `docs/context/downloads.md` |
 | Download network | User setting: **Wi-Fi only (default) / Any network** | Enforced natively by `modules/downloads`. No NetInfo |
 | Player | libmpv via a vendored MPL-2.0 Expo module in `modules/mpv` (headers kept) behind own `PlayerEngine` interface (`docs/context/player.md`) | Fallback: `expo-libvlc-player` - under review (`docs/open-items.md`). See §7 - current mpv/FFmpeg builds are GPL, LGPL rebuild post-MVP |
@@ -119,10 +119,10 @@ src/app/                 expo-router
   item/[id].tsx          movie / episode detail
   series/[id].tsx
   player.tsx
-  settings.tsx           accounts on top (tap switches), then app settings; tablet landscape: split view (`SettingsSplit`)
+  settings.tsx           accounts on top (tap switches), then app settings (Display: appearance + Subtitles, Playback, Downloads, About); tablet landscape: split view (`SettingsSplit`)
   subtitles.tsx          Settings → Subtitles: preview + option rows (size, font, colour, edge, preview text)
   show-downloads/[id].tsx  a show's downloaded episodes by season (from its Downloads row)
-  option/[key].tsx       one option's checkmark list (appearance, subtitle options, download network), preview on top for subtitles
+  option/[key].tsx       one option's checkmark list (appearance, subtitle options, playback defaults, download network), preview on top for subtitles
   download-storage.tsx   Settings → Storage limit: step slider for the downloads' space limit
   licences.tsx, licence/[id].tsx  Settings → Licences: the list, one entry (source, packages, full texts)
 src/theme.ts             design tokens
@@ -147,7 +147,7 @@ src/userData.ts          mark watched / favourite: optimistic cache + paged list
 src/useUserFlag.ts       mark from a button / menu: failure toast, confirm before unwatching a season / show
 src/useDownloadControl.ts  download from a button / menu: state (item or season), start (files looked up first), pause / resume, cancel, delete after asking, menu actions (`downloadActions`), policy check
 src/detail.ts            detailView: everything the detail screen shows, from one item (pure)
-src/playback.ts          PlaybackInfo → play source (pure): device profile, direct play check, stream + sidecar subtitle URLs, track options + `matchTracks` (real mpv ids) + `carryTracks` (picks to the next episode by language)
+src/playback.ts          PlaybackInfo → play source (pure): device profile, direct play check, stream + sidecar subtitle URLs, track options + `matchTracks` (real mpv ids) + `carryTracks` (picks to the next episode by language) + `preferredTracks` (Settings playback defaults)
 src/downloads.ts         store, queue, reconcile, cleanup, storage, weekly orphan sweep
 src/downloadSnapshot.ts  per-download snapshot: item JSON, poster, backdrop, episode still, external subtitles next to the file
 src/downloadList.ts      Downloads tab (pure): one list per account (a row per movie / show, search + type), a show's seasons, status wording
@@ -155,7 +155,7 @@ src/notificationPermission.ts  Android 13+: notification permission asked once, 
 src/sync.ts              offline progress: queue (reports that missed the server), replay for the active account, saved UserData pull
 src/offload.ts           auto-remove: timer per download + watched cooldown, expiry labels, cleanup after every sync run, player hold
 src/licences.ts          Settings → Licences data (`src/licences.json`, written on install by `scripts/generate-licences.mjs`)
-src/settings.ts          user settings in kv-store (appearance, subtitle size + style, video zoom, download network + storage limit, auto-remove days + watched cooldown)
+src/settings.ts          user settings in kv-store (appearance, subtitle size + style, video zoom, playback defaults: autoplay next, audio language, subtitle mode + language, download network + storage limit, auto-remove days + watched cooldown)
 src/pickers.ts           Settings options that open a checkmark list: key → title, choices, get / set
 src/player/Player.tsx    PlayerEngine interface + re-export of active engine
 src/player/mpv.tsx       mpv adapter

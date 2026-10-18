@@ -4,6 +4,7 @@ import { Storage } from 'expo-sqlite/kv-store';
 import { useSyncExternalStore } from 'react';
 import { Platform, Appearance as RNAppearance } from 'react-native';
 
+import type { TrackPrefs } from '@/playback';
 import type { SubtitleEdge, SubtitleFont, SubtitleStyle, VideoZoom } from '@/player/Player';
 
 export const APPEARANCE_OPTIONS = [
@@ -52,18 +53,12 @@ const FAMILIES: Record<SubtitleFont, string> = Platform.select({
   default: { 'sans-serif': 'sans-serif', serif: 'serif', monospace: 'monospace' },
 });
 
-/** Sample lines per language. `face`: the bundled iOS font libass falls back to for that script (no Serif / Mono). */
+/**
+ * Sample lines per language. English only while the app is (other languages come with localization); `face`: the
+ * bundled iOS font libass falls back to for that script (no Serif / Mono), `rtl`: right to left.
+ */
 export const SUBTITLE_SAMPLES = [
   { value: 'en', label: 'English', text: 'Subtitles look like this,\non every video.' },
-  { value: 'es', label: 'Español', text: 'Así se ven los subtítulos\nen cada vídeo.' },
-  { value: 'de', label: 'Deutsch', text: 'So sehen Untertitel aus,\nin jedem Video.' },
-  { value: 'fr', label: 'Français', text: 'Voici à quoi ressemblent\nles sous-titres.' },
-  { value: 'uk', label: 'Українська', text: 'Так виглядають субтитри\nу кожному відео.' },
-  { value: 'ar', label: 'العربية', text: 'هكذا تبدو الترجمة\nفي كل فيديو.', face: 'NotoSansArabic-Regular', rtl: true },
-  { value: 'he', label: 'עברית', text: 'כך נראות הכתוביות\nבכל סרטון.', face: 'NotoSansHebrew-Regular', rtl: true },
-  { value: 'zh', label: '中文', text: '字幕看起来是这样的，\n每个视频都一样。', face: 'NotoSansCJKsc-Regular' },
-  { value: 'ja', label: '日本語', text: '字幕はこのように\n表示されます。', face: 'NotoSansCJKsc-Regular' },
-  { value: 'ko', label: '한국어', text: '자막은 이렇게\n표시됩니다.', face: 'NotoSansCJKsc-Regular' },
 ] as const satisfies readonly { value: string; label: string; text: string; face?: string; rtl?: boolean }[];
 
 export type SubtitleSample = (typeof SUBTITLE_SAMPLES)[number]['value'];
@@ -80,6 +75,10 @@ const DOWNLOAD_NETWORK_KEY = 'settings.downloadNetwork';
 const DOWNLOAD_LIMIT_KEY = 'settings.downloadLimit';
 const OFFLOAD_DAYS_KEY = 'settings.offloadDays';
 const OFFLOAD_WATCHED_KEY = 'settings.offloadWatched';
+const AUTOPLAY_NEXT_KEY = 'settings.autoplayNext';
+const AUDIO_LANGUAGE_KEY = 'settings.audioLanguage';
+const SUBTITLE_MODE_KEY = 'settings.subtitleMode';
+const SUBTITLE_LANGUAGE_KEY = 'settings.subtitleLanguage';
 
 let appearance: Appearance | undefined;
 let subtitleScale: SubtitleScale | undefined;
@@ -89,6 +88,10 @@ let downloadNetwork: DownloadNetwork | undefined;
 let downloadLimit: number | undefined;
 let offloadDays: OffloadDays | undefined;
 let offloadWatched: OffloadWatched | undefined;
+let autoplayNext: AutoplayNext | undefined;
+let audioLanguage: Language | undefined;
+let subtitleMode: SubtitleMode | undefined;
+let subtitleLanguage: Language | undefined;
 // Preview only, for this session: not saved.
 let subtitleSample: SubtitleSample = 'en';
 const listeners = new Set<() => void>();
@@ -199,6 +202,97 @@ export function setVideoZoom(value: VideoZoom): void {
 export function useVideoZoom(): VideoZoom {
   return useSyncExternalStore(subscribeSettings, getVideoZoom);
 }
+
+// Playback defaults, same for every account on this phone. "Server default" keeps what Jellyfin picks for the user
+// (their language preferences and subtitle mode); the rest overrides it here (`preferredTracks` in src/playback.ts).
+export const AUTOPLAY_NEXT_OPTIONS = [
+  { value: 'on', label: 'On' },
+  { value: 'off', label: 'Off' },
+] as const;
+
+export type AutoplayNext = (typeof AUTOPLAY_NEXT_OPTIONS)[number]['value'];
+
+/**
+ * Track languages: the first code is the one saved; `codes` are every way a file tags it (ISO 639-2/B and /T, 639-1).
+ * English only while the app is (more come with localization, as the subtitle preview's); `server` first.
+ */
+export const LANGUAGES = [
+  { value: 'server', label: 'Server default', codes: [] },
+  { value: 'eng', label: 'English', codes: ['eng', 'en'] },
+] as const satisfies readonly { value: string; label: string; codes: readonly string[] }[];
+
+export type Language = (typeof LANGUAGES)[number]['value'];
+
+/** Every code a file may tag a language with; empty for `server`. */
+export const languageCodes = (value: Language): readonly string[] =>
+  LANGUAGES.find((l) => l.value === value)?.codes ?? [];
+
+export const SUBTITLE_MODES = [
+  { value: 'server', label: 'Server default' },
+  { value: 'off', label: 'Off' },
+  { value: 'forced', label: 'Forced only' },
+  { value: 'on', label: 'On' },
+] as const;
+
+export type SubtitleMode = (typeof SUBTITLE_MODES)[number]['value'];
+
+const readOption = <T extends string>(key: string, options: readonly { value: T }[], fallback: T): T => {
+  const value = Storage.getItemSync(key);
+  return options.find((o) => o.value === value)?.value ?? fallback;
+};
+
+const save = (key: string, value: string) => {
+  Storage.setItemSync(key, value);
+  listeners.forEach((l) => l());
+};
+
+/** Next episode plays at the end of one (Up Next counts down); off: Up Next waits for a tap. Default on. */
+export function getAutoplayNext(): AutoplayNext {
+  return (autoplayNext ??= readOption(AUTOPLAY_NEXT_KEY, AUTOPLAY_NEXT_OPTIONS, 'on'));
+}
+
+export function setAutoplayNext(value: AutoplayNext): void {
+  autoplayNext = value;
+  save(AUTOPLAY_NEXT_KEY, value);
+}
+
+export function useAutoplayNext(): AutoplayNext {
+  return useSyncExternalStore(subscribeSettings, getAutoplayNext);
+}
+
+export function getAudioLanguage(): Language {
+  return (audioLanguage ??= readOption(AUDIO_LANGUAGE_KEY, LANGUAGES, 'server'));
+}
+
+export function setAudioLanguage(value: Language): void {
+  audioLanguage = value;
+  save(AUDIO_LANGUAGE_KEY, value);
+}
+
+export function getSubtitleMode(): SubtitleMode {
+  return (subtitleMode ??= readOption(SUBTITLE_MODE_KEY, SUBTITLE_MODES, 'server'));
+}
+
+export function setSubtitleMode(value: SubtitleMode): void {
+  subtitleMode = value;
+  save(SUBTITLE_MODE_KEY, value);
+}
+
+export function getSubtitleLanguage(): Language {
+  return (subtitleLanguage ??= readOption(SUBTITLE_LANGUAGE_KEY, LANGUAGES, 'server'));
+}
+
+export function setSubtitleLanguage(value: Language): void {
+  subtitleLanguage = value;
+  save(SUBTITLE_LANGUAGE_KEY, value);
+}
+
+/** The playback defaults as `preferredTracks` takes them. */
+export const getTrackPrefs = (): TrackPrefs => ({
+  audio: languageCodes(getAudioLanguage()),
+  subtitleMode: getSubtitleMode(),
+  subtitle: languageCodes(getSubtitleLanguage()),
+});
 
 // Downloads, same for every account (the files are the phone's). Wi-Fi only = unmetered (no personal hotspot).
 export const DOWNLOAD_NETWORK_OPTIONS = [

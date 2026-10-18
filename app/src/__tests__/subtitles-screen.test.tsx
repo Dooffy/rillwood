@@ -24,14 +24,13 @@ describe('Subtitles screen', () => {
   it('shows the preview and each option with its saved value', async () => {
     setSubtitleScale(1.5);
     setSubtitleStyle({ font: 'serif', color: '#4DD0E1', edge: 'shadow' });
-    setSubtitleSample('ja');
     await render(<Subtitles />);
     expect(screen.getByTestId('subtitle-preview')).toBeOnTheScreen();
     expect(row('Size')).toHaveAccessibilityValue({ text: 'Extra large' });
     expect(row('Font')).toHaveAccessibilityValue({ text: 'Serif' });
     expect(row('Colour')).toHaveAccessibilityValue({ text: 'Cyan' });
     expect(row('Edge')).toHaveAccessibilityValue({ text: 'Shadow' });
-    expect(row('Preview text')).toHaveAccessibilityValue({ text: '日本語' });
+    expect(row('Preview text')).toHaveAccessibilityValue({ text: 'English' });
   });
 
   it('opens each option list', async () => {

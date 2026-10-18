@@ -42,6 +42,7 @@ import {
   matchTracks,
   picksOf,
   playbackInfoBody,
+  preferredTracks,
   localPlaySource,
   playErrorMessage,
   playSource,
@@ -64,7 +65,14 @@ import { Player, type PlayerRef, type VideoZoom } from '@/player/Player';
 import { createProgress } from '@/player/progress';
 import { useReporting } from '@/player/useReporting';
 import { connectionFor, getSession, useSession } from '@/session';
-import { setVideoZoom, useSubtitleScale, useSubtitleStyle, useVideoZoom } from '@/settings';
+import {
+  getTrackPrefs,
+  setVideoZoom,
+  useAutoplayNext,
+  useSubtitleScale,
+  useSubtitleStyle,
+  useVideoZoom,
+} from '@/settings';
 import { resumeRules } from '@/sync';
 import { ColorsContext, palettes, radii, spacing, useWide } from '@/theme';
 import { useDebounced } from '@/useDebounced';
@@ -151,6 +159,8 @@ export default function PlayerScreen() {
   const nextRequest = item ? nextEpisodes(item) : undefined;
   const nextList = useFetch<ItemsResult>(nextRequest?.path ?? null, { query: nextRequest?.query }).data;
   const [hiddenOn, setHiddenOn] = useState<string>();
+  // Off: Up Next waits for a tap (Settings → Autoplay next episode).
+  const autoplay = useAutoplayNext() === 'on';
   const next = id && hiddenOn !== id ? nextEpisode(nextList?.Items, id) : undefined;
 
   const state: State = !isItemId(id)
@@ -163,11 +173,13 @@ export default function PlayerScreen() {
   const play = state.status === 'ready' ? state.play : undefined;
   const options = play && engineTracks?.key === key ? matchTracks(play, engineTracks) : play;
   // Picks made on an earlier episode, found again here by language (in the server's list: stable for the load, unlike
-  // `options`); else the server's defaults (the user's language preferences, or what was last played on this item).
+  // `options`); else the Settings playback defaults, which fall back to the server's (the user's Jellyfin language
+  // preferences, or what was last played on this item).
   const carried = play ? carryTracks(play, choice.picks) : {};
+  const preferred = play ? preferredTracks(play, getTrackPrefs()) : undefined;
   // A choice the file doesn't have (a sidecar that failed to load, a stream mpv dropped): first audio, subtitles off.
-  const audio = picked.audio ?? carried.audio ?? play?.defaultAudio;
-  const subtitle = picked.subtitle ?? carried.subtitle ?? play?.defaultSubtitle ?? -1;
+  const audio = picked.audio ?? carried.audio ?? preferred?.audio;
+  const subtitle = picked.subtitle ?? carried.subtitle ?? preferred?.subtitle ?? -1;
   const audioTrack = options?.audio.find((t) => t.index === audio) ?? options?.audio[0];
   const subtitleTrack = options?.subtitles.find((t) => t.index === subtitle);
   const tracks: TracksValue = {
@@ -401,6 +413,7 @@ export default function PlayerScreen() {
         next={next}
         progress={progress}
         rate={paused || waiting ? 0 : tracks.speed}
+        autoplay={autoplay}
         hidden={pulling}
         onPlay={() => playNext(next)}
         onHide={() => setHiddenOn(id)}
@@ -445,10 +458,11 @@ export default function PlayerScreen() {
                   }}
                   onTracks={(e) => setEngineTracks({ key, ...e })}
                   onProgress={progress.set}
-                  // The next episode, if any; else the engine holds the last frame paused: show it as paused (the pause
-                  // reports the end - played), controls up; Play replays from the start.
+                  // The next episode, if any and autoplay is on; else the engine holds the last frame paused: show it
+                  // as paused (the pause reports the end - played), controls up; Play replays from the start, Up Next
+                  // (autoplay off) plays the next one.
                   onEnd={() => {
-                    if (next) return playNext(next);
+                    if (next && autoplay) return playNext(next);
                     setPaused(true);
                     setShown(true);
                   }}

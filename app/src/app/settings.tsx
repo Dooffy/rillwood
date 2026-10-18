@@ -36,7 +36,7 @@ function SettingsList() {
   return (
     <>
       <AccountsSection />
-      <ListSection>
+      <ListSection title="Display">
         <OptionRow option="appearance" />
         <ListRow
           label="Subtitles"
@@ -44,6 +44,12 @@ function SettingsList() {
           selected={link.selected(subtitles)}
           onPress={() => link.open(subtitles)}
         />
+      </ListSection>
+      <ListSection title="Playback">
+        <OptionRow option="autoplay-next" />
+        <OptionRow option="audio-language" />
+        {/* Subtitle language sits on the same page, under the mode. */}
+        <OptionRow option="subtitle-mode" />
       </ListSection>
       <ListSection title="Downloads">
         <OptionRow option="download-network" />

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Up Next tile over the player in the last 30 s of an episode with a next one, Apple TV style: the next still with a
 // ring that fills as the countdown runs, "Up Next · 12s", "S1, E2 · Title". Tap = play now; ✕ on the corner hides it.
-// The screen plays the next episode at the end unless the card was hidden.
+// The screen plays the next episode at the end unless the card was hidden or autoplay is off (Settings): then the card
+// has no countdown and waits for a tap.
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, View } from 'react-native';
@@ -25,6 +26,8 @@ export type UpNextProps = {
   progress: ProgressStore;
   /** Playback speed while playing, 0 while paused or waiting for data: how fast the ring runs on its own. */
   rate: number;
+  /** Plays at the end on its own (the countdown); false: waits for a tap. */
+  autoplay: boolean;
   /** Out of the way for now (pull to close); the countdown and the announcement carry on. */
   hidden?: boolean;
   onPlay: () => void;
@@ -49,19 +52,28 @@ export function UpNext(props: UpNextProps) {
   return countdown && !props.hidden && <UpNextCard {...props} {...countdown} />;
 }
 
-function UpNextCard({ next, left, fill, rate, onPlay, onHide }: UpNextProps & { left: number; fill: number }) {
+function UpNextCard({
+  next,
+  left,
+  fill,
+  rate,
+  autoplay,
+  onPlay,
+  onHide,
+}: UpNextProps & { left: number; fill: number }) {
   const c = useColors();
   // The ring runs smoothly between position updates (about one a second): each update puts it at the exact position,
   // then, while playing, it runs on to full over the real time left. Reduce Motion: it steps with the updates.
   const reduceMotion = useReducedMotion();
-  const ring = useSharedValue(fill);
+  // No countdown without autoplay: the ring stays empty.
+  const ring = useSharedValue(autoplay ? fill : 0);
   useEffect(() => {
-    ring.value = fill;
-    if (rate > 0 && !reduceMotion && fill < 1) {
+    ring.value = autoplay ? fill : 0;
+    if (autoplay && rate > 0 && !reduceMotion && fill < 1) {
       const ms = ((1 - fill) * UP_NEXT_SECONDS * 1000) / rate;
       ring.value = withTiming(1, { duration: ms, easing: Easing.linear });
     }
-  }, [fill, rate, reduceMotion, ring]);
+  }, [autoplay, fill, rate, reduceMotion, ring]);
   const image = useImage();
   const line = episodeLine(next);
 
@@ -71,7 +83,7 @@ function UpNextCard({ next, left, fill, rate, onPlay, onHide }: UpNextProps & { 
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Play next episode, ${line}`}
-        accessibilityHint={`Plays in ${left} seconds`}
+        accessibilityHint={autoplay ? `Plays in ${left} seconds` : undefined}
         onPress={onPlay}
       >
         <Glass interactive style={styles.card}>
@@ -88,7 +100,7 @@ function UpNextCard({ next, left, fill, rate, onPlay, onHide }: UpNextProps & { 
           </View>
           <View style={styles.meta}>
             <Text variant="caption" secondary>
-              {`Up Next · ${left}s`}
+              {autoplay ? `Up Next · ${left}s` : 'Up Next'}
             </Text>
             <Text variant="label" numberOfLines={2}>
               {line}
