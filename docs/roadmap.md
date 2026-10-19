@@ -26,7 +26,7 @@ Milestone checklists. Summary + current milestone: root `CLAUDE.md` §8. `/task-
 - [x] `api.ts` (header, 8s timeout, `ApiError`, offline flag), DeviceId - rules in `docs/context/api.md` (auth endpoints; browse / playback endpoints land with M3 / M4)
 - [x] `useFetch` (cache key `accountId|path`, TTL, abort, `invalidate`)
 - [x] Components: PosterCard, LandscapeCard, Row, ProgressBar, DownloadRing
-- [ ] TS strict, ESLint/Prettier, SPDX headers, CONTRIBUTING (DCO)
+- [x] TS strict, ESLint/Prettier, SPDX headers, CONTRIBUTING (DCO) + TRADEMARKS
 - [x] Test setup: `jest-expo` + RNTL, `npm test`, CI on every branch + `main`
 - [x] First unit tests for `api.ts`
 - [ ] Release config hardening (found in M0, `docs/research/store-requirements.md`): Android `usesCleartextTraffic: true` via `expo-build-properties` (I12 - release blocks `http://` servers) + `blockedPermissions` (`SYSTEM_ALERT_WINDOW`, `READ`/`WRITE_EXTERNAL_STORAGE`); iOS own `NSLocalNetworkUsageDescription` (dev launcher strips its default in release), `ios.privacyManifests` (UserDefaults CA92.1, FileTimestamp C617.1, SystemBootTime 35F9.1, DiskSpace E174.1 + 85F4.1 - MPVKit is static, no manifest), ATS per `docs/open-items.md` decision. Re-run release playback on the emulator after (`docs/test-plans/mpv.md`)
