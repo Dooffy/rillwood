@@ -50,3 +50,9 @@ modules/*/android/build/
 
 # Settings → Licences data, written on postinstall (scripts/generate-licences.mjs)
 src/licences.json
+
+# release builds
+*.ipa
+*.aab
+*.apk
+credentials.json
