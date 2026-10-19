@@ -39,6 +39,8 @@ const pageTitle = title === 'Rillwood' ? title : `${title} - Rillwood`;
         <a href={href('privacy')}>Privacy</a>
         {repoUrl && <a href={repoUrl}>Source code</a>}
         {repoUrl && <a href={`${repoUrl}/issues`}>Support</a>}
+        {repoUrl && <a href={`${repoUrl}/blob/main/CONTRIBUTING.md`}>Contributing</a>}
+        {repoUrl && <a href={`${repoUrl}/blob/main/TRADEMARKS.md`}>Trademarks</a>}
       </nav>
       <p>
         Free software under the GNU GPL version 3 or later. Rillwood is an independent app for Jellyfin servers, not

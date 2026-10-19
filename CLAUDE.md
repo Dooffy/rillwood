@@ -106,6 +106,7 @@ Repo layout:
   .github/    CI workflow + scripts
   .claude/    shared Claude Code skills (/task-init, /submit-code, /create-pull-request, /merge-pr, /update-modules)
   CLAUDE.md   this file
+  CONTRIBUTING.md, TRADEMARKS.md
   LICENSE
   README.md
 ```
@@ -209,7 +210,7 @@ Keep non-route code out of `src/app/`. `app/` and `web/` are independent project
 - **Player binaries:** the MVP uses the current prebuilt GPL builds (MPVKit fork on iOS, `dev.jdtech.mpv:libmpv` on Android; flags in `modules/mpv/UPSTREAM.md`). Post-MVP: rebuild **without** `enable-gpl` / `make gpl`, no `--enable-nonfree`, no libx264 / libsmbclient; dynamic framework on iOS (§11). Record exact binary provenance and publish build scripts / source per release.
 - **Never add other GPL-only third-party libs to the iOS build** (e.g. `expo-mpv` npm is GPL-3.0-only) - the MPVKit exception above is the only one.
 - `THIRD_PARTY_NOTICES.md` (repo root) lists vendored source + native binaries - update it with every vendored component or binary change. Check for upstream / binary updates with `/update-modules` before every release.
-- To add: `CONTRIBUTING.md` (DCO sign-off, contributions under GPL-3.0-or-later + exception), `TRADEMARKS.md` (forks welcome, rename + re-icon).
+- `CONTRIBUTING.md` (DCO sign-off, contributions under GPL-3.0-or-later + the same exception, no CLA) and `TRADEMARKS.md` (forks welcome: rename, re-icon, own bundle id + scheme). Keep them in step with these rules.
 - In-app licences screen (Settings → Licences): `scripts/generate-licences.mjs` writes `src/licences.json` on postinstall (gitignored) from the production npm packages + a hand-kept native list - keep that list in step with `THIRD_PARTY_NOTICES.md`. The FFmpeg credit line (`LicencesList.tsx`) says GPL-3.0 until the LGPL rebuild. No `react-native-legal`.
 - CI: `npm run licenses` fails on any GPL/AGPL-only production dependency (LGPL and `X OR GPL` dual licences allowed). Native binaries (MPVKit, libmpv) aren't npm deps - verify them by hand (§11).
 - Repo must be **public** before any build reaches external testers (exception requires public Corresponding Source).
