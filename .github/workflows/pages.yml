@@ -19,6 +19,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      # configure-pages reads the site's address (GET /repos/{owner}/{repo}/pages).
+      pages: read
     defaults:
       run:
         working-directory: web
