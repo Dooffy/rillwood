@@ -1,0 +1,351 @@
+{
+  "movies": [
+    {
+      "slug": "saltwater-hymn",
+      "title": "Saltwater Hymn",
+      "year": 2024,
+      "premiered": "2024-03-15",
+      "genres": ["Drama"],
+      "rating": "PG-13",
+      "communityRating": 7.6,
+      "minutes": 118,
+      "tagline": "The sea keeps what it's given.",
+      "overview": "A widowed fisherwoman takes over her husband's failing boat in a remote northern harbour. A storm season begins and a rival crew wants her mooring."
+    },
+    {
+      "slug": "glass-orbit",
+      "title": "Glass Orbit",
+      "year": 2025,
+      "premiered": "2025-07-11",
+      "genres": ["Science Fiction", "Thriller"],
+      "rating": "PG-13",
+      "communityRating": 8.1,
+      "minutes": 134,
+      "downloadGB": 2.6,
+      "tagline": "Nine hours of air. One way home.",
+      "overview": "An engineer on a private orbital hotel wakes alone after a debris strike. She has to cross the broken station before its orbit decays."
+    },
+    {
+      "slug": "the-quiet-cartographer",
+      "title": "The Quiet Cartographer",
+      "year": 2023,
+      "premiered": "2023-05-05",
+      "genres": ["Mystery", "Adventure"],
+      "rating": "PG",
+      "communityRating": 7.2,
+      "minutes": 107,
+      "tagline": "Some places don't want to be found.",
+      "overview": "A retired mapmaker finds an island on his old charts that no satellite shows. With his teenage granddaughter he sets out to prove it exists."
+    },
+    {
+      "slug": "last-train-to-vellmoor",
+      "title": "Last Train to Vellmoor",
+      "year": 2022,
+      "premiered": "2022-11-18",
+      "genres": ["Thriller", "Mystery"],
+      "rating": "PG-13",
+      "communityRating": 7.4,
+      "minutes": 112,
+      "tagline": "Everyone on board has a reason to stay quiet.",
+      "overview": "A night train through the mountains stops in a snowstorm. When a passenger vanishes, a conductor on his last shift has until dawn to find out who took her."
+    },
+    {
+      "slug": "marigold-static",
+      "title": "Marigold Static",
+      "year": 2024,
+      "premiered": "2024-02-09",
+      "genres": ["Romance", "Comedy"],
+      "rating": "PG-13",
+      "communityRating": 6.9,
+      "minutes": 101,
+      "tagline": "Love is just a frequency away.",
+      "overview": "A late-night radio host keeps getting calls from the same anonymous listener. The two fall for each other without ever meeting, and both are lying about who they are."
+    },
+    {
+      "slug": "hollow-pines",
+      "title": "Hollow Pines",
+      "year": 2021,
+      "premiered": "2021-10-22",
+      "genres": ["Horror"],
+      "rating": "R",
+      "communityRating": 6.4,
+      "minutes": 96,
+      "tagline": "The forest remembers.",
+      "overview": "Four friends rent a cabin in a forest where the trees grow back overnight wherever they're cut. The paths change too, and one of them starts hearing her own name."
+    },
+    {
+      "slug": "the-brass-detective",
+      "title": "The Brass Detective",
+      "year": 2023,
+      "premiered": "2023-12-01",
+      "genres": ["Animation", "Family"],
+      "rating": "G",
+      "communityRating": 7.8,
+      "minutes": 89,
+      "downloadGB": 1.8,
+      "tagline": "Small gears. Big case.",
+      "overview": "In a city of clockwork, a pocket-watch-sized robot detective and a street kid chase a thief who is stealing the city's tick."
+    },
+    {
+      "slug": "northbound-heat",
+      "title": "Northbound Heat",
+      "year": 2025,
+      "premiered": "2025-04-25",
+      "genres": ["Action", "Thriller"],
+      "rating": "R",
+      "communityRating": 6.8,
+      "minutes": 123,
+      "tagline": "2,000 miles. No stops.",
+      "overview": "An ex-convoy driver agrees to one last haul from the border to the Arctic coast, then finds out what she's carrying and who wants it back."
+    },
+    {
+      "slug": "velvet-hours",
+      "title": "Velvet Hours",
+      "year": 2022,
+      "premiered": "2022-09-30",
+      "genres": ["Drama", "Music"],
+      "rating": "PG-13",
+      "communityRating": 8.3,
+      "minutes": 129,
+      "downloadGB": 2.3,
+      "tagline": "Every song has a price.",
+      "overview": "In 1950s New Orleans, a young pianist joins a famous club band. The club's owner owns more than the stage."
+    },
+    {
+      "slug": "small-engines",
+      "title": "Small Engines",
+      "year": 2024,
+      "premiered": "2024-06-14",
+      "genres": ["Comedy"],
+      "rating": "PG",
+      "communityRating": 7.0,
+      "minutes": 98,
+      "tagline": "Built for speed. Barely.",
+      "overview": "A recently fired accountant joins his small town's illegal lawnmower racing league to win back his kid's respect and maybe the county trophy."
+    }
+  ],
+  "shows": [
+    {
+      "slug": "driftline",
+      "title": "Driftline",
+      "year": 2023,
+      "premiered": "2023-01-12",
+      "status": "Continuing",
+      "genres": ["Science Fiction", "Drama"],
+      "rating": "TV-14",
+      "communityRating": 8.0,
+      "minutes": 48,
+      "overview": "The crew of a deep-sea research station loses contact with the surface. Then the station starts receiving signals from below.",
+      "episodes": [
+        {
+          "title": "Pressure",
+          "overview": "A routine supply drop never arrives."
+        },
+        {
+          "title": "Ballast",
+          "overview": "The commander hides the real depth readings."
+        },
+        {
+          "title": "Echo Room",
+          "overview": "Sonar picks up a pattern that repeats."
+        },
+        {
+          "title": "Cold Seal",
+          "overview": "A hull breach forces a choice of who stays."
+        },
+        {
+          "title": "The Trench",
+          "overview": "Two divers go further than allowed."
+        },
+        {
+          "title": "Surface",
+          "overview": "Contact comes back, but it isn't the surface."
+        }
+      ]
+    },
+    {
+      "slug": "the-orchard-house",
+      "title": "The Orchard House",
+      "year": 2022,
+      "premiered": "2022-09-08",
+      "status": "Continuing",
+      "genres": ["Drama", "Family"],
+      "rating": "TV-PG",
+      "communityRating": 7.7,
+      "minutes": 44,
+      "overview": "Three adult siblings come home to run the family apple orchard after their father's stroke. Each of them is hiding why they really came back.",
+      "episodes": [
+        {
+          "title": "Homecoming",
+          "overview": "The siblings arrive within hours of each other."
+        },
+        {
+          "title": "First Frost",
+          "overview": "An early cold snap threatens the harvest."
+        },
+        {
+          "title": "The Ledger",
+          "overview": "The farm's debts are worse than anyone said."
+        },
+        {
+          "title": "Cider Night",
+          "overview": "The town festival brings back an old flame."
+        },
+        {
+          "title": "Grafting",
+          "overview": "Dad's first words since the stroke change everything."
+        },
+        {
+          "title": "Harvest Moon",
+          "overview": "A buyer makes an offer they can't ignore."
+        }
+      ]
+    },
+    {
+      "slug": "night-shift-at-kesslers",
+      "title": "Night Shift at Kessler's",
+      "year": 2024,
+      "premiered": "2024-04-03",
+      "status": "Continuing",
+      "genres": ["Comedy"],
+      "rating": "TV-14",
+      "communityRating": 7.5,
+      "minutes": 22,
+      "overview": "A burnt-out chef takes the graveyard shift at a run-down roadside diner, with regulars who never seem to leave.",
+      "episodes": [
+        {
+          "title": "Open Late",
+          "overview": "Day one: the fryer is on fire."
+        },
+        {
+          "title": "The Regulars",
+          "overview": "Nobody knows when Walt arrived. Possibly 1998."
+        },
+        {
+          "title": "Health Inspector",
+          "overview": "Panic, mops and one very calm raccoon."
+        },
+        {
+          "title": "Pie Wars",
+          "overview": "A rival diner opens across the road."
+        },
+        {
+          "title": "Graveyard Special",
+          "overview": "A lost tour bus arrives at 3 am."
+        },
+        {
+          "title": "Last Call",
+          "overview": "Kessler threatens to sell."
+        }
+      ]
+    },
+    {
+      "slug": "frostmark",
+      "title": "Frostmark",
+      "year": 2021,
+      "premiered": "2021-02-04",
+      "status": "Ended",
+      "genres": ["Crime", "Mystery"],
+      "rating": "TV-14",
+      "communityRating": 8.2,
+      "minutes": 52,
+      "downloadGB": 0.75,
+      "overview": "A detective returns to her Arctic hometown to reopen a twenty-year-old case: the night her brother disappeared on the frozen lake.",
+      "episodes": [
+        {
+          "title": "Thaw",
+          "overview": "Spring comes early, and the lake gives up an old secret."
+        },
+        {
+          "title": "Old Names",
+          "overview": "The case file from 2004 is missing pages."
+        },
+        {
+          "title": "Whiteout",
+          "overview": "A storm traps a witness in the town."
+        },
+        {
+          "title": "The Ferryman",
+          "overview": "A fisherman saw something that night."
+        },
+        {
+          "title": "Lost Tracks",
+          "overview": "An abandoned snowmobile points to a new lead."
+        },
+        {
+          "title": "Breakup",
+          "overview": "The lake thaws and the truth surfaces."
+        }
+      ],
+      "ended": "2021-03-11"
+    },
+    {
+      "slug": "wild-atlas",
+      "title": "Wild Atlas",
+      "year": 2025,
+      "premiered": "2025-03-02",
+      "status": "Continuing",
+      "genres": ["Documentary"],
+      "rating": "TV-G",
+      "communityRating": 8.6,
+      "minutes": 50,
+      "downloadGB": 0.9,
+      "overview": "A nature series following wildlife across six extreme habitats, filmed over three years.",
+      "episodes": [
+        {
+          "title": "Peaks",
+          "overview": "Life in the thin air of the high mountains."
+        },
+        {
+          "title": "Dunes",
+          "overview": "Desert creatures that never drink."
+        },
+        {
+          "title": "Canopy",
+          "overview": "A rainforest seen from the treetops."
+        },
+        {
+          "title": "Ice",
+          "overview": "The polar edge where seasons rule."
+        },
+        {
+          "title": "Reef",
+          "overview": "Cities beneath the waves."
+        },
+        {
+          "title": "Night",
+          "overview": "What wakes when the sun goes down."
+        }
+      ]
+    }
+  ],
+  "demo": {
+    "watched": [
+      "velvet-hours",
+      "saltwater-hymn",
+      "driftline S01E01",
+      "driftline S01E02",
+      "driftline S01E03",
+      "frostmark S01E01",
+      "frostmark S01E02",
+      "the-orchard-house S01E01",
+      "the-orchard-house S01E02",
+      "the-orchard-house S01E03"
+    ],
+    "resume": [
+      {
+        "item": "glass-orbit",
+        "minutes": 72
+      },
+      {
+        "item": "driftline S01E04",
+        "minutes": 18
+      },
+      {
+        "item": "marigold-static",
+        "minutes": 35
+      }
+    ],
+    "favourites": ["wild-atlas", "the-brass-detective", "frostmark"]
+  }
+}

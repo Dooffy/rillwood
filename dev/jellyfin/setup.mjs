@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Configures a fresh local Jellyfin for development: finishes the startup wizard,
-// creates the dev users and the Movies / Shows / Real libraries. Idempotent.
+// creates the dev users and the Movies / Shows / Real libraries, then the showcase (showcase.mjs: Films / TV Shows,
+// user demo). Idempotent.
 // Usage: node setup.mjs [--server http://localhost:8096]
 // Dev-only credentials - never use them on a real server.
+import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 
 const args = process.argv.slice(2);
 const flag = args.indexOf('--server');
@@ -85,3 +90,13 @@ for (const lib of LIBRARIES) {
 await call('POST', '/Library/Refresh', { token });
 console.log('Library scan started. Done - users: admin / admin-rillwood, test / test-rillwood');
 await call('POST', '/Sessions/Logout', { token });
+
+// Showcase library + demo user (README.md "Showcase library"), once make-test-media.sh has built its media
+if (existsSync(join(process.env.RILLWOOD_MEDIA || join(homedir(), 'rillwood-media'), 'showcase'))) {
+  const run = spawnSync(process.execPath, [join(import.meta.dirname, 'showcase.mjs'), '--server', server], {
+    stdio: 'inherit',
+  });
+  process.exitCode = run.status ?? 1;
+} else {
+  console.log('No showcase media yet - run ./make-test-media.sh, then node setup.mjs again for the demo user');
+}

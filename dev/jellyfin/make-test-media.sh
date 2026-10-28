@@ -183,6 +183,13 @@ for season in 1 2; do
   done
 done
 
+# Showcase library: fictional movies + shows with artwork, for screenshots (README.md "Showcase library")
+if command -v node >/dev/null; then
+  node "$(dirname "$0")/make-showcase-media.mjs"
+else
+  echo "node not found - skipped the showcase library (make-showcase-media.mjs)" >&2
+fi
+
 echo
 echo "Done: $MEDIA"
 echo "Add real files for DV P8 and PGS to $MEDIA/real/ (see README.md)."

@@ -102,10 +102,10 @@ Repo layout:
 /
   app/        mobile app (Expo SDK 58, iOS + Android) - everything in §2-§9 lives here
   web/        static project website (Astro): src/pages/index.astro (landing), privacy.astro (privacy policy), src/layouts/Base.astro, public/ (marks, favicon)
-  dev/        local dev tooling: dev/jellyfin = pinned Jellyfin servers + test media generator
+  dev/        local dev tooling: dev/jellyfin = pinned Jellyfin servers + test media generator + showcase library (screenshots)
   docs/       project docs: architecture, decisions, test plans, release process
   .github/    CI workflow + scripts
-  .claude/    shared Claude Code skills (/task-init, /submit-code, /create-pull-request, /merge-pr, /update-modules)
+  .claude/    shared Claude Code skills (/task-init, /submit-code, /create-pull-request, /merge-pr, /update-modules, /showcase)
   CLAUDE.md   this file
   CONTRIBUTING.md, TRADEMARKS.md
   LICENSE
