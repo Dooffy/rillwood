@@ -158,6 +158,8 @@ Design + sources: `docs/research/background-downloads.md`.
 - [ ] Splash, screenshots, privacy policy
   - [x] Splash light + dark: white with the black pebble mark / black with the white one (`expo-splash-screen` `dark`), follows the system appearance. Native rebuild - device check pending
   - [ ] Screenshots
+    - [x] Showcase library: 10 fictional movies + 5 shows with artwork, `demo` user with watch state (`dev/jellyfin/README.md`)
+    - [ ] Capture iPhone + iPad (+ Android) sets, frame for the stores
   - [x] Privacy policy ("connects to your own server") + landing page: `web/` (Astro), deployed to GitHub Pages. Goes live once the repo is public and Pages is on (Settings → Pages → Source: GitHub Actions); put its URL in both store listings
 - [ ] `/update-modules`: vendored modules, native binaries + Expo packages current, no blockers
 - [ ] CI native + playback checks (skill to create later):
