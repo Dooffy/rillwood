@@ -78,7 +78,7 @@ For each changed project that has a `package.json`:
 ```bash
 # app/
 cd app && npm run check            # lint, typecheck, format, tests
-cd app && npx --no-install expo-doctor && npm run bundle:check && npm run licenses   # if deps/config changed (CI runs them too)
+cd app && npx --no-install expo-doctor && npm run bundle:check && npm run licenses   # if deps/config changed (CI runs bundle + licences; Expo doctor only at Release)
 # web/
 cd web && npm test --if-present && npm run lint --if-present && npm run typecheck --if-present
 ```

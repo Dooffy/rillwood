@@ -98,13 +98,13 @@ describe('Settings screen', () => {
     expect(router.push).toHaveBeenCalledWith('/subtitles');
   });
 
-  it('shows the download defaults and app version', async () => {
+  it('shows the download defaults, no app version', async () => {
     await renderSettings();
     expect(screen.getByRole('button', { name: 'Network' })).toHaveAccessibilityValue({ text: 'Wi-Fi only' });
     expect(screen.getByRole('button', { name: 'Storage limit' })).toHaveAccessibilityValue({ text: 'No limit' });
     expect(screen.getByRole('button', { name: 'Remove downloads' })).toHaveAccessibilityValue({ text: '90 days' });
     expect(screen.queryByRole('button', { name: 'Remove watched' })).toBeNull();
-    expect(screen.getByText('Version')).toBeOnTheScreen();
+    expect(screen.queryByText('Version')).toBeNull();
   });
 
   it('opens the download network list and the storage limit', async () => {
