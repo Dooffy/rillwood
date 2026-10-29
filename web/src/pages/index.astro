@@ -1,90 +1,533 @@
 ---
 // SPDX-License-Identifier: GPL-3.0-or-later
 import Base from '../layouts/Base.astro';
-import { href } from '../site';
+import { href, repoUrl } from '../site';
 
+// Feature icons: 24 px stroke paths.
 const features = [
-  ['Plays your files as they are', 'MKV and every common video, audio and subtitle format, straight from your server. No transcoding.'],
-  ['Downloads for offline', 'Movies, episodes or whole seasons download in the background and keep going after the app closes.'],
-  ['Works offline', 'Browse and play your downloads without a connection. Watch progress syncs when you are back online.'],
-  ['Cleans up after itself', 'Downloads remove themselves after 90 days, or sooner once watched if you choose, so storage stays free.'],
-  ['All your servers', 'Several servers and accounts, switch in a tap. Sign in with a password or Quick Connect.'],
-  ['iPhone, iPad and Android', 'Built for phones, with layouts for iPad in portrait, landscape and Split View.'],
+  {
+    title: 'Plays your files as they are',
+    text: 'MKV and every common video, audio and subtitle format, straight from your server. No transcoding.',
+    icon: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M10 9l5 3-5 3z"/>',
+  },
+  {
+    title: 'Downloads for offline',
+    text: 'Movies, episodes or whole seasons download in the background and keep going after the app closes.',
+    icon: '<path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/>',
+  },
+  {
+    title: 'Works offline',
+    text: 'Browse and play your downloads without a connection. Watch progress syncs when you are back online.',
+    icon: '<path d="M3 3l18 18"/><path d="M8.5 16.5a5 5 0 017 0"/><path d="M5 12.5a10 10 0 014.2-2.4"/><path d="M14.8 10.1A10 10 0 0119 12.5"/><path d="M2 8.8a15 15 0 014-2.5"/><path d="M11 5a15 15 0 0111 3.8"/><circle cx="12" cy="20" r="0.8"/>',
+  },
+  {
+    title: 'Cleans up after itself',
+    text: 'Downloads remove themselves after 90 days, or sooner once watched if you choose, so storage stays free.',
+    icon: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/>',
+  },
+  {
+    title: 'All your servers',
+    text: 'Several servers and accounts, switch in a tap. Sign in with a password or Quick Connect.',
+    icon: '<rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 7h.01"/><path d="M7 17h.01"/>',
+  },
+  {
+    title: 'iPhone, iPad and Android',
+    text: 'Built for phones, with layouts for iPad in portrait, landscape and Split View.',
+    icon: '<rect x="2" y="5" width="13" height="16" rx="2"/><rect x="15" y="9" width="7" height="12" rx="1.5"/><path d="M8 18h1"/>',
+  },
 ];
+const privacyPoints = ['Connects only to your servers', 'No analytics', 'No ads', 'Nothing to sign up for'];
+const posters = ['#2b4a40', '#4a3b2b', '#2b3550', '#50302f', '#33472b', '#3e2e4a'];
 ---
 
 <Base
   title="Rillwood"
   description="A fast, open-source Jellyfin client for iPhone, iPad and Android. Plays every file as it is and downloads for offline."
 >
-  <section class="hero">
-    <picture>
-      <source srcset={href('logo-mark-dark.svg')} media="(prefers-color-scheme: dark)" />
-      <img src={href('logo-mark-light.svg')} alt="" width="96" height="96" />
-    </picture>
-    <h1>Your Jellyfin library, fast and offline.</h1>
-    <p class="secondary lead">
-      Rillwood is a free, open-source client for your own Jellyfin server. It plays every file as it is and downloads
-      for when you are away from home.
-    </p>
-    <p class="soon">Coming soon to the App Store and Google Play.</p>
+  <section class="hero wrap">
+    <div class="hero-text">
+      <span class="badge"><span class="dot"></span>Free and open source - for Jellyfin</span>
+      <h1>Your Jellyfin library, <span class="accent">fast and offline.</span></h1>
+      <p class="lead">
+        Rillwood is a free, open-source client for your own Jellyfin server. It plays every file as it is and downloads
+        for when you are away from home.
+      </p>
+      <div class="stores">
+        <span class="store primary">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"></rect><path
+              d="M11 18h2"></path></svg>
+          <span><small>Coming soon to the</small>App Store</span>
+        </span>
+        <span class="store">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3l13 9-13 9z"></path></svg>
+          <span><small>Coming soon to</small>Google Play</span>
+        </span>
+      </div>
+      <p class="fine">iPhone, iPad and Android. No account, no tracking.</p>
+    </div>
+
+    <div class="hero-art" aria-hidden="true">
+      <div class="ring ring-small"></div>
+      <div class="ring ring-large"></div>
+      <div class="phone">
+        <div class="screen">
+          <div class="screen-head"><b>Library</b><span>Home server</span></div>
+          <div class="tabs"><span class="on">Movies</span><span>Shows</span><span>Downloads</span></div>
+          <div class="posters">{posters.map((colour) => <div style={`background: ${colour}`} />)}</div>
+          <span class="label">Downloading</span>
+          <div class="download">
+            <div class="thumb" style="background: #2b3550"></div>
+            <div class="bar-text">Season 2 - 4 of 8 episodes<div class="bar"><div style="width: 52%"></div></div></div>
+          </div>
+          <div class="download">
+            <div class="thumb" style="background: #4a3b2b"></div>
+            <div class="bar-text">Movie - 2.1 GB MKV<div class="bar"><div style="width: 86%"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
-  <ul class="features">
-    {
-      features.map(([title, text]) => (
-        <li>
-          <h2>{title}</h2>
-          <p class="secondary">{text}</p>
-        </li>
-      ))
-    }
-  </ul>
+  <section id="features" class="features wrap">
+    <div class="section-head">
+      <span class="eyebrow">What it does</span>
+      <h2>Built for the way you actually watch.</h2>
+    </div>
+    <ul class="cards">
+      {
+        features.map((feature) => (
+          <li class="card">
+            <span class="icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true" set:html={feature.icon} />
+            </span>
+            <h3>{feature.title}</h3>
+            <p>{feature.text}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
 
-  <h2>No accounts, no tracking</h2>
-  <p class="secondary">
-    Rillwood talks only to the servers you add. It has no analytics, no ads and nothing to sign up for. See the <a
-      href={href('privacy')}>privacy policy</a
-    >.
-  </p>
+  <section id="privacy" class="wrap">
+    <div class="panel">
+      <div class="panel-text">
+        <span class="eyebrow">Privacy</span>
+        <h2>No accounts, no tracking.</h2>
+        <p class="lead">
+          Rillwood talks only to the servers you add. It has no analytics, no ads and nothing to sign up for. See the <a
+            href={href('privacy')}>privacy policy</a
+          >.
+        </p>
+      </div>
+      <ul class="checks">
+        {
+          privacyPoints.map((point) => (
+            <li>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12l5 5 9-10" />
+              </svg>
+              {point}
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <section class="made wrap">
+    <div class="panel dashed">
+      <div class="panel-text">
+        <span class="eyebrow muted">How it is made</span>
+        <h2 class="small">Built with help from AI.</h2>
+        <p class="secondary">AI coding tools help write parts of Rillwood. We say so up front because you deserve to know.</p>
+      </div>
+      <ul class="points">
+        <li>
+          <b>Read every line</b>
+          <span>
+            The full source is open{repoUrl ? <> on <a href={repoUrl}>GitHub</a></> : ''}.
+          </span>
+        </li>
+        <li>
+          <b>No AI inside the app</b>
+          <span>Your library never goes to an AI service. The app talks only to your servers.</span>
+        </li>
+        <li>
+          <b>Fixed in the open</b>
+          <span>
+            Bugs and changes are tracked publicly in {repoUrl ? <a href={`${repoUrl}/issues`}>issues</a> : 'issues'}.
+          </span>
+        </li>
+      </ul>
+    </div>
+  </section>
 </Base>
 
 <style>
-  .hero img {
-    margin-top: 48px;
-    display: block;
+  h1,
+  h2,
+  h3,
+  p {
+    margin: 0;
   }
-  .hero h1 {
-    margin-top: 24px;
+  .accent {
+    color: var(--accent);
   }
   .lead {
-    font-size: 20px;
+    max-width: 540px;
+    font-size: 19px;
+    color: var(--text-secondary);
   }
-  .soon {
-    display: inline-block;
-    background: var(--surface);
+  .eyebrow {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .eyebrow.muted {
+    color: var(--text-secondary);
+  }
+  svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Hero */
+  .hero {
+    padding-top: 56px;
+    padding-bottom: 96px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 64px;
+  }
+  .hero-text {
+    flex: 999 1 480px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+  .badge {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
     border-radius: 999px;
-    padding: 8px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .hero h1 {
+    font-size: clamp(44px, 6vw, 76px);
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+  }
+  .stores {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .store {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 56px;
+    padding: 0 22px;
+    border-radius: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 17px;
     font-weight: 600;
   }
-  .features {
-    list-style: none;
-    padding: 0;
-    margin: 32px 0 0;
-    display: grid;
+  .store.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+  }
+  .store svg {
+    width: 22px;
+    height: 22px;
+    stroke-width: 2;
+  }
+  .store > span {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+  }
+  .store small {
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .fine {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  /* Phone drawing beside the hero text */
+  .hero-art {
+    flex: 1 1 340px;
+    display: flex;
+    justify-content: center;
+    position: relative;
+  }
+  .ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+  }
+  .ring-small {
+    width: 360px;
+    height: 360px;
+    top: 120px;
+  }
+  .ring-large {
+    width: 480px;
+    height: 480px;
+    top: 60px;
+    opacity: 0.6;
+  }
+  .phone {
+    position: relative;
+    width: 320px;
+    height: 640px;
+    border-radius: 48px;
+    background: #070b0a;
+    border: 1px solid #2a3a34;
+    padding: 12px;
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.35);
+  }
+  .screen {
+    height: 100%;
+    border-radius: 38px;
+    background: #111a17;
+    color: #e6eeea;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     gap: 16px;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    padding: 44px 18px 18px;
   }
-  .features li {
-    background: var(--surface);
-    border-radius: 14px;
-    padding: 16px;
+  .screen-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
-  .features h2 {
-    margin: 0 0 4px;
-    font-size: 17px;
+  .screen-head b {
+    font-family: var(--display);
+    font-size: 24px;
   }
-  .features p {
+  .screen-head span {
+    font-size: 12px;
+    color: #a9bbb3;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #1a2622;
+  }
+  .tabs {
+    display: flex;
+    gap: 6px;
+    padding: 4px;
+    border-radius: 999px;
+    background: #1a2622;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .tabs span {
+    flex: 1;
+    text-align: center;
+    padding: 7px 0;
+    border-radius: 999px;
+    color: #a9bbb3;
+  }
+  .tabs .on {
+    background: #2a3a34;
+    color: #e6eeea;
+  }
+  .posters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .posters div {
+    aspect-ratio: 2 / 3;
+    border-radius: 10px;
+  }
+  .label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8a9d95;
+  }
+  .download {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .thumb {
+    width: 40px;
+    height: 56px;
+    border-radius: 8px;
+    flex: none;
+  }
+  .bar-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .bar {
+    height: 4px;
+    border-radius: 2px;
+    background: #22302b;
+  }
+  .bar div {
+    height: 4px;
+    border-radius: 2px;
+    background: #7fd1b9;
+  }
+
+  /* Features */
+  .features {
+    padding-bottom: 112px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+  .section-head {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 640px;
+  }
+  h2 {
+    font-size: clamp(32px, 4vw, 48px);
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+  }
+  h2.small {
+    font-size: clamp(26px, 3vw, 34px);
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+  }
+  .cards {
+    list-style: none;
     margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+    gap: 16px;
+  }
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 28px;
+    border-radius: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  .card .icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: var(--surface-raised);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+  }
+  .card svg {
+    width: 24px;
+    height: 24px;
+  }
+  .card h3 {
+    font-size: 21px;
+    font-weight: 600;
+  }
+  .card p {
+    color: var(--text-secondary);
+  }
+
+  /* Privacy + how it is made */
+  .panel {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 40px;
+    padding: clamp(28px, 5vw, 56px);
+    border-radius: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  .panel.dashed {
+    align-items: flex-start;
+    background: none;
+    border-style: dashed;
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+  .panel-text {
+    flex: 999 1 420px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .made {
+    padding-top: 24px;
+    padding-bottom: 112px;
+  }
+  .checks,
+  .points {
+    flex: 1 1 260px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .checks li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+  }
+  .checks svg {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    stroke: var(--accent);
+    stroke-width: 2.2;
+  }
+  .points {
+    gap: 16px;
+    font-size: 15px;
+  }
+  .points li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .points span {
+    color: var(--text-secondary);
   }
 </style>
