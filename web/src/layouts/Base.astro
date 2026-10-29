@@ -1,6 +1,6 @@
 ---
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Every page: head, header with the mark, footer links. Colours follow the app's tokens (CLAUDE.md §3).
+// Every page: head, header with the mark + nav, footer links. Fonts are the system's (no font requests to anyone).
 import { href, repoUrl } from '../site';
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
 }
 const { title, description } = Astro.props;
 const pageTitle = title === 'Rillwood' ? title : `${title} - Rillwood`;
+const year = new Date().getFullYear();
 ---
 
 <!doctype html>
@@ -22,7 +23,7 @@ const pageTitle = title === 'Rillwood' ? title : `${title} - Rillwood`;
     <link rel="icon" href={href('favicon.svg')} type="image/svg+xml" />
   </head>
   <body>
-    <header>
+    <header class="site-header wrap">
       <a class="brand" href={href()}>
         <picture>
           <source srcset={href('logo-mark-dark.svg')} media="(prefers-color-scheme: dark)" />
@@ -30,41 +31,60 @@ const pageTitle = title === 'Rillwood' ? title : `${title} - Rillwood`;
         </picture>
         Rillwood
       </a>
+      <nav aria-label="Main">
+        <a href={`${href()}#features`}>Features</a>
+        <a href={`${href()}#privacy`}>Privacy</a>
+        {repoUrl && <a href={repoUrl}>Source code</a>}
+      </nav>
     </header>
     <main>
       <slot />
     </main>
-    <footer>
-      <nav>
-        <a href={href('privacy')}>Privacy</a>
-        {repoUrl && <a href={repoUrl}>Source code</a>}
-        {repoUrl && <a href={`${repoUrl}/issues`}>Support</a>}
-        {repoUrl && <a href={`${repoUrl}/blob/main/CONTRIBUTING.md`}>Contributing</a>}
-        {repoUrl && <a href={`${repoUrl}/blob/main/TRADEMARKS.md`}>Trademarks</a>}
-      </nav>
-      <p>
-        Free software under the GNU GPL version 3 or later. Rillwood is an independent app for Jellyfin servers, not
-        made by or affiliated with the Jellyfin project.
-      </p>
+    <footer class="site-footer">
+      <div class="wrap">
+        <span class="brand-name">Rillwood</span>
+        <nav aria-label="Footer">
+          <a href={href('privacy')}>Privacy policy</a>
+          {repoUrl && <a href={repoUrl}>Source code</a>}
+          {repoUrl && <a href={`${repoUrl}/issues`}>Contact</a>}
+          {repoUrl && <a href={`${repoUrl}/blob/main/TRADEMARKS.md`}>Trademarks</a>}
+        </nav>
+        <p>
+          © {year} Rillwood. Free software under the GNU GPL version 3 or later. Not affiliated with the Jellyfin project.
+        </p>
+      </div>
     </footer>
   </body>
 </html>
 
 <style is:global>
   :root {
-    --background: #ffffff;
-    --surface: #f2f2f7;
-    --separator: #c6c6c8;
-    --text: #000000;
-    --text-secondary: #6c6c70;
+    --background: #f6faf8;
+    --surface: #ffffff;
+    --surface-raised: #e8f0ec;
+    --border: #d3e0da;
+    --text: #0c1311;
+    --text-secondary: #46574f;
+    --text-muted: #56675f;
+    --accent: #1f7a62;
+    --on-accent: #ffffff;
+    --link: #1f7a62;
+    --link-hover: #12503f;
+    --display: ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --background: #000000;
-      --surface: #1c1c1e;
-      --separator: #38383a;
-      --text: #ffffff;
-      --text-secondary: #98989f;
+      --background: #0c1311;
+      --surface: #121b18;
+      --surface-raised: #1a2622;
+      --border: #1f2c27;
+      --text: #e6eeea;
+      --text-secondary: #a9bbb3;
+      --text-muted: #8a9d95;
+      --accent: #7fd1b9;
+      --on-accent: #0c1311;
+      --link: #7fd1b9;
+      --link-hover: #b4e8d8;
     }
   }
   * {
@@ -74,41 +94,63 @@ const pageTitle = title === 'Rillwood' ? title : `${title} - Rillwood`;
     margin: 0;
     background: var(--background);
     color: var(--text);
-    font: 17px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  }
-  header,
-  main,
-  footer {
-    max-width: 680px;
-    margin: 0 auto;
-    padding: 0 16px;
-  }
-  header {
-    padding-top: 24px;
-  }
-  main {
-    padding-bottom: 48px;
-  }
-  footer {
-    border-top: 1px solid var(--separator);
-    padding-top: 24px;
-    padding-bottom: 48px;
-    color: var(--text-secondary);
-    font-size: 15px;
-  }
-  footer nav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 24px;
+    font:
+      16px/1.55 -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
   }
   a {
-    color: inherit;
+    color: var(--link);
+  }
+  a:hover {
+    color: var(--link-hover);
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--display);
+    font-weight: 700;
+  }
+  .wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .site-header {
+    padding-top: 24px;
+    padding-bottom: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .site-header nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+    font-size: 15px;
+  }
+  .site-header nav a,
+  .site-footer nav a {
+    color: var(--text-secondary);
+    text-decoration: none;
+  }
+  .site-header nav a:hover,
+  .site-footer nav a:hover {
+    color: var(--text);
   }
   .brand {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    font-family: var(--display);
     font-weight: 700;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+    color: var(--text);
     text-decoration: none;
   }
   /* Block, not inline: an inline image sits on the text baseline, above the centre line. */
@@ -116,13 +158,49 @@ const pageTitle = title === 'Rillwood' ? title : `${title} - Rillwood`;
   .brand img {
     display: block;
   }
-  h1 {
-    font-size: 34px;
-    line-height: 1.2;
-    margin: 48px 0 16px;
+  .site-footer {
+    border-top: 1px solid var(--border);
+    font-size: 14px;
+    color: var(--text-muted);
   }
-  h2 {
-    font-size: 20px;
+  .site-footer .wrap {
+    padding-top: 32px;
+    padding-bottom: 32px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .site-footer nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+  }
+  .site-footer p {
+    margin: 0;
+  }
+  .brand-name {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--text);
+  }
+  /* Text pages (privacy policy): one readable column. */
+  .prose {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 24px 24px 64px;
+    font-size: 17px;
+  }
+  .prose h1 {
+    font-size: clamp(34px, 5vw, 44px);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    margin: 24px 0 8px;
+  }
+  .prose h2 {
+    font-size: 21px;
     margin: 32px 0 8px;
   }
   .secondary {

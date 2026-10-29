@@ -8,85 +8,87 @@ const updated = '18 October 2026';
 ---
 
 <Base title="Privacy policy" description="Rillwood collects no data. It connects only to the Jellyfin servers you add.">
-  <h1>Privacy policy</h1>
-  <p class="secondary">Last updated {updated}</p>
+  <article class="prose">
+    <h1>Privacy policy</h1>
+    <p class="secondary">Last updated {updated}</p>
 
-  <p>
-    <strong>Rillwood collects no data.</strong> There is no Rillwood account, no analytics, no advertising, no tracking
-    and no crash reporting in the app. We, the developers, never receive anything you do in it.
-  </p>
+    <p>
+      <strong>Rillwood collects no data.</strong> There is no Rillwood account, no analytics, no advertising, no tracking
+      and no crash reporting in the app. We, the developers, never receive anything you do in it.
+    </p>
 
-  <h2>Your Jellyfin server</h2>
-  <p>
-    Rillwood connects only to the Jellyfin servers you add. It sends them what any Jellyfin app needs to work: your
-    username and password when you sign in (or a Quick Connect code), the type of device (iPhone, iPad or Android), a
-    random device ID created for each sign-in, the app's name and version, and what you play, with your progress and
-    the audio and subtitle tracks you pick.
-  </p>
-  <p>
-    That server is run by you or by whoever invited you, and its owner decides what it keeps. Their own privacy
-    practices apply to it.
-  </p>
+    <h2>Your Jellyfin server</h2>
+    <p>
+      Rillwood connects only to the Jellyfin servers you add. It sends them what any Jellyfin app needs to work: your
+      username and password when you sign in (or a Quick Connect code), the type of device (iPhone, iPad or Android), a
+      random device ID created for each sign-in, the app's name and version, and what you play, with your progress and
+      the audio and subtitle tracks you pick.
+    </p>
+    <p>
+      That server is run by you or by whoever invited you, and its owner decides what it keeps. Their own privacy
+      practices apply to it.
+    </p>
 
-  <h2>Stored on your device</h2>
-  <ul>
-    <li>Server addresses and account names.</li>
-    <li>Sign-in tokens, in the system's secure storage (the Keychain on iOS, Keystore-backed storage on Android).</li>
-    <li>Your settings.</li>
-    <li>Downloaded videos, with their artwork and subtitles.</li>
-    <li>Watch progress made offline, until it is sent to your server.</li>
-    <li>A cache of posters and artwork.</li>
-  </ul>
-  <p>
-    None of it leaves your device except to your own server. Signing out or removing an account deletes that account's
-    sign-in and downloads. Deleting the app deletes everything.
-  </p>
+    <h2>Stored on your device</h2>
+    <ul>
+      <li>Server addresses and account names.</li>
+      <li>Sign-in tokens, in the system's secure storage (the Keychain on iOS, Keystore-backed storage on Android).</li>
+      <li>Your settings.</li>
+      <li>Downloaded videos, with their artwork and subtitles.</li>
+      <li>Watch progress made offline, until it is sent to your server.</li>
+      <li>A cache of posters and artwork.</li>
+    </ul>
+    <p>
+      None of it leaves your device except to your own server. Signing out or removing an account deletes that account's
+      sign-in and downloads. Deleting the app deletes everything.
+    </p>
 
-  <h2>Permissions</h2>
-  <ul>
-    <li><strong>Local network</strong> (iOS): to reach a server on your home network.</li>
-    <li><strong>Notifications</strong> (Android 13 and later): to show download progress.</li>
-  </ul>
+    <h2>Permissions</h2>
+    <ul>
+      <li><strong>Local network</strong> (iOS): to reach a server on your home network.</li>
+      <li><strong>Notifications</strong> (Android 13 and later): to show download progress.</li>
+    </ul>
 
-  <h2>App stores</h2>
-  <p>
-    Apple and Google handle downloads and updates of the app under their own privacy policies. If you have chosen to
-    share analytics with app developers in your device settings, they may give us anonymous crash reports and usage
-    statistics. We use them only to fix problems.
-  </p>
+    <h2>App stores</h2>
+    <p>
+      Apple and Google handle downloads and updates of the app under their own privacy policies. If you have chosen to
+      share analytics with app developers in your device settings, they may give us anonymous crash reports and usage
+      statistics. We use them only to fix problems.
+    </p>
 
-  <h2>This website</h2>
-  <p>
-    This site has no cookies, no analytics and no scripts. It is hosted on GitHub Pages, and GitHub may log visits as
-    described in the <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement"
-      >GitHub privacy statement</a
-    >.
-  </p>
+    <h2>This website</h2>
+    <p>
+      This site has no cookies, no analytics and no scripts. It is hosted on GitHub Pages, and GitHub may log visits as
+      described in the <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement"
+        >GitHub privacy statement</a
+      >.
+    </p>
 
-  <h2>Children</h2>
-  <p>Rillwood collects no data from anyone, including children.</p>
+    <h2>Children</h2>
+    <p>Rillwood collects no data from anyone, including children.</p>
 
-  <h2>Changes</h2>
-  <p>
-    If this policy changes, the new version is published here with a new date{
-      repoUrl && (
-        <>
-          , and every earlier version stays in the <a href={repoUrl}>source repository</a>
-        </>
-      )
-    }.
-  </p>
+    <h2>Changes</h2>
+    <p>
+      If this policy changes, the new version is published here with a new date{
+        repoUrl && (
+          <>
+            , and every earlier version stays in the <a href={repoUrl}>source repository</a>
+          </>
+        )
+      }.
+    </p>
 
-  <h2>Contact</h2>
-  <p>
-    {
-      repoUrl ? (
-        <>
-          Questions about this policy: open an issue at <a href={`${repoUrl}/issues`}>{`${repoUrl}/issues`}</a>.
-        </>
-      ) : (
-        'Questions about this policy: open an issue in the project repository.'
-      )
-    }
-  </p>
+    <h2>Contact</h2>
+    <p>
+      {
+        repoUrl ? (
+          <>
+            Questions about this policy: open an issue at <a href={`${repoUrl}/issues`}>{`${repoUrl}/issues`}</a>.
+          </>
+        ) : (
+          'Questions about this policy: open an issue in the project repository.'
+        )
+      }
+    </p>
+  </article>
 </Base>
