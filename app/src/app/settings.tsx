@@ -1,6 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import Constants from 'expo-constants';
-
 import { AccountsSection } from '@/components/AccountList';
 import { ListRow, ListSection } from '@/components/List';
 import { Page } from '@/components/Page';
@@ -63,7 +61,6 @@ function SettingsList() {
         <OptionRow option="offload-days" />
       </ListSection>
       <ListSection title="About">
-        <ListRow label="Version" value={Constants.expoConfig?.version ?? '-'} />
         <ListRow label="Licences" selected={link.selected(licences)} onPress={() => link.open(licences)} />
       </ListSection>
     </>

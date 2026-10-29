@@ -172,7 +172,7 @@ Design + sources: `docs/research/background-downloads.md`.
 - [ ] Play Console: data safety, FGS `dataSync` declaration (record the video, paste the text - `docs/release/play-fgs-declaration.md`), app access, content rating, closed test (12 testers x 14 days for new personal accounts - start early)
 - [ ] Release checks: Xcode privacy report on the archive, AAB 16 KB page alignment, release permissions list, no spike / test screens, no `UIFileSharingEnabled` in the release Info.plist (built without `RILLWOOD_FILE_SHARING`)
 - [ ] TestFlight + Play internal, 3-5 testers
-- [ ] Tag release; publish mpv/FFmpeg source tarballs
+- [ ] Tag release (`release.yml`: checks + doctor, tag + draft release - `docs/release/ios.md`); publish mpv/FFmpeg source tarballs
 
 ## Post-release
 

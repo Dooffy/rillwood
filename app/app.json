@@ -2,7 +2,7 @@
   "expo": {
     "name": "Rillwood",
     "slug": "rillwood",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "rillwood",

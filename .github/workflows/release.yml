@@ -1,0 +1,77 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Release (Actions → Release → Run workflow on main): every check plus Expo doctor, then tag v<version> and a draft
+# GitHub Release. Nothing is created unless everything passes - a failure is fixed in a PR and the run repeated.
+# Builds stay local (docs/release/ios.md).
+name: Release
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: read
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          [ "$REF" = refs/heads/main ] || { echo "::error::Run Release on main, not $REF"; exit 1; }
+          version=$(jq -r .expo.version app/app.json)
+          npm_version=$(jq -r .version app/package.json)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::app.json version '$version' isn't x.y.z"; exit 1; }
+          [ "$version" = "$npm_version" ] || { echo "::error::app.json $version != package.json $npm_version"; exit 1; }
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null; then
+            echo "::error::v$version is already tagged - bump the version in app.json + package.json"; exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  checks:
+    uses: ./.github/workflows/checks.yml
+
+  doctor:
+    name: Expo doctor
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      # Not via `npm run`: expo-doctor's nested `npm explain` calls fail inside npm scripts
+      - run: npx --no-install expo-doctor
+
+  release:
+    name: Tag + draft release
+    needs: [version, checks, doctor]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      TAG: v${{ needs.version.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+      # Tag first: a draft release alone doesn't create its tag until it's published.
+      - run: |
+          git tag "$TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$TAG"
+      - run: gh release create "$TAG" --draft --verify-tag --generate-notes --title "Rillwood ${TAG#v}"
