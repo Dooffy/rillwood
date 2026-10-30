@@ -15,7 +15,7 @@ import { minTouch, pressedOpacity, spacing, useColors, useWide } from '@/theme';
 import { Artwork } from './Artwork';
 import { longPressProps } from './Card';
 import { DownloadRing } from './DownloadRing';
-import { EPISODE_ROW_STILL } from './EpisodeRow';
+import { EPISODE_ROW_STILL, WIDE_EPISODE_ROW_STILL } from './EpisodeRow';
 import { Chevron } from './List';
 import { SwipeToDelete } from './SwipeToDelete';
 import { Text } from './Text';
@@ -36,9 +36,7 @@ export type DownloadRowProps = {
 export const DOWNLOAD_ROW_GAP = spacing.sm + spacing.xs;
 
 /** Poster width in a row: phone size, bigger on wide screens (iPad) where a 56pt poster looks lost in a column. */
-export const DOWNLOAD_POSTER = { phone: 56, wide: 80 } as const;
-/** An episode's 16:9 still, grown by the same ratio on wide screens. */
-const WIDE_STILL = Math.round((EPISODE_ROW_STILL * DOWNLOAD_POSTER.wide) / DOWNLOAD_POSTER.phone);
+export const DOWNLOAD_POSTER = { phone: 56, wide: 100 } as const;
 
 /**
  * A list's `ItemSeparatorComponent`: the row gap. Not `gap` on a virtualised list's content - its spacers for the
@@ -212,7 +210,7 @@ const styles = StyleSheet.create({
   poster: { width: DOWNLOAD_POSTER.phone },
   posterWide: { width: DOWNLOAD_POSTER.wide },
   still: { width: EPISODE_ROW_STILL },
-  stillWide: { width: WIDE_STILL },
+  stillWide: { width: WIDE_EPISODE_ROW_STILL },
   text: { flex: 1, gap: spacing.xs / 2 },
   control: { width: minTouch, height: minTouch, alignItems: 'center', justifyContent: 'center' },
   chevron: { width: spacing.lg, alignItems: 'center' },

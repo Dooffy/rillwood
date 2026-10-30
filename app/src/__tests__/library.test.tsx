@@ -121,6 +121,19 @@ describe('Library', () => {
     ]);
   });
 
+  // Shelves (All) size like Home's: phone cards, whole cards across the tab on tablets.
+  it('sizes the shelves for the device', async () => {
+    const window = Dimensions.get('window');
+    await act(() => Dimensions.set({ window: { ...window, width: 390, height: 844 } }));
+    await render(<Library />);
+    const posterWidth = async () =>
+      StyleSheet.flatten((await screen.findByRole('button', { name: 'Sintel, 2010' })).props.style).width as number;
+    expect(await posterWidth()).toBe(120);
+    await act(() => Dimensions.set({ window: { ...window, width: 834, height: 1194 } }));
+    expect(await posterWidth()).toBe(191);
+    await act(() => Dimensions.set({ window }));
+  });
+
   // The tablet landscape sidebar narrows the list below the window: columns follow the width the tab gets.
   it('lays the grid out for the width the tab gets', async () => {
     const window = Dimensions.get('window');

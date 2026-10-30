@@ -11,7 +11,7 @@ import { usePullToRefresh } from '@/usePullToRefresh';
 import { spacing, tabList, useColors } from '@/theme';
 
 import { PosterCard, WIDE_POSTER_WIDTH } from './Card';
-import { EPISODE_ROW_STILL, EpisodeRow } from './EpisodeRow';
+import { EpisodeRow, WIDE_EPISODE_ROW_STILL } from './EpisodeRow';
 import { useItemMenu } from './ItemMenu';
 import { LoadError, loadErrorMessage, Message, Offline, useHeldOffline } from './Message';
 import { CARD_GAP, fitCards } from './Row';
@@ -88,7 +88,7 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
           {...cardTitles(item)}
           {...playback(item)}
           runtimeSeconds={item.RunTimeTicks ? ticksToSeconds(item.RunTimeTicks) : undefined}
-          image={image(landscapeImage(item), EPISODE_ROW_STILL)}
+          image={image(landscapeImage(item), WIDE_EPISODE_ROW_STILL)}
           item={item}
           onOpen={openCard}
           onMenu={menuCard}

@@ -5,13 +5,11 @@ import type { PersonDto } from '@/api';
 import { personImage, personRole } from '@/items';
 import { useImage } from '@/useImage';
 
-import { PERSON_CARD_WIDTH, PERSON_SIZE, PersonCard } from './PersonCard';
+import { PersonCard, usePersonSize, WIDE_PERSON_SIZE } from './PersonCard';
 import { CARD_GAP, Row, rowListContent } from './Row';
 
 const Gap = () => <View style={styles.gap} />;
 
-/** Width a card takes in the list, its gap included (fixed: lets the list skip measuring). */
-const ITEM = PERSON_CARD_WIDTH + CARD_GAP;
 const PAD = rowListContent.paddingHorizontal;
 
 /**
@@ -20,6 +18,8 @@ const PAD = rowListContent.paddingHorizontal;
  */
 export function CastRow({ people }: { people: PersonDto[] }) {
   const image = useImage();
+  // Width a card takes in the list, its gap included (known: lets the list skip measuring).
+  const item = usePersonSize().cardWidth + CARD_GAP;
   if (people.length === 0) return null;
   return (
     <Row
@@ -31,12 +31,12 @@ export function CastRow({ people }: { people: PersonDto[] }) {
           data={people}
           keyExtractor={(p, i) => `${p.Id}-${p.Type}-${i}`}
           initialNumToRender={8}
-          getItemLayout={(_, index) => ({ length: ITEM, offset: PAD + ITEM * index, index })}
+          getItemLayout={(_, index) => ({ length: item, offset: PAD + item * index, index })}
           // A separator, not `gap`: gap would also space the placeholders that stand in for off-screen cards.
           ItemSeparatorComponent={Gap}
           contentContainerStyle={styles.content}
           renderItem={({ item: p }) => (
-            <PersonCard name={p.Name} role={personRole(p)} image={image(personImage(p), PERSON_SIZE)} />
+            <PersonCard name={p.Name} role={personRole(p)} image={image(personImage(p), WIDE_PERSON_SIZE)} />
           )}
         />
       }

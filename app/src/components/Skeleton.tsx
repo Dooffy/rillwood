@@ -9,7 +9,8 @@ import { minTouch, radii, spacing, useColors } from '@/theme';
 import { CardPlaceholder } from './Card';
 import { useHeroLayout } from './DetailHero';
 import { useEpisodeCardWidth } from './EpisodeCard';
-import { EPISODE_ROW_STILL } from './EpisodeRow';
+import { useShelfCards } from './shelfCards';
+import { useEpisodeRowStill } from './EpisodeRow';
 import { CARD_GAP } from './Row';
 
 const EPISODE_ROWS = 6;
@@ -128,11 +129,12 @@ export function EpisodeCardsPlaceholder() {
 
 /** Episodes as a vertical list (Library, Episodes) before the first page. */
 export function EpisodeRowsPlaceholder() {
+  const still = useEpisodeRowStill();
   return (
     <Loading testID="episode-rows-placeholder" style={styles.rows}>
       {Array.from({ length: EPISODE_ROWS }, (_, i) => (
         <View key={i} style={styles.row}>
-          <Bone width={EPISODE_ROW_STILL} aspectRatio={16 / 9} />
+          <Bone width={still} aspectRatio={16 / 9} />
           <View style={styles.rowText}>
             <Bone width="70%" />
             <Bone width="45%" />
@@ -156,6 +158,7 @@ export function PosterGridPlaceholder({ columns, width }: { columns: number; wid
 
 /** Rows of posters (Library browse / search) before they load: a heading bar over a few cards, like a `Row`. */
 export function PosterRowsPlaceholder({ rows = 2 }: { rows?: number }) {
+  const { posters } = useShelfCards();
   return (
     <Loading testID="poster-rows-placeholder" style={styles.posterRows}>
       {Array.from({ length: rows }, (_, i) => (
@@ -164,7 +167,7 @@ export function PosterRowsPlaceholder({ rows = 2 }: { rows?: number }) {
             <Bone width={120} height={20} />
           </View>
           <View style={styles.padded}>
-            <CardRowPlaceholder shape="poster" />
+            <CardRowPlaceholder shape="poster" width={posters.width} count={posters.count} />
           </View>
         </View>
       ))}

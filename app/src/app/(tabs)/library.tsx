@@ -7,7 +7,7 @@ import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { isConnectionError, type BaseItemDto, type Endpoint, type ItemsResult } from '@/api';
 import { Button } from '@/components/Button';
-import { LANDSCAPE_WIDTH, LandscapeCard, POSTER_WIDTH, PosterCard } from '@/components/Card';
+import { LandscapeCard, PosterCard } from '@/components/Card';
 import { useItemMenu } from '@/components/ItemMenu';
 import { Chip } from '@/components/Chip';
 import { FilterChips } from '@/components/FilterChips';
@@ -21,6 +21,7 @@ import { PosterRowsPlaceholder } from '@/components/Skeleton';
 import { Screen } from '@/components/Screen';
 import { SearchField } from '@/components/SearchField';
 import { Text } from '@/components/Text';
+import { useShelfCards } from '@/components/shelfCards';
 import {
   activeFilters,
   cardTitles,
@@ -91,6 +92,8 @@ export default function Library() {
   const image = useImage();
   const c = useColors();
   const menu = useItemMenu();
+  // Shelf card sizes: whole cards across the tab on tablets, as on Home.
+  const { posters, landscape } = useShelfCards();
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
   const [scope, setScope] = useState<SearchScope>('all');
@@ -163,9 +166,10 @@ export default function Library() {
   const poster = (item: BaseItemDto) => (
     <PosterCard
       key={item.Id}
+      width={posters.width}
       {...cardTitles(item)}
       {...playback(item)}
-      image={image(posterImage(item), POSTER_WIDTH)}
+      image={image(posterImage(item), posters.width)}
       item={item}
       onOpen={open}
       onMenu={onMenu}
@@ -239,9 +243,10 @@ export default function Library() {
               {groups.episodes.map((ep) => (
                 <LandscapeCard
                   key={ep.Id}
+                  width={landscape.width}
                   {...cardTitles(ep)}
                   {...playback(ep)}
-                  image={image(landscapeImage(ep), LANDSCAPE_WIDTH)}
+                  image={image(landscapeImage(ep), landscape.width)}
                   item={ep}
                   onOpen={open}
                   onMenu={onMenu}
