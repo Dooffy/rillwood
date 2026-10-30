@@ -11,15 +11,16 @@ import type { BaseItemDto, ItemsResult } from '@/api';
 import { Button } from '@/components/Button';
 import { CastRow } from '@/components/CastRow';
 import { Chips } from '@/components/Chips';
+import { Credits } from '@/components/Credits';
 import { DetailActions } from '@/components/DetailActions';
 import { DetailHeader } from '@/components/DetailHeader';
 import { DetailHero, LOGO_WIDTH, useHeroLayout } from '@/components/DetailHero';
-import { EPISODE_CARD_WIDTH, EpisodeCard } from '@/components/EpisodeCard';
+import { EpisodeCard, useEpisodeCardWidth, WIDE_EPISODE_CARD_WIDTH } from '@/components/EpisodeCard';
 import { useItemMenu } from '@/components/ItemMenu';
 import { LoadError, loadErrorMessage, Message } from '@/components/Message';
 import { MoreLikeThis } from '@/components/MoreLikeThis';
 import { Overview } from '@/components/Overview';
-import { SeasonMenu } from '@/components/SeasonMenu';
+import { SeasonPills } from '@/components/SeasonPills';
 import { CARD_GAP } from '@/components/Row';
 import { DetailPlaceholder, EpisodeCardsPlaceholder } from '@/components/Skeleton';
 import { Text } from '@/components/Text';
@@ -102,12 +103,33 @@ function Series({ series }: { series: BaseItemDto }) {
           logo={image(view.logo, LOGO_WIDTH)}
           title={series.Name}
           subtitle={view.subtitle}
-        />
-        <View style={styles.body}>
-          <SeriesPlay series={series} seasonId={seasonId} next={nextEpisode} nextSettled={nextSettled} />
-          {series.Overview?.trim() ? <Overview text={series.Overview.trim()} /> : null}
-          <Chips items={view.chips} />
-        </View>
+          side={<Credits credits={view.credits} layout="column" />}
+        >
+          {/* As the movie hero: wide screens show the summary and badges on the art, phones under it. */}
+          {hero.wide && view.overview && <Overview text={view.overview} lines={2} />}
+          {view.facts.length > 0 && (
+            <Text variant="caption" secondary style={!hero.wide && styles.center}>
+              {view.facts.join(' · ')}
+            </Text>
+          )}
+          {hero.wide && <Chips items={view.badges} />}
+          <View style={styles.actions}>
+            <SeriesPlay
+              series={series}
+              seasonId={seasonId}
+              next={nextEpisode}
+              nextSettled={nextSettled}
+              center={!hero.wide}
+            />
+          </View>
+        </DetailHero>
+        {!hero.wide && (
+          <View style={styles.body}>
+            {view.overview && <Overview text={view.overview} />}
+            <Chips items={view.badges} />
+            <Credits credits={view.credits} layout="inline" />
+          </View>
+        )}
 
         <View style={styles.section}>
           {list === undefined ? (
@@ -125,7 +147,7 @@ function Series({ series }: { series: BaseItemDto }) {
           ) : (
             <>
               <View style={styles.body}>
-                <SeasonMenu seasons={list} value={seasonId} onChange={setPicked} onMark={mark} />
+                <SeasonPills seasons={list} value={seasonId} download={download} onChange={setPicked} onMark={mark} />
               </View>
               {seasonId ? (
                 // key: a new season starts a new list (its own start position, not the last season's scroll).
@@ -154,11 +176,14 @@ function SeriesPlay({
   seasonId,
   next,
   nextSettled,
+  center = false,
 }: {
   series: BaseItemDto;
   seasonId?: string;
   next?: BaseItemDto;
   nextSettled: boolean;
+  /** Phones: the line under the buttons centred, as the hero text above it. */
+  center?: boolean;
 }) {
   const mark = useUserFlag();
   const request = seasonId ? episodes(series.Id, seasonId) : undefined;
@@ -175,8 +200,9 @@ function SeriesPlay({
         onMark={(flag, value) => mark(series, flag, value)}
       />
       {target && (
-        <Text numberOfLines={2}>
-          <Text variant="label">{episodeLine(target.episode)}</Text>
+        // The capsule names the episode ("S2, E3"): the line has its title and overview.
+        <Text numberOfLines={2} style={center && styles.center}>
+          <Text variant="label">{target.episode.Name}</Text>
           {target.episode.Overview ? <Text secondary>{`: ${target.episode.Overview}`}</Text> : null}
         </Text>
       )}
@@ -201,6 +227,7 @@ function episodePlay(episode: BaseItemDto) {
 /** One season's episodes as horizontal cards, scrolled to the next episode; ⋯ / long press open its actions. */
 function EpisodeCards({ seriesId, seasonId, startAt }: { seriesId: string; seasonId: string; startAt?: string }) {
   const { width } = useWindowDimensions();
+  const cardWidth = useEpisodeCardWidth();
   const request = episodes(seriesId, seasonId);
   const { data, error, refresh } = useFetch<ItemsResult>(request.path, { query: request.query });
 
@@ -222,7 +249,7 @@ function EpisodeCards({ seriesId, seasonId, startAt }: { seriesId: string; seaso
   }
 
   // Start at the next episode, but never past the last screenful of cards (no blank space after the last one).
-  const visible = Math.max(1, Math.floor(width / (EPISODE_CARD_WIDTH + CARD_GAP)));
+  const visible = Math.max(1, Math.floor(width / (cardWidth + CARD_GAP)));
   const start = Math.min(
     Math.max(
       0,
@@ -245,8 +272,8 @@ function EpisodeCards({ seriesId, seasonId, startAt }: { seriesId: string; seaso
       initialNumToRender={3}
       windowSize={5}
       getItemLayout={(_, index) => ({
-        length: EPISODE_CARD_WIDTH + CARD_GAP,
-        offset: (EPISODE_CARD_WIDTH + CARD_GAP) * index,
+        length: cardWidth + CARD_GAP,
+        offset: (cardWidth + CARD_GAP) * index,
         index,
       })}
       renderItem={({ item: ep }) => <SeasonEpisode ep={ep} withOverviews={withOverviews} />}
@@ -264,7 +291,7 @@ const SeasonEpisode = memo(function SeasonEpisode({ ep, withOverviews }: { ep: B
       episode={ep.IndexNumber}
       title={ep.Name}
       overview={ep.Overview}
-      image={image(landscapeImage(ep), EPISODE_CARD_WIDTH)}
+      image={image(landscapeImage(ep), WIDE_EPISODE_CARD_WIDTH)}
       progress={state.progress}
       remainingSeconds={state.remainingSeconds}
       runtimeSeconds={ep.RunTimeTicks ? ticksToSeconds(ep.RunTimeTicks) : undefined}
@@ -285,6 +312,9 @@ function CardGap() {
 const styles = StyleSheet.create({
   scroll: { paddingBottom: spacing.lg, gap: spacing.lg },
   body: { paddingHorizontal: spacing.md, gap: spacing.md },
+  center: { textAlign: 'center' },
+  // The play row runs the hero's width on phones, as wide as its buttons on wide screens.
+  actions: { alignSelf: 'stretch', paddingTop: spacing.xs, gap: spacing.sm },
   section: { gap: spacing.xs },
   cards: { paddingHorizontal: spacing.md },
   gap: { width: CARD_GAP },

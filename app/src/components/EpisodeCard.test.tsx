@@ -1,8 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 
-import { EpisodeCard, OVERVIEW_LINE_HEIGHT, OVERVIEW_LINES } from './EpisodeCard';
+import { PHONE, resetDevice, setDevice, TABLET_PORTRAIT } from '@/testDevice';
+
+import {
+  EPISODE_CARD_WIDTH,
+  EpisodeCard,
+  OVERVIEW_LINE_HEIGHT,
+  OVERVIEW_LINES,
+  WIDE_EPISODE_CARD_WIDTH,
+} from './EpisodeCard';
 
 const handlers = () => ({ onPress: jest.fn(), onPlay: jest.fn(), onMore: jest.fn() });
 
@@ -73,5 +82,15 @@ describe('EpisodeCard', () => {
   it('reserves no overview lines when the season has no overviews', async () => {
     await render(<EpisodeCard episode={1} title="Pilot" overview="It begins." overviewLines={false} {...handlers()} />);
     expect(screen.queryByText('It begins.')).toBeNull();
+  });
+
+  it('is bigger on wide screens (iPad), phone size on phones', async () => {
+    const width = () => StyleSheet.flatten(screen.getByRole('button', { name: 'Episode 1, Pilot' }).props.style).width;
+    await setDevice(...PHONE);
+    await render(<EpisodeCard episode={1} title="Pilot" {...handlers()} />);
+    expect(width()).toBe(EPISODE_CARD_WIDTH);
+    await setDevice(...TABLET_PORTRAIT);
+    expect(width()).toBe(WIDE_EPISODE_CARD_WIDTH);
+    resetDevice();
   });
 });

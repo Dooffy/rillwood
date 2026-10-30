@@ -8,7 +8,7 @@ import { minTouch, radii, spacing, useColors } from '@/theme';
 
 import { CardPlaceholder } from './Card';
 import { useHeroLayout } from './DetailHero';
-import { EPISODE_CARD_WIDTH } from './EpisodeCard';
+import { useEpisodeCardWidth } from './EpisodeCard';
 import { EPISODE_ROW_STILL } from './EpisodeRow';
 import { CARD_GAP } from './Row';
 
@@ -112,12 +112,13 @@ export function DetailPlaceholder() {
 
 /** A season's episode cards before they load (series screen). */
 export function EpisodeCardsPlaceholder() {
+  const width = useEpisodeCardWidth();
   return (
     <View style={styles.padded}>
       <CardRowPlaceholder
         testID="episodes-placeholder"
         shape="landscape"
-        width={EPISODE_CARD_WIDTH}
+        width={width}
         count={2}
         label="Loading episodes"
       />
