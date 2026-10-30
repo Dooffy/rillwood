@@ -39,12 +39,21 @@ mkdirSync(out, { recursive: true });
 writeFileSync(subtitle, '1\n00:00:02,000 --> 00:00:08,000\n♪ Quiet music ♪\n');
 
 const escape = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// A value per tag; an array repeats the tag; an object nests its fields (<actor><name>..</name><role>..</role></actor>).
 const tags = (fields) =>
   Object.entries(fields)
     .flatMap(([tag, value]) => (Array.isArray(value) ? value : [value]).map((v) => ({ tag, v })))
     .filter(({ v }) => v !== undefined)
-    .map(({ tag, v }) => `  <${tag}>${escape(v)}</${tag}>`)
+    .map(({ tag, v }) =>
+      typeof v === 'object'
+        ? `  <${tag}>\n${Object.entries(v)
+            .map(([k, x]) => `    <${k}>${escape(x)}</${k}>`)
+            .join('\n')}\n  </${tag}>`
+        : `  <${tag}>${escape(v)}</${tag}>`,
+    )
     .join('\n');
+/** Fictional cast as NFO actors (Jellyfin: Type Actor, Role = character). */
+const actors = (cast = []) => cast.map(({ name, role }) => ({ name, role, type: 'Actor' }));
 // lockdata: the server never looks the fake titles up online
 const nfo = (root, fields) =>
   `<?xml version="1.0" encoding="utf-8" standalone="yes"?>\n<${root}>\n${tags(fields)}\n  <lockdata>true</lockdata>\n</${root}>\n`;
@@ -147,6 +156,11 @@ for (const m of fixture.movies) {
       genre: m.genres,
       tagline: m.tagline,
       plot: m.overview,
+      studio: m.studio,
+      director: m.directors,
+      // Jellyfin reads <credits> as Writer.
+      credits: m.writers,
+      actor: actors(m.cast),
     }),
   );
   copyFileSync(art(m.slug, 'poster.jpg'), join(dir, 'poster.jpg'));
@@ -171,6 +185,8 @@ for (const s of fixture.shows) {
       rating: s.communityRating,
       genre: s.genres,
       plot: s.overview,
+      studio: s.studio,
+      actor: actors(s.cast),
     }),
   );
   copyFileSync(art(s.slug, 'poster.jpg'), join(dir, 'poster.jpg'));
