@@ -73,7 +73,7 @@ export type DownloadControl = {
 };
 
 /** The item's `downloadGroup` for the active account; null when it isn't downloadable or nobody is signed in. */
-function useGroup(item: BaseItemDto | undefined): string | null {
+export function useDownloadGroup(item: BaseItemDto | undefined): string | null {
   const accountId = useSession().active?.id;
   if (!accountId || !item || !DOWNLOADABLE.has(item.Type)) return null;
   return downloadGroup(accountId, item.Type === 'Season' ? { seasonId: item.Id } : { itemId: item.Id });
@@ -84,7 +84,7 @@ function useGroup(item: BaseItemDto | undefined): string | null {
  * (to delete it). Re-renders only when that changes, not on progress (the detail header).
  */
 export function useCanDownload(item: BaseItemDto | undefined): boolean {
-  const group = useGroup(item);
+  const group = useDownloadGroup(item);
   const has = useHasDownloads(group);
   const user = useFetch<UserDto>(group ? currentUser.path : null);
   return !!group && (has || user.data?.Policy?.EnableContentDownloading === true);
@@ -104,7 +104,7 @@ async function withFiles(conn: Connection, item: BaseItemDto): Promise<BaseItemD
 export function useDownloadControl(item: BaseItemDto | undefined): DownloadControl {
   const toast = useToast();
   const available = useCanDownload(item);
-  const summary = useDownloadSummary(useGroup(item));
+  const summary = useDownloadSummary(useDownloadGroup(item));
   // A season with downloads: are episodes with a file (and a size - else they can't be downloaded) still missing?
   // Asked for only once something of it is here. Unknown (loading, offline) counts as complete.
   const season = item?.Type === 'Season' && item.SeriesId ? seasonFiles(item.SeriesId, item.Id) : undefined;

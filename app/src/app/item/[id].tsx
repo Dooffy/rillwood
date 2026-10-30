@@ -3,7 +3,8 @@
 // More Like This. Data rules: docs/context/api.md (Detail). Header ↓ downloads it (docs/context/downloads.md).
 // Offline (or the server failing) with a download of it: the item saved with the download instead of an error.
 import { useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useRef } from 'react';
+import { ScrollView, StyleSheet, View, type ScrollViewInstance } from 'react-native';
 
 import type { BaseItemDto } from '@/api';
 import { CastRow } from '@/components/CastRow';
@@ -12,8 +13,7 @@ import { Credits } from '@/components/Credits';
 import { DetailActions } from '@/components/DetailActions';
 import { DetailHeader } from '@/components/DetailHeader';
 import { DetailHero, LOGO_WIDTH, useHeroLayout } from '@/components/DetailHero';
-import { ListRow, ListSection } from '@/components/List';
-import { MediaRow } from '@/components/MediaRow';
+import { DetailsSection } from '@/components/DetailsSection';
 import { LoadError, Message } from '@/components/Message';
 import { MoreLikeThis } from '@/components/MoreLikeThis';
 import { Overview } from '@/components/Overview';
@@ -48,12 +48,21 @@ function Detail({ item, saved }: { item: BaseItemDto; saved: SavedItem | null })
   const { progress, resumeSeconds = 0, remainingSeconds = 0, played } = view.playback;
   const inProgress = progress !== undefined;
   const { SeriesId: seriesId, SeriesName: seriesName } = item;
+  // More (hero summary) scrolls to Details, which has the whole text.
+  const scroll = useRef<ScrollViewInstance>(null);
+  const detailsY = useRef(0);
+  const toDetails = () => scroll.current?.scrollTo({ y: detailsY.current - spacing.md, animated: true });
 
   return (
     <>
       <DetailHeader download={item} />
       {/* The hero runs under the transparent header (back + download over the art). */}
-      <ScrollView {...scrollList} contentInsetAdjustmentBehavior="never" contentContainerStyle={styles.scroll}>
+      <ScrollView
+        ref={scroll}
+        {...scrollList}
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={styles.scroll}
+      >
         <DetailHero
           art={saved ? saved.art : image(view.art, hero.artWidth)}
           logo={saved ? undefined : image(view.logo, LOGO_WIDTH)}
@@ -70,7 +79,7 @@ function Detail({ item, saved }: { item: BaseItemDto; saved: SavedItem | null })
           side={<Credits credits={view.credits} layout="column" />}
         >
           {/* Wide screens: the summary and badges on the art too; phones show them under it. */}
-          {hero.wide && view.overview && <Overview text={view.overview} lines={2} />}
+          {hero.wide && view.overview && <Overview text={view.overview} lines={2} onMore={toDetails} />}
           {view.facts.length > 0 && (
             <Text variant="caption" secondary style={!hero.wide && styles.center}>
               {view.facts.join(' · ')}
@@ -93,24 +102,16 @@ function Detail({ item, saved }: { item: BaseItemDto; saved: SavedItem | null })
           {saved && <Text secondary>Showing the details saved with the download.</Text>}
           {!hero.wide && (
             <>
-              {view.overview && <Overview text={view.overview} />}
+              {view.overview && <Overview text={view.overview} onMore={toDetails} />}
               <Chips items={view.badges} />
               <Credits credits={view.credits} layout="inline" />
             </>
-          )}
-
-          {(view.media.video || view.media.audio || view.media.subtitles) && (
-            <ListSection title="Media">
-              {view.versions && <ListRow label={`Version (${view.versions.count})`} value={view.versions.name} />}
-              {view.media.video && <MediaRow label="Video" row={view.media.video} />}
-              {view.media.audio && <MediaRow label="Audio" row={view.media.audio} />}
-              {view.media.subtitles && <MediaRow label="Subtitles" row={view.media.subtitles} />}
-            </ListSection>
           )}
         </View>
 
         <CastRow people={view.people} />
         {!saved && <MoreLikeThis id={item.Id} />}
+        <DetailsSection item={item} view={view} onLayout={(e) => (detailsY.current = e.nativeEvent.layout.y)} />
       </ScrollView>
     </>
   );

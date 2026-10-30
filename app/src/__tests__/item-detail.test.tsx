@@ -124,7 +124,7 @@ describe('ItemDetail', () => {
     expect(request).toHaveBeenCalledWith(expect.anything(), `/Items/${sintel.Id}`, expect.anything());
     expect(screen.getByText(/^2010 · 12m · Ends at .+ · ★ 7\.3$/)).toBeOnTheScreen();
     expect(screen.getByLabelText('PG, 4K, 5.1, CC')).toBeOnTheScreen();
-    expect(screen.getByText(/^A wandering warrior/)).toBeOnTheScreen();
+    expect(within(screen.getByTestId('detail-hero')).getByText(/^A wandering warrior/)).toBeOnTheScreen();
     expect(screen.getByText('Movie · Animation · Fantasy')).toBeOnTheScreen();
   });
 
@@ -190,17 +190,22 @@ describe('ItemDetail', () => {
     expect(screen.queryByText('Sintel')).toBeNull();
   });
 
-  it('clamps a long overview with More / Less: 2 lines on the hero (tablets), 3 under it (phones)', async () => {
+  it('clamps a long overview, 2 lines on the hero (tablets), 3 under it (phones); More goes to Details', async () => {
     const long = 'A wandering warrior finds an unlikely friend. '.repeat(5).trim();
     reply = () => Promise.resolve({ ...sintel, Overview: long });
     await render(<ItemDetail />);
-    expect(await screen.findByText(long)).toHaveProp('numberOfLines', 2);
+    const hero = await screen.findByTestId('detail-hero');
+    expect(within(hero).getByText(long)).toHaveProp('numberOfLines', 2);
+    // Details has the whole text, never clamped.
+    expect(within(screen.getByTestId('details')).getByText(long).props.numberOfLines).toBeUndefined();
     await setDevice(...PHONE);
-    const text = screen.getByText(long);
+    // Under the art on phones (Details repeats it, whole, further down).
+    const [text] = screen.getAllByText(long);
     expect(text).toHaveProp('numberOfLines', 3);
+    // More goes to Details (scrolls) instead of opening the text in place.
     await fireEvent.press(screen.getByText('More'));
-    expect(screen.getByText(long).props.numberOfLines).toBeUndefined();
-    expect(screen.getByText('Less')).toBeOnTheScreen();
+    expect(screen.queryByText('Less')).toBeNull();
+    expect(screen.getAllByText(long)[0]).toHaveProp('numberOfLines', 3);
   });
 
   it('shows Atmos and SDH badges from the streams', async () => {
@@ -415,7 +420,7 @@ describe('ItemDetail', () => {
       expect(await screen.findByText('Showing the details saved with the download.')).toBeOnTheScreen();
       expect(downloads.savedItem).toHaveBeenCalledWith(expect.stringMatching(/^srv\.u/), sintel.Id);
       expect(screen.getByRole('header', { name: 'Sintel' })).toBeOnTheScreen();
-      expect(screen.getByText('Saved with the download.')).toBeOnTheScreen();
+      expect(within(screen.getByTestId('detail-hero')).getByText('Saved with the download.')).toBeOnTheScreen();
       expect(screen.getByTestId('detail-backdrop').props.source).toEqual([expect.objectContaining({ uri: art })]);
       expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
     });
@@ -427,7 +432,7 @@ describe('ItemDetail', () => {
       await render(<ItemDetail />);
       expect(screen.getByText('Showing the details saved with the download.')).toBeOnTheScreen();
       answer();
-      expect(await screen.findByText(/^A wandering warrior/)).toBeOnTheScreen();
+      expect((await screen.findAllByText(/^A wandering warrior/))[0]).toBeOnTheScreen();
       expect(screen.queryByText('Showing the details saved with the download.')).toBeNull();
       offline.mockRestore();
     });
@@ -444,7 +449,7 @@ describe('ItemDetail', () => {
       await render(<ItemDetail />);
       expect(screen.getByTestId('detail-placeholder')).toBeOnTheScreen();
       answer();
-      expect(await screen.findByText(/^A wandering warrior/)).toBeOnTheScreen();
+      expect((await screen.findAllByText(/^A wandering warrior/))[0]).toBeOnTheScreen();
       expect(screen.queryByText('Showing the details saved with the download.')).toBeNull();
     });
   });
