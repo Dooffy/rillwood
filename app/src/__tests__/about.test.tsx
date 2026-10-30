@@ -72,6 +72,12 @@ describe('About screen', () => {
     expect(openURL.mock.calls).toEqual([[source], [privacy], [issues], ['https://u24.gov.ua']]);
   });
 
+  it('lists the web links first, Licences last', async () => {
+    await render(<About />);
+    const rows = screen.getAllByRole(/^(link|button)$/).map((row) => row.props.accessibilityLabel);
+    expect(rows.slice(0, 4)).toEqual(['Source code', 'Privacy policy', 'Report a problem', 'Licences']);
+  });
+
   it('opens Licences', async () => {
     await render(<About />);
     await fireEvent.press(screen.getByRole('button', { name: 'Licences' }));

@@ -148,10 +148,11 @@ export function AboutSettings() {
         </Text>
       </View>
       <ListSection>
+        {/* Web links first, the subpage last. */}
         {source && <ListRow label="Source code" external onPress={() => open(source)} />}
-        <ListRow label="Licences" onPress={() => link.open({ page: 'licences' })} />
         {privacy && <ListRow label="Privacy policy" external onPress={() => open(privacy)} />}
         {issues && <ListRow label="Report a problem" external onPress={() => open(issues)} />}
+        <ListRow label="Licences" onPress={() => link.open({ page: 'licences' })} />
       </ListSection>
       <View style={styles.aboutFooter}>
         {support && (
