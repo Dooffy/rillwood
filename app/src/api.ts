@@ -317,6 +317,8 @@ export type BaseItemDto = {
   // Detail (`/Items/{id}`) only.
   Overview?: string;
   Genres?: string[];
+  /** Production companies (detail endpoint). */
+  Studios?: { Name: string; Id?: string }[];
   /** Age rating: "PG-13". */
   OfficialRating?: string;
   /** 0-10. */
