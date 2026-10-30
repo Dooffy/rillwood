@@ -16,12 +16,10 @@ import { MediaRow } from '@/components/MediaRow';
 import { LoadError, Message } from '@/components/Message';
 import { MoreLikeThis } from '@/components/MoreLikeThis';
 import { Overview } from '@/components/Overview';
-import { ProgressBar } from '@/components/ProgressBar';
 import { DetailPlaceholder } from '@/components/Skeleton';
 import { Text } from '@/components/Text';
 import { detailView } from '@/detail';
 import type { SavedItem } from '@/downloads';
-import { formatRemaining } from '@/format';
 import { isItemId } from '@/items';
 import { openItem, openPlayer } from '@/navigation';
 import { useImage } from '@/useImage';
@@ -48,8 +46,6 @@ function Detail({ item, saved }: { item: BaseItemDto; saved: SavedItem | null })
   const view = detailView(item);
   const { progress, resumeSeconds = 0, remainingSeconds = 0, played } = view.playback;
   const inProgress = progress !== undefined;
-  // undefined at 0 (position at or past the runtime): no bare "left".
-  const left = formatRemaining(remainingSeconds);
   const { SeriesId: seriesId, SeriesName: seriesName } = item;
 
   return (
@@ -74,21 +70,8 @@ function Detail({ item, saved }: { item: BaseItemDto; saved: SavedItem | null })
 
         <View style={styles.body}>
           {saved && <Text secondary>Showing the details saved with the download.</Text>}
-          {inProgress && (
-            <View style={styles.progress}>
-              <View style={styles.bar}>
-                <ProgressBar progress={progress} label="Watched" />
-              </View>
-              {left && (
-                <Text variant="caption" secondary>
-                  {left} left
-                </Text>
-              )}
-            </View>
-          )}
-
           <DetailActions
-            playTitle={inProgress ? 'Resume' : 'Play'}
+            play={{ progress, remainingSeconds }}
             onPlay={() => openPlayer(item, resumeSeconds)}
             onStartOver={inProgress ? () => openPlayer(item, 0) : undefined}
             played={played}
@@ -125,6 +108,4 @@ function Detail({ item, saved }: { item: BaseItemDto; saved: SavedItem | null })
 const styles = StyleSheet.create({
   scroll: { paddingBottom: spacing.lg, gap: spacing.lg },
   body: { paddingHorizontal: spacing.md, gap: spacing.md },
-  progress: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  bar: { flex: 1 },
 });

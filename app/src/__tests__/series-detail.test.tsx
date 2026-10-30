@@ -153,7 +153,8 @@ describe('SeriesDetail', () => {
     // The cards start at the next episode.
     expect(screen.getByRole('button', { name: 'Episode 2, Chapter 2' })).toBeOnTheScreen();
     expect(calls('episodes:season-1')).toBe(0);
-    await fireEvent.press(screen.getByRole('button', { name: 'Play Episode' }));
+    expect(screen.getByText('S2, E2')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Play Season 2, Episode 2' }));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/player', params: { id: 'ep-2-2', start: '0' } });
     expect(screen.queryByRole('button', { name: 'Play from Start' })).toBeNull();
   });
@@ -193,7 +194,7 @@ describe('SeriesDetail', () => {
   it('resumes a started next episode, with Play from Start', async () => {
     routes.nextup = items(episode(2, 2, { UserData: { PlaybackPositionTicks: 6_000_000_000, Played: false } }));
     await render(<SeriesDetail />);
-    await fireEvent.press(await screen.findByRole('button', { name: 'Resume Episode' }));
+    await fireEvent.press(await screen.findByRole('button', { name: /^Resume Season 2, Episode 2/ }));
     expect(router.push).toHaveBeenLastCalledWith({ pathname: '/player', params: { id: 'ep-2-2', start: '600' } });
     await fireEvent.press(screen.getByRole('button', { name: 'Play from Start' }));
     expect(router.push).toHaveBeenLastCalledWith({ pathname: '/player', params: { id: 'ep-2-2', start: '0' } });

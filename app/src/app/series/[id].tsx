@@ -167,7 +167,7 @@ function SeriesPlay({
   return (
     <>
       <DetailActions
-        playTitle={target?.resume ? 'Resume Episode' : 'Play Episode'}
+        play={target ? episodePlay(target.episode) : { label: 'Episode' }}
         onPlay={target ? () => openPlayer(target.episode, target.start) : undefined}
         onStartOver={target?.resume ? () => openPlayer(target.episode, 0) : undefined}
         played={series.UserData?.Played === true}
@@ -182,6 +182,20 @@ function SeriesPlay({
       )}
     </>
   );
+}
+
+/** The play capsule for an episode: "S1, E4" (read as "Season 1, Episode 4") with its progress when started. */
+function episodePlay(episode: BaseItemDto) {
+  const { ParentIndexNumber: season, IndexNumber: number } = episode;
+  const { progress, remainingSeconds } = playback(episode);
+  const label = number === undefined ? 'Episode' : season === undefined ? `E${number}` : `S${season}, E${number}`;
+  const spokenLabel =
+    number === undefined
+      ? 'Episode'
+      : season === undefined
+        ? `Episode ${number}`
+        : `Season ${season}, Episode ${number}`;
+  return { label, spokenLabel, progress, remainingSeconds };
 }
 
 /** One season's episodes as horizontal cards, scrolled to the next episode; ⋯ / long press open its actions. */
