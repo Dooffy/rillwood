@@ -13,8 +13,9 @@ describe('DetailHero', () => {
   // Phones: 4:5 of the width. Tablets: a 16:9 strip, at most 60% of the window's height (4:5 would pass the screen).
   it('is a landscape strip on tablets, the title left-aligned', async () => {
     const size = () => {
-      const { width, height } = StyleSheet.flatten(screen.getByTestId('detail-hero').props.style);
-      return [width, height];
+      // The art's height is the hero's least: text that needs more room grows it.
+      const { width, minHeight } = StyleSheet.flatten(screen.getByTestId('detail-hero').props.style);
+      return [width, minHeight];
     };
     const centred = () => StyleSheet.flatten(screen.getByRole('header').props.style)?.textAlign === 'center';
     await setDevice(...PHONE);

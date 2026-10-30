@@ -8,6 +8,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import type { BaseItemDto } from '@/api';
 import { CastRow } from '@/components/CastRow';
 import { Chips } from '@/components/Chips';
+import { Credits } from '@/components/Credits';
 import { DetailActions } from '@/components/DetailActions';
 import { DetailHeader } from '@/components/DetailHeader';
 import { DetailHero, LOGO_WIDTH, useHeroLayout } from '@/components/DetailHero';
@@ -66,26 +67,36 @@ function Detail({ item, saved }: { item: BaseItemDto; saved: SavedItem | null })
                 }
               : undefined
           }
-        />
+          side={<Credits credits={view.credits} layout="column" />}
+        >
+          {/* Wide screens: the summary and badges on the art too; phones show them under it. */}
+          {hero.wide && view.overview && <Overview text={view.overview} lines={2} />}
+          {view.facts.length > 0 && (
+            <Text variant="caption" secondary style={!hero.wide && styles.center}>
+              {view.facts.join(' · ')}
+            </Text>
+          )}
+          {hero.wide && <Chips items={view.badges} />}
+          <View style={styles.actions}>
+            <DetailActions
+              play={{ progress, remainingSeconds }}
+              onPlay={() => openPlayer(item, resumeSeconds)}
+              onStartOver={inProgress ? () => openPlayer(item, 0) : undefined}
+              played={played}
+              favourite={item.UserData?.IsFavorite === true}
+              onMark={(flag, value) => mark(item, flag, value)}
+            />
+          </View>
+        </DetailHero>
 
         <View style={styles.body}>
           {saved && <Text secondary>Showing the details saved with the download.</Text>}
-          <DetailActions
-            play={{ progress, remainingSeconds }}
-            onPlay={() => openPlayer(item, resumeSeconds)}
-            onStartOver={inProgress ? () => openPlayer(item, 0) : undefined}
-            played={played}
-            favourite={item.UserData?.IsFavorite === true}
-            onMark={(flag, value) => mark(item, flag, value)}
-          />
-
-          {item.Overview?.trim() ? <Overview text={item.Overview.trim()} /> : null}
-
-          <Chips items={view.chips} />
-          {view.directors.length > 0 && (
-            <Text secondary>
-              Directed by <Text>{view.directors.join(', ')}</Text>
-            </Text>
+          {!hero.wide && (
+            <>
+              {view.overview && <Overview text={view.overview} />}
+              <Chips items={view.badges} />
+              <Credits credits={view.credits} layout="inline" />
+            </>
           )}
 
           {(view.media.video || view.media.audio || view.media.subtitles) && (
@@ -108,4 +119,7 @@ function Detail({ item, saved }: { item: BaseItemDto; saved: SavedItem | null })
 const styles = StyleSheet.create({
   scroll: { paddingBottom: spacing.lg, gap: spacing.lg },
   body: { paddingHorizontal: spacing.md, gap: spacing.md },
+  center: { textAlign: 'center' },
+  // The play row runs the hero's width on phones (centred text above it), as wide as its buttons on wide screens.
+  actions: { alignSelf: 'stretch', paddingTop: spacing.xs },
 });
