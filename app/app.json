@@ -101,6 +101,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "sourceUrl": "https://github.com/Dooffy/rillwood",
+      "privacyUrl": "https://dooffy.github.io/rillwood/privacy",
+      "supportUrl": "https://u24.gov.ua"
     }
   }
 }
