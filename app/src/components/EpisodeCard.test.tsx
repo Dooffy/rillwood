@@ -2,7 +2,7 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import { EpisodeCard } from './EpisodeCard';
+import { EpisodeCard, OVERVIEW_LINE_HEIGHT, OVERVIEW_LINES } from './EpisodeCard';
 
 const handlers = () => ({ onPress: jest.fn(), onPlay: jest.fn(), onMore: jest.fn() });
 
@@ -60,6 +60,14 @@ describe('EpisodeCard', () => {
   it('shows ♥ for a favourite and reads it out', async () => {
     await render(<EpisodeCard episode={1} title="Pilot" played favourite runtimeSeconds={2700} {...handlers()} />);
     expect(screen.getByRole('button', { name: 'Episode 1, Pilot, watched, favourite' })).toBeOnTheScreen();
+  });
+
+  it('keeps two overview lines: a short one leaves one free, a long one ends with an ellipsis', async () => {
+    await render(<EpisodeCard episode={1} title="Pilot" overview="It begins." {...handlers()} />);
+    const overview = screen.getByText('It begins.');
+    expect(OVERVIEW_LINES).toBe(2);
+    expect(overview.props.numberOfLines).toBe(2);
+    expect(overview).toHaveStyle({ minHeight: OVERVIEW_LINE_HEIGHT * 2 });
   });
 
   it('reserves no overview lines when the season has no overviews', async () => {
