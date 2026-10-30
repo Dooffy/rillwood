@@ -13,6 +13,7 @@ import * as session from '@/session';
 import { setDownloadLimit, setOffloadDays, setOffloadWatched } from '@/settings';
 import { recordProgress } from '@/sync';
 import type { Account } from '@/session';
+import { DOWNLOAD_POSTER } from '@/components/DownloadRow';
 import { resetDevice, setDevice } from '@/testDevice';
 
 import NativeDownloads from '../../modules/downloads';
@@ -115,6 +116,19 @@ describe('Downloads', () => {
       expect(widths()).toEqual([cell, cell]);
     }
     // The storage limit counts every account's downloads: leave none for the next tests.
+    await act(() => deleteDownloads([idOf(movie), idOf(episode(1))]));
+  });
+
+  // Regression: phone-size 56pt posters looked lost in a 13" iPad's columns.
+  it('shows bigger posters on wide screens', async () => {
+    await download(movie, episode(1));
+    await setDevice(390, 844);
+    await render(<Downloads />);
+    const widths = () =>
+      screen.getAllByTestId('download-art').map((n) => StyleSheet.flatten(n.props.style)?.width as number);
+    expect(widths()).toEqual([DOWNLOAD_POSTER.phone, DOWNLOAD_POSTER.phone]);
+    await setDevice(834, 1194);
+    expect(widths()).toEqual([DOWNLOAD_POSTER.wide, DOWNLOAD_POSTER.wide]);
     await act(() => deleteDownloads([idOf(movie), idOf(episode(1))]));
   });
 

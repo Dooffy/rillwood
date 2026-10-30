@@ -10,7 +10,7 @@ import { documentUri } from '@/downloadSnapshot';
 import { formatBytes } from '@/format';
 import { expiresAt, expiryLabel, watchedSinceReset } from '@/offload';
 import { useDownloadNetwork, useOffloadDays, useOffloadWatched } from '@/settings';
-import { minTouch, pressedOpacity, spacing, useColors } from '@/theme';
+import { minTouch, pressedOpacity, spacing, useColors, useWide } from '@/theme';
 
 import { Artwork } from './Artwork';
 import { longPressProps } from './Card';
@@ -35,6 +35,11 @@ export type DownloadRowProps = {
 /** Space between download rows in a list. */
 export const DOWNLOAD_ROW_GAP = spacing.sm + spacing.xs;
 
+/** Poster width in a row: phone size, bigger on wide screens (iPad) where a 56pt poster looks lost in a column. */
+export const DOWNLOAD_POSTER = { phone: 56, wide: 80 } as const;
+/** An episode's 16:9 still, grown by the same ratio on wide screens. */
+const WIDE_STILL = Math.round((EPISODE_ROW_STILL * DOWNLOAD_POSTER.wide) / DOWNLOAD_POSTER.phone);
+
 /**
  * A list's `ItemSeparatorComponent`: the row gap. Not `gap` on a virtualised list's content - its spacers for the
  * rows off screen would get the gap too.
@@ -56,6 +61,7 @@ function still(d: Download) {
  * ready one.
  */
 export const DownloadRow = memo(function DownloadRow({ id, title, onPlay, onDelete, onMenu }: DownloadRowProps) {
+  const wide = useWide();
   const d = useDownload(id);
   const network = useDownloadNetwork();
   const days = useOffloadDays();
@@ -85,11 +91,11 @@ export const DownloadRow = memo(function DownloadRow({ id, title, onPlay, onDele
           style={({ pressed }) => [styles.main, pressed && styles.pressed]}
         >
           {episode ? (
-            <View style={styles.still}>
+            <View testID="download-art" style={[styles.still, wide && styles.stillWide]}>
               <Artwork image={still(d)} aspectRatio={16 / 9} />
             </View>
           ) : (
-            <View style={styles.poster}>
+            <View testID="download-art" style={[styles.poster, wide && styles.posterWide]}>
               <Artwork image={poster(d)} aspectRatio={2 / 3} />
             </View>
           )}
@@ -132,6 +138,7 @@ export const ShowDownloadRow = memo(function ShowDownloadRow({
   onDelete,
   onMenu,
 }: ShowDownloadRowProps) {
+  const wide = useWide();
   const summary = useDownloadSummary(downloadGroup(accountId, { seriesId: show.seriesId }));
   // The latest episode's poster: an episode's snapshot poster is its show's.
   const first = useDownload(show.ids[0] ?? null);
@@ -161,7 +168,7 @@ export const ShowDownloadRow = memo(function ShowDownloadRow({
         style={({ pressed }) => [styles.row, pressed && styles.pressed]}
       >
         <View style={styles.main}>
-          <View style={styles.poster}>
+          <View testID="download-art" style={[styles.poster, wide && styles.posterWide]}>
             <Artwork image={poster(first ?? undefined)} aspectRatio={2 / 3} />
           </View>
           <View style={styles.text}>
@@ -202,8 +209,10 @@ function Expiry({ text, soon }: { text: string; soon: boolean }) {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   main: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm + spacing.xs, minHeight: minTouch },
-  poster: { width: 56 },
+  poster: { width: DOWNLOAD_POSTER.phone },
+  posterWide: { width: DOWNLOAD_POSTER.wide },
   still: { width: EPISODE_ROW_STILL },
+  stillWide: { width: WIDE_STILL },
   text: { flex: 1, gap: spacing.xs / 2 },
   control: { width: minTouch, height: minTouch, alignItems: 'center', justifyContent: 'center' },
   chevron: { width: spacing.lg, alignItems: 'center' },
