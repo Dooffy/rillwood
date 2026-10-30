@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Settings subpages, each its own screen on phones (`/subtitles`, `/option/[key]`, `/download-storage`,
+// Settings subpages, each its own screen on phones (`/subtitles`, `/option/[key]`, `/download-storage`, `/about`,
 // `/licence/[id]`; the Licences list is `LicencesList`) and the pane
 // beside Settings on tablets (`SettingsSplit`).
+import Constants from 'expo-constants';
 import { Paths } from 'expo-file-system';
+import { openURL } from 'expo-linking';
+import { SymbolView } from 'expo-symbols';
 import { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { downloadsSize, useDownloadList } from '@/downloads';
 import { formatBytes } from '@/format';
@@ -17,11 +20,13 @@ import {
   setDownloadLimit,
   useDownloadLimit,
 } from '@/settings';
-import { spacing } from '@/theme';
+import { flagUkraine, minTouch, pressedOpacity, spacing, useColors } from '@/theme';
 
 import { ListRow, ListSection } from './List';
+import { LogoMark } from './LogoMark';
 import { Message } from './Message';
 import { OptionList, OptionRow } from './OptionList';
+import { useSettingsLink } from './SettingsLink';
 import { StepSlider } from './StepSlider';
 import { SubtitlePreview } from './SubtitlePreview';
 import { Text } from './Text';
@@ -107,6 +112,72 @@ export function StorageSettings() {
   );
 }
 
+/** Fixed web links from `app.json` `extra` (forks set their own); a missing one hides its row. */
+export function aboutLinks(extra: Record<string, unknown> | undefined = Constants.expoConfig?.extra) {
+  const text = (value: unknown) => (typeof value === 'string' && value.startsWith('https://') ? value : undefined);
+  const source = text(extra?.sourceUrl);
+  return {
+    source,
+    issues: source && `${source}/issues`,
+    privacy: text(extra?.privacyUrl),
+    support: text(extra?.supportUrl),
+  };
+}
+
+/** Opens in the browser; a phone without one has nothing to show, so a refusal is ignored. */
+const open = (url: string) => void openURL(url).catch(() => {});
+
+/**
+ * Settings → About: what Rillwood is, its source, licences, privacy policy, where to report a problem, and a Stand with
+ * Ukraine link (UNITED24).
+ */
+export function AboutSettings() {
+  const c = useColors();
+  const link = useSettingsLink();
+  const { source, issues, privacy, support } = aboutLinks();
+  return (
+    <>
+      <View style={styles.about}>
+        <LogoMark size={76} />
+        <Text variant="largeTitle" accessibilityRole="header">
+          Rillwood
+        </Text>
+        <Text secondary style={styles.blurb}>
+          A free, open-source app for Jellyfin servers. Plays your files as they are and downloads them for offline
+          viewing.
+        </Text>
+      </View>
+      <ListSection>
+        {/* Web links first, the subpage last. */}
+        {source && <ListRow label="Source code" external onPress={() => open(source)} />}
+        {privacy && <ListRow label="Privacy policy" external onPress={() => open(privacy)} />}
+        {issues && <ListRow label="Report a problem" external onPress={() => open(issues)} />}
+        <ListRow label="Licences" onPress={() => link.open({ page: 'licences' })} />
+      </ListSection>
+      <View style={styles.aboutFooter}>
+        {support && (
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel="Stand with Ukraine"
+            onPress={() => open(support)}
+            style={({ pressed }) => [styles.ukraine, pressed && { opacity: pressedOpacity }]}
+          >
+            <View style={styles.flag}>
+              <View style={[styles.flagHalf, { backgroundColor: flagUkraine.blue }]} />
+              <View style={[styles.flagHalf, { backgroundColor: flagUkraine.yellow }]} />
+            </View>
+            <Text variant="label">Stand with Ukraine</Text>
+            <SymbolView name={{ ios: 'arrow.up.right', android: 'open_in_new' }} tintColor={c.iconInactive} size={12} />
+          </Pressable>
+        )}
+        <Text variant="caption" secondary style={styles.legal}>
+          Free software under the GNU GPL version 3 or later. Not made by or affiliated with the Jellyfin project.
+        </Text>
+      </View>
+    </>
+  );
+}
+
 /** One entry of Settings → Licences: its licence, source, packages and full licence texts. */
 export function LicenceSettings({ id }: { id: number }) {
   const licence = licenceById(id);
@@ -149,6 +220,13 @@ export function LicenceSettings({ id }: { id: number }) {
 
 const styles = StyleSheet.create({
   slider: { paddingTop: spacing.md },
+  about: { alignItems: 'center', gap: spacing.sm, paddingTop: spacing.md },
+  blurb: { textAlign: 'center', maxWidth: 320 },
+  aboutFooter: { alignItems: 'center', paddingHorizontal: spacing.md },
+  ukraine: { minHeight: minTouch, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  flag: { width: 16, height: 11, borderRadius: 2, overflow: 'hidden' },
+  flagHalf: { flex: 1 },
+  legal: { textAlign: 'center' },
   footer: { paddingHorizontal: spacing.md },
   licenceText: { gap: spacing.sm, paddingHorizontal: spacing.md, paddingTop: spacing.md },
 });

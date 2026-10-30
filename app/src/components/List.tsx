@@ -66,10 +66,12 @@ export type ListRowProps = {
   onPress?: () => void;
   /** The page it opens is the one shown beside the list (Settings split view on tablets). */
   selected?: boolean;
+  /** Opens a web page outside the app: an arrow instead of the chevron. */
+  external?: boolean;
 };
 
 /** Tappable rows get a chevron; rows without `onPress` show a read-only value. */
-export function ListRow({ label, value, swatch, onPress, selected }: ListRowProps) {
+export function ListRow({ label, value, swatch, onPress, selected, external = false }: ListRowProps) {
   const c = useColors();
   const content = (
     <>
@@ -82,14 +84,19 @@ export function ListRow({ label, value, swatch, onPress, selected }: ListRowProp
           </Text>
         </View>
       )}
-      {onPress && <Chevron />}
+      {onPress &&
+        (external ? (
+          <SymbolView name={{ ios: 'arrow.up.right', android: 'open_in_new' }} tintColor={c.iconInactive} size={14} />
+        ) : (
+          <Chevron />
+        ))}
     </>
   );
 
   if (!onPress) return <View style={styles.row}>{content}</View>;
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityRole={external ? 'link' : 'button'}
       accessibilityLabel={label}
       accessibilityValue={value === undefined ? undefined : { text: value }}
       accessibilityState={selected === undefined ? undefined : { selected }}

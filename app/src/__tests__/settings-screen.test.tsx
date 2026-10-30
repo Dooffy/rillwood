@@ -128,10 +128,11 @@ describe('Settings screen', () => {
     expect(router.push).toHaveBeenCalledWith({ pathname: '/option/[key]', params: { key: 'subtitle-mode' } });
   });
 
-  it('opens Licences', async () => {
+  it('opens About, Licences only from there', async () => {
     await renderSettings();
-    await fireEvent.press(screen.getByRole('button', { name: 'Licences' }));
-    expect(router.push).toHaveBeenCalledWith('/licences');
+    expect(screen.queryByRole('button', { name: 'Licences' })).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'About Rillwood' }));
+    expect(router.push).toHaveBeenCalledWith('/about');
   });
 
   it('opens the auto-remove page', async () => {
@@ -184,8 +185,11 @@ describe('Settings screen', () => {
       expect(screen.queryByRole('button', { name: /^Back to/ })).toBeNull();
     });
 
-    it('Licences opens in the pane, an entry over it', async () => {
+    it('About opens in the pane, Licences and an entry over it', async () => {
       await renderSettings();
+      await fireEvent.press(row('About Rillwood'));
+      expect(screen.getByRole('header', { name: 'About' })).toBeOnTheScreen();
+      expect(row('About Rillwood')).toBeSelected();
       await fireEvent.press(row('Licences'));
       expect(screen.getByRole('header', { name: 'Licences' })).toBeOnTheScreen();
       await fireEvent.press(row('Rillwood'));
@@ -193,7 +197,8 @@ describe('Settings screen', () => {
       expect(screen.getByRole('header', { name: 'Rillwood' })).toBeOnTheScreen();
       expect(screen.getByText(/^Additional permission under GNU GPL/)).toBeOnTheScreen();
       await fireEvent.press(row('Back to Licences'));
-      expect(screen.getByRole('header', { name: 'Licences' })).toBeOnTheScreen();
+      await fireEvent.press(row('Back to About'));
+      expect(screen.getByRole('header', { name: 'About' })).toBeOnTheScreen();
     });
 
     it('(i) on another account shows its details', async () => {

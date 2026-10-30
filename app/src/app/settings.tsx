@@ -29,7 +29,7 @@ function SettingsList() {
   const link = useSettingsLink();
   const subtitles = { page: 'subtitles' } as const;
   const storage = { page: 'storage' } as const;
-  const licences = { page: 'licences' } as const;
+  const about = { page: 'about' } as const;
 
   return (
     <>
@@ -61,7 +61,7 @@ function SettingsList() {
         <OptionRow option="offload-days" />
       </ListSection>
       <ListSection title="About">
-        <ListRow label="Licences" selected={link.selected(licences)} onPress={() => link.open(licences)} />
+        <ListRow label="About Rillwood" selected={link.selected(about)} onPress={() => link.open(about)} />
       </ListSection>
     </>
   );

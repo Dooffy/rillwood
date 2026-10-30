@@ -86,6 +86,9 @@ export const backdrop = 'rgba(0, 0, 0, 0.5)';
 /** Text on a danger fill (swipe-to-delete action), in both themes. */
 export const onDanger = '#FFFFFF';
 
+/** Ukraine's flag (Settings → About), the same in both themes. */
+export const flagUkraine = { blue: '#0057B7', yellow: '#FFD500' } as const;
+
 export const radii = {
   card: 12,
   cardLarge: 20,

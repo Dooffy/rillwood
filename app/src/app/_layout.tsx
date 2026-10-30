@@ -105,6 +105,7 @@ export default function RootLayout() {
             <Stack.Screen name="download-storage" options={pageOf(SETTINGS_TITLES.storage)} />
             {/* An option's checkmark list: a plain title, as iOS Settings subscreens. */}
             <Stack.Screen name="option/[key]" options={({ route }) => plainPage(pickerTitle(route.params), c)} />
+            <Stack.Screen name="about" options={pageOf(SETTINGS_TITLES.about)} />
             <Stack.Screen name="licences" options={pageOf(SETTINGS_TITLES.licences)} />
             {/* One licence: a plain title, package names can be long. */}
             <Stack.Screen

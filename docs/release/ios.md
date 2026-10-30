@@ -47,3 +47,4 @@ In App Store Connect, once processed (TestFlight tab):
 - [ ] Browse, play an MKV (direct play), resume, tracks, progress shows on the server dashboard
 - [ ] Download an episode, close the app, it finishes; plays in flight mode
 - [ ] No dev-client menu or test screens
+- [ ] Settings → About Rillwood: Source code, Privacy policy, Report a problem and Stand with Ukraine open the browser; Licences opens

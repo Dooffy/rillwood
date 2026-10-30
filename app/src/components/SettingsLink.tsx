@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The pages Settings opens (an account, Subtitles, an option's list, Storage limit, Licences). Phones push their
+// The pages Settings opens (an account, Subtitles, an option's list, Storage limit, About, Licences). Phones push their
 // screen; the tablet split view (`SettingsSplit`) shows them beside the list instead, through this context.
 import { router } from 'expo-router';
 import { createContext, useContext } from 'react';
@@ -11,11 +11,17 @@ export type SettingsLink =
   | { page: 'subtitles' }
   | { page: 'option'; key: PickerKey }
   | { page: 'storage' }
+  | { page: 'about' }
   | { page: 'licences' }
   | { page: 'licence'; id: number };
 
 /** Headings of the pages with a fixed title (screen header on phones, pane heading on tablets). */
-export const SETTINGS_TITLES = { subtitles: 'Subtitles', storage: 'Storage limit', licences: 'Licences' } as const;
+export const SETTINGS_TITLES = {
+  subtitles: 'Subtitles',
+  storage: 'Storage limit',
+  about: 'About',
+  licences: 'Licences',
+} as const;
 
 /** One string per page, to compare links. */
 export function linkKey(link: SettingsLink): string {
@@ -31,7 +37,11 @@ function push(link: SettingsLink) {
   else if (link.page === 'option') router.push({ pathname: '/option/[key]', params: { key: link.key } });
   else if (link.page === 'licence') router.push({ pathname: '/licence/[id]', params: { id: String(link.id) } });
   else
-    router.push(({ subtitles: '/subtitles', storage: '/download-storage', licences: '/licences' } as const)[link.page]);
+    router.push(
+      ({ subtitles: '/subtitles', storage: '/download-storage', about: '/about', licences: '/licences' } as const)[
+        link.page
+      ],
+    );
 }
 
 type Pane = {

@@ -99,6 +99,8 @@ const packages = [...groups.values()]
 const data = {
   app: {
     name: 'Rillwood',
+    // The repo link from app.json (`extra.sourceUrl`), the one Settings → About opens.
+    url: JSON.parse(read('../app.json')).expo.extra?.sourceUrl,
     licence: 'GPL-3.0-or-later',
     note: 'Free software under the GNU GPL version 3 or later, with an additional permission for app stores (end of the licence).',
     texts: [textId(licence)],

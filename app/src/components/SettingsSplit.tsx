@@ -15,7 +15,7 @@ import { IconButton } from './IconButton';
 import { pageColumn, pageContent } from './Page';
 import { linkKey, SETTINGS_TITLES, SettingsPaneContext, type SettingsLink } from './SettingsLink';
 import { LicencesList } from './LicencesList';
-import { LicenceSettings, OptionSettings, StorageSettings, SubtitlesSettings } from './SettingsPages';
+import { AboutSettings, LicenceSettings, OptionSettings, StorageSettings, SubtitlesSettings } from './SettingsPages';
 import { Text } from './Text';
 
 /** Width of the list side (iPad Settings). */
@@ -34,6 +34,7 @@ function PaneContent({ link }: { link: SettingsLink }) {
   if (link.page === 'subtitles') return <SubtitlesSettings />;
   if (link.page === 'option') return <OptionSettings option={link.key} />;
   if (link.page === 'licence') return <LicenceSettings id={link.id} />;
+  if (link.page === 'about') return <AboutSettings />;
   return <StorageSettings />;
 }
 
