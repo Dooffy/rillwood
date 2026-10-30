@@ -2,7 +2,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import type { BaseItemDto } from './api';
-import { detailView } from './detail';
+import { credits, detailView } from './detail';
 
 const now = new Date(2026, 9, 4, 21, 0);
 const at = (h: number, m: number) =>
@@ -71,6 +71,10 @@ describe('detailView', () => {
       versions: undefined,
       people: [],
       directors: [],
+      facts: [],
+      badges: [],
+      credits: [],
+      overview: undefined,
     });
   });
 
@@ -93,5 +97,74 @@ describe('detailView', () => {
     });
     const directed = { ...sintel, People: [{ Id: 'd', Name: 'Colin Levy', Type: 'Director' }] };
     expect(detailView(directed, now).directors).toEqual(['Colin Levy']);
+  });
+
+  it('fills the hero: facts line, badges and the whole overview', () => {
+    const view = detailView(
+      { ...sintel, PremiereDate: '2010-09-27T00:00:00Z', Overview: '  A girl and a dragon.  ' },
+      now,
+    );
+    expect(view.facts).toEqual(['27 Sep 2010', '12m', at(21, 11), '★ 7.3']);
+    expect(view.badges).toEqual(['PG', '4K', '5.1', 'CC']);
+    expect(view.overview).toBe('A girl and a dragon.');
+  });
+
+  it('falls back to the year without a release date, leaves out what is missing', () => {
+    const view = detailView({ Id: 'x', Name: 'X', Type: 'Movie', ProductionYear: 2021, Overview: '   ' }, now);
+    expect(view.facts).toEqual(['2021']);
+    expect(view.badges).toEqual([]);
+    expect(view.overview).toBeUndefined();
+  });
+
+  it('gives a series its years, seasons and score as facts, its rating as the badge', () => {
+    const show: BaseItemDto = {
+      Id: 's',
+      Name: 'Show',
+      Type: 'Series',
+      ProductionYear: 2019,
+      EndDate: '2023-05-01T00:00:00Z',
+      Status: 'Ended',
+      OfficialRating: 'TV-MA',
+      CommunityRating: 8.1,
+    };
+    const view = detailView(show, now, 3);
+    expect(view.facts).toEqual(['2019-2023', '3 Seasons', '★ 8.1']);
+    expect(view.badges).toEqual(['TV-MA']);
+  });
+});
+
+describe('credits', () => {
+  const person = (Name: string, Type: string) => ({ Id: Name, Name, Type });
+
+  it('names the first three actors, then directors, writers and studios, singular for one', () => {
+    const item: BaseItemDto = {
+      Id: 'm',
+      Name: 'M',
+      Type: 'Movie',
+      People: [
+        person('A', 'Actor'),
+        person('Jun Aldren', 'Director'),
+        person('B', 'Actor'),
+        person('C', 'GuestStar'),
+        person('D', 'Actor'),
+        person('Rui Santos', 'Writer'),
+        person('Lena Fisk', 'Writer'),
+        person('Pat', 'Producer'),
+      ],
+      Studios: [{ Name: 'Northlight Pictures' }],
+    };
+    expect(credits(item)).toEqual([
+      { label: 'Starring', names: ['A', 'B', 'C'] },
+      { label: 'Director', names: ['Jun Aldren'] },
+      { label: 'Writers', names: ['Rui Santos', 'Lena Fisk'] },
+      { label: 'Studio', names: ['Northlight Pictures'] },
+    ]);
+  });
+
+  it('leaves out lines with nobody in them', () => {
+    expect(credits({ Id: 'm', Name: 'M', Type: 'Movie' })).toEqual([]);
+    expect(credits({ Id: 'm', Name: 'M', Type: 'Movie', Studios: [{ Name: 'One' }, { Name: 'Two' }] })).toEqual([
+      { label: 'Studios', names: ['One', 'Two'] },
+    ]);
   });
 });

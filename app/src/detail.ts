@@ -2,7 +2,7 @@
 // Everything the detail screen shows, derived from one `/Items/{id}` response (pure). Lives outside items.ts because it
 // uses the display formatters, and items.ts must stay loadable by plain Node (scripts/check-home.mjs).
 import type { BaseItemDto, PersonDto } from '@/api';
-import { formatEndsAt, formatRemaining } from '@/format';
+import { formatDate, formatEndsAt, formatRemaining } from '@/format';
 import {
   backdropImage,
   castAndCrew,
@@ -38,7 +38,41 @@ export type DetailView = {
   people: PersonDto[];
   /** For "Directed by …" (movies). */
   directors: string[];
+  /**
+   * The hero's facts line. Movies / episodes: "11 Jul 2025" (else the year), "2h 15m", "Ends at 23:35", "★ 8.1".
+   * Series: "2019-2023", "3 Seasons", "★ 8.1".
+   */
+  facts: string[];
+  /** The hero's badges. Movies / episodes: "PG-13", "4K", "Dolby Vision", "5.1", "Dolby Atmos", "CC". Series: "TV-MA". */
+  badges: string[];
+  /** The hero's credits: Starring (first three actors), Director(s), Writer(s), Studio(s); empty ones left out. */
+  credits: Credit[];
+  /** The whole overview, trimmed; undefined when there is none. */
+  overview?: string;
 };
+
+/** One credits line: "Director" + its names. */
+export type Credit = { label: string; names: string[] };
+
+/** Actors named in the hero; the rest are in Cast & Crew. */
+const STARRING = 3;
+
+/** Starring, Director(s), Writer(s), Studio(s) - singular for one name. */
+export function credits(item: BaseItemDto): Credit[] {
+  const people = item.People ?? [];
+  const named = (types: string[]) =>
+    people.filter((p) => p.Type !== undefined && types.includes(p.Type)).map((p) => p.Name);
+  const line = (one: string, many: string, names: string[]): Credit => ({
+    label: names.length > 1 ? many : one,
+    names,
+  });
+  return [
+    { label: 'Starring', names: named(['Actor', 'GuestStar']).slice(0, STARRING) },
+    line('Director', 'Directors', named(['Director'])),
+    line('Writer', 'Writers', named(['Writer'])),
+    line('Studio', 'Studios', (item.Studios ?? []).map((s) => s.Name).filter(Boolean)),
+  ].filter((c) => c.names.length > 0);
+}
 
 /** `seasons`: real season count from the season list (series), better than `ChildCount`, which may hold Specials. */
 export function detailView(item: BaseItemDto, now: Date = new Date(), seasons?: number): DetailView {
@@ -47,20 +81,33 @@ export function detailView(item: BaseItemDto, now: Date = new Date(), seasons?: 
   const sources = item.MediaSources ?? [];
   const runtime = facts.runtimeSeconds ?? 0;
   const rated = [facts.rating, facts.score && `★ ${facts.score}`];
-  const chips =
-    item.Type === 'Series'
-      ? [yearRange(item), seasonCount(seasons ?? item.ChildCount), ...rated]
-      : [
-          facts.year?.toString(),
-          formatRemaining(runtime),
-          formatEndsAt(watch.remainingSeconds ?? runtime, now),
-          ...rated,
-          facts.resolution,
-          facts.hdr,
-          facts.audio,
-          facts.atmos,
-          facts.subtitles,
-        ];
+  const score = facts.score && `★ ${facts.score}`;
+  const series = item.Type === 'Series';
+  const heroFacts = series
+    ? [yearRange(item), seasonCount(seasons ?? item.ChildCount), score]
+    : [
+        formatDate(item.PremiereDate) ?? facts.year?.toString(),
+        formatRemaining(runtime),
+        formatEndsAt(watch.remainingSeconds ?? runtime, now),
+        score,
+      ];
+  const badges = series
+    ? [facts.rating]
+    : [facts.rating, facts.resolution, facts.hdr, facts.audio, facts.atmos, facts.subtitles];
+  const present = (list: (string | undefined)[]) => list.filter((s): s is string => !!s);
+  const chips = series
+    ? [yearRange(item), seasonCount(seasons ?? item.ChildCount), ...rated]
+    : [
+        facts.year?.toString(),
+        formatRemaining(runtime),
+        formatEndsAt(watch.remainingSeconds ?? runtime, now),
+        ...rated,
+        facts.resolution,
+        facts.hdr,
+        facts.audio,
+        facts.atmos,
+        facts.subtitles,
+      ];
   return {
     art: backdropImage(item),
     logo: logoImage(item),
@@ -71,5 +118,9 @@ export function detailView(item: BaseItemDto, now: Date = new Date(), seasons?: 
     versions: sources.length > 1 ? { count: sources.length, name: sources[0].Name } : undefined,
     people: castAndCrew(item.People),
     directors: directors(item.People),
+    facts: present(heroFacts),
+    badges: present(badges),
+    credits: credits(item),
+    overview: item.Overview?.trim() || undefined,
   };
 }

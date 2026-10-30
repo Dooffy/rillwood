@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from '@jest/globals';
 
-import { formatBytes, formatClock, formatDelay, formatEndsAt, formatRemaining, spokenRemaining } from './format';
+import {
+  formatBytes,
+  formatClock,
+  formatDate,
+  formatDelay,
+  formatEndsAt,
+  formatRemaining,
+  spokenRemaining,
+} from './format';
 
 describe('formatRemaining / spokenRemaining', () => {
   it.each([
@@ -19,6 +27,19 @@ describe('formatRemaining / spokenRemaining', () => {
   it.each([0, -5, Number.NaN, Number.POSITIVE_INFINITY])('is undefined for %p', (seconds) => {
     expect(formatRemaining(seconds)).toBeUndefined();
     expect(spokenRemaining(seconds)).toBeUndefined();
+  });
+});
+
+describe('formatDate', () => {
+  it('formats the server date as stored, not shifted to the device time zone', () => {
+    expect(formatDate('2025-07-11T00:00:00.0000000Z')).toBe('11 Jul 2025');
+    expect(formatDate('2010-09-27T00:00:00Z')).toBe('27 Sep 2010');
+  });
+
+  it('gives nothing for a missing or broken date', () => {
+    expect(formatDate(undefined)).toBeUndefined();
+    expect(formatDate('')).toBeUndefined();
+    expect(formatDate('not a date')).toBeUndefined();
   });
 });
 

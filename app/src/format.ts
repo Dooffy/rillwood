@@ -41,6 +41,16 @@ export function formatEndsAt(seconds: number, now: Date = new Date()): string | 
   return `Ends at ${end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
 }
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** A release / air date from the server ("2025-07-11T00:00:00Z"): "11 Jul 2025". The day as stored (UTC), not shifted to
+ * the device's time zone - a midnight date would land on the day before west of UTC. undefined when it doesn't parse. */
+export function formatDate(iso: string | undefined): string | undefined {
+  const date = iso ? new Date(iso) : undefined;
+  if (!date || Number.isNaN(date.getTime())) return undefined;
+  return `${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
+}
+
 /** Subtitle timing: "In sync", "0.3 s earlier", "2 s later". */
 export const formatDelay = (seconds: number) =>
   seconds === 0 ? 'In sync' : `${Math.abs(seconds)} s ${seconds < 0 ? 'earlier' : 'later'}`;

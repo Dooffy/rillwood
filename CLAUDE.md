@@ -150,7 +150,7 @@ src/recentSearches.ts    recent search terms per account, in memory for the sess
 src/userData.ts          mark watched / favourite: optimistic cache + paged list patch, server answer, refetch
 src/useUserFlag.ts       mark from a button / menu: failure toast, confirm before unwatching a season / show
 src/useDownloadControl.ts  download from a button / menu: state (item or season), start (files looked up first), pause / resume, cancel, delete after asking, menu actions (`downloadActions`), policy check
-src/detail.ts            detailView: everything the detail screen shows, from one item (pure)
+src/detail.ts            detailView: everything the detail screen shows, from one item (pure): chips, hero facts / badges / credits, media, people
 src/playback.ts          PlaybackInfo → play source (pure): device profile, direct play check, stream + sidecar subtitle URLs, track options + `matchTracks` (real mpv ids) + `carryTracks` (picks to the next episode by language) + `preferredTracks` (Settings playback defaults)
 src/downloads.ts         store, queue, reconcile, cleanup, storage, weekly orphan sweep
 src/downloadSnapshot.ts  per-download snapshot: item JSON, poster, backdrop, episode still, external subtitles next to the file

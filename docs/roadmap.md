@@ -158,7 +158,7 @@ Design + sources: `docs/research/background-downloads.md`.
   - [x] `supportsTablet` on + tablets rotate everywhere (`src/orientation.ts`; phones stay upright, player excepted)
 - [ ] Tablet + detail rework (Apple TV style: bigger iPad cards, info on the hero, progress in the play button) - one PR each, in order
   - [ ] Play button with progress (`PlayButton`): ▶, track and time left in one capsule; Play from Start a round button on every device
-  - [ ] Detail data: facts line (release date, runtime, ends at, score), badges (rating, quality, audio, CC), credits (starring, directors, writers, studios), full overview
+  - [x] Detail data: facts line (release date, runtime, ends at, score), badges (rating, quality, audio, CC), credits (starring, directors, writers, studios), full overview (`detailView` `facts` / `badges` / `credits` / `overview`; `Studios` on `BaseItemDto`)
   - [ ] Movie / episode hero: title, genres, summary + More, facts, badges and play row on the art over a dark fade; iPad credits column on the right (landscape too, at most 60% of the height)
   - [ ] Details section at the bottom: About (full text) + Media (tracks, version, file size, download expiry); two columns on iPad
   - [ ] Series page: same hero, season pills + ⋯ menu (mark watched, download season), episode cards 340 pt on iPad, Cast & Crew shelf
