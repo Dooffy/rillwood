@@ -160,7 +160,7 @@ Design + sources: `docs/research/background-downloads.md`.
   - [ ] Play button with progress (`PlayButton`): ▶, track and time left in one capsule; Play from Start a round button on every device
   - [x] Detail data: facts line (release date, runtime, ends at, score), badges (rating, quality, audio, CC), credits (starring, directors, writers, studios), full overview (`detailView` `facts` / `badges` / `credits` / `overview`; `Studios` on `BaseItemDto`)
   - [x] Movie / episode hero: title, genres, summary + More, facts, badges and play row on the art over a dark fade; iPad credits column on the right (landscape too, at most 60% of the height)
-  - [ ] Details section at the bottom: About (full text) + Media (tracks, version, file size, download expiry); two columns on iPad
+  - [x] Details section at the bottom: About (full text) + Media (tracks, version, file size, download expiry); two columns on iPad
   - [ ] Series page: same hero, season pills + ⋯ menu (mark watched, download season), episode cards 340 pt on iPad, Cast & Crew shelf
   - [ ] Bigger cards on iPad: posters ~190 pt, landscape ~340 pt (Home shelves, Library grid, More Like This)
   - [ ] Home hero on iPad: title + play button on the 2.4:1 art
