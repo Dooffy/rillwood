@@ -142,7 +142,16 @@ export function LandscapeCard({ width = LANDSCAPE_WIDTH, ...props }: CardProps) 
  * Grey card while a row loads: artwork box + two text lines. A percentage width for the Home hero (`'100%'`, or its
  * share of the row in tablet landscape). Hidden from VoiceOver (the row says "Loading").
  */
-export function CardPlaceholder({ shape, width }: { shape: 'poster' | 'landscape'; width?: number | `${number}%` }) {
+export function CardPlaceholder({
+  shape,
+  width,
+  aspectRatio,
+}: {
+  shape: 'poster' | 'landscape';
+  width?: number | `${number}%`;
+  /** The art's shape when it isn't the usual one (the Home hero on wide screens). */
+  aspectRatio?: number;
+}) {
   const c = useColors();
   const poster = shape === 'poster';
   return (
@@ -152,7 +161,12 @@ export function CardPlaceholder({ shape, width }: { shape: 'poster' | 'landscape
       accessibilityElementsHidden
       style={[styles.card, { width: width ?? (poster ? POSTER_WIDTH : LANDSCAPE_WIDTH) }]}
     >
-      <View style={[styles.placeholderArt, { aspectRatio: poster ? 2 / 3 : 16 / 9, backgroundColor: c.surface }]} />
+      <View
+        style={[
+          styles.placeholderArt,
+          { aspectRatio: aspectRatio ?? (poster ? 2 / 3 : 16 / 9), backgroundColor: c.surface },
+        ]}
+      />
       <View style={[styles.placeholderLine, { width: '70%', backgroundColor: c.surface }]} />
       <View style={[styles.placeholderLine, { width: '40%', backgroundColor: c.surface }]} />
     </View>

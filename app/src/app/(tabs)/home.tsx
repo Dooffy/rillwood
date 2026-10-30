@@ -15,7 +15,7 @@ import {
   WIDE_LANDSCAPE_WIDTH,
   WIDE_POSTER_WIDTH,
 } from '@/components/Card';
-import { Hero, HERO_SIDE_ART, HERO_SIDE_SHARE } from '@/components/Hero';
+import { Hero, HERO_SIDE_ART, HERO_SIDE_SHARE, useHeroAspect } from '@/components/Hero';
 import { useItemMenu } from '@/components/ItemMenu';
 import { LoadError, loadErrorMessage, Message, Offline, useHeldOffline } from '@/components/Message';
 import { fitCards, Row } from '@/components/Row';
@@ -63,6 +63,7 @@ export default function Home() {
   const rowWidth = useTabContentWidth() - 2 * spacing.md;
   // Tablet landscape: the hero (and its placeholder) shares the row with its text.
   const beside = useWideLandscape();
+  const heroAspect = useHeroAspect();
   // The hero image at the width it's drawn: the row, or its share beside the text.
   const heroWidth = Math.round(beside ? rowWidth * HERO_SIDE_SHARE : rowWidth);
   // Tablets: whole cards across the row, so it never ends in a gap.
@@ -168,7 +169,11 @@ export default function Home() {
                 layout.heroPending &&
                 !offline.offline && (
                   <View testID="hero-placeholder" style={styles.padded}>
-                    <CardPlaceholder shape="landscape" width={beside ? HERO_SIDE_ART : '100%'} />
+                    <CardPlaceholder
+                      shape="landscape"
+                      width={beside ? HERO_SIDE_ART : '100%'}
+                      aspectRatio={heroAspect}
+                    />
                   </View>
                 )
               )}
