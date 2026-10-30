@@ -10,6 +10,23 @@
       "communityRating": 7.6,
       "minutes": 118,
       "tagline": "The sea keeps what it's given.",
+      "cast": [
+        {
+          "name": "Maren Holtby",
+          "role": "Ingrid Vass"
+        },
+        {
+          "name": "Torvald Brekke",
+          "role": "Eskil Rune"
+        },
+        {
+          "name": "Aino Lassila",
+          "role": "Sigrun Vass"
+        }
+      ],
+      "directors": ["Hedda Strøm"],
+      "writers": ["Hedda Strøm", "Per Ailo"],
+      "studio": "Greyharbour Films",
       "overview": "A widowed fisherwoman takes over her husband's failing boat in a remote northern harbour. A storm season begins and a rival crew wants her mooring."
     },
     {
@@ -23,6 +40,27 @@
       "minutes": 134,
       "downloadGB": 2.6,
       "tagline": "Nine hours of air. One way home.",
+      "cast": [
+        {
+          "name": "Mara Vell",
+          "role": "Dr. Iris Kane"
+        },
+        {
+          "name": "Ilan Ross",
+          "role": "Teo Marsh"
+        },
+        {
+          "name": "Tess Okafor",
+          "role": "Commander Hale"
+        },
+        {
+          "name": "Omar Haddad",
+          "role": "Station AI (voice)"
+        }
+      ],
+      "directors": ["Jun Aldren"],
+      "writers": ["Rui Santos"],
+      "studio": "Northlight Pictures",
       "overview": "An engineer on a private orbital hotel wakes alone after a debris strike. She has to cross the broken station before its orbit decays."
     },
     {
@@ -35,6 +73,23 @@
       "communityRating": 7.2,
       "minutes": 107,
       "tagline": "Some places don't want to be found.",
+      "cast": [
+        {
+          "name": "Edmund Farrow",
+          "role": "Walter Pike"
+        },
+        {
+          "name": "Lila Moreno",
+          "role": "June Pike"
+        },
+        {
+          "name": "Cass Whitlock",
+          "role": "Harbourmaster"
+        }
+      ],
+      "directors": ["Anouk Tessier"],
+      "writers": ["Anouk Tessier", "Ben Okoro"],
+      "studio": "Lantern Bay Studios",
       "overview": "A retired mapmaker finds an island on his old charts that no satellite shows. With his teenage granddaughter he sets out to prove it exists."
     },
     {
@@ -47,6 +102,23 @@
       "communityRating": 7.4,
       "minutes": 112,
       "tagline": "Everyone on board has a reason to stay quiet.",
+      "cast": [
+        {
+          "name": "Dmitri Valen",
+          "role": "Conductor Aurel"
+        },
+        {
+          "name": "Sasha Brightwell",
+          "role": "Nell Harrow"
+        },
+        {
+          "name": "Konrad Weis",
+          "role": "Inspector Laske"
+        }
+      ],
+      "directors": ["Ilse Marchetti"],
+      "writers": ["Owen Calder"],
+      "studio": "Quarterlight",
       "overview": "A night train through the mountains stops in a snowstorm. When a passenger vanishes, a conductor on his last shift has until dawn to find out who took her."
     },
     {
@@ -59,6 +131,23 @@
       "communityRating": 6.9,
       "minutes": 101,
       "tagline": "Love is just a frequency away.",
+      "cast": [
+        {
+          "name": "Juno Park",
+          "role": "Rosa Bell"
+        },
+        {
+          "name": "Felix Adeyemi",
+          "role": "Theo"
+        },
+        {
+          "name": "Hattie Crane",
+          "role": "Mo"
+        }
+      ],
+      "directors": ["Celia Ronan"],
+      "writers": ["Celia Ronan"],
+      "studio": "Lark & Dial",
       "overview": "A late-night radio host keeps getting calls from the same anonymous listener. The two fall for each other without ever meeting, and both are lying about who they are."
     },
     {
@@ -71,6 +160,27 @@
       "communityRating": 6.4,
       "minutes": 96,
       "tagline": "The forest remembers.",
+      "cast": [
+        {
+          "name": "Bree Calloway",
+          "role": "Wren"
+        },
+        {
+          "name": "Nico Alvar",
+          "role": "Danny"
+        },
+        {
+          "name": "Ines Fairbank",
+          "role": "Ruth"
+        },
+        {
+          "name": "Tobias Lund",
+          "role": "Cal"
+        }
+      ],
+      "directors": ["Mattias Ek"],
+      "writers": ["Mattias Ek", "Sora Ito"],
+      "studio": "Undergrowth Pictures",
       "overview": "Four friends rent a cabin in a forest where the trees grow back overnight wherever they're cut. The paths change too, and one of them starts hearing her own name."
     },
     {
@@ -84,6 +194,23 @@
       "minutes": 89,
       "downloadGB": 1.8,
       "tagline": "Small gears. Big case.",
+      "cast": [
+        {
+          "name": "Rupert Ashgrove",
+          "role": "Detective Tock (voice)"
+        },
+        {
+          "name": "Poppy Lindqvist",
+          "role": "Pip (voice)"
+        },
+        {
+          "name": "Gideon Marsh",
+          "role": "The Winder (voice)"
+        }
+      ],
+      "directors": ["Kei Natsume"],
+      "writers": ["Liesl Brandt"],
+      "studio": "Cogwheel Animation",
       "overview": "In a city of clockwork, a pocket-watch-sized robot detective and a street kid chase a thief who is stealing the city's tick."
     },
     {
@@ -96,6 +223,23 @@
       "communityRating": 6.8,
       "minutes": 123,
       "tagline": "2,000 miles. No stops.",
+      "cast": [
+        {
+          "name": "Rhea Kalinski",
+          "role": "Dana Voss"
+        },
+        {
+          "name": "Marcus Ole",
+          "role": "Jonah Brandt"
+        },
+        {
+          "name": "Vera Sato",
+          "role": "Kit"
+        }
+      ],
+      "directors": ["Brann Hollis"],
+      "writers": ["Dane Whitaker"],
+      "studio": "Hard Shoulder Films",
       "overview": "An ex-convoy driver agrees to one last haul from the border to the Arctic coast, then finds out what she's carrying and who wants it back."
     },
     {
@@ -109,6 +253,23 @@
       "minutes": 129,
       "downloadGB": 2.3,
       "tagline": "Every song has a price.",
+      "cast": [
+        {
+          "name": "Elias Monroe",
+          "role": "Samuel Reed"
+        },
+        {
+          "name": "Odette Laurent",
+          "role": "Lillian Fay"
+        },
+        {
+          "name": "Clement Boyd",
+          "role": "Augustin Vale"
+        }
+      ],
+      "directors": ["Simone Achebe"],
+      "writers": ["Simone Achebe"],
+      "studio": "Basin Street Pictures",
       "overview": "In 1950s New Orleans, a young pianist joins a famous club band. The club's owner owns more than the stage."
     },
     {
@@ -121,6 +282,23 @@
       "communityRating": 7.0,
       "minutes": 98,
       "tagline": "Built for speed. Barely.",
+      "cast": [
+        {
+          "name": "Doug Penner",
+          "role": "Gary Hollis"
+        },
+        {
+          "name": "Mina Kowal",
+          "role": "Lou Hollis"
+        },
+        {
+          "name": "Ricky Tamsin",
+          "role": "Coach Ferris"
+        }
+      ],
+      "directors": ["Abe Lindell"],
+      "writers": ["Abe Lindell", "Jess Ortega"],
+      "studio": "Two Stroke Films",
       "overview": "A recently fired accountant joins his small town's illegal lawnmower racing league to win back his kid's respect and maybe the county trophy."
     }
   ],
@@ -134,6 +312,21 @@
       "genres": ["Science Fiction", "Drama"],
       "rating": "TV-14",
       "communityRating": 8.0,
+      "cast": [
+        {
+          "name": "Ayla Brennan",
+          "role": "Dr. Nadia Cole"
+        },
+        {
+          "name": "Sven Harker",
+          "role": "Ruiz"
+        },
+        {
+          "name": "Kenji Moraes",
+          "role": "Ellis"
+        }
+      ],
+      "studio": "Fathom Line",
       "minutes": 48,
       "overview": "The crew of a deep-sea research station loses contact with the surface. Then the station starts receiving signals from below.",
       "episodes": [
@@ -172,6 +365,21 @@
       "genres": ["Drama", "Family"],
       "rating": "TV-PG",
       "communityRating": 7.7,
+      "cast": [
+        {
+          "name": "Clara Whitmore",
+          "role": "Beth Ashby"
+        },
+        {
+          "name": "Owen Draycott",
+          "role": "Sam Ashby"
+        },
+        {
+          "name": "Ruth Albany",
+          "role": "Nora Ashby"
+        }
+      ],
+      "studio": "Cider Mill Television",
       "minutes": 44,
       "overview": "Three adult siblings come home to run the family apple orchard after their father's stroke. Each of them is hiding why they really came back.",
       "episodes": [
@@ -210,6 +418,21 @@
       "genres": ["Comedy"],
       "rating": "TV-14",
       "communityRating": 7.5,
+      "cast": [
+        {
+          "name": "Benny Ortolan",
+          "role": "Hank"
+        },
+        {
+          "name": "Dolores Fitch",
+          "role": "Marge"
+        },
+        {
+          "name": "Yusuf Kaya",
+          "role": "Ray"
+        }
+      ],
+      "studio": "Blue Plate Productions",
       "minutes": 22,
       "overview": "A burnt-out chef takes the graveyard shift at a run-down roadside diner, with regulars who never seem to leave.",
       "episodes": [
@@ -248,6 +471,21 @@
       "genres": ["Crime", "Mystery"],
       "rating": "TV-14",
       "communityRating": 8.2,
+      "cast": [
+        {
+          "name": "Liv Aronsen",
+          "role": "Det. Karin Lind"
+        },
+        {
+          "name": "Eero Salo",
+          "role": "Jonas Lind"
+        },
+        {
+          "name": "Mette Dahl",
+          "role": "Chief Holm"
+        }
+      ],
+      "studio": "Polar Night Drama",
       "minutes": 52,
       "downloadGB": 0.75,
       "overview": "A detective returns to her Arctic hometown to reopen a twenty-year-old case: the night her brother disappeared on the frozen lake.",
@@ -288,6 +526,13 @@
       "genres": ["Documentary"],
       "rating": "TV-G",
       "communityRating": 8.6,
+      "cast": [
+        {
+          "name": "Ada Morrow",
+          "role": "Narrator"
+        }
+      ],
+      "studio": "Fieldnote Films",
       "minutes": 50,
       "downloadGB": 0.9,
       "overview": "A nature series following wildlife across six extreme habitats, filmed over three years.",

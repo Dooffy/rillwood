@@ -41,7 +41,7 @@ Fake movies and shows with real-looking artwork, for screenshots that show no re
 
 ```bash
 node make-showcase-media.mjs     # ~400 MB into ~/rillwood-media/showcase (make-test-media.sh runs it)
-node showcase.mjs                # libraries, demo user, scan, watch state (setup.mjs runs it); ~2 s
+node showcase.mjs                # libraries, demo user, scan, NFO re-read, watch state (setup.mjs runs it); ~10 s
 ```
 
 Re-run `node showcase.mjs` before a screenshot session - it puts demo's watch state back.
@@ -53,10 +53,11 @@ node make-showcase-media.mjs --large-files && node showcase.mjs   # then downloa
 node make-showcase-media.mjs --small-files && node showcase.mjs   # back to normal (delete the downloads in the app too)
 ```
 
-| What                                                                            | Where                    |
-| ------------------------------------------------------------------------------- | ------------------------ |
-| Titles, overviews, ratings, runtimes, episodes, demo watch state                | `showcase/showcase.json` |
-| Artwork: `poster.jpg` (2:3), `backdrop.jpg` (16:9), `S01E0N.jpg` episode stills | `showcase/art/<slug>/`   |
+| What                                                                                 | Where                                                               |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| Titles, overviews, ratings, runtimes, episodes, demo watch state                     | `showcase/showcase.json`                                            |
+| Fictional cast (with roles), directors, writers, studios - the detail hero's credits | `showcase/showcase.json` (all names invented: `showcase/README.md`) |
+| Artwork: `poster.jpg` (2:3), `backdrop.jpg` (16:9), `S01E0N.jpg` episode stills      | `showcase/art/<slug>/`                                              |
 
 - 10 movies + 5 shows x 6 episodes. Each video is its backdrop / still looped at the full runtime (1 fps, silent 5.1 audio, an English subtitle track that's off), so runtimes, time left and progress bars look real.
 - Libraries `Films` / `TV Shows` (Home says "Recently Added in Films"; `Movies` / `Shows` are taken by the test libraries) read only the NFOs and artwork next to the files (no online lookups - the fake titles would match real films). `demo` sees only them; `test` sees everything else.

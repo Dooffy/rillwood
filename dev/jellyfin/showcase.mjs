@@ -139,6 +139,33 @@ if (missing().length) {
 }
 console.log(`Scan done: ${files.length} titles`);
 
+// A scan keeps metadata it already has, and the NFOs lock it (lockdata): unlock each movie and show, re-read its NFO
+// (cast, crew, studios may have changed - the NFO locks it again), then wait for the cast to land
+const titles = await call(
+  'GET',
+  `/Items?${new URLSearchParams({ includeItemTypes: 'Movie,Series', recursive: 'true' })}`,
+  {
+    token: demo,
+  },
+);
+for (const { Id } of titles.Items) {
+  const full = await call('GET', `/Items/${Id}`, { token: admin });
+  if (full.LockData) await call('POST', `/Items/${Id}`, { token: admin, body: { ...full, LockData: false } });
+  const q = new URLSearchParams({ MetadataRefreshMode: 'Default', ReplaceAllMetadata: 'true' });
+  await call('POST', `/Items/${Id}/Refresh?${q}`, { token: admin });
+}
+const castCheck = fixture.movies.find((m) => m.cast?.length);
+if (castCheck) {
+  const item = items.find((i) => i.Path?.endsWith(fileOf(castCheck.slug)));
+  let people = 0;
+  for (let i = 0; i < 60 && !people; i++) {
+    if (i) await new Promise((r) => setTimeout(r, 1000));
+    people = (await call('GET', `/Items/${item.Id}`, { token: demo })).People?.length ?? 0;
+  }
+  if (!people) throw new Error('Metadata refresh did not finish in 60 s - run node showcase.mjs again');
+  console.log('Metadata refreshed (cast, crew, studios)');
+}
+
 function find(key) {
   const item = items.find((i) => i.Path?.endsWith(fileOf(key)));
   if (!item) throw new Error(`No item for ${key}`);
