@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { Image } from 'expo-image';
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { minTouch, pressedOpacity, spacing, useColors, useWide } from '@/theme';
@@ -14,6 +15,9 @@ const HERO_ART_SCALE = HERO_RATIO * (16 / 9);
 export const LOGO_WIDTH = 240;
 /** Wide screens: the hero is a landscape strip, 16:9 of the width but at most this share of the window's height. */
 const WIDE_HERO_HEIGHT = 0.6;
+/** Wide screens: the text column's widest, and the credits column beside it. */
+const WIDE_TEXT_WIDTH = 560;
+const SIDE_WIDTH = 280;
 
 /**
  * The hero's size for this window and the width to request its art at (cover-cropped). Phones: 4:5 of the width.
@@ -36,14 +40,21 @@ export type DetailHeroProps = {
   subtitle: string;
   /** Link above the title (episode → its series). */
   parent?: { name: string; onPress: () => void };
+  /** On the art under the subtitle: facts, actions (and on wide screens the summary and badges). */
+  children?: ReactNode;
+  /** Wide screens: a column on the right of the art, bottom-aligned with the text (credits). */
+  side?: ReactNode;
 };
 
-/** Top of a detail screen, under the transparent header: art with scrim, logo or title, subtitle. */
-export function DetailHero({ art, logo, title, subtitle, parent }: DetailHeroProps) {
+/**
+ * Top of a detail screen, under the transparent header: art fading into the page, then on it the logo or title, the
+ * subtitle and `children`; `side` on the right on wide screens. Grows past its art height when the text needs it.
+ */
+export function DetailHero({ art, logo, title, subtitle, parent, children, side }: DetailHeroProps) {
   const c = useColors();
   const { wide, width, height } = useHeroLayout();
   return (
-    <View testID="detail-hero" style={[styles.hero, { width, height, backgroundColor: c.surface }]}>
+    <View testID="detail-hero" style={[styles.hero, { width, minHeight: height, backgroundColor: c.surface }]}>
       {art && (
         <Image
           testID="detail-backdrop"
@@ -60,47 +71,52 @@ export function DetailHero({ art, logo, title, subtitle, parent }: DetailHeroPro
         style={[
           StyleSheet.absoluteFill,
           {
-            backgroundImage: `linear-gradient(to bottom, ${c.background}66 0%, ${c.background}00 20%, ${c.background}00 45%, ${c.background} 100%)`,
+            // The bottom half holds text and buttons: it reaches the page colour well before the edge.
+            backgroundImage: `linear-gradient(to bottom, ${c.background}66 0%, ${c.background}00 20%, ${c.background}00 35%, ${c.background}D9 70%, ${c.background} 92%)`,
           },
         ]}
       />
-      {/* Wide screens: left-aligned over the strip, in line with the body under it. */}
-      <View style={[styles.text, wide && styles.start]}>
-        {parent && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={parent.name}
-            accessibilityHint="Opens the series"
-            onPress={parent.onPress}
-            style={({ pressed }) => [styles.parent, pressed && styles.pressed]}
-          >
-            <Text variant="label" secondary numberOfLines={1}>
-              {parent.name}
+      {/* Wide screens: left-aligned over the strip, in line with the body under it; `side` on the right. */}
+      <View style={[styles.content, wide && styles.wideContent]}>
+        <View style={[styles.text, wide && styles.start]}>
+          {parent && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={parent.name}
+              accessibilityHint="Opens the series"
+              onPress={parent.onPress}
+              style={({ pressed }) => [styles.parent, pressed && styles.pressed]}
+            >
+              <Text variant="label" secondary numberOfLines={1}>
+                {parent.name}
+              </Text>
+              <Chevron />
+            </Pressable>
+          )}
+          {logo ? (
+            <Image
+              testID="detail-logo"
+              source={logo}
+              cachePolicy="memory-disk"
+              contentFit="contain"
+              style={styles.logo}
+              accessible
+              accessibilityRole="header"
+              accessibilityLabel={title}
+            />
+          ) : (
+            <Text variant="largeTitle" accessibilityRole="header" numberOfLines={3} style={!wide && styles.center}>
+              {title}
             </Text>
-            <Chevron />
-          </Pressable>
-        )}
-        {logo ? (
-          <Image
-            testID="detail-logo"
-            source={logo}
-            cachePolicy="memory-disk"
-            contentFit="contain"
-            style={styles.logo}
-            accessible
-            accessibilityRole="header"
-            accessibilityLabel={title}
-          />
-        ) : (
-          <Text variant="largeTitle" accessibilityRole="header" numberOfLines={3} style={!wide && styles.center}>
-            {title}
-          </Text>
-        )}
-        {subtitle !== '' && (
-          <Text secondary numberOfLines={1}>
-            {subtitle}
-          </Text>
-        )}
+          )}
+          {subtitle !== '' && (
+            <Text secondary numberOfLines={1}>
+              {subtitle}
+            </Text>
+          )}
+          {children}
+        </View>
+        {wide && side ? <View style={styles.side}>{side}</View> : null}
       </View>
     </View>
   );
@@ -108,10 +124,14 @@ export function DetailHero({ art, logo, title, subtitle, parent }: DetailHeroPro
 
 const styles = StyleSheet.create({
   hero: { justifyContent: 'flex-end' },
-  text: { alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingBottom: spacing.md },
+  content: { paddingHorizontal: spacing.md, paddingBottom: spacing.md },
+  wideContent: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.lg * 2 },
+  text: { alignItems: 'center', gap: spacing.sm },
+  side: { width: SIDE_WIDTH },
   logo: { width: LOGO_WIDTH, height: LOGO_WIDTH / 3 },
   center: { textAlign: 'center' },
-  start: { alignItems: 'flex-start' },
+  // The text column keeps a readable width beside the credits.
+  start: { flex: 1, maxWidth: WIDE_TEXT_WIDTH, alignItems: 'flex-start' },
   parent: { minHeight: minTouch, flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   pressed: { opacity: pressedOpacity },
 });

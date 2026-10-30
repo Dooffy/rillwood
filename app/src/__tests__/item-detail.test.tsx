@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { act, fireEvent, render as rtlRender, screen } from '@testing-library/react-native';
+import { act, fireEvent, render as rtlRender, screen, within } from '@testing-library/react-native';
 import { Paths } from 'expo-file-system';
 import type { ReactElement } from 'react';
 import { Alert, type AlertButton } from 'react-native';
@@ -14,6 +14,7 @@ import * as downloads from '@/downloads';
 import { initDownloads } from '@/downloads';
 import * as session from '@/session';
 import { setDownloadLimit } from '@/settings';
+import { PHONE, resetDevice, setDevice } from '@/testDevice';
 
 import NativeDownloads from '../../modules/downloads';
 
@@ -115,13 +116,27 @@ beforeEach(() => {
 });
 
 describe('ItemDetail', () => {
-  it('loads the item by id and shows title, chips, overview and genres', async () => {
+  afterEach(resetDevice);
+
+  it('loads the item by id and shows title, facts, badges, overview and genres', async () => {
     await render(<ItemDetail />);
     expect(await screen.findByRole('header', { name: 'Sintel' })).toBeOnTheScreen();
     expect(request).toHaveBeenCalledWith(expect.anything(), `/Items/${sintel.Id}`, expect.anything());
-    expect(screen.getByLabelText(/^2010, 12m, Ends at .+, PG, ★ 7\.3, 4K, 5\.1, CC$/)).toBeOnTheScreen();
+    expect(screen.getByText(/^2010 · 12m · Ends at .+ · ★ 7\.3$/)).toBeOnTheScreen();
+    expect(screen.getByLabelText('PG, 4K, 5.1, CC')).toBeOnTheScreen();
     expect(screen.getByText(/^A wandering warrior/)).toBeOnTheScreen();
     expect(screen.getByText('Movie · Animation · Fantasy')).toBeOnTheScreen();
+  });
+
+  it('phones: facts and the play row on the art, summary, badges and credits under it', async () => {
+    await setDevice(...PHONE);
+    await render(<ItemDetail />);
+    const hero = await screen.findByTestId('detail-hero');
+    expect(within(hero).getByText(/^2010 · 12m/)).toBeOnTheScreen();
+    expect(within(hero).getByRole('button', { name: 'Play' })).toBeOnTheScreen();
+    expect(within(hero).queryByLabelText('PG, 4K, 5.1, CC')).toBeNull();
+    expect(screen.getByLabelText('PG, 4K, 5.1, CC')).toBeOnTheScreen();
+    expect(screen.getByText('Director Colin Levy')).toBeOnTheScreen();
   });
 
   it('shows the backdrop from the active server, without a token', async () => {
@@ -175,11 +190,13 @@ describe('ItemDetail', () => {
     expect(screen.queryByText('Sintel')).toBeNull();
   });
 
-  it('clamps a long overview to 3 lines with More / Less', async () => {
+  it('clamps a long overview with More / Less: 2 lines on the hero (tablets), 3 under it (phones)', async () => {
     const long = 'A wandering warrior finds an unlikely friend. '.repeat(5).trim();
     reply = () => Promise.resolve({ ...sintel, Overview: long });
     await render(<ItemDetail />);
-    const text = await screen.findByText(long);
+    expect(await screen.findByText(long)).toHaveProp('numberOfLines', 2);
+    await setDevice(...PHONE);
+    const text = screen.getByText(long);
     expect(text).toHaveProp('numberOfLines', 3);
     await fireEvent.press(screen.getByText('More'));
     expect(screen.getByText(long).props.numberOfLines).toBeUndefined();
@@ -291,7 +308,7 @@ describe('ItemDetail', () => {
           : reply()) as Promise<never>,
     );
     await render(<ItemDetail />);
-    expect(await screen.findByText(/^Directed by/)).toHaveTextContent('Directed by Colin Levy');
+    expect(await screen.findByLabelText('Director: Colin Levy')).toBeOnTheScreen();
     expect(await screen.findByText('More Like This')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Tears of Steel, 2012' }));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/item/[id]', params: { id: 'tears' } });
