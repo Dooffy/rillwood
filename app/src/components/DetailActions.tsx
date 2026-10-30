@@ -4,15 +4,18 @@ import { StyleSheet, View } from 'react-native';
 import type { UserFlag } from '@/items';
 import { spacing, useWide } from '@/theme';
 
-import { Button } from './Button';
 import { IconButton } from './IconButton';
+import { PlayButton, type PlayButtonProps } from './PlayButton';
+
+/** Wide screens: the play capsule is at least this wide, so a bare "▶ Play" isn't a small button on an iPad. */
+export const WIDE_PLAY_MIN_WIDTH = 220;
 
 export type DetailActionsProps = {
-  /** "Play", "Resume", "Resume S1:E2". */
-  playTitle: string;
+  /** The play capsule: what it plays and how far in (`PlayButton`). */
+  play: Omit<PlayButtonProps, 'onPress'>;
   /** undefined: nothing to play yet (button disabled). */
   onPlay?: () => void;
-  /** Shown under the row when set (in progress): "Play from Start". */
+  /** In progress: a round "Play from Start" button in the row. */
   onStartOver?: () => void;
   played: boolean;
   favourite: boolean;
@@ -21,50 +24,43 @@ export type DetailActionsProps = {
 };
 
 /**
- * Play capsule with round watched + favourite toggles (filled when on; the label says what a tap does). Wide screens:
- * Play as wide as its title, Play from Start a round button in the row - a column-wide capsule would be giant.
+ * Play capsule (carries the progress) with round Play from Start, watched and favourite buttons (filled when on; the
+ * label says what a tap does). Phones: the capsule takes the rest of the row. Wide screens: as wide as its content,
+ * at least `WIDE_PLAY_MIN_WIDTH` - a column-wide capsule would be giant.
  */
-export function DetailActions({ playTitle, onPlay, onStartOver, played, favourite, onMark }: DetailActionsProps) {
+export function DetailActions({ play, onPlay, onStartOver, played, favourite, onMark }: DetailActionsProps) {
   const wide = useWide();
   return (
-    <View style={styles.actions}>
-      <View style={styles.row}>
-        <View style={!wide && styles.play}>
-          <Button
-            title={playTitle}
-            icon={{ ios: 'play.fill', android: 'play_arrow' }}
-            disabled={!onPlay}
-            onPress={() => onPlay?.()}
-          />
-        </View>
-        {wide && onStartOver && (
-          <IconButton
-            icon={{ ios: 'arrow.counterclockwise', android: 'replay' }}
-            label="Play from Start"
-            onPress={onStartOver}
-          />
-        )}
-        <IconButton
-          icon={{ ios: 'checkmark', android: 'check' }}
-          // A toggle: one name, its state from `selected` ("Watched, selected"), not a second time in the label.
-          label="Watched"
-          selected={played}
-          onPress={() => onMark('played', !played)}
-        />
-        <IconButton
-          icon={{ ios: favourite ? 'heart.fill' : 'heart', android: favourite ? 'favorite' : 'favorite_border' }}
-          label="Favourite"
-          selected={favourite}
-          onPress={() => onMark('favourite', !favourite)}
-        />
+    <View style={styles.row}>
+      <View testID="play-slot" style={wide ? styles.playWide : styles.play}>
+        <PlayButton {...play} onPress={onPlay} />
       </View>
-      {!wide && onStartOver && <Button title="Play from Start" variant="secondary" onPress={onStartOver} />}
+      {onStartOver && (
+        <IconButton
+          icon={{ ios: 'arrow.counterclockwise', android: 'replay' }}
+          label="Play from Start"
+          onPress={onStartOver}
+        />
+      )}
+      <IconButton
+        icon={{ ios: 'checkmark', android: 'check' }}
+        // A toggle: one name, its state from `selected` ("Watched, selected"), not a second time in the label.
+        label="Watched"
+        selected={played}
+        onPress={() => onMark('played', !played)}
+      />
+      <IconButton
+        icon={{ ios: favourite ? 'heart.fill' : 'heart', android: favourite ? 'favorite' : 'favorite_border' }}
+        label="Favourite"
+        selected={favourite}
+        onPress={() => onMark('favourite', !favourite)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  actions: { gap: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   play: { flex: 1 },
+  playWide: { minWidth: WIDE_PLAY_MIN_WIDTH },
 });

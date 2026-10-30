@@ -320,8 +320,9 @@ describe('ItemDetail', () => {
     await render(<ItemDetail />);
     expect(await screen.findByRole('header', { name: 'Test Show S01E02' })).toBeOnTheScreen();
     expect(screen.getByText('S1:E2 · Season 1')).toBeOnTheScreen();
+    // The time left sits in the play button, read with it.
     expect(screen.getByText('2m left')).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole('button', { name: 'Resume' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Resume, 2 minutes left' }));
     expect(router.push).toHaveBeenLastCalledWith({ pathname: '/player', params: { id: episode.Id, start: '40' } });
     await fireEvent.press(screen.getByRole('button', { name: 'Play from Start' }));
     expect(router.push).toHaveBeenLastCalledWith({ pathname: '/player', params: { id: episode.Id, start: '0' } });
