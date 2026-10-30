@@ -4,8 +4,9 @@ import { cardTitles, posterImage, similar } from '@/items';
 import { openItem } from '@/navigation';
 import { useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
+import { useWide } from '@/theme';
 
-import { POSTER_WIDTH, PosterCard } from './Card';
+import { POSTER_WIDTH, PosterCard, WIDE_SHELF_POSTER_WIDTH } from './Card';
 import { useItemMenu } from './ItemMenu';
 import { Row } from './Row';
 
@@ -13,6 +14,7 @@ import { Row } from './Row';
 export function MoreLikeThis({ id }: { id: string }) {
   const image = useImage();
   const menu = useItemMenu();
+  const width = useWide() ? WIDE_SHELF_POSTER_WIDTH : POSTER_WIDTH;
   const endpoint = similar(id);
   const { data } = useFetch<ItemsResult>(endpoint.path, { query: endpoint.query });
   const items = data?.Items ?? [];
@@ -22,9 +24,10 @@ export function MoreLikeThis({ id }: { id: string }) {
       {items.map((item: BaseItemDto) => (
         <PosterCard
           key={item.Id}
+          width={width}
           {...cardTitles(item)}
           played={item.UserData?.Played}
-          image={image(posterImage(item), POSTER_WIDTH)}
+          image={image(posterImage(item), width)}
           item={item}
           onOpen={openItem}
           onMenu={menu}

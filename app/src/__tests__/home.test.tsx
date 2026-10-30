@@ -197,10 +197,10 @@ describe('Home', () => {
     await screen.findByText('Recently Added in Shows');
     // Phone: the default sizes, the next card peeking in.
     expect([width('Test Show'), width(/^Test Show, S1:E2/)]).toEqual([120, 260]);
-    // iPad portrait (802 pt row): 5 posters, 3 landscape cards. Landscape beside the sidebar (902): 6 and 3.
+    // iPad portrait (802 pt row): 4 posters, 2 landscape cards. Landscape beside the sidebar (902): 5 and 2.
     for (const [w, h, poster, landscape] of [
-      [834, 1194, 150, 259],
-      [1194, 834, 140, 292],
+      [834, 1194, 191, 395],
+      [1194, 834, 170, 445],
     ] as const) {
       await setDevice(w, h);
       expect([width('Test Show'), width(/^Test Show, S1:E2/)]).toEqual([poster, landscape]);
@@ -214,7 +214,7 @@ describe('Home', () => {
     await setDevice(1194, 834);
     await render(<Home />);
     const row = screen.getByLabelText('Loading Recently Added');
-    expect(within(row).getAllByTestId('card-placeholder', { includeHiddenElements: true })).toHaveLength(6);
+    expect(within(row).getAllByTestId('card-placeholder', { includeHiddenElements: true })).toHaveLength(5);
   });
 
   it('uses the next episode as the hero when nothing is in progress', async () => {

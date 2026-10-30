@@ -19,7 +19,7 @@ import { EpisodeRowsPlaceholder, PosterGridPlaceholder } from './Skeleton';
 import { Spinner } from './Spinner';
 import { useTabContentWidth } from './TabsSidebar';
 
-/** A phone's poster column count (about 111 pt each); wider lists add columns (5 in iPad portrait, 6 beside the sidebar). */
+/** A phone's poster column count (about 111 pt each); wider lists add columns (4 on an 11" iPad in portrait, 5 on a 13"). */
 const MIN_COLUMNS = 3;
 
 export type PagedListProps = {

@@ -15,6 +15,7 @@ import { initDownloads } from '@/downloads';
 import * as session from '@/session';
 import { setDownloadLimit } from '@/settings';
 import { PHONE, resetDevice, setDevice } from '@/testDevice';
+import { WIDE_SHELF_POSTER_WIDTH } from '@/components/Card';
 
 import NativeDownloads from '../../modules/downloads';
 
@@ -315,6 +316,10 @@ describe('ItemDetail', () => {
     await render(<ItemDetail />);
     expect(await screen.findByLabelText('Director: Colin Levy')).toBeOnTheScreen();
     expect(await screen.findByText('More Like This')).toBeOnTheScreen();
+    // Tablet (Jest's default window): bigger posters than a phone's.
+    expect(screen.getByRole('button', { name: 'Tears of Steel, 2012' })).toHaveStyle({
+      width: WIDE_SHELF_POSTER_WIDTH,
+    });
     await fireEvent.press(screen.getByRole('button', { name: 'Tears of Steel, 2012' }));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/item/[id]', params: { id: 'tears' } });
     // Long press: the item's menu.

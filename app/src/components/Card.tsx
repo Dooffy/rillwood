@@ -122,11 +122,14 @@ export const POSTER_WIDTH = 120;
 export const LANDSCAPE_WIDTH = 260;
 
 /**
- * Tablets: cards about this wide, as many whole ones as fit the row (`fitCards`). Posters a bit over a phone's (the
- * Library grid too); landscape cards a bit under, so iPad portrait gets three across, not two big ones.
+ * Tablets: cards about this wide, as many whole ones as fit the row (`fitCards`), so they come out a bit wider. Posters
+ * (the Library grid too): five of ~190 pt across a 13" iPad in portrait, four on an 11". Landscape cards: three of
+ * ~325 pt on a 13", two on an 11" - artwork sized like the store apps, not phone cards in more columns.
  */
-export const WIDE_POSTER_WIDTH = 140;
-export const WIDE_LANDSCAPE_WIDTH = 220;
+export const WIDE_POSTER_WIDTH = 170;
+export const WIDE_LANDSCAPE_WIDTH = 300;
+/** Tablets: posters in a detail screen's More Like This (a shelf with the next one peeking in, not fitted). */
+export const WIDE_SHELF_POSTER_WIDTH = 190;
 
 /** 2:3 poster with title + subtitle under it (library grid, Recently Added). */
 export function PosterCard({ width = POSTER_WIDTH, ...props }: CardProps) {

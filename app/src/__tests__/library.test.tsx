@@ -129,11 +129,11 @@ describe('Library', () => {
     await screen.findByText('11 movies · by Name');
     const posterWidth = () =>
       StyleSheet.flatten(screen.getByRole('button', { name: 'Sintel, 2010' }).props.style).width as number;
-    // Phone: 3 columns. iPad portrait: 5. iPad landscape: 6 beside the sidebar.
+    // Phone: 3 columns. iPad portrait: 4. iPad landscape: 5 beside the sidebar.
     for (const [width, height, expected] of [
       [390, 844, 111],
-      [834, 1194, 150],
-      [1194, 834, 140],
+      [834, 1194, 191],
+      [1194, 834, 170],
     ] as const) {
       await act(() => Dimensions.set({ window: { ...window, width, height } }));
       expect(posterWidth()).toBe(expected);

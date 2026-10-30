@@ -162,7 +162,7 @@ Design + sources: `docs/research/background-downloads.md`.
   - [x] Movie / episode hero: title, genres, summary + More, facts, badges and play row on the art over a dark fade; iPad credits column on the right (landscape too, at most 60% of the height)
   - [x] Details section at the bottom: About (full text) + Media (tracks, version, file size, download expiry); two columns on iPad
   - [x] Series page: same hero, season pills + ⋯ menu (mark watched, download season), episode cards 340 pt on iPad, Cast & Crew shelf
-  - [ ] Bigger cards on iPad: posters ~190 pt, landscape ~340 pt (Home shelves, Library grid, More Like This)
+  - [x] Bigger cards on iPad: posters ~190 pt, landscape ~340 pt (Home shelves, Library grid, More Like This)
   - [ ] Home hero on iPad: title + play button on the 2.4:1 art
 - [ ] Splash, screenshots, privacy policy
   - [x] Splash light + dark: white with the black pebble mark / black with the white one (`expo-splash-screen` `dark`), follows the system appearance. Native rebuild - device check pending
