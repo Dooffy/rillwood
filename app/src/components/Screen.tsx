@@ -44,7 +44,9 @@ export function Screen({ title, onTitlePress, right, padded = true, children }: 
         ) : (
           heading
         )}
-        <View style={styles.right}>{right}</View>
+        <View testID="screen-right" style={styles.right}>
+          {right}
+        </View>
       </View>
       <View style={[styles.body, padded && styles.padded]}>{children}</View>
     </SafeAreaView>
@@ -64,7 +66,8 @@ const styles = StyleSheet.create({
   },
   titleButton: { minHeight: minTouch, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
   pressed: { opacity: pressedOpacity },
-  right: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  // Button height even when empty: every tab's header is the same height, so the title doesn't jump between tabs.
+  right: { minHeight: minTouch, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   body: { flex: 1 },
   // No top padding: the header's gap is the one above the content on every tab.
   padded: { paddingHorizontal: spacing.md, paddingBottom: spacing.md, gap: spacing.md },
