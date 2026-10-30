@@ -14,8 +14,9 @@ import { Text } from './Text';
 /** Card width (points); image URLs and the list's scroll offsets are sized from it. */
 export const EPISODE_CARD_WIDTH = 300;
 const RING_SIZE = 24;
-const OVERVIEW_LINES = 3;
-const OVERVIEW_LINE_HEIGHT = Math.round(type.caption.fontSize * 1.4);
+/** Overview lines every card keeps (cards in a row line up); longer ones end with "…". */
+export const OVERVIEW_LINES = 2;
+export const OVERVIEW_LINE_HEIGHT = Math.round(type.caption.fontSize * 1.4);
 
 export type EpisodeCardProps = {
   /** Episode number: "EPISODE 3" on the card, "Episode 3" for VoiceOver. */

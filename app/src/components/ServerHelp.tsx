@@ -13,6 +13,9 @@ const WHERE = [
   'No server yet? Jellyfin is free to install on a computer or NAS.',
 ];
 
+/** Diameter of a step's number circle. */
+export const STEP_NUMBER = 24;
+
 /** Numbered "Where do I find it?" card. */
 export function WhereToFindServer() {
   const c = useColors();
@@ -26,7 +29,7 @@ export function WhereToFindServer() {
       </View>
       {WHERE.map((line, i) => (
         <View key={line} style={styles.step}>
-          <View style={[styles.number, { backgroundColor: c.elevated2 }]}>
+          <View testID="step-number" style={[styles.number, { backgroundColor: c.elevated2 }]}>
             <Text variant="caption" maxFontSizeMultiplier={1.5}>
               {i + 1}
             </Text>
@@ -44,6 +47,14 @@ const styles = StyleSheet.create({
   card: { borderRadius: radii.card, padding: spacing.md, gap: spacing.md },
   cardTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   step: { flexDirection: 'row', gap: spacing.sm + spacing.xs },
-  number: { minWidth: 24, minHeight: 24, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
+  // Fixed size, top of the row: stretched to a multi-line step it turned into a tall pill.
+  number: {
+    width: STEP_NUMBER,
+    height: STEP_NUMBER,
+    alignSelf: 'flex-start',
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   stepText: { flex: 1 },
 });

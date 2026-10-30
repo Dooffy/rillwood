@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { pressedOpacity, spacing, useWideLandscape } from '@/theme';
+import { pressedOpacity, spacing, useWide, useWideLandscape } from '@/theme';
 
 import { Artwork } from './Artwork';
 import { cardLabel, type CardProps, longPressProps } from './Card';
@@ -13,6 +13,16 @@ import { Text } from './Text';
  */
 export const HERO_SIDE_SHARE = 0.6;
 export const HERO_SIDE_ART = `${HERO_SIDE_SHARE * 100}%` as const;
+
+/** Wide screens in portrait (iPad): a full-width 16:9 hero takes ~40% of a 13" screen, so it's cropped wider. */
+export const WIDE_HERO_RATIO = 2.4;
+
+/** The hero art's aspect ratio: 16:9, cropped wider on a wide screen when the art runs full width. */
+export function useHeroAspect() {
+  const wide = useWide();
+  const beside = useWideLandscape();
+  return wide && !beside ? WIDE_HERO_RATIO : 16 / 9;
+}
 
 export type HeroProps = Omit<CardProps, 'width'> & {
   /** Small line above the title: "Continue Watching", "Up Next". */
@@ -26,6 +36,7 @@ export type HeroProps = Omit<CardProps, 'width'> & {
 export function Hero({ eyebrow, ...props }: HeroProps) {
   const { title, subtitle, image, progress, remainingSeconds, played, onPress, onLongPress } = props;
   const beside = useWideLandscape();
+  const aspectRatio = useHeroAspect();
   return (
     <Pressable
       accessibilityRole="button"
@@ -37,7 +48,7 @@ export function Hero({ eyebrow, ...props }: HeroProps) {
       <View testID="hero-art" style={beside ? styles.sideArt : styles.fullArt}>
         <Artwork
           image={image}
-          aspectRatio={16 / 9}
+          aspectRatio={aspectRatio}
           progress={progress}
           remainingSeconds={remainingSeconds}
           played={played}

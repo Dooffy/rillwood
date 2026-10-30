@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it, jest } from '@jest/globals';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, renderHook, screen } from '@testing-library/react-native';
 import { Dimensions, StyleSheet } from 'react-native';
 
 import { isWideLandscape } from '@/theme';
 
-import { Hero, HERO_SIDE_ART } from './Hero';
+import { Hero, HERO_SIDE_ART, useHeroAspect, WIDE_HERO_RATIO } from './Hero';
 
 describe('Hero', () => {
   it('reads eyebrow, title and progress, and opens on press', async () => {
@@ -46,6 +46,23 @@ describe('Hero', () => {
       size.mockReturnValue({ width, height, scale: 2, fontScale: 1 });
       await render(<Hero eyebrow="Up Next" title="Test Show" onPress={() => {}} />);
       expect(artWidth()).toBe(expected);
+    }
+    size.mockRestore();
+  });
+});
+
+// Regression: a full-width 16:9 hero took ~40% of a 13" iPad in portrait.
+describe('useHeroAspect', () => {
+  it('crops wider only on a wide screen in portrait', async () => {
+    const size = jest.spyOn(Dimensions, 'get');
+    for (const [width, height, expected] of [
+      [390, 844, 16 / 9],
+      [834, 1194, WIDE_HERO_RATIO],
+      [1194, 834, 16 / 9],
+    ] as const) {
+      size.mockReturnValue({ width, height, scale: 2, fontScale: 1 });
+      const { result } = await renderHook(() => useHeroAspect());
+      expect(result.current).toBe(expected);
     }
     size.mockRestore();
   });
