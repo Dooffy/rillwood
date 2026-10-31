@@ -46,7 +46,6 @@ const posters = ['#2b4a40', '#4a3b2b', '#2b3550', '#50302f', '#33472b', '#3e2e4a
 >
   <section class="hero wrap">
     <div class="hero-text">
-      <span class="badge"><span class="dot"></span>Free and open source - for Jellyfin</span>
       <h1>Your Jellyfin library, <span class="accent">fast and offline.</span></h1>
       <p class="lead">
         Rillwood is a free, open-source client for your own Jellyfin server. It plays every file as it is and downloads
@@ -212,36 +211,27 @@ const posters = ['#2b4a40', '#4a3b2b', '#2b3550', '#50302f', '#33472b', '#3e2e4a
     flex-direction: column;
     gap: 28px;
   }
-  .badge {
-    align-self: flex-start;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    border-radius: 999px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-secondary);
-  }
-  .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--accent);
-  }
   .hero h1 {
     font-size: clamp(44px, 6vw, 76px);
     line-height: 1.02;
     letter-spacing: -0.035em;
   }
+  /* Every store button the same width, side by side or stacked on a narrow screen. */
   .stores {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
   }
+  /* Two 230 px buttons + gap + page gutters: below this they stack, centred. */
+  @media (max-width: 520px) {
+    .stores {
+      flex-direction: column;
+      align-items: center;
+    }
+  }
   .store {
+    width: 230px;
+    max-width: 100%;
     display: inline-flex;
     align-items: center;
     gap: 12px;
@@ -300,21 +290,46 @@ const posters = ['#2b4a40', '#4a3b2b', '#2b3550', '#50302f', '#33472b', '#3e2e4a
     top: 60px;
     opacity: 0.6;
   }
+  /* The drawn app follows the site theme: the app's own dark or light look. */
   .phone {
+    --phone-frame: #070b0a;
+    --phone-edge: #2a3a34;
+    --phone-shadow: rgba(0, 0, 0, 0.35);
+    --phone-screen: #111a17;
+    --phone-text: #e6eeea;
+    --phone-secondary: #a9bbb3;
+    --phone-muted: #8a9d95;
+    --phone-fill: #1a2622;
+    --phone-raised: #2a3a34;
+    --phone-track: #22302b;
+    --phone-accent: #7fd1b9;
     position: relative;
     width: 320px;
     height: 640px;
     border-radius: 48px;
-    background: #070b0a;
-    border: 1px solid #2a3a34;
+    background: var(--phone-frame);
+    border: 1px solid var(--phone-edge);
     padding: 12px;
-    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 40px 80px var(--phone-shadow);
+  }
+  :global([data-theme='light']) .phone {
+    --phone-frame: #ffffff;
+    --phone-edge: #d3e0da;
+    --phone-shadow: rgba(12, 19, 17, 0.12);
+    --phone-screen: #f6faf8;
+    --phone-text: #0c1311;
+    --phone-secondary: #46574f;
+    --phone-muted: #56675f;
+    --phone-fill: #e8f0ec;
+    --phone-raised: #ffffff;
+    --phone-track: #d3e0da;
+    --phone-accent: #1f7a62;
   }
   .screen {
     height: 100%;
     border-radius: 38px;
-    background: #111a17;
-    color: #e6eeea;
+    background: var(--phone-screen);
+    color: var(--phone-text);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -332,17 +347,17 @@ const posters = ['#2b4a40', '#4a3b2b', '#2b3550', '#50302f', '#33472b', '#3e2e4a
   }
   .screen-head span {
     font-size: 12px;
-    color: #a9bbb3;
+    color: var(--phone-secondary);
     padding: 4px 10px;
     border-radius: 999px;
-    background: #1a2622;
+    background: var(--phone-fill);
   }
   .tabs {
     display: flex;
     gap: 6px;
     padding: 4px;
     border-radius: 999px;
-    background: #1a2622;
+    background: var(--phone-fill);
     font-size: 13px;
     font-weight: 500;
   }
@@ -351,11 +366,11 @@ const posters = ['#2b4a40', '#4a3b2b', '#2b3550', '#50302f', '#33472b', '#3e2e4a
     text-align: center;
     padding: 7px 0;
     border-radius: 999px;
-    color: #a9bbb3;
+    color: var(--phone-secondary);
   }
   .tabs .on {
-    background: #2a3a34;
-    color: #e6eeea;
+    background: var(--phone-raised);
+    color: var(--phone-text);
   }
   .posters {
     display: grid;
@@ -371,7 +386,7 @@ const posters = ['#2b4a40', '#4a3b2b', '#2b3550', '#50302f', '#33472b', '#3e2e4a
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #8a9d95;
+    color: var(--phone-muted);
   }
   .download {
     display: flex;
@@ -396,12 +411,12 @@ const posters = ['#2b4a40', '#4a3b2b', '#2b3550', '#50302f', '#33472b', '#3e2e4a
   .bar {
     height: 4px;
     border-radius: 2px;
-    background: #22302b;
+    background: var(--phone-track);
   }
   .bar div {
     height: 4px;
     border-radius: 2px;
-    background: #7fd1b9;
+    background: var(--phone-accent);
   }
 
   /* Features */
