@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, StyleSheet, View, type ListRenderItem } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import type { UserDto } from '@/api';
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
 import { useDownloadActions } from '@/components/DownloadActions';
 import { DownloadRow, DownloadRowGap, ShowDownloadRow, type ShowDownloadRowProps } from '@/components/DownloadRow';
@@ -30,13 +31,14 @@ import {
 } from '@/downloadList';
 import { deleteDownloads, downloadsSize, getDownload, resetTimers, useDownloadList } from '@/downloads';
 import { formatBytes } from '@/format';
-import { searchTerm } from '@/items';
+import { currentUser, searchTerm } from '@/items';
 import { openLibrary } from '@/navigation';
 import { expiresAt } from '@/offload';
 import { useSession } from '@/session';
 import { useDownloadLimit, useOffloadDays, useOffloadWatched } from '@/settings';
 import { spacing, tabList, useWide } from '@/theme';
 import { confirmDeleteDownloads } from '@/useDownloadControl';
+import { useFetch } from '@/useFetch';
 
 /**
  * Free space as the store's pre-flight reads it (purgeable included - `Paths.availableDiskSpace` leaves it out),
@@ -110,6 +112,9 @@ export default function Downloads() {
   // The limit counts every account's downloads.
   const allSize = useMemo(() => downloadsSize(all), [all]);
   const { play, remove, openMenu, sheet } = useDownloadActions();
+  // Nothing here yet: is the account allowed to download at all? Asked only then (unknown or offline → the usual text).
+  const user = useFetch<UserDto>(ids.length === 0 && active ? currentUser.path : null);
+  const blocked = user.data?.Policy?.EnableContentDownloading === false;
   const days = useOffloadDays();
   const hours = useOffloadWatched();
   // Header menu (everything) or a show's long press.
@@ -186,7 +191,13 @@ export default function Downloads() {
           )
         }
       >
-        {ids.length === 0 || !active ? (
+        {ids.length === 0 && active && blocked ? (
+          <Empty
+            icon={{ ios: 'exclamationmark', android: 'priority_high' }}
+            title="Downloads Turned Off"
+            text={`The admin of ${active.server.name} has turned off downloads for ${active.userName}, so nothing can be downloaded. You can still stream everything.`}
+          />
+        ) : ids.length === 0 || !active ? (
           <Empty
             icon={{ ios: 'arrow.down.circle', android: 'download' }}
             title="No Downloads Yet"
