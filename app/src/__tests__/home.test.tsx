@@ -126,7 +126,10 @@ describe('Home', () => {
   it('shows the latest started item as the hero and leaves it out of Continue Watching', async () => {
     await render(<Home />);
     const hero = await screen.findByRole('button', { name: /^Continue Watching, Sintel, 2010/ });
-    expect(within(hero).getByText('Continue Watching')).toBeOnTheScreen();
+    // Tablet (Jest's default window): the eyebrow on the art, and ▶ with the progress plays from the saved position.
+    expect(within(hero).getByText('CONTINUE WATCHING')).toBeOnTheScreen();
+    await fireEvent.press(within(hero).getByRole('button', { name: /^Resume, / }));
+    expect(router.push).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/player' }));
     expect(
       screen.getByRole('button', { name: /^Tears of Steel, 2012, 8% watched, 12 minutes left$/ }),
     ).toBeOnTheScreen();

@@ -7,7 +7,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-n
 import { ApiError, isConnectionError, type BaseItemDto, type ItemsResult } from '@/api';
 import { Avatar } from '@/components/Avatar';
 import { CardPlaceholder, LandscapeCard, PosterCard } from '@/components/Card';
-import { Hero, HERO_SIDE_ART, HERO_SIDE_SHARE, useHeroAspect } from '@/components/Hero';
+import { Hero, useHeroAspect } from '@/components/Hero';
 import { useItemMenu } from '@/components/ItemMenu';
 import { LoadError, loadErrorMessage, Message, Offline, useHeldOffline } from '@/components/Message';
 import { Row } from '@/components/Row';
@@ -28,12 +28,12 @@ import {
   recentlyAdded,
   userViews,
 } from '@/items';
-import { openItem } from '@/navigation';
+import { openItem, openPlayer } from '@/navigation';
 import { useSession } from '@/session';
 import { invalidate, useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
 import { usePullToRefresh } from '@/usePullToRefresh';
-import { minTouch, pressedOpacity, spacing, tabList, useColors, useWideLandscape } from '@/theme';
+import { minTouch, pressedOpacity, spacing, tabList, useColors } from '@/theme';
 
 /** Pull to refresh / Retry: refetch every Home row, failed ones too. */
 function refreshHome() {
@@ -47,11 +47,9 @@ export default function Home() {
   const menu = useItemMenu();
   // Tablets: whole cards across the row, so it never ends in a gap.
   const { rowWidth, posters, landscape: cards } = useShelfCards();
-  // Tablet landscape: the hero (and its placeholder) shares the row with its text.
-  const beside = useWideLandscape();
+  // The hero (and its placeholder): the row's width, 16:9 on phones, cropped wide on tablets.
   const heroAspect = useHeroAspect();
-  // The hero image at the width it's drawn: the row, or its share beside the text.
-  const heroWidth = Math.round(beside ? rowWidth * HERO_SIDE_SHARE : rowWidth);
+  const heroWidth = Math.round(rowWidth);
   const views = useFetch<ItemsResult>(userViews.path, { query: userViews.query });
   const resume = useFetch<ItemsResult>(continueWatching.path, { query: continueWatching.query });
   const next = useFetch<ItemsResult>(nextUp.path, { query: nextUp.query });
@@ -144,6 +142,7 @@ export default function Home() {
                     {...playback(hero)}
                     image={image(backdropImage(hero), heroWidth)}
                     onPress={() => openItem(hero)}
+                    onPlay={() => openPlayer(hero, playback(hero).resumeSeconds ?? 0)}
                     onLongPress={() => menu(hero)}
                   />
                 </View>
@@ -151,11 +150,7 @@ export default function Home() {
                 layout.heroPending &&
                 !offline.offline && (
                   <View testID="hero-placeholder" style={styles.padded}>
-                    <CardPlaceholder
-                      shape="landscape"
-                      width={beside ? HERO_SIDE_ART : '100%'}
-                      aspectRatio={heroAspect}
-                    />
+                    <CardPlaceholder shape="landscape" width="100%" aspectRatio={heroAspect} />
                   </View>
                 )
               )}
