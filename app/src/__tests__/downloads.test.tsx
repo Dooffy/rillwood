@@ -141,6 +141,35 @@ describe('Downloads', () => {
     expect(router.navigate).toHaveBeenCalledWith('/library');
   });
 
+  // The server's admin turned downloads off for this user (the public Jellyfin demo): say so, not "Browse Library".
+  it('says downloads are turned off when the user may not download', async () => {
+    const policy = (EnableContentDownloading: boolean) =>
+      jest
+        .mocked(api.request)
+        .mockImplementation(
+          (_conn, path) =>
+            (path === '/Users/Me'
+              ? Promise.resolve({ Id: account.userId, Name: 'anna', Policy: { EnableContentDownloading } })
+              : new Promise(() => {})) as Promise<never>,
+        );
+    policy(false);
+    await render(<Downloads />);
+    expect(await screen.findByText('Downloads Turned Off')).toBeOnTheScreen();
+    expect(
+      screen.getByText(
+        'The admin of Home server has turned off downloads for anna, so nothing can be downloaded. You can still stream everything.',
+      ),
+    ).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Browse Library' })).toBeNull();
+
+    // Allowed: the usual empty state.
+    signIn(newAccount());
+    policy(true);
+    await render(<Downloads />);
+    expect(await screen.findByText('No Downloads Yet')).toBeOnTheScreen();
+    expect(screen.queryByText('Downloads Turned Off')).toBeNull();
+  });
+
   it('shows the storage limit, free = the device when it has less room than the limit', async () => {
     setDownloadLimit(200);
     try {
