@@ -121,6 +121,19 @@ describe('Library', () => {
     ]);
   });
 
+  // Shelves (All) size like Home's: phone cards, whole cards across the tab on tablets.
+  it('sizes the shelves for the device', async () => {
+    const window = Dimensions.get('window');
+    await act(() => Dimensions.set({ window: { ...window, width: 390, height: 844 } }));
+    await render(<Library />);
+    const posterWidth = async () =>
+      StyleSheet.flatten((await screen.findByRole('button', { name: 'Sintel, 2010' })).props.style).width as number;
+    expect(await posterWidth()).toBe(120);
+    await act(() => Dimensions.set({ window: { ...window, width: 834, height: 1194 } }));
+    expect(await posterWidth()).toBe(191);
+    await act(() => Dimensions.set({ window }));
+  });
+
   // The tablet landscape sidebar narrows the list below the window: columns follow the width the tab gets.
   it('lays the grid out for the width the tab gets', async () => {
     const window = Dimensions.get('window');
@@ -129,11 +142,11 @@ describe('Library', () => {
     await screen.findByText('11 movies · by Name');
     const posterWidth = () =>
       StyleSheet.flatten(screen.getByRole('button', { name: 'Sintel, 2010' }).props.style).width as number;
-    // Phone: 3 columns. iPad portrait: 5. iPad landscape: 6 beside the sidebar.
+    // Phone: 3 columns. iPad portrait: 4. iPad landscape: 5 beside the sidebar.
     for (const [width, height, expected] of [
       [390, 844, 111],
-      [834, 1194, 150],
-      [1194, 834, 140],
+      [834, 1194, 191],
+      [1194, 834, 170],
     ] as const) {
       await act(() => Dimensions.set({ window: { ...window, width, height } }));
       expect(posterWidth()).toBe(expected);
@@ -291,14 +304,19 @@ describe('Library', () => {
     expect(request.mock.calls.length).toBeGreaterThan(before);
   });
 
-  it('the episode list shows row placeholders while its first page loads', async () => {
+  it('the episode list shows placeholders while its first page loads: a card grid on tablets, rows on phones', async () => {
     await render(<Library />);
     await type('test');
     const seeAll = await screen.findByRole('button', { name: 'Episodes, See All' });
     request.mockImplementation(() => new Promise(() => {}));
     await fireEvent.press(seeAll);
-    expect(await screen.findByTestId('episode-rows-placeholder')).toBeOnTheScreen();
+    // Jest's default window counts as a tablet.
+    expect(await screen.findByTestId('poster-grid-placeholder')).toBeOnTheScreen();
     expect(screen.queryByTestId('spinner')).toBeNull();
+    const window = Dimensions.get('window');
+    await act(() => Dimensions.set({ window: { ...window, width: 390, height: 844 } }));
+    expect(await screen.findByTestId('episode-rows-placeholder')).toBeOnTheScreen();
+    await act(() => Dimensions.set({ window }));
   });
 
   // Regression: the type chips are the screen's first scroll view, so iOS inset only them for the tab bar.

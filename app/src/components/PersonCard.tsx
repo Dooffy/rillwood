@@ -1,20 +1,27 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { StyleSheet, View } from 'react-native';
 
-import { spacing } from '@/theme';
+import { spacing, useWide } from '@/theme';
 
 import { Avatar } from './Avatar';
 import { Text } from './Text';
 
 export const PERSON_SIZE = 72;
-/** A card's width: the photo plus room for the name under it. */
-export const PERSON_CARD_WIDTH = PERSON_SIZE + spacing.md;
+/** Wide screens (iPad): bigger photos, in step with the bigger cards there. */
+export const WIDE_PERSON_SIZE = 96;
+
+/** Photo size and card width (the photo plus room for the name under it) for this window. */
+export function usePersonSize(): { size: number; cardWidth: number } {
+  const size = useWide() ? WIDE_PERSON_SIZE : PERSON_SIZE;
+  return { size, cardWidth: size + spacing.md };
+}
 
 /** Cast / crew entry: round photo (initials without one), name, role. Not tappable - no person screen yet. */
 export function PersonCard({ name, role, image }: { name: string; role?: string; image?: string }) {
+  const { size, cardWidth } = usePersonSize();
   return (
-    <View accessible accessibilityLabel={role ? `${name}, ${role}` : name} style={styles.card}>
-      <Avatar name={name} image={image} size={PERSON_SIZE} />
+    <View accessible accessibilityLabel={role ? `${name}, ${role}` : name} style={[styles.card, { width: cardWidth }]}>
+      <Avatar name={name} image={image} size={size} />
       <Text variant="caption" numberOfLines={2} style={styles.center}>
         {name}
       </Text>
@@ -28,6 +35,6 @@ export function PersonCard({ name, role, image }: { name: string; role?: string;
 }
 
 const styles = StyleSheet.create({
-  card: { width: PERSON_CARD_WIDTH, alignItems: 'center', gap: spacing.xs },
+  card: { alignItems: 'center', gap: spacing.xs },
   center: { textAlign: 'center' },
 });
