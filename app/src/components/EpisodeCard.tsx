@@ -5,7 +5,7 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { formatRemaining, spokenRemaining } from '@/format';
-import { minTouch, pressedOpacity, radii, spacing, type, useColors } from '@/theme';
+import { minTouch, pressedOpacity, radii, spacing, type, useColors, useWide } from '@/theme';
 
 import { ProgressRing } from './ProgressRing';
 import { MORE_ACTION } from './Card';
@@ -13,6 +13,13 @@ import { Text } from './Text';
 
 /** Card width (points); image URLs and the list's scroll offsets are sized from it. */
 export const EPISODE_CARD_WIDTH = 300;
+/** Wide screens (iPad): bigger cards, about three across a 13" portrait screen. */
+export const WIDE_EPISODE_CARD_WIDTH = 340;
+
+/** Card width for this window: phone size, bigger on wide screens. */
+export function useEpisodeCardWidth(): number {
+  return useWide() ? WIDE_EPISODE_CARD_WIDTH : EPISODE_CARD_WIDTH;
+}
 const RING_SIZE = 24;
 /** Overview lines every card keeps (cards in a row line up); longer ones end with "…". */
 export const OVERVIEW_LINES = 2;
@@ -71,6 +78,7 @@ export const EpisodeCard = memo(function EpisodeCard(props: EpisodeCardProps) {
     onMore,
   } = props;
   const c = useColors();
+  const width = useEpisodeCardWidth();
   const inProgress = progress !== undefined;
   const time = timeLabel(props);
   const name = episode === undefined ? title : `Episode ${episode}, ${title}`;
@@ -91,7 +99,7 @@ export const EpisodeCard = memo(function EpisodeCard(props: EpisodeCardProps) {
       onAccessibilityAction={({ nativeEvent }) => (nativeEvent.actionName === 'play' ? onPlay() : onMore())}
       onPress={onPress}
       onLongPress={onMore}
-      style={({ pressed }) => [styles.card, { backgroundColor: c.surface }, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.card, { width, backgroundColor: c.surface }, pressed && styles.pressed]}
     >
       <View style={styles.still}>
         {image && (
@@ -154,7 +162,7 @@ export const EpisodeCard = memo(function EpisodeCard(props: EpisodeCardProps) {
 });
 
 const styles = StyleSheet.create({
-  card: { width: EPISODE_CARD_WIDTH, borderRadius: radii.card, overflow: 'hidden' },
+  card: { borderRadius: radii.card, overflow: 'hidden' },
   pressed: { opacity: pressedOpacity },
   still: { width: '100%', aspectRatio: 16 / 9 },
   fade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '35%' },

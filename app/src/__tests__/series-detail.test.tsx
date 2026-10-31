@@ -141,15 +141,14 @@ describe('SeriesDetail', () => {
     expect(await screen.findByRole('header', { name: 'Test Show' })).toBeOnTheScreen();
     expect(screen.getByText('TV Show · Drama')).toBeOnTheScreen();
     // ChildCount says 3 (Specials included); the season list has 2 real seasons.
-    expect(await screen.findByLabelText('2019-2023, 2 Seasons')).toBeOnTheScreen();
+    expect(await screen.findByText('2019-2023 · 2 Seasons')).toBeOnTheScreen();
     expect(screen.getByText('A show about tests.')).toBeOnTheScreen();
     expect(screen.getByLabelText('Halina Reijn, Sintel')).toBeOnTheScreen();
   });
 
   it('opens the season of the next episode, names it under Play and plays it', async () => {
     await render(<SeriesDetail />);
-    expect(await screen.findByRole('button', { name: 'Season 2' })).toBeOnTheScreen();
-    expect(await screen.findByText('S2, E2 · Chapter 2')).toBeOnTheScreen();
+    expect(await screen.findByRole('button', { name: 'Season 2', selected: true })).toBeOnTheScreen();
     // The cards start at the next episode.
     expect(screen.getByRole('button', { name: 'Episode 2, Chapter 2' })).toBeOnTheScreen();
     expect(calls('episodes:season-1')).toBe(0);
@@ -203,27 +202,26 @@ describe('SeriesDetail', () => {
   it('plays the first episode of the first real season when everything is watched', async () => {
     routes.nextup = items();
     await render(<SeriesDetail />);
-    expect(await screen.findByRole('button', { name: 'Season 1' })).toBeOnTheScreen();
-    expect(await screen.findByText('S1, E1 · Chapter 1')).toBeOnTheScreen();
+    expect(await screen.findByRole('button', { name: 'Season 1', selected: true })).toBeOnTheScreen();
+    expect(await screen.findByText('S1, E1')).toBeOnTheScreen();
   });
 
-  it('switches season from the season menu, which shows watch state', async () => {
+  it('switches season with one tap on its pill', async () => {
     await render(<SeriesDetail />);
-    await fireEvent.press(await screen.findByRole('button', { name: 'Season 2' }));
-    expect(screen.getByRole('menuitem', { name: 'Season 2', selected: true })).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole('menuitem', { name: 'Season 1' }));
-    expect(await screen.findByRole('button', { name: 'Season 1' })).toBeOnTheScreen();
+    expect(await screen.findByRole('button', { name: 'Season 2', selected: true })).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Season 1' }));
+    expect(await screen.findByRole('button', { name: 'Season 1', selected: true })).toBeOnTheScreen();
     expect(await screen.findByRole('button', { name: /^Episode 2, Chapter 2/ })).toBeOnTheScreen();
     expect(calls('episodes:season-1')).toBeGreaterThan(0);
   });
 
-  it('shows a single season as a heading, not a menu', async () => {
+  it('shows a single season as one pill, its ⋯ beside it', async () => {
     routes.seasons = items(s1);
     routes.nextup = items(episode(1, 2));
     await render(<SeriesDetail />);
-    expect(await screen.findByRole('header', { name: 'Season 1' })).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Season 1' })).toBeNull();
-    expect(await screen.findByLabelText('2019-2023, 1 Season')).toBeOnTheScreen();
+    expect(await screen.findByRole('button', { name: 'Season 1', selected: true })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'More for Season 1' })).toBeOnTheScreen();
+    expect(await screen.findByText('2019-2023 · 1 Season')).toBeOnTheScreen();
   });
 
   it('plays an episode from its card, and opens its detail on tap', async () => {
@@ -243,7 +241,7 @@ describe('SeriesDetail', () => {
     );
     await render(<SeriesDetail />);
     await fireEvent.press(await screen.findByRole('button', { name: 'More for Episode 1, Chapter 1' }));
-    expect(screen.getAllByText('S2, E1 · Chapter 1').length).toBe(2); // line under Play + menu title
+    expect(screen.getByText('S2, E1 · Chapter 1')).toBeOnTheScreen(); // the menu's title
     expect(screen.getByRole('menuitem', { name: 'Mark as Watched' })).toBeOnTheScreen();
     expect(screen.getByRole('menuitem', { name: 'Resume' })).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('menuitem', { name: 'Play from Start' }));
@@ -342,10 +340,12 @@ describe('SeriesDetail', () => {
     expect(setPlayed).toHaveBeenCalledWith(expect.anything(), 'ep-2-2', true);
   });
 
-  it('marks the shown season from the season menu, every episode in it at once', async () => {
+  it('marks the shown season from its ⋯ menu, every episode in it at once', async () => {
     const setPlayed = jest.spyOn(api, 'setPlayed').mockReturnValue(new Promise(() => {}));
     await render(<SeriesDetail />);
-    await fireEvent.press(await screen.findByRole('button', { name: 'Season 2' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'More for Season 2' }));
+    // The season's download sits in the same menu (the sheet's title names the season).
+    expect(screen.getByRole('menuitem', { name: 'Download' })).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('menuitem', { name: 'Mark Season 2 as Watched' }));
     expect(setPlayed).toHaveBeenCalledWith(expect.anything(), 'season-2', true);
     expect(await screen.findByRole('button', { name: 'Episode 2, Chapter 2, watched' })).toBeOnTheScreen();
