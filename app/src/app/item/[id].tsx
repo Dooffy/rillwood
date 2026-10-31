@@ -76,7 +76,7 @@ function Detail({ item, saved }: { item: BaseItemDto; saved: SavedItem | null })
                 }
               : undefined
           }
-          side={<Credits credits={view.credits} layout="column" />}
+          side={<Credits credits={view.credits} />}
         >
           {/* Wide screens: the summary and badges on the art too; phones show them under it. */}
           {hero.wide && view.overview && <Overview text={view.overview} lines={2} onMore={toDetails} />}
@@ -104,7 +104,6 @@ function Detail({ item, saved }: { item: BaseItemDto; saved: SavedItem | null })
             <>
               {view.overview && <Overview text={view.overview} onMore={toDetails} />}
               <Chips items={view.badges} />
-              <Credits credits={view.credits} layout="inline" />
             </>
           )}
         </View>

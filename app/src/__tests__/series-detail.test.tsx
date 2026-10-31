@@ -142,7 +142,8 @@ describe('SeriesDetail', () => {
     expect(screen.getByText('TV Show · Drama')).toBeOnTheScreen();
     // ChildCount says 3 (Specials included); the season list has 2 real seasons.
     expect(await screen.findByText('2019-2023 · 2 Seasons')).toBeOnTheScreen();
-    expect(screen.getByText('A show about tests.')).toBeOnTheScreen();
+    // On the hero, and whole in Details.
+    expect(screen.getAllByText('A show about tests.')).toHaveLength(2);
     expect(screen.getByLabelText('Halina Reijn, Sintel')).toBeOnTheScreen();
   });
 

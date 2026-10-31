@@ -109,6 +109,12 @@ export const minTouch = 44;
 /** Width from which a screen uses its wide (tablet) layout: Android's sw600dp, every iPad. */
 export const WIDE_MIN_WIDTH = 600;
 
+/**
+ * Width from which a wide layout puts content side by side in two columns (detail hero + credits, Details): a 13" iPad
+ * in portrait, every iPad in landscape. Smaller tablet windows (11" portrait, Split View, Stage Manager) keep one column.
+ */
+export const TWO_COLUMNS_MIN_WIDTH = 900;
+
 /** Widest a column of content gets on a wide screen, so lines and fields stay readable: forms (auth) and pages. */
 export const readableWidth = { form: 480, page: 680 } as const;
 
@@ -157,6 +163,13 @@ export function useWide(): boolean {
 
 export function useWideLandscape(): boolean {
   return useTabletWindowIs(wideLandscapeWindow);
+}
+
+const twoColumnWindow = ({ width }: Size) => width >= TWO_COLUMNS_MIN_WIDTH;
+
+/** A tablet window wide enough for two columns side by side (`TWO_COLUMNS_MIN_WIDTH`). */
+export function useTwoColumns(): boolean {
+  return useTabletWindowIs(twoColumnWindow);
 }
 
 /** Opacity of a pressed button, card or row. */

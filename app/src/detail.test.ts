@@ -2,7 +2,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import type { BaseItemDto } from './api';
-import { credits, detailView } from './detail';
+import { credits, detailView, information, library, production } from './detail';
 
 const now = new Date(2026, 9, 4, 21, 0);
 const at = (h: number, m: number) =>
@@ -75,6 +75,11 @@ describe('detailView', () => {
       badges: [],
       credits: [],
       overview: undefined,
+      tagline: undefined,
+      information: [],
+      production: [],
+      library: [],
+      sdh: false,
     });
   });
 
@@ -166,5 +171,66 @@ describe('credits', () => {
     expect(credits({ Id: 'm', Name: 'M', Type: 'Movie', Studios: [{ Name: 'One' }, { Name: 'Two' }] })).toEqual([
       { label: 'Studios', names: ['One', 'Two'] },
     ]);
+  });
+});
+
+describe('information', () => {
+  it("lists a movie's facts with data, original title only when it differs", () => {
+    const movie: BaseItemDto = {
+      Id: 'm',
+      Name: 'Glass Orbit',
+      Type: 'Movie',
+      OriginalTitle: 'Orbite de verre',
+      PremiereDate: '2025-07-11T00:00:00Z',
+      RunTimeTicks: 80_400_000_000,
+      OfficialRating: 'PG-13',
+      Genres: ['Science Fiction', 'Thriller'],
+      Studios: [{ Name: 'Northlight Pictures' }],
+      ProductionLocations: ['United Kingdom', 'France'],
+      CommunityRating: 8.1,
+      CriticRating: 91,
+      Tags: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+      DateCreated: '2026-10-30T21:46:31Z',
+      UserData: { Played: true, PlaybackPositionTicks: 0, PlayCount: 2, LastPlayedDate: '2026-10-14T20:00:00Z' },
+    };
+    expect(information(movie)).toEqual([
+      { label: 'Original Title', value: 'Orbite de verre' },
+      { label: 'Released', value: '11 Jul 2025' },
+      { label: 'Run Time', value: '2h 14m' },
+      { label: 'Rated', value: 'PG-13' },
+      { label: 'Ratings', value: '⭐️ 8.1  🍅 91%' },
+      { label: 'Genres', value: 'Science Fiction, Thriller' },
+      { label: 'Tags', value: 'a, b, c, d, e, f' },
+    ]);
+    expect(production(movie)).toEqual([
+      { label: 'Studio', value: 'Northlight Pictures' },
+      { label: 'Region of Origin', value: 'United Kingdom, France' },
+    ]);
+    expect(library(movie)).toEqual([
+      { label: 'Added', value: '30 Oct 2026' },
+      { label: 'Played', value: '2 times, last 14 Oct 2026' },
+    ]);
+    expect(information({ ...movie, OriginalTitle: 'Glass Orbit' }).map((f) => f.label)).not.toContain('Original Title');
+  });
+
+  it('gives a series its status, air dates and seasons; air days only while it runs', () => {
+    const show: BaseItemDto = {
+      Id: 's',
+      Name: 'Driftline',
+      Type: 'Series',
+      Status: 'Continuing',
+      PremiereDate: '2023-01-12T00:00:00Z',
+      AirDays: ['Thursday'],
+      AirTime: '21:00',
+    };
+    expect(information(show, 2).slice(0, 4)).toEqual([
+      { label: 'Status', value: 'Continuing' },
+      { label: 'Aired', value: 'Since 12 Jan 2023' },
+      { label: 'Airs', value: 'Thursdays at 21:00' },
+      { label: 'Seasons', value: '2 Seasons' },
+    ]);
+    const ended = information({ ...show, Status: 'Ended', EndDate: '2024-03-01T00:00:00Z' });
+    expect(ended).toContainEqual({ label: 'Aired', value: '12 Jan 2023 - 1 Mar 2024' });
+    expect(ended.map((f) => f.label)).not.toContain('Airs');
   });
 });

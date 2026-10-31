@@ -7,33 +7,25 @@ import { spacing } from '@/theme';
 import { Text } from './Text';
 
 /**
- * The hero's credits: Starring, Director, Writers, Studio. `column`: a label over its names (beside the hero text on
- * wide screens); `inline`: "Director Jun Aldren" on one line each (under the summary on phones).
+ * The hero's credits on wide screens: Starring, Director, Writers, Studio, a label over its names, in a column beside
+ * the hero text. Phones leave them out - Cast & Crew right under the hero names the same people.
  */
-export function Credits({ credits, layout }: { credits: Credit[]; layout: 'column' | 'inline' }) {
+export function Credits({ credits }: { credits: Credit[] }) {
   if (credits.length === 0) return null;
   return (
-    <View testID="credits" style={layout === 'column' ? styles.column : styles.inline}>
-      {credits.map(({ label, names }) =>
-        layout === 'column' ? (
-          <View key={label} accessible accessibilityLabel={`${label}: ${names.join(', ')}`}>
-            <Text variant="label">{label}</Text>
-            <Text secondary numberOfLines={2}>
-              {names.join(', ')}
-            </Text>
-          </View>
-        ) : (
-          <Text key={label} secondary numberOfLines={2}>
-            <Text variant="label">{label} </Text>
+    <View testID="credits" style={styles.column}>
+      {credits.map(({ label, names }) => (
+        <View key={label} accessible accessibilityLabel={`${label}: ${names.join(', ')}`}>
+          <Text variant="label">{label}</Text>
+          <Text secondary numberOfLines={2}>
             {names.join(', ')}
           </Text>
-        ),
-      )}
+        </View>
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   column: { gap: spacing.sm },
-  inline: { gap: spacing.xs },
 });
