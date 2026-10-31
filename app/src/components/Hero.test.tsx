@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { describe, expect, it, jest } from '@jest/globals';
+import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, renderHook, screen } from '@testing-library/react-native';
-import { Dimensions, StyleSheet } from 'react-native';
+import { Dimensions } from 'react-native';
 
+import { PHONE, resetDevice, setDevice, TABLET_LANDSCAPE, TABLET_PORTRAIT } from '@/testDevice';
 import { isWideLandscape } from '@/theme';
 
-import { Hero, HERO_SIDE_ART, useHeroAspect, WIDE_HERO_RATIO } from './Hero';
+import { Hero, useHeroAspect, WIDE_HERO_RATIO } from './Hero';
 
 describe('Hero', () => {
-  it('reads eyebrow, title and progress, and opens on press', async () => {
+  afterEach(resetDevice);
+
+  it('phones: reads eyebrow, title and progress under the art, and opens on press', async () => {
     const onPress = jest.fn();
+    await setDevice(...PHONE);
     await render(
       <Hero
         eyebrow="Continue Watching"
@@ -34,31 +38,42 @@ describe('Hero', () => {
     expect(screen.getByTestId('artwork-placeholder')).toBeOnTheScreen();
   });
 
-  // Regression: full-width 16:9 filled a tablet's screen in landscape.
-  it('puts the text beside the artwork on a tablet in landscape only', async () => {
-    const artWidth = () => StyleSheet.flatten(screen.getByTestId('hero-art').props.style).width;
-    const size = jest.spyOn(Dimensions, 'get');
-    for (const [width, height, expected] of [
-      [390, 844, '100%'],
-      [834, 1194, '100%'],
-      [1194, 834, HERO_SIDE_ART],
-    ] as const) {
-      size.mockReturnValue({ width, height, scale: 2, fontScale: 1 });
-      await render(<Hero eyebrow="Up Next" title="Test Show" onPress={() => {}} />);
-      expect(artWidth()).toBe(expected);
+  // Tablets (both ways up): the text and the play button on the cropped art, the progress in the button.
+  it('tablets: title and play button on the art, the button plays', async () => {
+    const onPress = jest.fn();
+    const onPlay = jest.fn();
+    for (const device of [TABLET_PORTRAIT, TABLET_LANDSCAPE]) {
+      await setDevice(device[0], device[1]);
+      await render(
+        <Hero
+          eyebrow="Continue Watching"
+          title="Sintel"
+          subtitle="2010"
+          progress={0.25}
+          remainingSeconds={600}
+          onPress={onPress}
+          onPlay={onPlay}
+        />,
+      );
+      expect(screen.getByText('CONTINUE WATCHING')).toBeOnTheScreen();
+      expect(screen.getByText('10m left')).toBeOnTheScreen();
+      // No bar on the art: the button carries the progress.
+      expect(screen.queryByTestId('progress-bar')).toBeNull();
+      await fireEvent.press(screen.getByRole('button', { name: 'Resume, 10 minutes left' }));
     }
-    size.mockRestore();
+    expect(onPlay).toHaveBeenCalledTimes(2);
+    expect(onPress).not.toHaveBeenCalled();
   });
 });
 
-// Regression: a full-width 16:9 hero took ~40% of a 13" iPad in portrait.
+// Regression: a full-width 16:9 hero took ~40% of a 13" iPad.
 describe('useHeroAspect', () => {
-  it('crops wider only on a wide screen in portrait', async () => {
+  it('crops wider on wide screens, both ways up; 16:9 on phones', async () => {
     const size = jest.spyOn(Dimensions, 'get');
     for (const [width, height, expected] of [
       [390, 844, 16 / 9],
       [834, 1194, WIDE_HERO_RATIO],
-      [1194, 834, 16 / 9],
+      [1194, 834, WIDE_HERO_RATIO],
     ] as const) {
       size.mockReturnValue({ width, height, scale: 2, fontScale: 1 });
       const { result } = await renderHook(() => useHeroAspect());

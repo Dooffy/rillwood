@@ -118,7 +118,7 @@ export function isWide(width: number): boolean {
   return width >= WIDE_MIN_WIDTH;
 }
 
-/** A wide window wider than tall: a tablet in landscape (fixed tabs sidebar, Home hero beside its text). */
+/** A wide window wider than tall: a tablet in landscape (fixed tabs sidebar, Settings split view). */
 export function isWideLandscape(width: number, height: number): boolean {
   return isWide(width) && width > height;
 }
