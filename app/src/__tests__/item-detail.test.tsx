@@ -14,7 +14,7 @@ import * as downloads from '@/downloads';
 import { initDownloads } from '@/downloads';
 import * as session from '@/session';
 import { setDownloadLimit } from '@/settings';
-import { PHONE, resetDevice, setDevice } from '@/testDevice';
+import { PHONE, resetDevice, setDevice, TABLET_LANDSCAPE, TABLET_PORTRAIT } from '@/testDevice';
 import { WIDE_SHELF_POSTER_WIDTH } from '@/components/Card';
 
 import NativeDownloads from '../../modules/downloads';
@@ -129,7 +129,7 @@ describe('ItemDetail', () => {
     expect(screen.getByText('Movie · Animation · Fantasy')).toBeOnTheScreen();
   });
 
-  it('phones: facts and the play row on the art, summary, badges and credits under it', async () => {
+  it('phones: facts and the play row on the art, summary and badges under it, no credits (Cast & Crew has them)', async () => {
     await setDevice(...PHONE);
     await render(<ItemDetail />);
     const hero = await screen.findByTestId('detail-hero');
@@ -137,7 +137,7 @@ describe('ItemDetail', () => {
     expect(within(hero).getByRole('button', { name: 'Play' })).toBeOnTheScreen();
     expect(within(hero).queryByLabelText('PG, 4K, 5.1, CC')).toBeNull();
     expect(screen.getByLabelText('PG, 4K, 5.1, CC')).toBeOnTheScreen();
-    expect(screen.getByText('Director Colin Levy')).toBeOnTheScreen();
+    expect(screen.queryByTestId('credits')).toBeNull();
   });
 
   it('shows the backdrop from the active server, without a token', async () => {
@@ -150,7 +150,7 @@ describe('ItemDetail', () => {
 
   it('shows what plays by default, with track counts', async () => {
     await render(<ItemDetail />);
-    expect(await screen.findByText('MEDIA')).toBeOnTheScreen();
+    expect(await screen.findByRole('header', { name: 'Media' })).toBeOnTheScreen();
     expect(screen.getByText('4K H264 SDR')).toBeOnTheScreen();
     expect(screen.getByText('English - Dolby Digital - 5.1')).toBeOnTheScreen();
     expect(screen.getByText('Subtitles (2)')).toBeOnTheScreen();
@@ -313,7 +313,12 @@ describe('ItemDetail', () => {
           ? Promise.resolve({ Items: [similarMovie], TotalRecordCount: 1 })
           : reply()) as Promise<never>,
     );
+    // Credits beside the hero text only where two columns fit; smaller tablet windows leave them to Cast & Crew.
+    await setDevice(...TABLET_PORTRAIT);
     await render(<ItemDetail />);
+    expect(await screen.findByText('More Like This')).toBeOnTheScreen();
+    expect(screen.queryByTestId('credits')).toBeNull();
+    await setDevice(...TABLET_LANDSCAPE);
     expect(await screen.findByLabelText('Director: Colin Levy')).toBeOnTheScreen();
     expect(await screen.findByText('More Like This')).toBeOnTheScreen();
     // Tablet (Jest's default window): bigger posters than a phone's.

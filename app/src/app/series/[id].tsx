@@ -14,6 +14,7 @@ import { Chips } from '@/components/Chips';
 import { Credits } from '@/components/Credits';
 import { DetailActions } from '@/components/DetailActions';
 import { DetailHeader } from '@/components/DetailHeader';
+import { DetailsSection } from '@/components/DetailsSection';
 import { DetailHero, LOGO_WIDTH, useHeroLayout } from '@/components/DetailHero';
 import { EpisodeCard, useEpisodeCardWidth, WIDE_EPISODE_CARD_WIDTH } from '@/components/EpisodeCard';
 import { useItemMenu } from '@/components/ItemMenu';
@@ -103,7 +104,7 @@ function Series({ series }: { series: BaseItemDto }) {
           logo={image(view.logo, LOGO_WIDTH)}
           title={series.Name}
           subtitle={view.subtitle}
-          side={<Credits credits={view.credits} layout="column" />}
+          side={<Credits credits={view.credits} />}
         >
           {/* As the movie hero: wide screens show the summary and badges on the art, phones under it. */}
           {hero.wide && view.overview && <Overview text={view.overview} lines={2} />}
@@ -127,7 +128,6 @@ function Series({ series }: { series: BaseItemDto }) {
           <View style={styles.body}>
             {view.overview && <Overview text={view.overview} />}
             <Chips items={view.badges} />
-            <Credits credits={view.credits} layout="inline" />
           </View>
         )}
 
@@ -162,6 +162,7 @@ function Series({ series }: { series: BaseItemDto }) {
 
         <CastRow people={view.people} />
         <MoreLikeThis id={series.Id} />
+        <DetailsSection item={series} view={view} />
       </ScrollView>
     </>
   );

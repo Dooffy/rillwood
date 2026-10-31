@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import { minTouch, pressedOpacity, spacing, useColors, useWide } from '@/theme';
+import { minTouch, pressedOpacity, spacing, useColors, useTwoColumns, useWide } from '@/theme';
 
 import { Chevron } from './List';
 import { Text } from './Text';
@@ -42,17 +42,18 @@ export type DetailHeroProps = {
   parent?: { name: string; onPress: () => void };
   /** On the art under the subtitle: facts, actions (and on wide screens the summary and badges). */
   children?: ReactNode;
-  /** Wide screens: a column on the right of the art, bottom-aligned with the text (credits). */
+  /** Two-column windows (`useTwoColumns`): a column on the right of the art, bottom-aligned with the text (credits). */
   side?: ReactNode;
 };
 
 /**
  * Top of a detail screen, under the transparent header: art fading into the page, then on it the logo or title, the
- * subtitle and `children`; `side` on the right on wide screens. Grows past its art height when the text needs it.
+ * subtitle and `children`; `side` on the right in two-column windows (left out below: Cast & Crew names the same people). Grows past its art height when the text needs it.
  */
 export function DetailHero({ art, logo, title, subtitle, parent, children, side }: DetailHeroProps) {
   const c = useColors();
   const { wide, width, height } = useHeroLayout();
+  const columns = useTwoColumns();
   return (
     <View testID="detail-hero" style={[styles.hero, { width, minHeight: height, backgroundColor: c.surface }]}>
       {art && (
@@ -76,7 +77,7 @@ export function DetailHero({ art, logo, title, subtitle, parent, children, side 
           },
         ]}
       />
-      {/* Wide screens: left-aligned over the strip, in line with the body under it; `side` on the right. */}
+      {/* Wide screens: left-aligned over the strip, in line with the body under it; `side` on the right when it fits. */}
       <View style={[styles.content, wide && styles.wideContent]}>
         <View style={[styles.text, wide && styles.start]}>
           {parent && (
@@ -116,7 +117,7 @@ export function DetailHero({ art, logo, title, subtitle, parent, children, side 
           )}
           {children}
         </View>
-        {wide && side ? <View style={styles.side}>{side}</View> : null}
+        {columns && side ? <View style={styles.side}>{side}</View> : null}
       </View>
     </View>
   );

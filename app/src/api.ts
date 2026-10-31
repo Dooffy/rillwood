@@ -317,6 +317,19 @@ export type BaseItemDto = {
   // Detail (`/Items/{id}`) only.
   Overview?: string;
   Genres?: string[];
+  OriginalTitle?: string;
+  Taglines?: string[];
+  Tags?: string[];
+  /** Countries: "United States". */
+  ProductionLocations?: string[];
+  /** Critics score, 0-100 (Rotten Tomatoes, via the OMDb plugin). */
+  CriticRating?: number;
+  /** When the item arrived on the server (ISO). */
+  DateCreated?: string;
+  /** Series: "Thursday", ... */
+  AirDays?: string[];
+  /** Series: "21:00", as the server stores it. */
+  AirTime?: string;
   /** Production companies (detail endpoint). */
   Studios?: { Name: string; Id?: string }[];
   /** Age rating: "PG-13". */
