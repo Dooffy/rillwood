@@ -304,14 +304,19 @@ describe('Library', () => {
     expect(request.mock.calls.length).toBeGreaterThan(before);
   });
 
-  it('the episode list shows row placeholders while its first page loads', async () => {
+  it('the episode list shows placeholders while its first page loads: a card grid on tablets, rows on phones', async () => {
     await render(<Library />);
     await type('test');
     const seeAll = await screen.findByRole('button', { name: 'Episodes, See All' });
     request.mockImplementation(() => new Promise(() => {}));
     await fireEvent.press(seeAll);
-    expect(await screen.findByTestId('episode-rows-placeholder')).toBeOnTheScreen();
+    // Jest's default window counts as a tablet.
+    expect(await screen.findByTestId('poster-grid-placeholder')).toBeOnTheScreen();
     expect(screen.queryByTestId('spinner')).toBeNull();
+    const window = Dimensions.get('window');
+    await act(() => Dimensions.set({ window: { ...window, width: 390, height: 844 } }));
+    expect(await screen.findByTestId('episode-rows-placeholder')).toBeOnTheScreen();
+    await act(() => Dimensions.set({ window }));
   });
 
   // Regression: the type chips are the screen's first scroll view, so iOS inset only them for the tab bar.

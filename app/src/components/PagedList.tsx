@@ -8,9 +8,9 @@ import { openItem } from '@/navigation';
 import type { PagedItems } from '@/usePagedItems';
 import { useImage } from '@/useImage';
 import { usePullToRefresh } from '@/usePullToRefresh';
-import { spacing, tabList, useColors } from '@/theme';
+import { spacing, tabList, useColors, useWide } from '@/theme';
 
-import { PosterCard, WIDE_POSTER_WIDTH } from './Card';
+import { LandscapeCard, PosterCard, WIDE_LANDSCAPE_WIDTH, WIDE_POSTER_WIDTH } from './Card';
 import { EpisodeRow, WIDE_EPISODE_ROW_STILL } from './EpisodeRow';
 import { useItemMenu } from './ItemMenu';
 import { LoadError, loadErrorMessage, Message, Offline, useHeldOffline } from './Message';
@@ -21,10 +21,15 @@ import { useTabContentWidth } from './TabsSidebar';
 
 /** A phone's poster column count (about 111 pt each); wider lists add columns (4 on an 11" iPad in portrait, 5 on a 13"). */
 const MIN_COLUMNS = 3;
+/** Tablets: episode cards across (the grid needs at least two to be one). */
+const MIN_EPISODE_COLUMNS = 2;
 
 export type PagedListProps = {
   list: PagedItems;
-  /** posters: grid (movies, shows; 3 columns on phones, more on tablets); episodes: one row each. */
+  /**
+   * posters: grid (movies, shows; 3 columns on phones, more on tablets). episodes: one row each on phones, a grid of
+   * landscape cards on tablets (rows there would leave most of the width empty).
+   */
   layout: 'posters' | 'episodes';
   /** Scrolls with the list (summary line). */
   header?: ReactElement;
@@ -48,8 +53,14 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
   // A tab screen: the sidebar takes part of the window in tablet landscape.
   const width = useTabContentWidth();
   const { refreshing, onRefresh } = usePullToRefresh(list.loading, list.refresh);
-  const { count: columns, width: cardWidth } = fitCards(width - 2 * spacing.md, WIDE_POSTER_WIDTH, MIN_COLUMNS);
   const posters = layout === 'posters';
+  // Episodes on tablets: landscape cards in a grid, sized like the Home shelves (at least two across).
+  const wide = useWide();
+  const episodeGrid = !posters && wide;
+  const grid = posters || episodeGrid;
+  const { count: columns, width: cardWidth } = posters
+    ? fitCards(width - 2 * spacing.md, WIDE_POSTER_WIDTH, MIN_COLUMNS)
+    : fitCards(width - 2 * spacing.md, WIDE_LANDSCAPE_WIDTH, MIN_EPISODE_COLUMNS);
   const menu = useItemMenu();
   const offline = useHeldOffline(list.items.length === 0 && isConnectionError(list.error), list.loading);
 
@@ -83,6 +94,19 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
           />
         );
       }
+      if (episodeGrid) {
+        return (
+          <LandscapeCard
+            {...cardTitles(item)}
+            {...playback(item)}
+            width={cardWidth}
+            image={image(landscapeImage(item), cardWidth)}
+            item={item}
+            onOpen={openCard}
+            onMenu={menuCard}
+          />
+        );
+      }
       return (
         <EpisodeRow
           {...cardTitles(item)}
@@ -95,7 +119,7 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
         />
       );
     },
-    [posters, cardWidth, image, openCard, menuCard],
+    [posters, episodeGrid, cardWidth, image, openCard, menuCard],
   );
 
   // Out of reach with nothing loaded: the offline card alone at the top, nothing to scroll (held while a retry runs).
@@ -103,8 +127,8 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
 
   // First page: placeholders, an error with Retry, or what an empty list means.
   const empty = list.loading ? (
-    posters ? (
-      <PosterGridPlaceholder columns={columns} width={cardWidth} />
+    grid ? (
+      <PosterGridPlaceholder columns={columns} width={cardWidth} shape={posters ? 'poster' : 'landscape'} />
     ) : (
       <EpisodeRowsPlaceholder />
     )
@@ -130,12 +154,12 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
     <FlatList
       {...tabList}
       // A new column count needs a new list (FlatList can't change numColumns in place).
-      key={`${layout}|${listKey}|${posters ? columns : 1}`}
+      key={`${layout}|${listKey}|${grid ? columns : 1}`}
       testID={testID}
       data={list.items}
       keyExtractor={(item) => item.Id}
-      numColumns={posters ? columns : 1}
-      columnWrapperStyle={posters ? styles.columns : undefined}
+      numColumns={grid ? columns : 1}
+      columnWrapperStyle={grid ? styles.columns : undefined}
       contentContainerStyle={styles.content}
       // Separators, not `gap`: gap would also space the placeholders that stand in for off-screen rows.
       ItemSeparatorComponent={RowGap}

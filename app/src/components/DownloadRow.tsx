@@ -15,7 +15,7 @@ import { minTouch, pressedOpacity, spacing, useColors, useWide } from '@/theme';
 import { Artwork } from './Artwork';
 import { longPressProps } from './Card';
 import { DownloadRing } from './DownloadRing';
-import { EPISODE_ROW_STILL, WIDE_EPISODE_ROW_STILL } from './EpisodeRow';
+import { EPISODE_ROW_STILL } from './EpisodeRow';
 import { Chevron } from './List';
 import { SwipeToDelete } from './SwipeToDelete';
 import { Text } from './Text';
@@ -36,7 +36,9 @@ export type DownloadRowProps = {
 export const DOWNLOAD_ROW_GAP = spacing.sm + spacing.xs;
 
 /** Poster width in a row: phone size, bigger on wide screens (iPad) where a 56pt poster looks lost in a column. */
-export const DOWNLOAD_POSTER = { phone: 56, wide: 100 } as const;
+export const DOWNLOAD_POSTER = { phone: 56, wide: 140 } as const;
+/** An episode's 16:9 still on wide screens: about the poster's height, so rows line up. */
+export const WIDE_DOWNLOAD_STILL = 240;
 
 /**
  * A list's `ItemSeparatorComponent`: the row gap. Not `gap` on a virtualised list's content - its spacers for the
@@ -98,13 +100,13 @@ export const DownloadRow = memo(function DownloadRow({ id, title, onPlay, onDele
             </View>
           )}
           <View style={styles.text}>
-            <Text variant="label" numberOfLines={2}>
+            <Text variant={wide ? 'sectionHeader' : 'label'} numberOfLines={2}>
               {name}
             </Text>
-            <Text variant="caption" secondary numberOfLines={1}>
+            <Text variant={wide ? 'body' : 'caption'} secondary numberOfLines={1}>
               {detail}
             </Text>
-            {expiry && <Expiry {...expiry} />}
+            {expiry && <Expiry {...expiry} wide={wide} />}
           </View>
         </Pressable>
         {!done && (
@@ -170,18 +172,18 @@ export const ShowDownloadRow = memo(function ShowDownloadRow({
             <Artwork image={poster(first ?? undefined)} aspectRatio={2 / 3} />
           </View>
           <View style={styles.text}>
-            <Text variant="label" numberOfLines={2}>
+            <Text variant={wide ? 'sectionHeader' : 'label'} numberOfLines={2}>
               {show.name}
             </Text>
-            <Text variant="caption" secondary numberOfLines={1}>
+            <Text variant={wide ? 'body' : 'caption'} secondary numberOfLines={1}>
               {detail}
             </Text>
             {status ? (
-              <Text variant="caption" secondary numberOfLines={1}>
+              <Text variant={wide ? 'body' : 'caption'} secondary numberOfLines={1}>
                 {status}
               </Text>
             ) : (
-              expiry && <Expiry text={`Next ${expiry.text.toLowerCase()}`} soon={expiry.soon} />
+              expiry && <Expiry text={`Next ${expiry.text.toLowerCase()}`} soon={expiry.soon} wide={wide} />
             )}
           </View>
         </View>
@@ -194,11 +196,11 @@ export const ShowDownloadRow = memo(function ShowDownloadRow({
   );
 });
 
-/** "Expires in 5 days" / "45h": orange under a day. */
-function Expiry({ text, soon }: { text: string; soon: boolean }) {
+/** "Expires in 5 days" / "45h": orange under a day. `wide`: the bigger text of a tablet row. */
+function Expiry({ text, soon, wide = false }: { text: string; soon: boolean; wide?: boolean }) {
   const c = useColors();
   return (
-    <Text variant="caption" secondary={!soon} numberOfLines={1} style={soon && { color: c.warning }}>
+    <Text variant={wide ? 'body' : 'caption'} secondary={!soon} numberOfLines={1} style={soon && { color: c.warning }}>
       {text}
     </Text>
   );
@@ -210,7 +212,7 @@ const styles = StyleSheet.create({
   poster: { width: DOWNLOAD_POSTER.phone },
   posterWide: { width: DOWNLOAD_POSTER.wide },
   still: { width: EPISODE_ROW_STILL },
-  stillWide: { width: WIDE_EPISODE_ROW_STILL },
+  stillWide: { width: WIDE_DOWNLOAD_STILL },
   text: { flex: 1, gap: spacing.xs / 2 },
   control: { width: minTouch, height: minTouch, alignItems: 'center', justifyContent: 'center' },
   chevron: { width: spacing.lg, alignItems: 'center' },

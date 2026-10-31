@@ -145,12 +145,23 @@ export function EpisodeRowsPlaceholder() {
   );
 }
 
-/** A poster grid's first page loading (Library Movies / Shows): `columns` posters `width` wide, three rows. */
-export function PosterGridPlaceholder({ columns, width }: { columns: number; width: number }) {
+/**
+ * A grid's first page loading (Library Movies / Shows posters; Episodes on tablets, landscape): `columns` cards `width`
+ * wide, three rows.
+ */
+export function PosterGridPlaceholder({
+  columns,
+  width,
+  shape = 'poster',
+}: {
+  columns: number;
+  width: number;
+  shape?: 'poster' | 'landscape';
+}) {
   return (
     <Loading testID="poster-grid-placeholder" style={styles.grid}>
       {Array.from({ length: columns * 3 }, (_, i) => (
-        <CardPlaceholder key={i} shape="poster" width={width} />
+        <CardPlaceholder key={i} shape={shape} width={width} />
       ))}
     </Loading>
   );
