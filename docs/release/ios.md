@@ -14,10 +14,10 @@ Local EAS build, manual upload with Transporter, internal testers only. External
 
 ## Release
 
-1. Bump `version` in `app/app.json` and `app/package.json` (same value, root entries of `package-lock.json` too) in a PR, merge it.
+1. Bump `version` in `app/app.json` in a PR, merge it. Format `YY.N`: two-digit year, then the release number in that year from 0 (`26.0`, `26.1`, ... `27.0` in a new year). No patch number - a fix is the next release. `app/package.json` has no version.
 2. Actions → **Release** → Run workflow on `main`: version check, every CI check plus Expo doctor, then tag `v<version>` + a draft GitHub Release with notes from the merged PRs. A failure creates nothing - fix it in a PR (Expo doctor: `npx expo install --check`) and run it again.
 3. Build from the tag (`git switch --detach v<version>`, then [Each build](#each-build)) and upload.
-4. Publish the draft release. A build that failed before reaching testers: delete the draft + tag, fix, run Release again. Once testers have it, never move the tag - fix in the next patch version.
+4. Publish the draft release. A build that failed before reaching testers: delete the draft + tag, fix, run Release again. Once testers have it, never move the tag - fix in the next release.
 
 ## Each build
 
