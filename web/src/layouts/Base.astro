@@ -136,6 +136,10 @@ const year = new Date().getFullYear();
   * {
     box-sizing: border-box;
   }
+  /* Decorations (hero rings, phone shadow) may reach past the column: clip them at the screen edge only (clip, not hidden, so nothing scrolls). */
+  main {
+    overflow-x: clip;
+  }
   body {
     margin: 0;
     background: var(--background);

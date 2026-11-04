@@ -27,7 +27,12 @@
 
 Rillwood plays your library as it is, with no transcoding, and downloads it for when you're away from home. It connects only to your own Jellyfin server: no account, no analytics, no tracking.
 
-**Status:** in development, not in the App Store or Google Play yet. Beta testing on TestFlight and the Play internal track comes first.
+<p align="center">
+  <a href="https://apps.apple.com/app/id6824665406"><img src="https://img.shields.io/badge/App%20Store-Download-000000?logo=apple&logoColor=white" alt="Download on the App Store" /></a>
+  <img src="https://img.shields.io/badge/Google%20Play-coming%20soon-lightgrey?logo=googleplay&logoColor=white" alt="Google Play: coming soon" />
+</p>
+
+**Status:** iPhone and iPad: [App Store](https://apps.apple.com/app/id6824665406). Android: coming soon to Google Play.
 
 ## Features
 
