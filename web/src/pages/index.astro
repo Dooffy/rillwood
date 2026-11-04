@@ -1,7 +1,7 @@
 ---
 // SPDX-License-Identifier: GPL-3.0-or-later
 import Base from '../layouts/Base.astro';
-import { href, repoUrl } from '../site';
+import { appStoreUrl, href, repoUrl } from '../site';
 
 // Feature icons: 24 px stroke paths.
 const features = [
@@ -52,11 +52,11 @@ const posters = ['#2b4a40', '#4a3b2b', '#2b3550', '#50302f', '#33472b', '#3e2e4a
         for when you are away from home.
       </p>
       <div class="stores">
-        <span class="store primary">
+        <a class="store primary" href={appStoreUrl}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"></rect><path
               d="M11 18h2"></path></svg>
-          <span><small>Coming soon to the</small>App Store</span>
-        </span>
+          <span><small>Download on the</small>App Store</span>
+        </a>
         <span class="store">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3l13 9-13 9z"></path></svg>
           <span><small>Coming soon to</small>Google Play</span>
@@ -248,6 +248,18 @@ const posters = ['#2b4a40', '#4a3b2b', '#2b3550', '#50302f', '#33472b', '#3e2e4a
     border-color: var(--accent);
     color: var(--on-accent);
   }
+  /* A live store link: no underline, the link colours never override the button's. */
+  a.store {
+    text-decoration: none;
+    color: inherit;
+  }
+  a.store.primary,
+  a.store.primary:hover {
+    color: var(--on-accent);
+  }
+  a.store:hover {
+    opacity: 0.9;
+  }
   .store svg {
     width: 22px;
     height: 22px;
@@ -267,15 +279,13 @@ const posters = ['#2b4a40', '#4a3b2b', '#2b3550', '#50302f', '#33472b', '#3e2e4a
     color: var(--text-muted);
   }
 
-  /* Phone drawing beside the hero text */
-  /* The rings are wider than a phone screen: clip them sideways (clip, not hidden, so nothing scrolls). */
+  /* Phone drawing beside the hero text. The rings are wider than a phone screen; `main` clips them at the screen edge. */
   .hero-art {
     flex: 1 1 340px;
     min-width: 0;
     display: flex;
     justify-content: center;
     position: relative;
-    overflow-x: clip;
   }
   .ring {
     position: absolute;
