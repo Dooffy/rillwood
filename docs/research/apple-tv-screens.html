@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rillwood Apple TV</title>
+<style>
+  /* Page around the screens */
+  :root {
+    --page: #0b0b0c;
+    --page-text: #e9e9ec;
+    --page-muted: #8d8d94;
+    --page-line: #26262a;
+    /* App tokens (CLAUDE.md §3, dark) */
+    --bg: #000000;
+    --surface: #1c1c1e;
+    --surface-2: #2c2c2e;
+    --surface-3: #3a3a3c;
+    --separator: #38383a;
+    --text: #ffffff;
+    --text-2: #98989f;
+    --inactive: #8e8e93;
+    --danger: #ff453a;
+    --success: #30d158;
+    --warning: #ff9f0a;
+    --glass: rgba(60, 60, 64, 0.55);
+    --glass-strong: rgba(44, 44, 48, 0.82);
+    --unfocused: rgba(255, 255, 255, 0.14);
+    --fade: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.75) 100%);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--page-text);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+  }
+  .doc { max-width: 1280px; margin: 0 auto; padding: 48px 16px 96px; }
+  .doc > header h1 { font-size: 34px; margin: 0 0 8px; letter-spacing: -0.02em; }
+  .doc > header p { margin: 0 0 8px; color: var(--page-muted); max-width: 760px; }
+  .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 8px; padding: 0; list-style: none; }
+  .toc a { display: inline-block; padding: 6px 14px; border-radius: 999px; background: #1a1a1d; color: var(--page-text); text-decoration: none; font-size: 14px; }
+  .toc a:hover { background: #26262a; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin: 24px 0 0; }
+  .rules div { background: #141416; border: 1px solid var(--page-line); border-radius: 14px; padding: 14px 16px; font-size: 14px; color: var(--page-muted); }
+  .rules b { display: block; color: var(--page-text); margin-bottom: 4px; font-size: 15px; }
+
+  section.screen { margin-top: 64px; scroll-margin-top: 24px; }
+  section.screen > h2 { font-size: 22px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  section.screen > h2 span { color: var(--page-muted); font-weight: 500; margin-right: 8px; }
+  section.screen > p { margin: 0 0 16px; color: var(--page-muted); font-size: 15px; }
+  .notes { margin: 16px 0 0; padding-left: 20px; color: var(--page-muted); font-size: 14px; columns: 2 320px; column-gap: 32px; }
+  .notes li { break-inside: avoid; margin-bottom: 4px; }
+  .notes b { color: var(--page-text); font-weight: 600; }
+
+  /* The TV: designed at 1920 x 1080, scaled to the column by JS (--s) */
+  .frame { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 1px var(--page-line), 0 30px 60px rgba(0,0,0,.5); background: var(--bg); }
+  .tv {
+    position: absolute; top: 0; left: 0;
+    width: 1920px; height: 1080px;
+    transform: scale(var(--s, 0.5)); transform-origin: top left;
+    background: var(--bg); color: var(--text); overflow: hidden;
+    font-family: -apple-system, 'SF Pro Display', BlinkMacSystemFont, sans-serif;
+    font-size: 29px; line-height: 1.3;
+  }
+  .safe { position: absolute; inset: 60px 90px; }
+
+  /* Type (tvOS scale) */
+  .t-hero { font-size: 92px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+  .t-title { font-size: 76px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.05; }
+  .t-h2 { font-size: 38px; font-weight: 700; }
+  .t-h3 { font-size: 31px; font-weight: 600; }
+  .t-body { font-size: 29px; }
+  .t-cap { font-size: 25px; color: var(--text-2); }
+  .t-small { font-size: 23px; color: var(--text-2); }
+  .muted { color: var(--text-2); }
+
+  /* Top tab bar (glass capsule, collapses on scroll) */
+  .tabbar { position: absolute; top: 46px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 8px; border-radius: 999px; background: var(--glass); backdrop-filter: blur(30px); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); z-index: 5; }
+  .tabbar span { padding: 12px 34px; border-radius: 999px; font-size: 29px; font-weight: 600; color: rgba(255,255,255,.75); }
+  .tabbar .sel { background: rgba(255,255,255,.18); color: #fff; }
+  .tabbar .focus { background: #fff; color: #000; transform: scale(1.06); box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+  .profile { position: absolute; top: 52px; right: 90px; display: flex; align-items: center; gap: 16px; z-index: 5; }
+  .avatar { width: 66px; height: 66px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 28px; background: linear-gradient(135deg, #5f7f73, #2b4a40); color: #fff; }
+  .clock { font-size: 27px; color: rgba(255,255,255,.8); font-weight: 500; }
+
+  /* Buttons: capsules, focused = white */
+  .btn { display: inline-flex; align-items: center; gap: 14px; height: 86px; padding: 0 44px; border-radius: 999px; background: var(--unfocused); color: #fff; font-size: 31px; font-weight: 600; white-space: nowrap; }
+  .btn.round { width: 86px; padding: 0; justify-content: center; }
+  .btn.focus { background: #fff; color: #000; transform: scale(1.08); box-shadow: 0 16px 40px rgba(0,0,0,.55); }
+  .btn svg { width: 34px; height: 34px; fill: currentColor; }
+  .btn .bar { width: 170px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.3); overflow: hidden; }
+  .btn .bar i { display: block; height: 100%; background: #fff; }
+  .btn.focus .bar { background: rgba(0,0,0,.18); }
+  .btn.focus .bar i { background: #000; }
+  .btn-row { display: flex; gap: 22px; align-items: center; }
+
+  /* Art: gradient stand-ins for posters / backdrops */
+  .art { position: relative; overflow: hidden; background: var(--g, #333); }
+  .art::after { content: ''; position: absolute; inset: 0; background: radial-gradient(120% 80% at 20% 0%, rgba(255,255,255,.18), transparent 60%); }
+  .art .name { position: absolute; left: 0; right: 0; bottom: 0; padding: 22px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.02; color: rgba(255,255,255,.92); text-shadow: 0 2px 12px rgba(0,0,0,.4); }
+  .g1 { --g: linear-gradient(160deg, #3f6e60, #13261f); }
+  .g2 { --g: linear-gradient(160deg, #8a6a3e, #2a1d10); }
+  .g3 { --g: linear-gradient(160deg, #3d4f86, #121a33); }
+  .g4 { --g: linear-gradient(160deg, #8a4a46, #2a1210); }
+  .g5 { --g: linear-gradient(160deg, #5a7a3c, #1a2610); }
+  .g6 { --g: linear-gradient(160deg, #6b4d86, #1f1330); }
+  .g7 { --g: linear-gradient(160deg, #2f7487, #0d2329); }
+  .g8 { --g: linear-gradient(160deg, #8a7a4a, #29230f); }
+  .g9 { --g: linear-gradient(160deg, #4b4b52, #141416); }
+
+  /* Cards + focus (lift, scale, shadow; title appears under the focused card) */
+  .row { display: flex; gap: 48px; }
+  .card { flex: none; border-radius: 14px; }
+  .card.poster { width: 250px; height: 375px; }
+  .card.poster .name { font-size: 30px; }
+  .card.land { width: 548px; height: 308px; }
+  .card.land .name { font-size: 40px; }
+  .card.small-land { width: 399px; height: 224px; }
+  .card.small-land .name { font-size: 32px; }
+  .card.focus { transform: scale(1.1); box-shadow: 0 30px 60px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.15); z-index: 2; }
+  .card.focus::before { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.22) 45%, transparent 60%); z-index: 1; }
+  .cell { flex: none; display: flex; flex-direction: column; gap: 14px; }
+  .cell .label { font-size: 25px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cell .label b { display: block; color: #fff; font-weight: 600; font-size: 27px; }
+  .cell.focused .label { transform: translateY(16px); }
+  /* Progress over art: fade + bar + time left */
+  .prog { position: absolute; left: 22px; right: 22px; bottom: 20px; display: flex; align-items: center; gap: 14px; font-size: 23px; font-weight: 600; z-index: 1; }
+  .prog .track { flex: 1; height: 7px; border-radius: 4px; background: rgba(255,255,255,.35); overflow: hidden; }
+  .prog .track i { display: block; height: 100%; background: #fff; }
+  .art.has-prog::after { background: var(--fade); top: 40%; }
+  .badge-watched { position: absolute; right: 16px; top: 16px; padding: 6px 14px; border-radius: 999px; background: rgba(0,0,0,.55); font-size: 21px; font-weight: 600; z-index: 1; }
+
+  .shelf-title { display: flex; align-items: center; gap: 10px; margin: 0 0 26px; }
+  .shelf-title .chev { color: var(--text-2); font-weight: 600; }
+
+  /* Glass panels (menus, sheets) */
+  .panel { background: var(--glass-strong); backdrop-filter: blur(40px); border-radius: 36px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 30px 80px rgba(0,0,0,.6); }
+  .list { display: flex; flex-direction: column; gap: 6px; }
+  .li { display: flex; align-items: center; justify-content: space-between; gap: 24px; height: 84px; padding: 0 34px; border-radius: 20px; font-size: 31px; }
+  .li .val { color: var(--text-2); }
+  .li.focus { background: #fff; color: #000; transform: scale(1.03); box-shadow: 0 16px 40px rgba(0,0,0,.45); }
+  .li.focus .val { color: rgba(0,0,0,.55); }
+  .check { width: 34px; color: inherit; font-weight: 700; }
+  .li-head { padding: 0 34px; margin: 26px 0 8px; font-size: 25px; color: var(--text-2); font-weight: 600; }
+
+  .field { height: 96px; border-radius: 20px; background: var(--surface-2); display: flex; align-items: center; padding: 0 34px; font-size: 33px; color: #fff; }
+  .field.focus { background: #fff; color: #000; transform: scale(1.04); box-shadow: 0 16px 40px rgba(0,0,0,.5); }
+  .field .ph { color: var(--text-2); }
+  .caret { display: inline-block; width: 3px; height: 40px; background: currentColor; margin-left: 2px; vertical-align: middle; }
+
+  .pill { display: inline-flex; align-items: center; height: 70px; padding: 0 34px; border-radius: 999px; background: var(--unfocused); font-size: 28px; font-weight: 600; }
+  .pill.sel { background: rgba(255,255,255,.3); }
+  .pill.focus { background: #fff; color: #000; transform: scale(1.08); }
+  .chips { display: flex; gap: 16px; flex-wrap: wrap; }
+  .badge { display: inline-flex; align-items: center; height: 40px; padding: 0 12px; border-radius: 8px; border: 2px solid rgba(255,255,255,.55); font-size: 21px; font-weight: 700; color: rgba(255,255,255,.85); }
+
+  .backdrop { position: absolute; inset: 0; }
+  .scrim-left { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.88) 0%, rgba(0,0,0,.6) 38%, rgba(0,0,0,0) 70%); }
+  .scrim-bottom { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,.55) 62%, #000 100%); }
+  .scrim-top { position: absolute; left: 0; right: 0; top: 0; height: 260px; background: linear-gradient(180deg, rgba(0,0,0,.6), transparent); }
+
+  .mark { width: 120px; height: 120px; border-radius: 30px; background: #fff; display: grid; place-items: center; }
+  .mark i { width: 64px; height: 50px; border-radius: 50% 50% 46% 54% / 60% 58% 42% 40%; background: #000; display: block; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--success); display: inline-block; }
+  .kbd { display: grid; grid-template-columns: repeat(13, 1fr); gap: 8px; }
+  .kbd span { height: 64px; border-radius: 12px; display: grid; place-items: center; font-size: 29px; color: rgba(255,255,255,.85); }
+  .kbd span.focus { background: #fff; color: #000; transform: scale(1.15); font-weight: 600; }
+  .kbd span.wide { grid-column: span 2; font-size: 22px; }
+  .remote-hint { display: inline-flex; align-items: center; gap: 12px; font-size: 23px; color: var(--text-2); }
+  .remote-hint kbd { font: inherit; font-weight: 600; color: #fff; padding: 4px 14px; border-radius: 999px; background: rgba(255,255,255,.16); }
+  svg.i { width: 1em; height: 1em; fill: currentColor; vertical-align: -0.12em; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header>
+    <h1>Rillwood for Apple TV - screen drafts</h1>
+    <p>Design draft for a tvOS client (plan: <code>docs/roadmap.md</code> TV, spike notes: <code>docs/research/apple-tv.md</code>). Drawn at 1920 × 1080 in the app's dark palette, scaled to fit. Gradients stand in for artwork; every title is made up. Each screen shows where the focus sits.</p>
+    <p>A draft to build from, not final: details settle per screen task.</p>
+    <ul class="toc" id="toc"></ul>
+    <div class="rules">
+      <div><b>Focus is the cursor</b>Focused item lifts: scale 1.08-1.1, deeper shadow, light sheen. Buttons and rows turn white with black text. Nothing else shows focus.</div>
+      <div><b>Remote</b>Swipe / click to move, click to select, Play/Pause anywhere plays the focused item, long-press for the item menu, Back (Menu) goes up one level and from a tab root to Home.</div>
+      <div><b>Navigation</b>Glass tab bar at the top: Home, Library, Search, Settings. It hides when you move down into content and returns on Back or swiping up.</div>
+      <div><b>No downloads on TV</b>tvOS gives apps no lasting storage, so the TV app streams only. Offline = a clear message, not a Downloads tab.</div>
+      <div><b>Safe area</b>90 pt sides, 60 pt top / bottom. Shelves bleed off the right edge so the next card peeks in. Text never sits on bright art without a fade.</div>
+      <div><b>Sizes</b>Posters 250 × 375 (6 across), Continue Watching 548 × 308 (3 across), small landscape 399 × 224. Body 29 pt, captions 25 pt, titles 76 pt.</div>
+    </div>
+  </header>
+
+  <!-- 1 Welcome -->
+  <section class="screen" id="s-welcome" data-title="Welcome">
+    <h2><span>01</span>Welcome - add a server</h2>
+    <p>First launch. One field, one button; the address keyboard is the system one (full screen on tvOS).</p>
+    <div class="frame"><div class="tv">
+      <div class="backdrop art g1" style="opacity:.35"></div>
+      <div class="scrim-bottom"></div>
+      <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:44px; text-align:center;">
+        <div class="mark"><i></i></div>
+        <div>
+          <div class="t-title">Welcome to Rillwood</div>
+          <div class="t-body muted" style="margin-top:16px; max-width:1100px;">Play your Jellyfin library as it is. Enter your server's address to start.</div>
+        </div>
+        <div style="width:900px; display:flex; flex-direction:column; gap:26px;">
+          <div class="field focus"><span>192.168.1.20:8096</span><span class="caret"></span></div>
+          <div class="btn-row" style="justify-content:center;"><span class="btn">Continue</span></div>
+        </div>
+        <div class="t-small" style="max-width:1000px;">Find it in Jellyfin on your computer: Dashboard → Networking. Example: jellyfin.local:8096 or https://media.example.com</div>
+      </div>
+    </div></div>
+    <ul class="notes">
+      <li><b>Focus starts</b> on the address field; click opens the system keyboard.</li>
+      <li>Probe runs on Continue; the button shows a spinner and the field locks.</li>
+      <li><b>Errors</b> sit under the field in danger red ("Can't reach this server").</li>
+      <li>Same help copy as the phone's Add server.</li>
+    </ul>
+  </section>
+
+  <!-- 2 Sign in -->
+  <section class="screen" id="s-signin" data-title="Sign in">
+    <h2><span>02</span>Sign in - Quick Connect first</h2>
+    <p>Typing a password with a remote is slow, so Quick Connect is the default: approve the code on your phone or the web.</p>
+    <div class="frame"><div class="tv">
+      <div class="safe" style="display:grid; grid-template-columns: 1fr 1fr; gap:120px; align-items:center;">
+        <div>
+          <div class="t-small" style="margin-bottom:12px;">Home server · 12.1.0</div>
+          <div class="t-title">Sign in</div>
+          <div class="t-body muted" style="margin-top:24px; line-height:1.45;">On your phone or computer, open Jellyfin → your profile → Quick Connect, and enter this code.</div>
+          <div class="btn-row" style="margin-top:64px;">
+            <span class="btn">Use Password</span>
+            <span class="btn">Change Server</span>
+          </div>
+        </div>
+        <div class="panel" style="padding:70px; display:flex; flex-direction:column; align-items:center; gap:30px;">
+          <div class="t-cap">Quick Connect code</div>
+          <div style="font-size:130px; font-weight:800; letter-spacing:.08em; white-space:nowrap; font-variant-numeric: tabular-nums;">482 913</div>
+          <div class="t-cap" style="display:flex; align-items:center; gap:14px;"><span class="spin" style="width:28px;height:28px;border-radius:50%;border:4px solid rgba(255,255,255,.2);border-top-color:#fff;display:inline-block"></span>Waiting for approval</div>
+        </div>
+      </div>
+    </div></div>
+    <ul class="notes">
+      <li><b>Focus starts</b> on Use Password (nothing to press on the code).</li>
+      <li>Polls every few seconds; on approval goes straight to Who's Watching or Home.</li>
+      <li>Server with Quick Connect off → opens the password form instead (username + password fields, Sign In).</li>
+      <li>Code expires → new code appears, no error screen.</li>
+    </ul>
+  </section>
+
+  <!-- 3 Who's watching -->
+  <section class="screen" id="s-profiles" data-title="Who's watching">
+    <h2><span>03</span>Who's watching</h2>
+    <p>Accounts across servers, like the Apple TV user picker. Shown at launch when there is more than one account.</p>
+    <div class="frame"><div class="tv">
+      <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:90px;">
+        <div class="t-title">Who's watching?</div>
+        <div style="display:flex; gap:80px; align-items:flex-start;">
+          <div class="cell" style="align-items:center;"><div class="avatar" style="width:240px;height:240px;font-size:96px;transform:scale(1.1);box-shadow:0 30px 60px rgba(0,0,0,.7), 0 0 0 6px #fff;">A</div><div class="label" style="text-align:center;margin-top:20px"><b>Alex</b>Home server</div></div>
+          <div class="cell" style="align-items:center;"><div class="avatar" style="width:240px;height:240px;font-size:96px;background:linear-gradient(135deg,#86704a,#3a2c14)">S</div><div class="label" style="text-align:center"><b>Sam</b>Home server</div></div>
+          <div class="cell" style="align-items:center;"><div class="avatar" style="width:240px;height:240px;font-size:96px;background:linear-gradient(135deg,#4a5c86,#162036)">K</div><div class="label" style="text-align:center"><b>Kids</b>Home server</div></div>
+          <div class="cell" style="align-items:center;"><div class="avatar" style="width:240px;height:240px;font-size:96px;background:linear-gradient(135deg,#6b4d86,#1f1330)">A</div><div class="label" style="text-align:center"><b>Alex</b>Cabin</div></div>
+          <div class="cell" style="align-items:center;"><div class="avatar" style="width:240px;height:240px;font-size:110px;background:var(--surface-2);color:var(--text-2);font-weight:300">+</div><div class="label" style="text-align:center"><b>Add</b>Account</div></div>
+        </div>
+      </div>
+    </div></div>
+    <ul class="notes">
+      <li><b>Focus starts</b> on the last used account.</li>
+      <li>Same name on two servers → the server name under it tells them apart.</li>
+      <li>Long-press an account: Sign Out, Remove.</li>
+      <li>Reached later from the avatar at the top right of every tab.</li>
+    </ul>
+  </section>
+
+  <!-- 4 Home -->
+  <section class="screen" id="s-home" data-title="Home">
+    <h2><span>04</span>Home</h2>
+    <p>Full-bleed Up Next hero, then Continue Watching, Next Up and Recently Added shelves. The hero art fills the screen; the top shelf peeks in at the bottom.</p>
+    <div class="frame"><div class="tv">
+      <div class="backdrop art g7"></div>
+      <div class="scrim-left"></div>
+      <div class="scrim-bottom"></div>
+      <div class="scrim-top"></div>
+      <div class="tabbar"><span class="sel">Home</span><span>Library</span><span>Search</span><span>Settings</span></div>
+      <div class="profile"><span class="clock">20:41</span><span class="avatar">A</span></div>
+      <div style="position:absolute; left:90px; top:300px; width:900px;">
+        <div class="t-small" style="text-transform:uppercase; letter-spacing:.12em; color:#fff; opacity:.8; font-weight:600;">Up Next</div>
+        <div class="t-hero" style="margin:18px 0 20px;">Copperline</div>
+        <div class="t-body" style="opacity:.9;">S2, E5 · The Signal Box</div>
+        <div class="t-cap" style="margin-top:10px; color:rgba(255,255,255,.75)">Drama · 2025 · TV-14 · 52 min</div>
+        <div class="btn-row" style="margin-top:44px;">
+          <span class="btn focus"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>S2, E5<span class="bar"><i style="width:35%"></i></span>34m left</span>
+          <span class="btn round"><svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z"/></svg></span>
+          <span class="btn round"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></span>
+        </div>
+      </div>
+      <div style="position:absolute; left:90px; top:860px; right:0;">
+        <div class="shelf-title"><span class="t-h3">Continue Watching</span><span class="chev">›</span></div>
+        <div class="row" data-shelf="land" data-names="Harbor Lights|Low Tide|The Quiet Orchard|Glasshouse" data-progress="62,20,85,40"></div>
+      </div>
+    </div></div>
+    <div class="frame" style="margin-top:20px"><div class="tv">
+      <div class="backdrop art g7" style="transform:translateY(-760px)"></div>
+      <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.4), #000 22%);"></div>
+      <div class="safe" style="top:70px;">
+        <div class="shelf-title"><span class="t-h3">Continue Watching</span><span class="chev">›</span></div>
+        <div class="row" data-shelf="land" data-names="Harbor Lights|Low Tide|The Quiet Orchard|Glasshouse" data-progress="62,20,85,40" data-focus="1" data-labels="Harbor Lights|1h 12m left · S1, E3|The Quiet Orchard|Glasshouse"></div>
+        <div class="shelf-title" style="margin-top:96px;"><span class="t-h3">Next Up</span><span class="chev">›</span></div>
+        <div class="row" data-shelf="small-land" data-names="Copperline|Paper Moons|Northbound|Salt &amp; Ember|Winter Kept" data-labels="S2, E5 · The Signal Box|S1, E2 · Fold Lines|S3, E1 · Return|S1, E8 · Ash|S1, E4 · Thaw"></div>
+        <div class="shelf-title" style="margin-top:80px;"><span class="t-h3">Recently Added in Movies</span><span class="chev">›</span></div>
+        <div class="row" data-shelf="poster" data-count="8" data-start="3"></div>
+      </div>
+    </div></div>
+    <ul class="notes">
+      <li><b>Focus starts</b> on the hero's play button (with progress, `PlayButton`). Round buttons: Play from Start, ⋯ (Mark Watched, Go to Series).</li>
+      <li><b>Swipe down</b>: the hero scrolls away and the tab bar hides (second frame). Continue Watching focused card shows time left under it.</li>
+      <li>Hero art changes with Up Next only, never auto-rotates (no carousel).</li>
+      <li>Shelf title is focusable: › opens the full list. Recently Added = one shelf per library, like the phone.</li>
+      <li><b>Empty</b>: a new account sees Recently Added only; no libraries → message with Retry.</li>
+    </ul>
+  </section>
+
+  <!-- 5 Library -->
+  <section class="screen" id="s-library" data-title="Library">
+    <h2><span>05</span>Library</h2>
+    <p>Type pills (All / Movies / Shows / Episodes), sort and filter, then a poster grid. Same list logic as the phone's Library tab.</p>
+    <div class="frame"><div class="tv">
+      <div class="tabbar"><span>Home</span><span class="sel">Library</span><span>Search</span><span>Settings</span></div>
+      <div class="profile"><span class="clock">20:41</span><span class="avatar">A</span></div>
+      <div class="safe" style="top:170px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div class="chips"><span class="pill">All</span><span class="pill sel">Movies</span><span class="pill">Shows</span><span class="pill">Episodes</span></div>
+          <div class="chips"><span class="pill">Sort: Date Added</span><span class="pill">Filter · Unwatched</span></div>
+        </div>
+        <div class="t-small" style="margin:34px 0 30px;">214 movies</div>
+        <div style="display:grid; grid-template-columns: repeat(6, 250px); gap:56px 48px;" data-grid="12" data-focus="7"></div>
+      </div>
+    </div></div>
+    <ul class="notes">
+      <li><b>Focus</b> lands on the first poster when coming from the tab bar; up from the grid reaches the pills.</li>
+      <li>Focused poster shows title + year under it; others stay clean.</li>
+      <li>Paging loads ahead two rows before the end; placeholders (grey cards) fill while loading.</li>
+      <li>Sort and Filter open a side panel (same choices as the phone's `FilterSheet`).</li>
+      <li>Episodes: landscape grid, 4 across, with series name and S·E label.</li>
+    </ul>
+  </section>
+
+  <!-- 6 Search -->
+  <section class="screen" id="s-search" data-title="Search">
+    <h2><span>06</span>Search</h2>
+    <p>Its own tab on TV (on the phone it lives in Library): the inline tvOS keyboard on top, results updating below.</p>
+    <div class="frame"><div class="tv">
+      <div class="tabbar"><span>Home</span><span>Library</span><span class="sel">Search</span><span>Settings</span></div>
+      <div class="profile"><span class="clock">20:41</span><span class="avatar">A</span></div>
+      <div class="safe" style="top:170px;">
+        <div style="font-size:52px; font-weight:600; margin-bottom:26px;">harb<span class="caret" style="height:52px"></span></div>
+        <div class="kbd" style="margin-bottom:22px;" id="kbd"></div>
+        <div class="chips" style="margin:0 0 44px;"><span class="pill">Recent: lights</span><span class="pill">copper</span><span class="pill">orchard</span></div>
+        <div class="shelf-title"><span class="t-h3">Movies</span></div>
+        <div class="row" data-shelf="poster" data-count="7" data-names="Harbor Lights|Harbor Lights 2|The Harbour|Old Harbor|Harbinger|Safe Harbor|Harbor Days"></div>
+      </div>
+    </div></div>
+    <ul class="notes">
+      <li>Debounced as you type (same as the phone). Results grouped: Movies, Shows, Episodes, People.</li>
+      <li>Swipe down from the keyboard into results; Back returns to the keyboard.</li>
+      <li>Dictation (Siri remote mic) works in the system field for free.</li>
+      <li>No results → "No results for harb" in place of the shelves.</li>
+    </ul>
+  </section>
+
+  <!-- 7 Movie detail -->
+  <section class="screen" id="s-movie" data-title="Movie">
+    <h2><span>07</span>Movie detail</h2>
+    <p>Full-bleed backdrop with everything to decide on the art: title, facts, summary, badges, play row. Same `detailView` data as the phone.</p>
+    <div class="frame"><div class="tv">
+      <div class="backdrop art g2"></div>
+      <div class="scrim-left"></div>
+      <div class="scrim-bottom"></div>
+      <div style="position:absolute; left:90px; top:220px; width:980px;">
+        <div class="t-hero">Harbor Lights</div>
+        <div class="t-cap" style="margin-top:24px; color:rgba(255,255,255,.8)">Drama · Mystery</div>
+        <div class="t-body" style="margin-top:22px; line-height:1.45; color:rgba(255,255,255,.92)">A lighthouse keeper's daughter returns to the island after twenty years and finds the lamp still burning - though nobody has climbed the tower since the storm. <b style="color:#fff">More</b></div>
+        <div class="t-cap" style="margin-top:24px; color:rgba(255,255,255,.8)">2024 · 1h 58m · Ends at 22:39 · ⭐️ 7.8 · 🍅 91%</div>
+        <div class="chips" style="margin-top:20px; gap:10px;"><span class="badge">PG-13</span><span class="badge">4K</span><span class="badge">HDR10</span><span class="badge">Dolby Atmos</span><span class="badge">CC</span></div>
+        <div class="btn-row" style="margin-top:50px;">
+          <span class="btn focus"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>Resume<span class="bar"><i style="width:38%"></i></span>1h 12m left</span>
+          <span class="btn round"><svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z"/></svg></span>
+          <span class="btn round"><svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>
+          <span class="btn round"><svg viewBox="0 0 24 24"><path d="M12 21l-1.5-1.3C5 15 2 12.3 2 8.9 2 6.2 4.2 4 6.9 4c1.6 0 3.1.7 4.1 1.9C12 4.7 13.5 4 15.1 4 17.8 4 20 6.2 20 8.9c0 3.4-3 6.1-8.5 10.8z"/></svg></span>
+        </div>
+      </div>
+      <div style="position:absolute; right:90px; bottom:80px; width:520px;" class="t-cap">
+        <div style="color:#fff; font-weight:600; margin-bottom:6px;">Starring</div>Mara Ellison, Tom Reyes, June Okafor
+        <div style="color:#fff; font-weight:600; margin:22px 0 6px;">Director</div>Lena Varga
+      </div>
+    </div></div>
+    <ul class="notes">
+      <li><b>Focus starts</b> on Resume / Play. Round buttons: Play from Start, Mark Watched, Favourite (filled when on).</li>
+      <li><b>More</b> on the summary is focusable: opens the full About text in a centred panel.</li>
+      <li>Swipe down scrolls to the shelves and Details (next frame); the backdrop dims and stays behind.</li>
+      <li>Credits in the bottom-right, like the iPad's wide two-column hero.</li>
+    </ul>
+  </section>
+
+  <!-- 8 Movie detail scrolled -->
+  <section class="screen" id="s-movie-more" data-title="Movie - more">
+    <h2><span>08</span>Movie detail - shelves and details</h2>
+    <p>Below the hero: Cast &amp; Crew, More Like This, then Details (About, Information, Media) as plain text in columns.</p>
+    <div class="frame"><div class="tv">
+      <div class="backdrop art g2" style="opacity:.35; filter:blur(30px)"></div>
+      <div style="position:absolute; inset:0; background:rgba(0,0,0,.55)"></div>
+      <div class="safe" style="top:44px;">
+        <div class="shelf-title"><span class="t-h3">Cast &amp; Crew</span></div>
+        <div class="row" id="cast"></div>
+        <div class="shelf-title" style="margin-top:44px;"><span class="t-h3">More Like This</span></div>
+        <div class="row" data-shelf="poster" data-count="7" data-start="4"></div>
+        <div style="display:grid; grid-template-columns: 1.3fr 1fr 1fr; gap:70px; margin-top:40px;">
+          <div><div class="t-h3" style="margin-bottom:14px">About</div><div class="t-cap" style="line-height:1.45">Some lights are kept for the living. A quiet mystery about grief, inheritance and the weather.</div></div>
+          <div class="t-cap" style="line-height:1.6"><div class="t-h3" style="color:#fff;margin-bottom:14px">Information</div>Released<br><span style="color:#fff">12 April 2024</span><br>Genres<br><span style="color:#fff">Drama, Mystery</span></div>
+          <div class="t-cap" style="line-height:1.6"><div class="t-h3" style="color:#fff;margin-bottom:14px">Media</div>Video<br><span style="color:#fff">4K HEVC · HDR10</span><br>Audio<br><span style="color:#fff">English · Atmos 7.1</span></div>
+        </div>
+      </div>
+    </div></div>
+    <ul class="notes">
+      <li>Cast photos round, 140 pt; focus = scale + white ring. Opens the person's filmography (Library filtered by person).</li>
+      <li>Details text isn't focusable as a block: the focus engine skips it, so the Media card is one focusable panel that opens the track list.</li>
+      <li>Back from anywhere here returns to the hero with focus on Play.</li>
+    </ul>
+  </section>
+
+  <!-- 9 Series -->
+  <section class="screen" id="s-series" data-title="Series">
+    <h2><span>09</span>Series detail</h2>
+    <p>Same hero as the movie; below it the season pills and a shelf of episode cards that follows the focused season.</p>
+    <div class="frame"><div class="tv">
+      <div class="backdrop art g7"></div>
+      <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.15) 0%, rgba(0,0,0,.6) 40%, #000 72%)"></div>
+      <div class="scrim-left" style="opacity:.6"></div>
+      <div style="position:absolute; left:90px; top:120px; width:1000px;">
+        <div class="t-hero" style="font-size:84px">Copperline</div>
+        <div class="t-cap" style="margin-top:18px; color:rgba(255,255,255,.85)">2023 - 2025 · 3 seasons · Drama · TV-14 · ⭐️ 8.1</div>
+        <div class="btn-row" style="margin-top:36px;">
+          <span class="btn"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>S2, E5<span class="bar"><i style="width:35%"></i></span>34m left</span>
+          <span class="btn round"><svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z"/></svg></span>
+          <span class="btn round"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></span>
+        </div>
+      </div>
+      <div style="position:absolute; left:90px; top:560px; right:0;">
+        <div class="chips" style="margin-bottom:40px;"><span class="pill">Season 1</span><span class="pill focus">Season 2</span><span class="pill">Season 3</span></div>
+        <div class="row" id="episodes"></div>
+      </div>
+    </div></div>
+    <ul class="notes">
+      <li>Moving across pills switches the shelf below (no click needed); the shelf scrolls to the next unwatched episode.</li>
+      <li>Episode card: still with progress / ✓ Watched, then "E5 · The Signal Box", runtime, two-line summary.</li>
+      <li>Long-press an episode: Play from Start, Mark Watched, Go to Season. ⋯ in the hero: Mark Series Watched, Favourite.</li>
+      <li>Below: Cast &amp; Crew, More Like This, Details (as the movie).</li>
+    </ul>
+  </section>
+
+  <!-- 10 Player transport -->
+  <section class="screen" id="s-player" data-title="Player">
+    <h2><span>10</span>Player - controls</h2>
+    <p>No chrome while playing. Click or swipe shows the title, scrubber and the track buttons; hides after 4 s.</p>
+    <div class="frame"><div class="tv">
+      <div class="backdrop art g4"></div>
+      <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,.75) 100%)"></div>
+      <div style="position:absolute; left:90px; right:90px; bottom:70px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:34px;">
+          <div><div class="t-cap" style="color:rgba(255,255,255,.8)">Copperline · S2, E5</div><div class="t-h2" style="font-size:48px; margin-top:6px">The Signal Box</div></div>
+          <div class="btn-row" style="gap:16px">
+            <span class="btn round focus" style="width:80px;height:80px" title="Subtitles"><svg viewBox="0 0 24 24"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm2 8v2h5v-2zm7 0v2h5v-2zM6 9v2h12V9z"/></svg></span>
+            <span class="btn round" style="width:80px;height:80px" title="Audio"><svg viewBox="0 0 24 24"><path d="M3 10v4h4l5 5V5L7 10zm13.5 2A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4z"/></svg></span>
+            <span class="btn round" style="width:80px;height:80px;font-size:26px">1×</span>
+            <span class="btn round" style="width:80px;height:80px" title="Info"><svg viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg></span>
+          </div>
+        </div>
+        <div style="position:relative; height:12px; border-radius:6px; background:rgba(255,255,255,.3);">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:42%; border-radius:6px; background:#fff;"></div>
+          <div style="position:absolute; left:42%; top:-26px; transform:translateX(-50%); width:4px; height:64px; background:#fff; border-radius:2px;"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top:16px;" class="t-cap"><span style="color:#fff">21:48</span><span>-30:12 · Ends at 21:22</span></div>
+      </div>
+    </div></div>
+    <ul class="notes">
+      <li><b>Remote</b>: click = play / pause, left / right click = ±10 s, swipe on the touch surface = scrub (preview time above the playhead), Back = hide controls, then close.</li>
+      <li>Swipe up from the scrubber reaches the buttons: Subtitles, Audio, Speed, Info. Same menu content as the phone's `TracksMenu`.</li>
+      <li>Reporting as on the phone: start, every 10 s, pause, seek, stop.</li>
+      <li>Ends-at clock follows playback speed.</li>
+    </ul>
+  </section>
+
+  <!-- 11 Tracks menu -->
+  <section class="screen" id="s-tracks" data-title="Tracks">
+    <h2><span>11</span>Player - subtitles menu</h2>
+    <p>A glass list anchored above its button. Video keeps playing behind it.</p>
+    <div class="frame"><div class="tv">
+      <div class="backdrop art g4"></div>
+      <div style="position:absolute; inset:0; background:rgba(0,0,0,.35)"></div>
+      <div class="panel" style="position:absolute; right:250px; bottom:210px; width:640px; padding:24px 20px;">
+        <div class="li-head" style="margin-top:6px">Subtitles</div>
+        <div class="list">
+          <div class="li"><span><span class="check"></span>Off</span></div>
+          <div class="li focus"><span><span class="check">✓</span>English</span><span class="val">SRT</span></div>
+          <div class="li"><span><span class="check"></span>English (SDH)</span><span class="val">PGS</span></div>
+          <div class="li"><span><span class="check"></span>Español</span><span class="val">ASS</span></div>
+          <div class="li"><span><span class="check"></span>Deutsch</span><span class="val">External</span></div>
+        </div>
+        <div style="height:1px; background:rgba(255,255,255,.12); margin:18px 34px;"></div>
+        <div class="list"><div class="li"><span>Subtitle Timing</span><span class="val">+0.4 s</span></div></div>
+      </div>
+      <div style="position:absolute; left:90px; right:90px; bottom:70px;">
+        <div style="display:flex; justify-content:flex-end; margin-bottom:34px;">
+          <div class="btn-row" style="gap:16px">
+            <span class="btn round" style="width:80px;height:80px;background:rgba(255,255,255,.4)"><svg viewBox="0 0 24 24"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm2 8v2h5v-2zm7 0v2h5v-2zM6 9v2h12V9z"/></svg></span>
+            <span class="btn round" style="width:80px;height:80px"><svg viewBox="0 0 24 24"><path d="M3 10v4h4l5 5V5L7 10zm13.5 2A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4z"/></svg></span>
+            <span class="btn round" style="width:80px;height:80px;font-size:26px">1×</span>
+            <span class="btn round" style="width:80px;height:80px"><svg viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg></span>
+          </div>
+        </div>
+        <div style="height:12px; border-radius:6px; background:rgba(255,255,255,.3);"><div style="width:42%; height:100%; border-radius:6px; background:#fff;"></div></div>
+      </div>
+      <div style="position:absolute; left:90px; right:930px; bottom:300px; text-align:center; font-size:46px; font-weight:600; text-shadow: 0 0 6px #000, 0 0 3px #000;">I told you the lamp was out.</div>
+    </div></div>
+    <ul class="notes">
+      <li>Click a row = pick and close. Subtitle Timing opens a horizontal −10 s … +10 s slider (left / right in 0.1 s steps).</li>
+      <li>Audio menu: same list with codec / channels as the value (e.g. "Atmos 7.1").</li>
+      <li>Picks carry to the next episode by language, as on the phone (`carryTracks`).</li>
+    </ul>
+  </section>
+
+  <!-- 12 Up Next -->
+  <section class="screen" id="s-upnext" data-title="Up Next">
+    <h2><span>12</span>Player - Up Next</h2>
+    <p>Last 30 s of an episode (or at the end credits): the video shrinks to a corner, the next episode takes the screen.</p>
+    <div class="frame"><div class="tv">
+      <div class="backdrop art g5"></div>
+      <div class="scrim-left"></div>
+      <div class="art g4" style="position:absolute; right:90px; top:80px; width:560px; height:315px; border-radius:16px; box-shadow:0 20px 50px rgba(0,0,0,.6);"><div class="prog"><span class="track"><i style="width:96%"></i></span><span>0:24</span></div></div>
+      <div style="position:absolute; left:90px; top:420px; width:950px;">
+        <div class="t-small" style="text-transform:uppercase; letter-spacing:.12em; color:#fff; font-weight:600;">Next episode in 12</div>
+        <div class="t-title" style="margin-top:18px">S2, E6 · Night Freight</div>
+        <div class="t-body" style="margin-top:20px; line-height:1.45; color:rgba(255,255,255,.88)">The line closes for a week. Iris rides the last freight run with the one person she can't stand.</div>
+        <div class="btn-row" style="margin-top:48px;">
+          <span class="btn focus"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>Play Now</span>
+          <span class="btn">Back to Credits</span>
+        </div>
+      </div>
+    </div></div>
+    <ul class="notes">
+      <li>Countdown in the eyebrow (no ring on TV - text reads better from the sofa). Autoplay follows the Settings switch.</li>
+      <li>Back to Credits / Back = video full screen again, no autoplay for this episode.</li>
+      <li>Last episode of the series → "More Like This" row instead, no countdown.</li>
+    </ul>
+  </section>
+
+  <!-- 13 Settings -->
+  <section class="screen" id="s-settings" data-title="Settings">
+    <h2><span>13</span>Settings</h2>
+    <p>tvOS Settings style: the list on the right, a big icon or preview for the focused row on the left. Rows open checkmark lists (same `pickers`).</p>
+    <div class="frame"><div class="tv">
+      <div class="tabbar"><span>Home</span><span>Library</span><span>Search</span><span class="sel">Settings</span></div>
+      <div class="profile"><span class="clock">20:41</span><span class="avatar">A</span></div>
+      <div class="safe" style="top:190px; display:grid; grid-template-columns: 1fr 980px; gap:100px;">
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:30px;">
+          <div class="art g9" style="width:620px; height:349px; border-radius:20px; display:flex; align-items:flex-end; justify-content:center; padding-bottom:36px;">
+            <span style="position:relative; z-index:1; font-size:36px; font-weight:600; color:#ffef5a; text-shadow:0 0 4px #000,0 0 2px #000">The tide is turning.</span>
+          </div>
+          <div class="t-cap" style="text-align:center; max-width:560px">Size, font, colour and edge for text subtitles. Image subtitles (PGS) keep their own look.</div>
+        </div>
+        <div>
+          <div class="li-head" style="margin-top:0">Accounts</div>
+          <div class="list">
+            <div class="li"><span style="display:flex;align-items:center;gap:18px"><span class="avatar" style="width:48px;height:48px;font-size:22px">A</span>Alex · Home server</span><span class="val"><span class="dot"></span></span></div>
+          </div>
+          <div class="li-head">Display</div>
+          <div class="list">
+            <div class="li focus"><span>Subtitles</span><span class="val">Medium · Yellow ›</span></div>
+          </div>
+          <div class="li-head">Playback</div>
+          <div class="list">
+            <div class="li"><span>Autoplay Next Episode</span><span class="val">On</span></div>
+            <div class="li"><span>Audio Language</span><span class="val">English ›</span></div>
+            <div class="li"><span>Subtitles</span><span class="val">Only Forced ›</span></div>
+          </div>
+          <div class="li-head">About</div>
+          <div class="list"><div class="li"><span>About Rillwood</span><span class="val">26.0 ›</span></div></div>
+        </div>
+      </div>
+    </div></div>
+    <ul class="notes">
+      <li>No Appearance row (tvOS follows the system) and no Downloads section.</li>
+      <li>On / Off rows toggle in place on click; everything else opens a list page in the same layout.</li>
+      <li>About: Source code / Privacy policy show a QR code instead of opening a browser (tvOS has none).</li>
+      <li>Accounts row opens Who's Watching with Sign Out / Add Account.</li>
+    </ul>
+  </section>
+
+  <!-- 14 Offline -->
+  <section class="screen" id="s-offline" data-title="Offline">
+    <h2><span>14</span>Can't reach the server</h2>
+    <p>The `Offline` message, full screen. Rechecks on its own and reloads when the server is back.</p>
+    <div class="frame"><div class="tv">
+      <div class="tabbar"><span class="sel">Home</span><span>Library</span><span>Search</span><span>Settings</span></div>
+      <div class="profile"><span class="clock">20:41</span><span class="avatar">A</span></div>
+      <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:30px; text-align:center;">
+        <svg viewBox="0 0 24 24" style="width:120px;height:120px;fill:var(--text-2)"><path d="M2.3 3.7L3.7 2.3l18 18-1.4 1.4-3.2-3.2H7a5 5 0 0 1-1-9.9c.1-.6.3-1.2.6-1.7zM8.6 5.4A7 7 0 0 1 18.9 10 4.5 4.5 0 0 1 21 18l-1.4-1.4A2.5 2.5 0 0 0 18.5 12H17v-1a5 5 0 0 0-7-4.6z"/></svg>
+        <div class="t-title" style="font-size:60px">Can't reach Home server</div>
+        <div class="t-body muted" style="max-width:1000px">Check that the server is on and this Apple TV is on the same network. Rillwood keeps trying.</div>
+        <div class="btn-row" style="margin-top:20px"><span class="btn focus">Try Again</span><span class="btn">Switch Account</span></div>
+      </div>
+    </div></div>
+    <ul class="notes">
+      <li>Same backoff as `src/connection.ts`; back online → the failed screen reloads, focus returns where it was.</li>
+      <li>Signed out (401) → straight to Sign in for that server, like the phone.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+  // Fill shelves / grids with gradient art.
+  const NAMES = ['Harbor Lights', 'The Quiet Orchard', 'Northbound', 'Salt & Ember', 'Glasshouse', 'Low Tide', 'Paper Moons', 'The Long Field', 'Copperline', 'Winter Kept', 'Fold Lines', 'Halfway House'];
+  const YEARS = [2024, 2023, 2025, 2022, 2024, 2021, 2025, 2023, 2023, 2022, 2024, 2025];
+  const g = (i) => 'g' + ((i % 8) + 1);
+  const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; };
+
+  document.querySelectorAll('[data-shelf]').forEach((row) => {
+    const kind = row.dataset.shelf;
+    const start = +(row.dataset.start || 0);
+    const names = row.dataset.names ? row.dataset.names.split('|') : NAMES.slice(start).concat(NAMES).slice(0, +(row.dataset.count || 6));
+    const progress = row.dataset.progress ? row.dataset.progress.split(',').map(Number) : [];
+    const labels = row.dataset.labels ? row.dataset.labels.split('|') : null;
+    const focus = row.dataset.focus === undefined ? -1 : +row.dataset.focus;
+    names.forEach((n, i) => {
+      const p = progress[i];
+      const prog = p ? `<div class="prog"><span class="track"><i style="width:${p}%"></i></span><span>${Math.round((100 - p) * 0.9)}m</span></div>` : '';
+      const art = `<div class="card art ${kind} ${g(i + start)} ${p ? 'has-prog' : ''} ${i === focus ? 'focus' : ''}">${kind === 'poster' || !p ? `<span class="name">${n}</span>` : `<span class="name" style="bottom:46px">${n}</span>`}${prog}</div>`;
+      let label = '';
+      if (labels) label = i === focus ? `<div class="label"><b>${n}</b>${labels[i]}</div>` : `<div class="label">${labels[i]}</div>`;
+      row.appendChild(el(`<div class="cell ${i === focus ? 'focused' : ''}">${art}${label}</div>`));
+    });
+  });
+
+  document.querySelectorAll('[data-grid]').forEach((grid) => {
+    const n = +grid.dataset.grid, focus = +grid.dataset.focus;
+    for (let i = 0; i < n; i++) {
+      const name = NAMES[i % NAMES.length];
+      const watched = i === 2 ? '<span class="badge-watched">✓ Watched</span>' : '';
+      const label = i === focus ? `<div class="label" style="transform:translateY(16px)"><b>${name}</b>${YEARS[i % YEARS.length]} · 1h 52m</div>` : '';
+      grid.appendChild(el(`<div class="cell"><div class="card art poster ${g(i)} ${i === focus ? 'focus' : ''}">${watched}<span class="name">${name}</span></div>${label}</div>`));
+    }
+  });
+
+  // Cast row
+  const cast = [['Mara Ellison', 'Nell'], ['Tom Reyes', 'Arlo'], ['June Okafor', 'Dr. Penn'], ['Ivo Brandt', 'Keeper'], ['Sade Lin', 'Ruth'], ['Lena Varga', 'Director'], ['Paul Moreau', 'Writer'], ['Ines Kahl', 'Music']];
+  const castRow = document.getElementById('cast');
+  cast.forEach(([n, r], i) => castRow.appendChild(el(`<div class="cell" style="align-items:center;width:200px"><div class="art ${g(i + 2)}" style="width:140px;height:140px;border-radius:50%;${i === 0 ? 'transform:scale(1.1);box-shadow:0 0 0 6px #fff,0 20px 40px rgba(0,0,0,.6)' : ''}"></div><div class="label" style="text-align:center"><b>${n}</b>${r}</div></div>`)));
+
+  // Episodes row
+  const eps = [['The Crossing', 'Watched'], ['Two Platforms', 'Watched'], ['Dead Reckoning', 'Watched'], ['Lamp Oil', 'Watched'], ['The Signal Box', 35], ['Night Freight', 0], ['Coupling', 0]];
+  const epRow = document.getElementById('episodes');
+  eps.forEach(([t, s], i) => {
+    const over = s === 'Watched' ? '<span class="badge-watched">✓ Watched</span>' : s ? `<div class="prog"><span class="track"><i style="width:${s}%"></i></span><span>34m</span></div>` : '';
+    const focus = i === 4;
+    epRow.appendChild(el(`<div class="cell" style="width:430px"><div class="card art ${g(i + 3)} ${s && s !== 'Watched' ? 'has-prog' : ''} ${focus ? 'focus' : ''}" style="width:430px;height:242px">${over}</div><div class="label" style="white-space:normal; ${focus ? 'transform:translateY(16px)' : ''}"><b>E${i + 1} · ${t}</b>52 min${focus ? '<br>Iris finds the timetable has been rewritten by hand.' : ''}</div></div>`));
+  });
+
+  // Search keyboard
+  const keys = 'abcdefghijklmnopqrstuvwxyz'.split('');
+  const kbd = document.getElementById('kbd');
+  keys.forEach((k) => kbd.appendChild(el(`<span class="${k === 'o' ? 'focus' : ''}">${k}</span>`)));
+  ['space', 'delete', '123', '#+-'].forEach((k) => kbd.appendChild(el(`<span class="wide">${k}</span>`)));
+
+  // Table of contents
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('section.screen').forEach((s, i) => toc.appendChild(el(`<li><a href="#${s.id}">${String(i + 1).padStart(2, '0')} ${s.dataset.title}</a></li>`)));
+
+  // Scale each 1920 x 1080 screen to its frame
+  const fit = () => document.querySelectorAll('.frame').forEach((f) => f.querySelector('.tv').style.setProperty('--s', f.clientWidth / 1920));
+  new ResizeObserver(fit).observe(document.body);
+  fit();
+</script>
+</body>
+</html>
