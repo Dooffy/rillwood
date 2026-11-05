@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import { AccessibilityInfo, AppState, Dimensions, type AppStateStatus } from 'react-native';
+import { AccessibilityInfo, AppState, Dimensions, Platform, type AppStateStatus } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import {
   createGestureController,
@@ -15,6 +15,7 @@ import { ApiError, type BaseItemDto, type MediaSourceDto, type PlaybackInfoRespo
 import PlayerScreen from '@/app/player';
 import * as downloads from '@/downloads';
 import type { PlayerProps } from '@/player/Player';
+import { PIP_GRACE_MS } from '@/player/controls';
 import * as session from '@/session';
 import * as settings from '@/settings';
 import { palettes } from '@/theme';
@@ -670,14 +671,30 @@ describe('Player screen', () => {
     });
   });
 
+  // AppState is a jest-expo mock: tell every subscriber (the screen, the reporting hook).
+  const replaced: { restore(): void }[] = [];
+  const changeAppState = (state: AppStateStatus) =>
+    act(() => {
+      jest.mocked(AppState.addEventListener).mock.calls.forEach(([, listener]) => listener(state));
+    });
+  afterEach(() => {
+    replaced
+      .splice(0)
+      .reverse()
+      .forEach((r) => r.restore());
+    jest.useRealTimers();
+  });
+
   it('leaving the app pauses it, controls up; Control Center (iOS inactive) does not; the lock screen plays and pauses', async () => {
+    jest.useFakeTimers();
     await renderPlaying();
-    // AppState is a jest-expo mock: tell every subscriber (the screen, the reporting hook).
-    const change = (state: AppStateStatus) =>
-      act(() => jest.mocked(AppState.addEventListener).mock.calls.forEach(([, listener]) => listener(state)));
+    const change = changeAppState;
     await change('inactive');
     expect(lastPlayer().paused).toBe(false);
     await change('background');
+    // iOS waits for picture in picture first; none started: paused.
+    expect(lastPlayer().paused).toBe(false);
+    await act(() => jest.advanceTimersByTime(PIP_GRACE_MS));
     expect(lastPlayer().paused).toBe(true);
     expect(progressed).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ EventName: 'Pause' }));
     // Lock screen Play / Pause (audio in the background): the screen and the reports follow.
@@ -690,6 +707,65 @@ describe('Player screen', () => {
     expect(lastPlayer().paused).toBe(true);
     await fireEvent.press(screen.getByRole('button', { name: 'Play' }));
     expect(lastPlayer().paused).toBe(false);
+  });
+
+  it('iOS: leaving while playing moves the video into picture in picture - it keeps playing; closed while away pauses', async () => {
+    jest.useFakeTimers();
+    await renderPlaying();
+    // The engine starts PiP as the app is left: it reports before the app is in the background.
+    await act(() => lastPlayer().onPipChange?.(true));
+    await changeAppState('background');
+    await act(() => jest.advanceTimersByTime(PIP_GRACE_MS * 2));
+    expect(lastPlayer().paused).toBe(false);
+    // The window's play / pause reach the screen like the lock screen's.
+    await act(() => lastPlayer().onPausedChange?.(true));
+    expect(lastPlayer().paused).toBe(true);
+    await act(() => lastPlayer().onPausedChange?.(false));
+    // Closed from the home screen: stops there.
+    await act(() => lastPlayer().onPipChange?.(false));
+    await act(() => jest.advanceTimersByTime(PIP_GRACE_MS));
+    expect(lastPlayer().paused).toBe(true);
+  });
+
+  it('iOS: picture in picture restored - back in the app, still playing, controls up', async () => {
+    jest.useFakeTimers();
+    await renderPlaying();
+    await act(() => lastPlayer().onPipChange?.(true));
+    await changeAppState('background');
+    await act(() => jest.advanceTimersByTime(PIP_GRACE_MS));
+    await changeAppState('active');
+    await act(() => lastPlayer().onPipChange?.(false));
+    await act(() => jest.advanceTimersByTime(PIP_GRACE_MS));
+    expect(lastPlayer().paused).toBe(false);
+    expect(screen.getByRole('button', { name: 'Pause' })).toBeOnTheScreen();
+  });
+
+  it('iOS: picture in picture restore reported before the app is active again still keeps it playing', async () => {
+    jest.useFakeTimers();
+    await renderPlaying();
+    await act(() => lastPlayer().onPipChange?.(true));
+    await changeAppState('background');
+    await act(() => jest.advanceTimersByTime(PIP_GRACE_MS));
+    await act(() => lastPlayer().onPipChange?.(false));
+    await changeAppState('active');
+    await act(() => jest.advanceTimersByTime(PIP_GRACE_MS));
+    expect(lastPlayer().paused).toBe(false);
+  });
+
+  it('iOS: picture in picture starting just after the app is left still keeps it playing', async () => {
+    jest.useFakeTimers();
+    await renderPlaying();
+    await changeAppState('background');
+    await act(() => lastPlayer().onPipChange?.(true));
+    await act(() => jest.advanceTimersByTime(PIP_GRACE_MS));
+    expect(lastPlayer().paused).toBe(false);
+  });
+
+  it('Android: leaving pauses at once (no picture in picture yet)', async () => {
+    replaced.push(jest.replaceProperty(Platform, 'OS', 'android'));
+    await renderPlaying();
+    await changeAppState('background');
+    expect(lastPlayer().paused).toBe(true);
   });
 
   it('tracks menu: current values, pick a subtitle, change speed; controls stay up while it is open', async () => {

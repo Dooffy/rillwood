@@ -13,6 +13,8 @@ export const STALL_SPINNER_MS = 500;
 export const PULL_CLOSE_DISTANCE = 120;
 /** The Up Next card shows for this long before the end of an episode that has a next one. */
 export const UP_NEXT_SECONDS = 30;
+/** iOS: how long the pause on leave waits for picture in picture to start (`onPipChange` usually comes first). */
+export const PIP_GRACE_MS = 500;
 /** Portrait shows the picture small and mpv sizes text to the picture: subtitles a step larger there. */
 export const PORTRAIT_SUBTITLE_SCALE = 1.25;
 

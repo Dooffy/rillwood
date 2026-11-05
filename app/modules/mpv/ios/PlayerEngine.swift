@@ -266,9 +266,9 @@ final class MPVPlayerEngine: NSObject {
 		#if os(iOS)
 		hasRenderedFirstFrame = false
 		#endif
-		// Rillwood: PiP is post-MVP. The `audio` background mode (lock-screen play) would let iOS start it on its own when
-		// the app is left - a paused, black window.
-		setPictureInPictureAutoStartEnabled(false)
+		// Rillwood: leaving the app while a video plays moves it into PiP (AVKit only auto-starts while playing). The JS
+		// screen keeps playing then instead of pausing on leave (docs/context/player.md).
+		setPictureInPictureAutoStartEnabled(true)
 
 		let preset = PlayerPreset(
 			id: .sdrRec709,
@@ -766,6 +766,9 @@ extension MPVPlayerEngine: MPVLayerRendererDelegate {
 extension MPVPlayerEngine: PiPControllerDelegate {
 	func pipController(_ controller: PiPController, willStartPictureInPicture: Bool) {
 		Logger.shared.log("PiP: will start", type: "Info")
+		// Rillwood: tell the host now, not at didStart - an auto-start begins before the app is in the background, so
+		// the screen sees PiP before its pause-on-leave. A failed start reports false (didStart).
+		delegate?.engine(self, didChangePictureInPicture: true)
 		// Sync timebase before PiP starts for smooth transition
 		renderer?.syncTimebase()
 		// Set current time for PiP progress bar
@@ -814,18 +817,13 @@ extension MPVPlayerEngine: PiPControllerDelegate {
 		completionHandler(true)
 	}
 
+	// Rillwood: the PiP window's play / pause is a play / pause from outside - the host follows (controls, reports).
 	func pipControllerPlay(_ controller: PiPController) {
-		print("PiP play requested")
-		intendedPlayState = true
-		renderer?.play()
-		pipController?.setPlaybackRate(1.0)
+		playFromOutside(true)
 	}
 
 	func pipControllerPause(_ controller: PiPController) {
-		print("PiP pause requested")
-		intendedPlayState = false
-		renderer?.pausePlayback()
-		pipController?.setPlaybackRate(0.0)
+		playFromOutside(false)
 	}
 
 	func pipController(_ controller: PiPController, skipByInterval interval: CMTime) {
