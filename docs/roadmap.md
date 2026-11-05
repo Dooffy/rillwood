@@ -198,9 +198,45 @@ Design + sources: `docs/research/background-downloads.md`.
 - [ ] Download a show from its page (idea - revise before building): today a show with many seasons means picking each season, then Download. Instead a Download button on the show that asks what to get, like the Apple TV app (e.g. a season picker, all seasons, unwatched only). Decide the choices, where the button sits and how it fits the season header button
 - [ ] Long-press menu: Play / Resume Episode for shows and seasons (async next-episode lookup, `seriesNextUp` / `seriesPlayTarget` out of the series screen; `itemActions` into `items.ts`)
 
+## TV - Apple TV (post-MVP)
+
+Spike 2026-11-05 (simulator, reverted): builds, signs in, plays through mpv, remote drives the player. Learnings, hacks and fixes: `docs/research/apple-tv.md`. Screen drafts: `docs/research/apple-tv-screens.html` (numbers below = draft screen). One PR each; 1-5 first (every screen needs focus + the shell), then screens in any order (Home, detail, player first = usable soonest).
+
+Foundation:
+
+- [ ] 1. TV build: `react-native-tvos` (npm alias, same RN minor) + `@react-native-tvos/config-tv`, `EXPO_TV=1` prebuild, `patch-package` for the `expo-modules-core` Swift crash (research §Problems 1), EAS TV profile, CI TV bundle check. Decision record + CLAUDE.md §2 rows (new deps)
+- [ ] 2. Gate what TV doesn't have (`Platform.isTV`): downloads module + Downloads tab, offline queue / offload, orientation lock, file sharing; no touch gestures in the player (pinch crashes on tvOS)
+- [ ] 3. TV storage: accounts list + settings out of the kv-store (tvOS can purge caches) into UserDefaults / Keychain; tokens stay in secure-store
+- [ ] 4. Focus building blocks: focused styles for cards, buttons, rows, pills (scale + lift + white for buttons), focus guides between rows, preferred first focus per screen
+- [ ] 5. TV shell: top tab bar Home / Library / Search / Settings + profile avatar, hides on scroll; Menu = back one level, tab root → Home; no native modals on TV (remote presses don't reach them - player + sheets as pushed screens)
+
+Screens:
+
+- [ ] 6. Welcome / add server (01)
+- [ ] 7. Sign in: Quick Connect first, password form as fallback (02)
+- [ ] 8. Who's Watching: accounts across servers, long-press Sign Out / Remove (03)
+- [ ] 9. Home: full-screen Up Next hero with play button + progress, Continue Watching / Next Up / Recently Added shelves (04)
+- [ ] 10. Library: type pills, poster grid (episodes: landscape grid), sort / filter side panel, paging (05)
+- [ ] 11. Search tab: tvOS keyboard, results grouped Movies / Shows / Episodes / People, recent searches (06)
+- [ ] 12. Movie / episode detail: hero with facts, badges, play row, credits; More panel; Cast & Crew, More Like This, Details (07-08)
+- [ ] 13. Series detail: hero, season pills switch the episode shelf, next unwatched episode first (09)
+- [ ] 14. Player controls: remote mapping (select, play / pause, ±10 s, swipe-to-scrub, Menu hides then closes), title + scrubber + track buttons, auto-hide (10)
+- [ ] 15. Player tracks menu: subtitles / audio / speed lists, subtitle timing slider (11)
+- [ ] 16. Up Next: next episode takes the screen, video in the corner, text countdown, Back to Credits (12)
+- [ ] 17. Settings: tvOS split layout (preview left, list right), option pages, About with QR codes (no browser) (13)
+- [ ] 18. Offline / error / empty states, signed-out → Sign in (14)
+- [ ] 19. Long-press item menus on cards everywhere (Mark Watched, Play from Start, Go to Series)
+
+Release:
+
+- [ ] 20. Assets: layered app icon, Top Shelf images, launch screen
+- [ ] 21. Device test plan `docs/test-plans/tv.md` + run on a real Apple TV 4K: hardware decoding, HDR / Dolby Vision, Atmos, frame-rate match, remote
+- [ ] 22. App Store: tvOS on the existing app (Universal Purchase), screenshots, review
+- [ ] 23. Optional: Top Shelf extension (Continue Watching on the Apple TV home screen)
+
 ## Ideas
 
-- [ ] Research Apple TV (tvOS) + Google TV / Android TV apps: focus navigation (every card is already `Pressable`), RN TV support, player on TV, store requirements
+- [ ] Research Google TV / Android TV: same RN TV fork as Apple TV (`docs/research/apple-tv.md`), player + focus on Android TV, Play TV requirements
 - [ ] Kids mode (post-MVP): a simpler, YouTube-like look for children - big thumbnails in one feed, minimal chrome, only their allowed libraries / parental rating; switch in and out from the profile
 - [ ] Download space limit setting: the user picks the most space downloads may use (e.g. 5 / 10 / 25 / 50 GB / no limit), used bytes shown against it; the pre-flight refuses past the limit as well as on free space
 - [ ] Pick audio / subtitles on the detail screen (idea, every device): tap a track in the expanded Media list to tick it, Play / Resume starts with it (`openPlayer` passes the Jellyfin indexes, the player already takes them). The pick lasts while the page is open; the player's reports save it on the server once it plays. Today the list only shows the server's defaults, picks happen in the player's tracks menu
