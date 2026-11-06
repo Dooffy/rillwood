@@ -4,6 +4,7 @@ import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { getFocusedRouteNameFromRoute } from 'expo-router/react-navigation';
 import type { AndroidSymbol, SFSymbol } from 'expo-symbols';
 import { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 
 import type { BaseItemDto } from '@/api';
 import { useSession } from '@/session';
@@ -18,11 +19,16 @@ export const TAB_TITLES = { home: 'Home', library: 'Library', downloads: 'Downlo
 type TabName = keyof typeof TAB_TITLES;
 
 /** The tabs in order with their icons (SF Symbol, filled when selected; Material Symbol): native tabs + the sidebar. */
-export const TABS: { name: TabName; sf: SFSymbol; sfSelected: SFSymbol; md: AndroidSymbol }[] = [
+type Tab = { name: TabName; sf: SFSymbol; sfSelected: SFSymbol; md: AndroidSymbol };
+
+const ALL_TABS: Tab[] = [
   { name: 'home', sf: 'house', sfSelected: 'house.fill', md: 'home' },
   { name: 'library', sf: 'rectangle.stack', sfSelected: 'rectangle.stack.fill', md: 'video_library' },
   { name: 'downloads', sf: 'arrow.down.circle', sfSelected: 'arrow.down.circle.fill', md: 'download' },
 ];
+
+/** Apple TV has no downloads. */
+export const TABS = Platform.isTV ? ALL_TABS.filter((t) => t.name !== 'downloads') : ALL_TABS;
 
 /**
  * Title of the tabs screen in the root stack = the focused tab. iOS shows it as the back button text on screens pushed

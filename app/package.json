@@ -23,7 +23,7 @@
     "expo-system-ui": "~58.0.7",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "react-native": "0.88.1",
+    "react-native": "npm:react-native-tvos@0.88.1-0",
     "react-native-gesture-handler": "~3.3.0",
     "react-native-reanimated": "4.7.1",
     "react-native-safe-area-context": "~5.10.1",
@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@jest/globals": "30.5.2",
+    "@react-native-tvos/config-tv": "0.1.7",
     "@react-native/jest-preset": "0.88.1",
     "@testing-library/react-native": "^14.0.1",
     "@types/react": "~19.3.0",
@@ -42,6 +43,7 @@
     "jest": "~30.5.2",
     "jest-expo": "~58.0.13",
     "license-checker-rseidelsohn": "5.0.1",
+    "patch-package": "8.0.1",
     "prettier": "^3.9.9",
     "typescript": "~6.0.3"
   },
@@ -57,7 +59,7 @@
     "bundle:check": "expo export --platform ios --platform android --output-dir .bundle-check && rm -rf .bundle-check",
     "check": "npm run lint && npm run typecheck && npm run format:check && npm test -- --ci",
     "licenses": "node scripts/check-licenses.mjs",
-    "postinstall": "node scripts/generate-licences.mjs",
+    "postinstall": "patch-package && node scripts/generate-licences.mjs",
     "check:home": "node --no-warnings scripts/check-home.mjs"
   },
   "private": true,

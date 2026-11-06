@@ -2,7 +2,7 @@
 // Download from a button or menu (docs/context/downloads.md): the item's download state, start (looking up the files
 // first when the item came from a list), pause / resume, cancel, delete after a confirmation, a toast when starting fails.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 
 import { ApiError, request, type BaseItemDto, type Connection, type ItemsResult, type UserDto } from '@/api';
 import type { SheetAction } from '@/components/ActionSheet';
@@ -72,10 +72,10 @@ export type DownloadControl = {
   cancel: () => void;
 };
 
-/** The item's `downloadGroup` for the active account; null when it isn't downloadable or nobody is signed in. */
+/** The item's `downloadGroup` for the active account; null when it isn't downloadable, nobody is signed in, or on TV. */
 export function useDownloadGroup(item: BaseItemDto | undefined): string | null {
   const accountId = useSession().active?.id;
-  if (!accountId || !item || !DOWNLOADABLE.has(item.Type)) return null;
+  if (Platform.isTV || !accountId || !item || !DOWNLOADABLE.has(item.Type)) return null; // no downloads on TV
   return downloadGroup(accountId, item.Type === 'Season' ? { seasonId: item.Id } : { itemId: item.Id });
 }
 

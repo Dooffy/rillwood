@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { LogoMark } from '@/components/LogoMark';
+import { TvWelcome } from '@/components/TvWelcome';
 import { Text } from '@/components/Text';
 import { MIN_SERVER_VERSION } from '@/server';
 import { ONBOARDING } from '@/navigation';
@@ -24,9 +25,13 @@ const wall = {
  * "Use a saved account" opens Accounts to sign one back in.
  *
  * Phone: the wall on top, copy at the bottom. Wide portrait: the same, copy in a centred column. Wide landscape: the
- * wall on the left, copy on the right.
+ * wall on the left, copy on the right. Apple TV: its own screen with the address field on it (`TvWelcome`).
  */
 export default function Welcome() {
+  return Platform.isTV ? <TvWelcome /> : <PhoneWelcome />;
+}
+
+function PhoneWelcome() {
   const c = useColors();
   const { accounts } = useSession();
   const wide = useWide();

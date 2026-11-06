@@ -96,7 +96,8 @@
       ],
       "expo-image",
       "expo-status-bar",
-      "./modules/mpv/app.plugin.js"
+      "./modules/mpv/app.plugin.js",
+      "@react-native-tvos/config-tv"
     ],
     "experiments": {
       "typedRoutes": true,

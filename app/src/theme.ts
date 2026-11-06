@@ -190,3 +190,35 @@ export const scrollList = { showsVerticalScrollIndicator: false } as const;
  * (on Library that's the type chips), so each list asks for it; Android pads the bottom itself.
  */
 export const tabList = { ...scrollList, contentInsetAdjustmentBehavior: 'automatic' } as const;
+
+/**
+ * Apple TV: a 1920 × 1080 pt screen seen from the sofa, so its own type scale and sizes (screen drafts:
+ * docs/research/apple-tv-screens.html). Focus = scale up + lift; buttons turn the palette's text colour (text fields keep the system's look).
+ */
+export const tv = {
+  type: {
+    title: { fontSize: 76, fontWeight: '700', letterSpacing: -1 },
+    body: { fontSize: 29, fontWeight: '400' },
+    small: { fontSize: 23, fontWeight: '400' },
+    button: { fontSize: 31, fontWeight: '600' },
+    field: { fontSize: 33, fontWeight: '400' },
+  },
+  /** Safe margin from the screen edge (tvOS overscan). */
+  margin: 90,
+  gap: { sm: 26, lg: 44 },
+  button: { height: 86, paddingHorizontal: 44 },
+  field: { height: 96 },
+  /** Form column (Welcome, Sign in). */
+  formWidth: 900,
+  /** Longest line of centred copy. */
+  textWidth: 1400,
+  /** Full-screen artwork behind a form (Welcome). */
+  backdropOpacity: 0.35,
+  markSize: 120,
+  /** Unfocused button fill over any background. */
+  unfocused: 'rgba(255, 255, 255, 0.14)',
+  focus: {
+    buttonScale: 1.08,
+    shadow: { shadowColor: '#000000', shadowOpacity: 0.5, shadowRadius: 20, shadowOffset: { width: 0, height: 16 } },
+  },
+} as const;
