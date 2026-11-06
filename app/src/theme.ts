@@ -202,12 +202,32 @@ export const tv = {
     small: { fontSize: 23, fontWeight: '400' },
     button: { fontSize: 31, fontWeight: '600' },
     field: { fontSize: 33, fontWeight: '400' },
+    caption: { fontSize: 25, fontWeight: '400' },
+    /** Quiet (text-only) buttons and field labels. */
+    quiet: { fontSize: 27, fontWeight: '600' },
+    label: { fontSize: 23, fontWeight: '600' },
+    /** Quick Connect code. */
+    code: { fontSize: 130, fontWeight: '800', letterSpacing: 10, fontVariant: ['tabular-nums'] },
   },
-  /** Safe margin from the screen edge (tvOS overscan). */
+  /** Safe margins from the screen edge (tvOS overscan). */
   margin: 90,
+  marginTop: 60,
+  /** Between the two halves of a split screen (Sign in). */
+  columnGap: 120,
+  /** Raised surface over the background (Quick Connect code, password form). */
+  panel: { radius: 36, padding: 70, minHeight: 480 },
   gap: { sm: 26, lg: 44 },
   button: { height: 86, paddingHorizontal: 44 },
-  field: { height: 96 },
+  quietButton: { height: 70, paddingHorizontal: 30 },
+  icon: { button: 26, field: 34 },
+  /** Sunken fill + hairline so a field reads as "type here" (the system draws its own pill on focus). */
+  field: {
+    height: 96,
+    iconInset: 32,
+    textInset: 88,
+    fill: 'rgba(0, 0, 0, 0.45)',
+    hairline: 'rgba(255, 255, 255, 0.1)',
+  },
   /** Form column (Welcome, Sign in). */
   formWidth: 900,
   /** Longest line of centred copy. */
@@ -215,6 +235,8 @@ export const tv = {
   /** Full-screen artwork behind a form (Welcome). */
   backdropOpacity: 0.35,
   markSize: 120,
+  /** Active-server dot (Sign in). */
+  statusDot: 12,
   /** Unfocused button fill over any background. */
   unfocused: 'rgba(255, 255, 255, 0.14)',
   focus: {

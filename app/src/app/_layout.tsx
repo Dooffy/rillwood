@@ -89,7 +89,11 @@ export default function RootLayout() {
             {/* Header hidden, but the title labels the back button on Add server (else iOS shows the route path). */}
             <Stack.Screen name="(auth)/welcome" options={{ title: 'Welcome' }} />
             <Stack.Screen name="(auth)/server" options={pageOf('Add server')} />
-            <Stack.Screen name="(auth)/login" options={pageOf('Sign in')} />
+            {/* TV Sign in draws its own title (screen draft 02). */}
+            <Stack.Screen
+              name="(auth)/login"
+              options={Platform.isTV ? { title: 'Sign in', headerShown: false } : pageOf('Sign in')}
+            />
             <Stack.Screen name="(auth)/quick-connect" options={pageOf('Quick Connect')} />
             <Stack.Screen name="(auth)/accounts" options={pageOf('Accounts')} />
             <Stack.Screen name="(auth)/account" options={pageOf('Account')} />

@@ -54,6 +54,7 @@ export function TvWelcome() {
         <View style={styles.form}>
           <TvTextField
             label="Server address"
+            icon="server.rack"
             placeholder="192.168.1.20:8096"
             value={address}
             onChangeText={editAddress}
@@ -68,7 +69,7 @@ export function TvWelcome() {
             preferredFocus
           />
           <View style={styles.buttons}>
-            <TvButton title="Continue" onPress={connect} loading={loading} disabled={address.trim() === ''} />
+            <TvButton variant="primary" title="Continue" onPress={connect} loading={loading} />
             {accounts.length > 0 && <TvButton title="Use a saved account" onPress={() => router.push('/accounts')} />}
           </View>
         </View>

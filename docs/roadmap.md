@@ -215,7 +215,7 @@ Foundation:
 Screens:
 
 - [x] 6. Welcome / add server (01) - address on the Welcome screen itself (`TvWelcome`), system text field
-- [ ] 7. Sign in: Quick Connect first, password form as fallback (02)
+- [x] 7. Sign in: Quick Connect first, password form as fallback (02) - `TvSignIn`; every action in the panel column, expired codes renewed
 - [ ] 8. Who's Watching: accounts across servers, long-press Sign Out / Remove (03)
 - [ ] 9. Home: full-screen Up Next hero with play button + progress, Continue Watching / Next Up / Recently Added shelves (04)
 - [ ] 10. Library: type pills, poster grid (episodes: landscape grid), sort / filter side panel, paging (05)
