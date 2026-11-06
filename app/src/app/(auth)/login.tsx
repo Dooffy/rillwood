@@ -1,65 +1,42 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View, type TextInputInstance } from 'react-native';
+import { useRef } from 'react';
+import { Platform, StyleSheet, View, type TextInputInstance } from 'react-native';
 
-import { authErrorMessage, quickConnectEnabled, signIn, useServerParam } from '@/auth';
+import { useServerParam } from '@/auth';
 import { Button } from '@/components/Button';
 import { Page } from '@/components/Page';
 import { StepPills } from '@/components/StepPills';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
+import { TvSignIn } from '@/components/TvSignIn';
 import { isOutdatedServer, MIN_SERVER_VERSION, ONBOARDING_STEPS } from '@/server';
-import { ONBOARDING, resetTo, useOnboarding } from '@/navigation';
+import { ONBOARDING, useOnboarding } from '@/navigation';
+import type { Server } from '@/session';
 import { spacing } from '@/theme';
+import { usePasswordSignIn, useQuickConnectEnabled } from '@/useSignIn';
 
 export default function Login() {
   const server = useServerParam();
   // Prefilled when signing a signed-out account back in.
-  const params = useLocalSearchParams<{ userName?: string }>();
-  const onboarding = useOnboarding();
-  const [userName, setUserName] = useState(params.userName ?? '');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string>();
-  const [loading, setLoading] = useState(false);
-  const [quickConnect, setQuickConnect] = useState(false);
-  const passwordRef = useRef<TextInputInstance>(null);
-  // Ref, not state: Go + tap in one frame must not sign in twice.
-  const busy = useRef(false);
-
-  const name = userName.trim();
-
-  useEffect(() => {
-    if (!server) return;
-    const controller = new AbortController();
-    quickConnectEnabled(server, controller.signal)
-      .then(setQuickConnect)
-      .catch(() => {});
-    return () => controller.abort();
-  }, [server]);
-
+  const { userName } = useLocalSearchParams<{ userName?: string }>();
   if (!server) return <Redirect href="/server" />;
+  return Platform.isTV ? (
+    <TvSignIn server={server} initialUserName={userName} />
+  ) : (
+    <PhoneSignIn server={server} initialUserName={userName} />
+  );
+}
 
-  /** Typing clears the last error. */
-  const edit = (set: (text: string) => void) => (text: string) => {
-    set(text);
-    setError(undefined);
-  };
-
-  const submit = async () => {
-    if (name === '' || busy.current) return;
-    busy.current = true;
-    setError(undefined);
-    setLoading(true);
-    try {
-      await signIn(server, name, password);
-      resetTo('/home');
-    } catch (e) {
-      busy.current = false;
-      setError(authErrorMessage(e, 'signIn'));
-      setLoading(false);
-    }
-  };
+/** Username + password, Quick Connect as a second button (phone, tablet). */
+function PhoneSignIn({ server, initialUserName }: { server: Server; initialUserName?: string }) {
+  const onboarding = useOnboarding();
+  const quickConnect = useQuickConnectEnabled(server) ?? false;
+  const { userName, setUserName, password, setPassword, canSubmit, error, loading, submit } = usePasswordSignIn(
+    server,
+    initialUserName,
+  );
+  const passwordRef = useRef<TextInputInstance>(null);
 
   return (
     <Page form busy={loading}>
@@ -87,7 +64,7 @@ export default function Login() {
       <TextField
         label="Username"
         value={userName}
-        onChangeText={edit(setUserName)}
+        onChangeText={setUserName}
         textContentType="username"
         autoComplete="username"
         autoCapitalize="none"
@@ -102,7 +79,7 @@ export default function Login() {
         label="Password"
         secure
         value={password}
-        onChangeText={edit(setPassword)}
+        onChangeText={setPassword}
         error={error}
         textContentType="password"
         autoComplete="current-password"
@@ -110,7 +87,7 @@ export default function Login() {
         onSubmitEditing={submit}
         editable={!loading}
       />
-      <Button title="Sign in" onPress={submit} loading={loading} disabled={name === ''} />
+      <Button title="Sign in" onPress={submit} loading={loading} disabled={!canSubmit} />
       {quickConnect && (
         <Button
           title="Use Quick Connect"

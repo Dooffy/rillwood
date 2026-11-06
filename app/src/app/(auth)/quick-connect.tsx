@@ -1,46 +1,26 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { Redirect, router } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { authErrorMessage, quickConnect, useServerParam } from '@/auth';
+import { useServerParam } from '@/auth';
 import { Button } from '@/components/Button';
 import { Message } from '@/components/Message';
 import { Page } from '@/components/Page';
 import { Spinner } from '@/components/Spinner';
 import { StepPills } from '@/components/StepPills';
 import { Text } from '@/components/Text';
-import { resetTo, useOnboarding } from '@/navigation';
+import { useOnboarding } from '@/navigation';
 import { ONBOARDING_STEPS } from '@/server';
 import { radii, spacing, useColors } from '@/theme';
+import { useQuickConnectCode } from '@/useSignIn';
 
 export default function QuickConnect() {
   const server = useServerParam();
   const onboarding = useOnboarding();
   const c = useColors();
-  const [code, setCode] = useState<string>();
-  const [error, setError] = useState<string>();
-  const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    if (!server) return;
-    // Aborted on unmount / retry: stops polling and a cancelled sign-in never adds the account.
-    const controller = new AbortController();
-    quickConnect(server, { signal: controller.signal, onCode: setCode })
-      .then(() => resetTo('/home'))
-      .catch((e: unknown) => {
-        if (!controller.signal.aborted) setError(authErrorMessage(e, 'quickConnect'));
-      });
-    return () => controller.abort();
-  }, [server, attempt]);
+  const { code, error, retry } = useQuickConnectCode(server);
 
   if (!server) return <Redirect href="/server" />;
-
-  function retry() {
-    setError(undefined);
-    setCode(undefined);
-    setAttempt((a) => a + 1);
-  }
 
   return (
     <Page narrow>

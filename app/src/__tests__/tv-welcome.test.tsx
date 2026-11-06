@@ -60,10 +60,10 @@ describe('TvWelcome', () => {
     expect(router.push).not.toHaveBeenCalled();
   });
 
-  it('does nothing on Continue until an address is entered', async () => {
+  it('says what is missing on Continue with no address (TV keeps the button pressable)', async () => {
     await render(<TvWelcome />);
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
     await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(/Enter an address/);
     expect(probeServer).not.toHaveBeenCalled();
   });
 
