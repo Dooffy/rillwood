@@ -206,15 +206,15 @@ Spike 2026-11-05 (simulator, reverted): builds, signs in, plays through mpv, rem
 
 Foundation:
 
-- [ ] 1. TV build: `react-native-tvos` (npm alias, same RN minor) + `@react-native-tvos/config-tv`, `EXPO_TV=1` prebuild, `patch-package` for the `expo-modules-core` Swift crash (research §Problems 1), EAS TV profile, CI TV bundle check. Decision record + CLAUDE.md §2 rows (new deps)
-- [ ] 2. Gate what TV doesn't have (`Platform.isTV`): downloads module + Downloads tab, offline queue / offload, orientation lock, file sharing; no touch gestures in the player (pinch crashes on tvOS)
+- [x] 1. TV build: `react-native-tvos` (npm alias, same RN minor) + `@react-native-tvos/config-tv`, `EXPO_TV=1` prebuild, `patch-package` for the `expo-modules-core` Swift crash (research §Problems 1), EAS TV profile, CI TV bundle check. Decision record + CLAUDE.md §2 rows (new deps) - `docs/decisions/tv-build.md`; CI: the existing bundle check covers the fork (no TV-only JS)
+- [x] 2. Gate what TV doesn't have (`Platform.isTV`): downloads module + Downloads tab, offline queue / offload, orientation lock, file sharing; no touch gestures in the player (pinch crashes on tvOS)
 - [ ] 3. TV storage: accounts list + settings out of the kv-store (tvOS can purge caches) into UserDefaults / Keychain; tokens stay in secure-store
 - [ ] 4. Focus building blocks: focused styles for cards, buttons, rows, pills (scale + lift + white for buttons), focus guides between rows, preferred first focus per screen
 - [ ] 5. TV shell: top tab bar Home / Library / Search / Settings + profile avatar, hides on scroll; Menu = back one level, tab root → Home; no native modals on TV (remote presses don't reach them - player + sheets as pushed screens)
 
 Screens:
 
-- [ ] 6. Welcome / add server (01)
+- [x] 6. Welcome / add server (01) - address on the Welcome screen itself (`TvWelcome`), system text field
 - [ ] 7. Sign in: Quick Connect first, password form as fallback (02)
 - [ ] 8. Who's Watching: accounts across servers, long-press Sign Out / Remove (03)
 - [ ] 9. Home: full-screen Up Next hero with play button + progress, Continue Watching / Next Up / Recently Added shelves (04)

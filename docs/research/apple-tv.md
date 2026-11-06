@@ -15,6 +15,8 @@ Date: 2026-11-05. Throwaway spike: the current app (`main` @ `5b530a7`) built fo
 
 ## Build setup
 
+Now set up for real: `docs/decisions/tv-build.md` (task 1).
+
 | Step            | Detail                                                                                                                                                                                                       | Tag |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --- |
 | React Native    | `"react-native": "npm:react-native-tvos@0.88.1-0"` (its `latest`, matches RN 0.88.1). Expo prebuild warns "instead of recommended" - harmless                                                                | [V] |

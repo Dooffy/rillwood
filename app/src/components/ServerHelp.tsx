@@ -7,7 +7,8 @@ import { radii, spacing, useColors } from '@/theme';
 
 import { Text } from './Text';
 
-const WHERE = [
+/** Where to find the server address (Add server card, TV Welcome). */
+export const WHERE = [
   'At home: the computer running Jellyfin plus port 8096. Its Dashboard - Networking page shows the address.',
   "Away from home: the web address your server's owner gave you.",
   'No server yet? Jellyfin is free to install on a computer or NAS.',

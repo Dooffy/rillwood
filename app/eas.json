@@ -6,6 +6,12 @@
   "build": {
     "production": {
       "autoIncrement": true
+    },
+    "production_tv": {
+      "extends": "production",
+      "env": {
+        "EXPO_TV": "1"
+      }
     }
   }
 }

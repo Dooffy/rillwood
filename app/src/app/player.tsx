@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { router, useLocalSearchParams } from 'expo-router';
-import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { AccessibilityInfo, AppState, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import {
   GestureDetector,
@@ -36,7 +35,7 @@ import { UpNext } from '@/components/UpNext';
 import { localCopy } from '@/downloads';
 import { cardTitles, isItemId, nextEpisode, nextEpisodes, playback, TICKS_PER_SECOND } from '@/items';
 import { holdPlaying } from '@/offload';
-import { lockAppOrientation } from '@/orientation';
+import { lockAppOrientation, unlockOrientation } from '@/orientation';
 import {
   carryTracks,
   matchTracks,
@@ -204,7 +203,7 @@ export default function PlayerScreen() {
   // The only screen that rotates on a phone: unlocked while open, back to the app's lock on leave (upright portrait on
   // phones, still free on tablets).
   useEffect(() => {
-    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.DEFAULT).catch(() => {});
+    unlockOrientation();
     return lockAppOrientation;
   }, []);
 
@@ -442,7 +441,7 @@ export default function PlayerScreen() {
       <ColorsContext.Provider value={palettes.dark}>
         <StatusBar style="light" hidden={!controlsUp} />
         <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]} pointerEvents="none" />
-        <GestureDetector gesture={gestures}>
+        <TouchGestures gesture={gestures}>
           <Animated.View
             style={[styles.root, styles.clip, videoStyle]}
             accessible={playing && !controlsUp}
@@ -510,7 +509,7 @@ export default function PlayerScreen() {
                 <Message fill text={state.message} retry={retry} />
               ))}
           </Animated.View>
-        </GestureDetector>
+        </TouchGestures>
         {releaseHint && (
           <View style={[styles.hint, { top: insets.top + spacing.lg }]} pointerEvents="none">
             <Glass style={styles.hintPill}>
@@ -578,6 +577,17 @@ function useScreenReader(): boolean {
     return () => sub.remove();
   }, []);
   return on;
+}
+
+/** Touch gestures; none on Apple TV (no touch screen, and tvOS has no pinch recogniser - attaching one aborts). */
+function TouchGestures({
+  gesture,
+  children,
+}: {
+  gesture: ReturnType<typeof useCompetingGestures>;
+  children: ReactElement;
+}) {
+  return Platform.isTV ? children : <GestureDetector gesture={gesture}>{children}</GestureDetector>;
 }
 
 const styles = StyleSheet.create({

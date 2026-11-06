@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Background downloader - rules in docs/context/downloads.md. Only the downloads store (src/downloads.ts) imports this.
+// Apple TV has no downloads and tvOS doesn't build this module: there it's a stand-in that does nothing and has no tasks.
 import { NativeModule, requireNativeModule } from 'expo';
+import { Platform } from 'react-native';
 
 export type TaskState = 'queued' | 'running' | 'waiting' | 'paused' | 'done' | 'error';
 
@@ -64,4 +66,21 @@ declare class DownloadsModule extends NativeModule<DownloadsEvents> {
   getTasks(): Promise<Task[]>;
 }
 
-export default requireNativeModule<DownloadsModule>('Downloads');
+/** TV: every call does nothing, no tasks, no events (the UI offers no downloads there). */
+class NoDownloads extends NativeModule<DownloadsEvents> {
+  setCredential() {}
+  clearCredential() {}
+  enqueue() {}
+  pause() {}
+  resume() {}
+  cancel() {}
+  setCellular() {}
+  getTasks(): Promise<Task[]> {
+    return Promise.resolve([]);
+  }
+}
+
+const Downloads: DownloadsModule = Platform.isTV
+  ? new NoDownloads()
+  : requireNativeModule<DownloadsModule>('Downloads');
+export default Downloads;

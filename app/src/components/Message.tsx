@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { SymbolView } from 'expo-symbols';
 import { useState, type ComponentProps, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isConnectionError, type ApiError } from '@/api';
@@ -95,17 +95,19 @@ export function Offline({
         alert
         icon={{ ios: 'wifi.slash', android: 'wifi_off' }}
         title={`Can't reach ${server}`}
-        text="Check your connection, or watch something you've downloaded."
+        text={Platform.isTV ? 'Check your connection.' : "Check your connection, or watch something you've downloaded."}
       >
         <Button title="Retry" loading={busy} onPress={retry} />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Go to Downloads"
-          onPress={openDownloads}
-          style={({ pressed }) => [styles.link, pressed && styles.pressed]}
-        >
-          <Text variant="button">Go to Downloads</Text>
-        </Pressable>
+        {!Platform.isTV && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Go to Downloads"
+            onPress={openDownloads}
+            style={({ pressed }) => [styles.link, pressed && styles.pressed]}
+          >
+            <Text variant="button">Go to Downloads</Text>
+          </Pressable>
+        )}
       </StateCard>
     </View>
   );
