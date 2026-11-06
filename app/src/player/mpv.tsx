@@ -275,6 +275,7 @@ export const MpvPlayer = forwardRef<PlayerRef, PlayerProps>(function MpvPlayer(p
         onError={({ nativeEvent }) => latest.current.onError?.(nativeEvent.error)}
         // The engine already acted (lock screen, headphones, a call): the screen follows.
         onOutsidePause={({ nativeEvent: { isPaused } }) => latest.current.onPausedChange?.(isPaused)}
+        onPictureInPictureChange={({ nativeEvent: { isActive } }) => latest.current.onPipChange?.(isActive)}
         onPlaybackEnd={async () => {
           // Not gated on playing: mpv pauses itself at EOF. Once per end (a native reload at the end fires it again).
           if (!ready.current || ended.current || checkingEnd.current) return;

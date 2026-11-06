@@ -54,6 +54,11 @@ export type PlayerProps = {
   /** Waiting for data (stalled stream, seek, reload after an early end): true until frames flow again. */
   onBuffering?(buffering: boolean): void;
   onError?(msg: string): void;
+  /**
+   * Picture in picture on / off (iOS: the engine starts it when the app is left while playing). On arrives as it
+   * starts, before the app is in the background; off when the window is closed or restored.
+   */
+  onPipChange?(active: boolean): void;
 };
 
 export type PlayerRef = { seek(s: number): void; play(): void; pause(): void };

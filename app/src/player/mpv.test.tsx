@@ -540,6 +540,15 @@ describe('MpvPlayer', () => {
     expect(onPausedChange).toHaveBeenLastCalledWith(false);
   });
 
+  it('picture in picture on / off goes to the screen', async () => {
+    const onPipChange = jest.fn();
+    await render(<MpvPlayer source={source} onPipChange={onPipChange} />);
+    await act(async () => mockViewProps.onPictureInPictureChange?.({ nativeEvent: { isActive: true } }));
+    expect(onPipChange).toHaveBeenLastCalledWith(true);
+    await act(async () => mockViewProps.onPictureInPictureChange?.({ nativeEvent: { isActive: false } }));
+    expect(onPipChange).toHaveBeenLastCalledWith(false);
+  });
+
   describe('subtitle size on the picture (iOS draws subtitles into it)', () => {
     // Landscape iPhone view (fit: clear of the Dynamic Island), 2.39:1 film.
     const layout = (width: number, height: number) =>

@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, AppState, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { AccessibilityInfo, AppState, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import {
   GestureDetector,
   GestureHandlerRootView,
@@ -52,6 +52,7 @@ import {
 } from '@/playback';
 import {
   HIDE_AFTER_MS,
+  PIP_GRACE_MS,
   PULL_CLOSE_DISTANCE,
   SEEK_STEP,
   seekTarget,
@@ -261,15 +262,30 @@ export default function PlayerScreen() {
     return () => clearTimeout(timer);
   }, [shown, playing, paused, scrubbing, menuOpen, screenReader, touched]);
 
-  // Leaving the app (home, lock, another app) pauses on both platforms: back in the app, the controls are up and Play
-  // carries on. Not on iOS `inactive` (Control Center, a notification pulled down). Lock-screen Play can resume audio.
+  // Leaving the app (home, lock, another app) pauses: back in the app, the controls are up and Play carries on. Not on
+  // iOS `inactive` (Control Center, a notification pulled down). iOS: a playing video moves into picture in picture
+  // instead - the engine starts it as the app is left (`onPipChange`); the pause waits PIP_GRACE_MS and only lands if
+  // PiP didn't start. Lock-screen Play can resume audio.
+  const pip = useRef(false);
+  const away = useRef(false);
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (state) => {
-      if (state !== 'background') return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const leave = () => {
+      if (pip.current) return;
       setPaused(true);
       setShown(true);
+    };
+    const sub = AppState.addEventListener('change', (state) => {
+      clearTimeout(timer);
+      away.current = state === 'background';
+      if (!away.current) return;
+      if (Platform.OS === 'ios') timer = setTimeout(leave, PIP_GRACE_MS);
+      else leave();
     });
-    return () => sub.remove();
+    return () => {
+      sub.remove();
+      clearTimeout(timer);
+    };
   }, []);
 
   // Jellyfin sees the session: start once mpv loaded the file, progress every 10 s / pause / seek, stop on leave.
@@ -468,6 +484,16 @@ export default function PlayerScreen() {
                   }}
                   // Lock screen, headphones, a call: the controls and the reports follow.
                   onPausedChange={setPaused}
+                  // PiP closed while away stops there (nothing plays unseen); restored: back with the controls up. A restore
+                  // may report the stop before the app is active again - still away after the grace = closed.
+                  onPipChange={(active) => {
+                    pip.current = active;
+                    if (active) return;
+                    setShown(true);
+                    setTimeout(() => {
+                      if (away.current && !pip.current) setPaused(true);
+                    }, PIP_GRACE_MS);
+                  }}
                   onBuffering={setWaiting}
                   onError={() => {
                     setWaiting(false);
