@@ -2,7 +2,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import type { BaseItemDto } from './api';
-import { credits, detailView, information, library, production } from './detail';
+import { credits, detailView, heroFacts, information, library, production } from './detail';
 
 const now = new Date(2026, 9, 4, 21, 0);
 const at = (h: number, m: number) =>
@@ -232,5 +232,13 @@ describe('information', () => {
     const ended = information({ ...show, Status: 'Ended', EndDate: '2024-03-01T00:00:00Z' });
     expect(ended).toContainEqual({ label: 'Aired', value: '12 Jan 2023 - 1 Mar 2024' });
     expect(ended.map((f) => f.label)).not.toContain('Airs');
+  });
+});
+
+describe('heroFacts', () => {
+  it('joins year, rating and run time, skipping what is missing', () => {
+    expect(heroFacts(sintel)).toBe('2010 · PG · 12m');
+    expect(heroFacts({ ...sintel, OfficialRating: undefined, RunTimeTicks: undefined })).toBe('2010');
+    expect(heroFacts({ Id: 'x', Name: 'X', Type: 'Movie' })).toBeUndefined();
   });
 });

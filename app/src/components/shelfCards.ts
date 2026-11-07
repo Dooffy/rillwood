@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { spacing, useWide } from '@/theme';
+import { Platform, useWindowDimensions } from 'react-native';
+
+import { spacing, tv, useWide } from '@/theme';
 
 import { LANDSCAPE_WIDTH, POSTER_WIDTH, WIDE_LANDSCAPE_WIDTH, WIDE_POSTER_WIDTH } from './Card';
 import { fitCards } from './Row';
@@ -17,8 +19,19 @@ const PHONE_LANDSCAPE: CardSize = { count: 3, width: LANDSCAPE_WIDTH };
  * the tab's width (less the sidebar in landscape), so a shelf never ends in a gap and artwork grows with the iPad.
  */
 export function useShelfCards(): { rowWidth: number; posters: CardSize; landscape: CardSize } {
-  const rowWidth = useTabContentWidth() - 2 * spacing.md;
+  const tabWidth = useTabContentWidth();
+  const { width } = useWindowDimensions();
   const wide = useWide();
+  if (Platform.isTV) {
+    // Apple TV: the whole screen less its safe margins, TV-sized cards (`TvShelf`).
+    const tvRow = width - 2 * tv.margin;
+    return {
+      rowWidth: tvRow,
+      posters: fitCards(tvRow, tv.shelf.posterWidth, 1, tv.shelf.gap),
+      landscape: fitCards(tvRow, tv.shelf.landscapeWidth, 1, tv.shelf.gap),
+    };
+  }
+  const rowWidth = tabWidth - 2 * spacing.md;
   return {
     rowWidth,
     posters: wide ? fitCards(rowWidth, WIDE_POSTER_WIDTH) : PHONE_POSTERS,

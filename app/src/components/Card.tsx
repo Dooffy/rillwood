@@ -2,10 +2,10 @@
 import { memo } from 'react';
 
 import type { BaseItemDto } from '@/api';
-import { Pressable, StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
+import { Platform, Pressable, StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
 
 import { spokenRemaining } from '@/format';
-import { pressedOpacity, radii, spacing, type, useColors } from '@/theme';
+import { pressedOpacity, radii, spacing, tv, type, useColors } from '@/theme';
 
 import { Artwork } from './Artwork';
 import { isInProgress } from './ProgressBar';
@@ -94,7 +94,8 @@ const MediaCard = memo(function MediaCard({
       accessibilityLabel={cardLabel(props)}
       {...longPressProps(longPress)}
       onPress={press}
-      style={({ pressed }) => [styles.card, { width }, pressed && styles.pressed]}
+      // Apple TV: focus grows the card and lifts it (the shelf leaves room for it).
+      style={({ pressed, focused }) => [styles.card, { width }, pressed && styles.pressed, focused && styles.focused]}
     >
       <Artwork
         image={image}
@@ -104,11 +105,11 @@ const MediaCard = memo(function MediaCard({
         played={played}
       />
       <View>
-        <Text variant="label" numberOfLines={1}>
+        <Text variant="label" numberOfLines={1} style={Platform.isTV && tv.type.cardTitle}>
           {title}
         </Text>
         {subtitle !== undefined && (
-          <Text variant="caption" secondary numberOfLines={1}>
+          <Text variant="caption" secondary numberOfLines={1} style={Platform.isTV && tv.type.small}>
             {subtitle}
           </Text>
         )}
@@ -179,6 +180,7 @@ export function CardPlaceholder({
 const styles = StyleSheet.create({
   card: { gap: spacing.sm },
   pressed: { opacity: pressedOpacity },
+  focused: { transform: [{ scale: tv.focus.cardScale }], ...tv.focus.shadow, zIndex: 1 },
   placeholderArt: { width: '100%', borderRadius: radii.card },
   placeholderLine: { height: type.caption.fontSize, borderRadius: radii.pill },
 });
