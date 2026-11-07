@@ -14,21 +14,32 @@ import type { Colors } from '@/theme';
 export const ONBOARDING = { onboarding: '1' } as const;
 
 /** Tab bar labels by route name (`src/app/(tabs)/`). */
-export const TAB_TITLES = { home: 'Home', library: 'Library', downloads: 'Downloads' } as const;
+export const TAB_TITLES = {
+  home: 'Home',
+  library: 'Library',
+  downloads: 'Downloads',
+  search: 'Search',
+} as const;
 
 type TabName = keyof typeof TAB_TITLES;
 
 /** The tabs in order with their icons (SF Symbol, filled when selected; Material Symbol): native tabs + the sidebar. */
 type Tab = { name: TabName; sf: SFSymbol; sfSelected: SFSymbol; md: AndroidSymbol };
 
-const ALL_TABS: Tab[] = [
+/** Every tab route, each with a trigger; the ones a platform doesn't use are hidden (`TABS`). */
+export const ALL_TABS: Tab[] = [
   { name: 'home', sf: 'house', sfSelected: 'house.fill', md: 'home' },
   { name: 'library', sf: 'rectangle.stack', sfSelected: 'rectangle.stack.fill', md: 'video_library' },
   { name: 'downloads', sf: 'arrow.down.circle', sfSelected: 'arrow.down.circle.fill', md: 'download' },
+  { name: 'search', sf: 'magnifyingglass', sfSelected: 'magnifyingglass', md: 'search' },
 ];
 
-/** Apple TV has no downloads. */
-export const TABS = Platform.isTV ? ALL_TABS.filter((t) => t.name !== 'downloads') : ALL_TABS;
+/**
+ * The tabs shown, in order. Phone / tablet: Home, Library, Downloads (search lives in Library, Settings opens from
+ * the avatar). Apple TV: Home, Library, Search in the system's top tab bar - no downloads; Settings from the avatar too.
+ */
+const SHOWN: readonly TabName[] = Platform.isTV ? ['home', 'library', 'search'] : ['home', 'library', 'downloads'];
+export const TABS = ALL_TABS.filter((t) => SHOWN.includes(t.name));
 
 /**
  * Title of the tabs screen in the root stack = the focused tab. iOS shows it as the back button text on screens pushed

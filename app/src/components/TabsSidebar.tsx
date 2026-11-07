@@ -2,7 +2,7 @@
 import { router, usePathname } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
-import { Dimensions, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Dimensions, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TAB_TITLES, TABS } from '@/navigation';
@@ -20,7 +20,8 @@ const SIDEBAR_WIDTH = 260;
 export function useTabContentWidth(): number {
   const { width, height } = useWindowDimensions();
   if (!isTabletScreen(Dimensions.get('screen'))) return Math.min(width, height);
-  return isWideLandscape(width, height) ? width - SIDEBAR_WIDTH : width;
+  // Apple TV: the system's top tab bar takes no width.
+  return isWideLandscape(width, height) && !Platform.isTV ? width - SIDEBAR_WIDTH : width;
 }
 
 const tabOf = (path: string) => TABS.find((tab) => path === `/${tab.name}`)?.name;

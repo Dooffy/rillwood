@@ -1,0 +1,16 @@
+diff --git a/node_modules/react-native-screens/ios/tabs/RNSTabBarAppearanceCoordinator.mm b/node_modules/react-native-screens/ios/tabs/RNSTabBarAppearanceCoordinator.mm
+index b3bc98d..2a9d87a 100644
+--- a/node_modules/react-native-screens/ios/tabs/RNSTabBarAppearanceCoordinator.mm
++++ b/node_modules/react-native-screens/ios/tabs/RNSTabBarAppearanceCoordinator.mm
+@@ -63,8 +63,11 @@ - (void)configureTabBarItemForTabScreenController:(nonnull RNSTabsScreenViewCont
+ {
+   UITabBarItem *tabBarItem = tabScreenCtrl.tabBarItem;
+ 
++#if !TARGET_OS_TV
++  // tvOS: any appearance swaps the system's Liquid Glass tab bar for the classic opaque one - keep the system's.
+   tabBarItem.standardAppearance = tabScreenCtrl.tabScreenComponentView.standardAppearance;
+   tabBarItem.scrollEdgeAppearance = tabScreenCtrl.tabScreenComponentView.scrollEdgeAppearance;
++#endif
+ 
+   [self setIconsForTabBarItem:tabBarItem
+                fromScreenView:tabScreenCtrl.tabScreenComponentView

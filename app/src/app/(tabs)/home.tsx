@@ -2,7 +2,7 @@
 // Home: Up Next hero, Continue Watching, Next Up, Recently Added per library (docs/context/api.md, Home data).
 import { router } from 'expo-router';
 import { memo, useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ApiError, isConnectionError, type BaseItemDto, type ItemsResult } from '@/api';
 import { Avatar } from '@/components/Avatar';
@@ -33,7 +33,7 @@ import { useSession } from '@/session';
 import { invalidate, useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
 import { usePullToRefresh } from '@/usePullToRefresh';
-import { minTouch, pressedOpacity, spacing, tabList, useColors } from '@/theme';
+import { minTouch, pressedOpacity, radii, spacing, tabList, tv, useColors } from '@/theme';
 
 /** Pull to refresh / Retry: refetch every Home row, failed ones too. */
 function refreshHome() {
@@ -100,15 +100,20 @@ export default function Home() {
       title="Home"
       padded={false}
       right={
-        // Active user's avatar opens Settings (accounts live there), like the system apps' profile button.
+        // Active user's avatar opens Settings (accounts live there), like the system apps' profile button. TV: bigger,
+        // and focus grows it with a white ring.
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Settings"
           onPress={() => router.push('/settings')}
-          style={({ pressed }) => [styles.profile, pressed && styles.pressed]}
+          style={({ pressed, focused }) => [
+            Platform.isTV ? styles.profileTv : styles.profile,
+            pressed && styles.pressed,
+            focused && [styles.profileFocused, { borderColor: c.text }],
+          ]}
         >
           {/* Same size as the round header buttons on other tabs (Library's filters). */}
-          <Avatar name={active?.userName} size={minTouch} />
+          <Avatar name={active?.userName} size={Platform.isTV ? tv.avatar : minTouch} />
         </Pressable>
       }
     >
@@ -284,5 +289,8 @@ const styles = StyleSheet.create({
   content: { gap: spacing.lg, paddingBottom: spacing.lg },
   padded: { paddingHorizontal: spacing.md },
   profile: { width: minTouch, height: minTouch, alignItems: 'center', justifyContent: 'center' },
+  // TV: a clear ring around the avatar while focused (border kept transparent otherwise, so it doesn't shift).
+  profileTv: { borderRadius: radii.pill, borderWidth: 4, borderColor: 'transparent' },
+  profileFocused: { transform: [{ scale: tv.focus.buttonScale }], ...tv.focus.shadow },
   pressed: { opacity: pressedOpacity },
 });
