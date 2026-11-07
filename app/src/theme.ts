@@ -201,11 +201,12 @@ export const tv = {
     body: { fontSize: 29, fontWeight: '400' },
     small: { fontSize: 23, fontWeight: '400' },
     button: { fontSize: 31, fontWeight: '600' },
-    field: { fontSize: 33, fontWeight: '400' },
     caption: { fontSize: 25, fontWeight: '400' },
     /** Quiet (text-only) buttons and field labels. */
     quiet: { fontSize: 27, fontWeight: '600' },
     label: { fontSize: 23, fontWeight: '600' },
+    /** Text in a TV text field's capsule (we draw it; the typing field has no style). */
+    field: { fontSize: 33, fontWeight: '400' },
     /** Shelf title (Home rows). */
     shelf: { fontSize: 38, fontWeight: '700' },
     /** Title under a card. */
@@ -228,7 +229,7 @@ export const tv = {
   field: {
     height: 96,
     iconInset: 32,
-    textInset: 88,
+    /** Sunken fill + hairline so the capsule reads as "type here"; focused it turns the text colour (white). */
     fill: 'rgba(0, 0, 0, 0.45)',
     hairline: 'rgba(255, 255, 255, 0.1)',
   },
@@ -245,6 +246,8 @@ export const tv = {
   tabBarInset: 150,
   /** Full-screen hero (Home): how much of the first shelf peeks in under it, its text column. */
   hero: { peek: 300, textWidth: 1000 },
+  /** Menus (`TvMenu`): the card's width. */
+  menu: { width: 760 },
   /** Card shelves: about this wide (whole cards across, `fitCards`), the gap, room above / below for a focused card. */
   shelf: { posterWidth: 250, landscapeWidth: 400, gap: 40, focusRoom: 40 },
   /** Active-server dot (Sign in). */

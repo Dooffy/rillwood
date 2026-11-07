@@ -9,13 +9,16 @@ import { ApiError, type BaseItemDto, type RequestOptions } from '@/api';
 import Home from '@/app/(tabs)/home';
 import { ItemMenuProvider } from '@/components/ItemMenu';
 import { ToastProvider } from '@/components/Toast';
+import { TvMenuHost } from '@/components/TvMenu';
 import * as session from '@/session';
 import { resetDevice, setDevice } from '@/testDevice';
 
 const render = (ui: ReactElement) =>
   rtlRender(
     <ToastProvider>
-      <ItemMenuProvider>{ui}</ItemMenuProvider>
+      <TvMenuHost>
+        <ItemMenuProvider>{ui}</ItemMenuProvider>
+      </TvMenuHost>
     </ToastProvider>,
   );
 jest.mock('expo-router', () => ({ router: { push: jest.fn(), back: jest.fn() } }));

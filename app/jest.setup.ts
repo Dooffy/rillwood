@@ -68,6 +68,13 @@ jest.mock('react-native-reanimated', () => {
   return { ...mock, useSharedValue: <T>(init: T) => useState(() => mock.useSharedValue(init))[0] };
 });
 
+// Apple TV focus guides (tests switch Platform.isTV on): the native view command doesn't exist under Jest.
+jest.mock('react-native/Libraries/Components/View/ViewNativeComponent', () => {
+  const actual = jest.requireActual<Record<string, unknown>>(
+    'react-native/Libraries/Components/View/ViewNativeComponent',
+  );
+  return { ...actual, __esModule: true, Commands: { setDestinations: () => {} } };
+});
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 
 // RN's Modal mock never calls onDismiss; iOS calls it once a hidden modal has finished closing. Mirror that so code

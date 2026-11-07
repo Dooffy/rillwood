@@ -45,7 +45,7 @@ describe('TvWelcome', () => {
   it('probes the address and opens Sign in in onboarding', async () => {
     probeServer.mockResolvedValue(server);
     await render(<TvWelcome />);
-    await fireEvent.changeText(screen.getByLabelText('Server address'), 'jf.example.com');
+    await fireEvent.changeText(screen.getByTestId('Server address input'), 'jf.example.com');
     await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
     expect(probeServer).toHaveBeenCalledWith(['https://jf.example.com', 'http://jf.example.com']);
     expect(router.push).toHaveBeenCalledWith({ pathname: '/login', params: { url: server.url, onboarding: '1' } });
@@ -54,7 +54,7 @@ describe('TvWelcome', () => {
   it('shows why the server was not reached, under the field', async () => {
     probeServer.mockRejectedValue(new ApiError('network'));
     await render(<TvWelcome />);
-    await fireEvent.changeText(screen.getByLabelText('Server address'), 'jf.example.com');
+    await fireEvent.changeText(screen.getByTestId('Server address input'), 'jf.example.com');
     await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/Couldn't reach the server/);
     expect(router.push).not.toHaveBeenCalled();
