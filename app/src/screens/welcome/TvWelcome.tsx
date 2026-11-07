@@ -9,15 +9,15 @@ import { useSession } from '@/session';
 import { tv, useColors, useScheme } from '@/theme';
 import { useServerConnect } from '@/useServerConnect';
 
-import { LogoMark } from './LogoMark';
-import { WHERE } from './ServerHelp';
-import { Text } from './Text';
-import { TvButton } from './TvButton';
-import { TvTextField } from './TvTextField';
+import { LogoMark } from '@/components/LogoMark';
+import { WHERE } from '@/components/ServerHelp';
+import { Text } from '@/components/Text';
+import { TvButton } from '@/components/TvButton';
+import { TvTextField } from '@/components/TvTextField';
 
 const wall = {
-  dark: require('../../assets/images/welcome-wall-dark.svg'),
-  light: require('../../assets/images/welcome-wall-light.svg'),
+  dark: require('../../../assets/images/welcome-wall-dark.svg'),
+  light: require('../../../assets/images/welcome-wall-light.svg'),
 };
 
 export function TvWelcome() {
