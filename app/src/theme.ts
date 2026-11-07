@@ -235,6 +235,8 @@ export const tv = {
   /** Full-screen artwork behind a form (Welcome). */
   backdropOpacity: 0.35,
   markSize: 120,
+  /** Profile button (Home, top right). */
+  avatar: 66,
   /** Active-server dot (Sign in). */
   statusDot: 12,
   /** Unfocused button fill over any background. */

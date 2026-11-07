@@ -120,12 +120,17 @@ export default function RootLayout() {
             />
             <Stack.Screen
               name="player"
-              options={{
-                // See-through, so pulling the player down shows the screen below (the player draws its own black).
-                presentation: 'transparentModal',
-                animation: 'fade',
-                contentStyle: { backgroundColor: 'transparent' },
-              }}
+              options={
+                Platform.isTV
+                  ? // TV: a pushed screen - remote presses don't reach a native modal (Menu closes it as Back).
+                    { animation: 'fade', contentStyle: { backgroundColor: 'black' } }
+                  : {
+                      // See-through, so pulling the player down shows the screen below (the player draws its own black).
+                      presentation: 'transparentModal',
+                      animation: 'fade',
+                      contentStyle: { backgroundColor: 'transparent' },
+                    }
+              }
             />
           </Stack>
         </ItemMenuProvider>

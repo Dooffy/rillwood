@@ -210,7 +210,7 @@ Foundation:
 - [x] 2. Gate what TV doesn't have (`Platform.isTV`): downloads module + Downloads tab, offline queue / offload, orientation lock, file sharing; no touch gestures in the player (pinch crashes on tvOS)
 - [ ] 3. TV storage: accounts list + settings out of the kv-store (tvOS can purge caches) into UserDefaults / Keychain; tokens stay in secure-store
 - [ ] 4. Focus building blocks: focused styles for cards, buttons, rows, pills (scale + lift + white for buttons), focus guides between rows, preferred first focus per screen
-- [ ] 5. TV shell: top tab bar Home / Library / Search / Settings + profile avatar, hides on scroll; Menu = back one level, tab root → Home; no native modals on TV (remote presses don't reach them - player + sheets as pushed screens)
+- [x] 5. TV shell: the system's top tab bar Home / Library / Search (Liquid Glass, hides as focus moves into content; `react-native-screens` patched so it keeps it), Settings from the profile avatar, no tab titles; Menu = back one level, tab root → Home (system); no native modals on TV (remote presses don't reach them) - the player is a pushed screen, sheets follow with the screens that use them
 
 Screens:
 

@@ -27,9 +27,9 @@ describe('on Apple TV', () => {
     }).not.toThrow();
   });
 
-  it('has no Downloads tab', () => {
+  it('has Home, Library and Search tabs - no Downloads', () => {
     const { mod } = onTV<typeof import('./navigation')>('./navigation');
-    expect(mod.TABS.map((t) => t.name)).toEqual(['home', 'library']);
+    expect(mod.TABS.map((t) => t.name)).toEqual(['home', 'library', 'search']);
   });
 
   it('uses a downloads stand-in with no tasks instead of the native module', async () => {
@@ -45,7 +45,7 @@ describe('on Apple TV', () => {
 });
 
 describe('off TV', () => {
-  it('keeps the Downloads tab', () => {
+  it('keeps Home, Library, Downloads (no Search tab)', () => {
     jest.isolateModules(() => {
       const { TABS } = require('./navigation');
       expect(TABS.map((t: { name: string }) => t.name)).toEqual(['home', 'library', 'downloads']);
