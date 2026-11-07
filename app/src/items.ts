@@ -752,9 +752,13 @@ export function detailSubtitle(item: BaseItemDto): string {
 
 /** "S2, E3 · Pilot" - names an episode in a line of text (under Play, menu titles); the name alone without numbers. */
 export function episodeLine(ep: BaseItemDto): string {
-  const { ParentIndexNumber: season, IndexNumber: episode } = ep;
-  const code = episode === undefined ? undefined : season === undefined ? `E${episode}` : `S${season}, E${episode}`;
+  const code = episodeLabel(ep);
   return code ? `${code} · ${ep.Name}` : ep.Name;
+}
+
+/** "S2, E3" ("E3" without a season) - the numbers alone, as text (the TV hero's play button). */
+export function episodeLabel({ ParentIndexNumber: season, IndexNumber: episode }: BaseItemDto): string | undefined {
+  return episode === undefined ? undefined : season === undefined ? `E${episode}` : `S${season}, E${episode}`;
 }
 
 /** "S1:E3"; "E3" without a season; undefined without an episode number. */

@@ -210,14 +210,15 @@ Foundation:
 - [x] 2. Gate what TV doesn't have (`Platform.isTV`): downloads module + Downloads tab, offline queue / offload, orientation lock, file sharing; no touch gestures in the player (pinch crashes on tvOS)
 - [ ] 3. TV storage: accounts list + settings out of the kv-store (tvOS can purge caches) into UserDefaults / Keychain; tokens stay in secure-store
 - [ ] 4. Focus building blocks: focused styles for cards, buttons, rows, pills (scale + lift + white for buttons), focus guides between rows, preferred first focus per screen
-- [x] 5. TV shell: the system's top tab bar Home / Library / Search (Liquid Glass, hides as focus moves into content; `react-native-screens` patched so it keeps it), Settings from the profile avatar, no tab titles; Menu = back one level, tab root → Home (system); no native modals on TV (remote presses don't reach them) - the player is a pushed screen, sheets follow with the screens that use them
+- [ ] 4b. TV menus: one in-app panel / card over a dimmed screen instead of RN `Modal` (remote presses don't reach a native modal), focus held inside, Menu closes it; TV item menu (`ActionSheet`) on it first - then reused by the Library sort / filter panel (10), detail More panel (12), player tracks menu (15) and long-press menus (19)
+- [x] 5. TV shell: the system's top tab bar Home / Library / Search (Liquid Glass, hides as focus moves into content; `react-native-screens` patched so it keeps it), Settings from the profile avatar, no tab titles; Menu = back one level, tab root → Home (system); no native modals on TV (remote presses don't reach them) - the player is a pushed screen, sheets and menus in task 4b
 
 Screens:
 
 - [x] 6. Welcome / add server (01) - address on the Welcome screen itself (`TvWelcome`), system text field
 - [x] 7. Sign in: Quick Connect first, password form as fallback (02) - `TvSignIn`; every action in the panel column, expired codes renewed
 - [ ] 8. Who's Watching: accounts across servers, long-press Sign Out / Remove (03)
-- [ ] 9. Home: full-screen Up Next hero with play button + progress, Continue Watching / Next Up / Recently Added shelves (04)
+- [x] 9. Home: full-screen Up Next hero with play button + progress, Continue Watching / Next Up / Recently Added shelves (04) - `TvHero` (art under the tab bar, focus on Play, Play from Start + ⋯; a hero button's focus scrolls Home to the top), `TvShelf` (TV card sizes, focused card grows); shelves and the hero's buttons are full-width focus guides. Left: focusable shelf titles (› full list), genre in the facts line (Home asks for no `Genres`)
 - [ ] 10. Library: type pills, poster grid (episodes: landscape grid), sort / filter side panel, paging (05)
 - [ ] 11. Search tab: tvOS keyboard, results grouped Movies / Shows / Episodes / People, recent searches (06)
 - [ ] 12. Movie / episode detail: hero with facts, badges, play row, credits; More panel; Cast & Crew, More Like This, Details (07-08)

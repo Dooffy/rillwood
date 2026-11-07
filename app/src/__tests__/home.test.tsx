@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import type { ReactElement } from 'react';
 import { act, fireEvent, render as rtlRender, screen, waitFor, within } from '@testing-library/react-native';
-import { StyleSheet, type RefreshControlProps } from 'react-native';
+import { Platform, StyleSheet, type RefreshControlProps } from 'react-native';
 
 import * as api from '@/api';
 import { ApiError, type BaseItemDto, type RequestOptions } from '@/api';
@@ -347,5 +347,55 @@ describe('Home', () => {
     for (const route of ['/UserViews', '/UserItems/Resume', '/Shows/NextUp', 'latest:lib-m', 'latest:lib-s']) {
       expect(calls(route)).toBe(2);
     }
+  });
+});
+
+describe('Home on Apple TV', () => {
+  const isTV = Object.getOwnPropertyDescriptor(Platform, 'isTV')!;
+  beforeEach(() => {
+    Object.defineProperty(Platform, 'isTV', { get: () => true, configurable: true });
+  });
+  afterEach(() => {
+    Object.defineProperty(Platform, 'isTV', isTV);
+  });
+
+  it('opens on the full-screen hero with focus on Play, which resumes', async () => {
+    await render(<Home />);
+    await screen.findByTestId('tv-hero');
+    expect(screen.getByText('CONTINUE WATCHING')).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Sintel' })).toBeOnTheScreen();
+    expect(screen.getByText('2010 · 15m')).toBeOnTheScreen();
+    const play = screen.getByRole('button', { name: 'Resume, 13m left' });
+    expect(play.props.hasTVPreferredFocus).toBe(true);
+    await fireEvent.press(play);
+    expect(router.push).toHaveBeenLastCalledWith(
+      expect.objectContaining({ pathname: '/player', params: expect.objectContaining({ start: '120' }) }),
+    );
+    // Started: Play from Start beside it, then More (the item menu).
+    await fireEvent.press(screen.getByRole('button', { name: 'Play from Start' }));
+    expect(router.push).toHaveBeenLastCalledWith(
+      expect.objectContaining({ pathname: '/player', params: expect.objectContaining({ start: '0' }) }),
+    );
+    await fireEvent.press(screen.getByRole('button', { name: 'More' }));
+    expect(screen.getByText('Sintel · 2010')).toBeOnTheScreen();
+  });
+
+  it('names the episode on an Up Next hero, no Play from Start when not started', async () => {
+    routes['/UserItems/Resume'] = items();
+    await render(<Home />);
+    await screen.findByTestId('tv-hero');
+    expect(screen.getByText('UP NEXT')).toBeOnTheScreen();
+    expect(screen.getByText('S1, E2 · Episode 2')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Play S1, E2' })).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Play from Start' })).toBeNull();
+  });
+
+  it('has no title, no pull to refresh, and the avatar opens Settings', async () => {
+    await render(<Home />);
+    await screen.findByTestId('tv-hero');
+    expect(screen.queryByText('Home')).toBeNull();
+    expect(screen.getByTestId('home-scroll').props.refreshControl).toBeUndefined();
+    await fireEvent.press(screen.getByRole('button', { name: 'Settings' }));
+    expect(router.push).toHaveBeenCalledWith('/settings');
   });
 });

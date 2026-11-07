@@ -14,6 +14,7 @@ import {
   detailSubtitle,
   directors,
   episodes,
+  episodeLabel,
   episodeLine,
   filterQuery,
   NO_FILTERS,
@@ -616,6 +617,9 @@ describe('series', () => {
     expect(episodeLine({ ...episode(3), Name: 'Pilot' })).toBe('S1, E3 · Pilot');
     expect(episodeLine({ ...episode(3), ParentIndexNumber: undefined, Name: 'Pilot' })).toBe('E3 · Pilot');
     expect(episodeLine({ ...episode(3), IndexNumber: undefined, Name: 'Pilot' })).toBe('Pilot');
+    expect(episodeLabel(episode(3))).toBe('S1, E3');
+    expect(episodeLabel({ ...episode(3), ParentIndexNumber: undefined })).toBe('E3');
+    expect(episodeLabel({ ...episode(3), IndexNumber: undefined })).toBeUndefined();
     expect(seasonDetail({ ...s1, UserData: { PlaybackPositionTicks: 0, Played: true } })).toBe('Watched');
     expect(seasonDetail({ ...s1, UserData: { PlaybackPositionTicks: 0, Played: false, UnplayedItemCount: 5 } })).toBe(
       '5 unwatched',

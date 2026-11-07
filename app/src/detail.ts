@@ -151,6 +151,13 @@ export function library(item: BaseItemDto): Fact[] {
 }
 
 /** `seasons`: real season count from the season list (series), better than `ChildCount`, which may hold Specials. */
+/** Facts line under the TV Home hero's title: "2025 · TV-14 · 52m" (what's known). */
+export function heroFacts(item: BaseItemDto): string | undefined {
+  const runtime = item.RunTimeTicks ? formatRemaining(ticksToSeconds(item.RunTimeTicks)) : undefined;
+  const parts = [item.ProductionYear?.toString(), item.OfficialRating, runtime].filter(Boolean);
+  return parts.length > 0 ? parts.join(' · ') : undefined;
+}
+
 export function detailView(item: BaseItemDto, now: Date = new Date(), seasons?: number): DetailView {
   const facts = detailFacts(item);
   const watch = playback(item);

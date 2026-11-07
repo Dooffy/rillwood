@@ -14,9 +14,9 @@ export const CARD_GAP = spacing.sm + spacing.xs;
  * Whole cards across `width` (no padding in it): as many as fit at least `target` wide, but never fewer than `min`
  * (then narrower). The count and the card width. Tablet rows and the Library grid - the row ends on a card's edge.
  */
-export function fitCards(width: number, target: number, min = 1): { count: number; width: number } {
-  const count = Math.max(min, Math.floor((width + CARD_GAP) / (target + CARD_GAP)));
-  return { count, width: Math.floor((width - (count - 1) * CARD_GAP) / count) };
+export function fitCards(width: number, target: number, min = 1, gap = CARD_GAP): { count: number; width: number } {
+  const count = Math.max(min, Math.floor((width + gap) / (target + gap)));
+  return { count, width: Math.floor((width - (count - 1) * gap) / count) };
 }
 
 export type RowProps = {

@@ -206,6 +206,10 @@ export const tv = {
     /** Quiet (text-only) buttons and field labels. */
     quiet: { fontSize: 27, fontWeight: '600' },
     label: { fontSize: 23, fontWeight: '600' },
+    /** Shelf title (Home rows). */
+    shelf: { fontSize: 38, fontWeight: '700' },
+    /** Title under a card. */
+    cardTitle: { fontSize: 25, fontWeight: '600' },
     /** Quick Connect code. */
     code: { fontSize: 130, fontWeight: '800', letterSpacing: 10, fontVariant: ['tabular-nums'] },
   },
@@ -235,14 +239,21 @@ export const tv = {
   /** Full-screen artwork behind a form (Welcome). */
   backdropOpacity: 0.35,
   markSize: 120,
-  /** Profile button (Home, top right). */
+  /** Profile button (Home, top right, beside the tab bar). */
   avatar: 66,
+  /** Space the system's top tab bar takes over content that starts under it (Home with no hero). */
+  tabBarInset: 150,
+  /** Full-screen hero (Home): how much of the first shelf peeks in under it, its text column. */
+  hero: { peek: 300, textWidth: 1000 },
+  /** Card shelves: about this wide (whole cards across, `fitCards`), the gap, room above / below for a focused card. */
+  shelf: { posterWidth: 250, landscapeWidth: 400, gap: 40, focusRoom: 40 },
   /** Active-server dot (Sign in). */
   statusDot: 12,
   /** Unfocused button fill over any background. */
   unfocused: 'rgba(255, 255, 255, 0.14)',
   focus: {
     buttonScale: 1.08,
+    cardScale: 1.1,
     shadow: { shadowColor: '#000000', shadowOpacity: 0.5, shadowRadius: 20, shadowOffset: { width: 0, height: 16 } },
   },
 } as const;

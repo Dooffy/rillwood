@@ -1,0 +1,37 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Apple TV shelf: title over a horizontal row of cards, at the screen's safe margins. The row leaves room above and
+// below so a focused card can grow and lift without being cut off. The row is one focus target across the screen: a
+// swipe from any card above or below (even one far along its own shelf) lands on this shelf's last-focused card, the
+// first one on the first visit.
+import type { ReactNode } from 'react';
+import { ScrollView, StyleSheet, TVFocusGuideView, View } from 'react-native';
+
+import { tv } from '@/theme';
+
+import { Text } from './Text';
+
+export type TvShelfProps = {
+  title: string;
+  /** Cards, scrolled horizontally. */
+  children?: ReactNode;
+};
+
+export function TvShelf({ title, children }: TvShelfProps) {
+  return (
+    <View>
+      <Text accessibilityRole="header" numberOfLines={1} style={[tv.type.shelf, styles.title]}>
+        {title}
+      </Text>
+      <TVFocusGuideView autoFocus>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.list}>
+          {children}
+        </ScrollView>
+      </TVFocusGuideView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  title: { paddingHorizontal: tv.margin },
+  list: { paddingHorizontal: tv.margin, paddingVertical: tv.shelf.focusRoom, gap: tv.shelf.gap },
+});
