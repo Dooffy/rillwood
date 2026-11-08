@@ -1,6 +1,6 @@
 ---
 name: tv-screen
-description: Draft - build or rework one Apple TV screen for Rillwood the agreed way - shared hook, Phone / Tv views in src/screens, one screenFor switch in the route, TV tokens, tests with Platform.isTV, then a fresh tvOS simulator install. Use when the user wants to build, port or rework a TV screen (roadmap TV tasks).
+description: Draft - build or rework one Apple TV screen for Rillwood the agreed way - shared hook, Phone / Tv views in src/screens/phone and src/screens/tv, one screenFor switch in the route, TV tokens, tests with Platform.isTV, then a fresh tvOS simulator install. Use when the user wants to build, port or rework a TV screen (roadmap TV tasks).
 ---
 
 Build or rework one Apple TV screen. Usage: `/tv-screen <screen>` (e.g. `/tv-screen library`). Rules: `docs/decisions/tv-code-structure.md` - read it first. Work in the TV worktree on the task's branch (`/task-init` first if there is none).
@@ -25,8 +25,8 @@ Move the screen's logic out of the route into `app/src/use<Screen>.ts`: fetches,
 
 ## Step 3 - Views
 
-- `app/src/screens/<screen>/Phone<Screen>.tsx` - the current phone / tablet JSX, moved as is (fix relative `require` paths).
-- `app/src/screens/<screen>/Tv<Screen>.tsx` - the TV view from the draft. Build from the TV pieces (`TvButton`, `TvTextField`, `TvShelf`, `TvHero`, `TvMenu` via `ActionSheet`) and `tv` tokens; new TV-only pieces go in `app/src/components/tv/Tv*.tsx` (shared ones stay in `app/src/components/`).
+- `app/src/screens/phone/Phone<Screen>.tsx` - the current phone / tablet JSX, moved as is (fix relative `require` paths).
+- `app/src/screens/tv/Tv<Screen>.tsx` - the TV view from the draft. Build from the TV pieces (`TvButton`, `TvTextField`, `TvShelf`, `TvHero`, `TvMenu` via `ActionSheet`) and `tv` tokens; new TV-only pieces go in `app/src/components/tv/Tv*.tsx` (shared ones stay in `app/src/components/`).
 - Neither view checks `Platform.isTV`. A size-only difference in a shared component → a token in `app/src/theme.ts`; a missing feature → `features.*` in `app/src/device.ts`.
 
 TV rules (CLAUDE.md §3): focus by geometry - one column or a `TVFocusGuideView`; full-width `autoFocus` guides for rows; top buttons scroll back to the top; one `primary` button; never disable a TV button; no RN `Modal` (use `ActionSheet` → `TvMenu`); system text colours in text fields.
@@ -37,10 +37,10 @@ TV rules (CLAUDE.md §3): focus by geometry - one column or a `TVFocusGuideView`
 
 ```tsx
 // SPDX-License-Identifier: GPL-3.0-or-later
-// <What the screen is>. Route only: the phone / tablet or the Apple TV screen (`src/screens/<screen>/`).
+// <What the screen is>. Route only: the phone / tablet or the Apple TV screen (`src/screens/phone/`, `src/screens/tv/`).
 import { screenFor } from '@/device';
-import { Phone<Screen> } from '@/screens/<screen>/Phone<Screen>';
-import { Tv<Screen> } from '@/screens/<screen>/Tv<Screen>';
+import { Phone<Screen> } from '@/screens/phone/Phone<Screen>';
+import { Tv<Screen> } from '@/screens/tv/Tv<Screen>';
 
 export default screenFor({ phone: Phone<Screen>, tv: Tv<Screen> });
 ```
@@ -80,5 +80,5 @@ UDID: `xcrun simctl list devices booted`. Don't screenshot or send input unless 
 
 - `docs/roadmap.md` - tick the TV task with what's left.
 - `docs/decisions/tv-code-structure.md` - tick the step if this screen was on its list.
-- `CLAUDE.md` §4 - new files in `src/screens/`, new `Tv*` components.
+- `CLAUDE.md` §4 - new files in `src/screens/phone/` / `tv/`, new `Tv*` components (`src/components/tv/`).
 - Then `/submit-code` → `/create-pull-request`.

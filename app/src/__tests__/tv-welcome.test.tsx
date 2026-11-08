@@ -7,7 +7,7 @@ import { Platform } from 'react-native';
 import { ApiError } from '@/api';
 import Welcome from '@/app/(auth)/welcome';
 import * as auth from '@/auth';
-import { TvWelcome } from '@/screens/welcome/TvWelcome';
+import { TvWelcome } from '@/screens/tv/TvWelcome';
 import { addAccount, getSession, removeAccount, signOut, type Server as JellyfinServer } from '@/session';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
