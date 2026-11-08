@@ -48,6 +48,11 @@ describe('TvSignIn', () => {
     expect(await screen.findByText('482913')).toBeOnTheScreen();
     expect(screen.getByText('Home server · 12.1.0 · jf.example.com')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Use Password' })).toBeOnTheScreen();
+    // Regression: Down from the code reached Change Server, never Use Password - one column now, the other way first.
+    expect(screen.getAllByRole('button').map((b) => b.props.accessibilityLabel)).toEqual([
+      'Use Password',
+      'Change Server',
+    ]);
     await act(async () => calls[0].resolve());
     expect(resetTo).toHaveBeenCalledWith('/home');
   });

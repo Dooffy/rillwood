@@ -31,14 +31,18 @@ export type TvMenuProps = {
   onClose: () => void;
 };
 
-type Host = { show: (key: object, menu: TvMenuProps) => void; hide: (key: object) => void };
+/** One per menu owner; a new owner's menu mounts afresh (focus on its first action). */
+type MenuKey = { id: number };
+type Host = { show: (key: MenuKey, menu: TvMenuProps) => void; hide: (key: MenuKey) => void };
+
+let nextKey = 0;
 
 const TvMenuContext = createContext<Host | null>(null);
 
 /** The host for TV menus (root layout, around the navigator); off TV it only renders its children. */
 export function TvMenuHost({ children }: { children: ReactNode }) {
   // The menu showing and who opened it (a closing sheet only hides its own).
-  const [open, setOpen] = useState<{ key: object; menu: TvMenuProps }>();
+  const [open, setOpen] = useState<{ key: MenuKey; menu: TvMenuProps }>();
   const host = useMemo<Host>(
     () => ({
       show: (key, menu) => setOpen({ key, menu }),
@@ -51,7 +55,7 @@ export function TvMenuHost({ children }: { children: ReactNode }) {
     <TvMenuContext.Provider value={host}>
       <View style={styles.fill}>
         {children}
-        {open && <TvMenu {...open.menu} />}
+        {open && <TvMenu key={open.key.id} {...open.menu} />}
       </View>
     </TvMenuContext.Provider>
   );
@@ -65,7 +69,7 @@ export function useTvMenuHost(): Host | null {
 /** Shows `menu` while `visible`, from a component that owns it (`ActionSheet` on TV). */
 export function useTvMenu(host: Host | null, visible: boolean, menu: TvMenuProps) {
   // One stable key per owner.
-  const [key] = useState(() => ({}));
+  const [key] = useState<MenuKey>(() => ({ id: nextKey++ }));
   useEffect(() => {
     if (!host) return;
     if (visible) host.show(key, menu);

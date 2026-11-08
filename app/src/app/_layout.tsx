@@ -98,7 +98,11 @@ export default function RootLayout() {
                 options={Platform.isTV ? { title: 'Sign in', headerShown: false } : pageOf('Sign in')}
               />
               <Stack.Screen name="(auth)/quick-connect" options={pageOf('Quick Connect')} />
-              <Stack.Screen name="(auth)/accounts" options={pageOf('Accounts')} />
+              {/* TV Who's Watching draws its own title (screen draft 03). */}
+              <Stack.Screen
+                name="(auth)/accounts"
+                options={Platform.isTV ? { title: "Who's Watching", headerShown: false } : pageOf('Accounts')}
+              />
               <Stack.Screen name="(auth)/account" options={pageOf('Account')} />
               <Stack.Screen name="item/[id]" options={detailOptions} />
               <Stack.Screen name="series/[id]" options={detailOptions} />

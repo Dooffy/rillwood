@@ -4,7 +4,7 @@
 // Connect off get the password form only.
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, TVFocusGuideView, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { isOutdatedServer, MIN_SERVER_VERSION } from '@/server';
 import type { Server } from '@/session';
@@ -12,7 +12,7 @@ import { tv, useColors } from '@/theme';
 import { usePasswordSignIn, useQuickConnectCode, useQuickConnectEnabled } from '@/useSignIn';
 
 import { Text } from '../Text';
-import { TvButton, type TvButtonHandle } from './TvButton';
+import { TvButton } from './TvButton';
 import { TvTextField } from './TvTextField';
 
 export function TvSignIn({ server, initialUserName }: { server: Server; initialUserName?: string }) {
@@ -25,32 +25,24 @@ export function TvSignIn({ server, initialUserName }: { server: Server; initialU
   const form = usePasswordSignIn(server, initialUserName);
 
   const busy = form.loading;
-  // Focus coming down into the row lands on its first button (the other way to sign in), not whichever sits nearest.
-  const [firstWay, setFirstWay] = useState<TvButtonHandle | null>(null);
-  /** Under the panel's main content: the other way to sign in + Change Server, text only (Up / Down reaches all). */
+  /**
+   * Under the panel's main content: the other way to sign in, then Change Server - text only, one column, so Down from
+   * the code or the form always reaches the other way first. No focus guide: a guide's destination went stale and
+   * left focus on Change Server, or stuck (the other way unreachable).
+   */
   const ways = (
-    <TVFocusGuideView style={styles.ways} destinations={firstWay ? [firstWay] : undefined}>
+    <View style={styles.ways}>
       {mode === 'code' && (
-        <TvButton
-          variant="quiet"
-          icon="lock"
-          ref={setFirstWay}
-          title="Use Password"
-          onPress={() => setUsePassword(true)}
-        />
+        <TvButton variant="quiet" icon="lock" title="Use Password" onPress={() => setUsePassword(true)} />
       )}
       {mode === 'password' && enabled && (
         <TvButton
           variant="quiet"
           icon="qrcode"
-          ref={setFirstWay}
           title="Use Quick Connect"
           onPress={() => setUsePassword(false)}
           disabled={busy}
         />
-      )}
-      {(mode === 'code' || (mode === 'password' && enabled)) && (
-        <View style={[styles.separator, { backgroundColor: c.elevated2 }]} />
       )}
       <TvButton
         variant="quiet"
@@ -59,7 +51,7 @@ export function TvSignIn({ server, initialUserName }: { server: Server; initialU
         onPress={() => router.back()}
         disabled={busy}
       />
-    </TVFocusGuideView>
+    </View>
   );
 
   return (
@@ -176,9 +168,8 @@ const styles = StyleSheet.create({
   side: { flex: 1, gap: tv.gap.sm },
   server: { flexDirection: 'row', alignItems: 'center', gap: tv.gap.sm / 2 },
   dot: { width: tv.statusDot, height: tv.statusDot, borderRadius: tv.statusDot / 2 },
-  ways: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: tv.gap.sm, marginTop: tv.gap.sm },
+  ways: { alignItems: 'center', marginTop: tv.gap.sm },
   anchor: { alignItems: 'center', gap: tv.gap.sm },
-  separator: { width: 2, height: tv.gap.lg - tv.gap.sm / 2 },
   panel: {
     flex: 1,
     minHeight: tv.panel.minHeight,

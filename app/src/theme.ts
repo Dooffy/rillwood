@@ -246,6 +246,8 @@ export const tv = {
   tabBarInset: 150,
   /** Full-screen hero (Home): how much of the first shelf peeks in under it, its text column. */
   hero: { peek: 300, textWidth: 1000 },
+  /** Who's Watching: the account circles, the gap between them, the focus ring. */
+  profile: { avatar: 240, gap: 80, ring: 6 },
   /** Menus (`TvMenu`): the card's width. */
   menu: { width: 760 },
   /** Card shelves: about this wide (whole cards across, `fitCards`), the gap, room above / below for a focused card. */

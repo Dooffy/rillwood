@@ -218,7 +218,7 @@ Screens:
 
 - [x] 6. Welcome / add server (01) - address on the Welcome screen itself (`TvWelcome`), system text field
 - [x] 7. Sign in: Quick Connect first, password form as fallback (02) - `TvSignIn`; every action in the panel column, expired codes renewed
-- [ ] 8. Who's Watching: accounts across servers, long-press Sign Out / Remove (03)
+- [x] 8. Who's Watching: accounts across servers, long-press Sign Out / Remove (03) - `TvAccounts` (TV only; phones keep the Accounts list): at launch with 2+ signed-in accounts, from the tab avatar (Settings from its gear), focus on the active one; Add = saved server or New server (Welcome)
 - [x] 9. Home: full-screen Up Next hero with play button + progress, Continue Watching / Next Up / Recently Added shelves (04) - `TvHero` (art under the tab bar, focus on Play, Play from Start + ⋯; a hero button's focus scrolls Home to the top), `TvShelf` (TV card sizes, focused card grows); shelves and the hero's buttons are full-width focus guides. Left: focusable shelf titles (› full list), genre in the facts line (Home asks for no `Genres`)
 - [ ] 10. Library: type pills, poster grid (episodes: landscape grid), sort / filter side panel, paging (05)
 - [ ] 11. Search tab: tvOS keyboard, results grouped Movies / Shows / Episodes / People, recent searches (06)

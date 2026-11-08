@@ -393,12 +393,14 @@ describe('Home on Apple TV', () => {
     expect(screen.queryByRole('button', { name: 'Play from Start' })).toBeNull();
   });
 
-  it('has no title, no pull to refresh, and the avatar opens Settings', async () => {
+  it("has no title, no pull to refresh, and the avatar opens Who's Watching", async () => {
     await render(<Home />);
     await screen.findByTestId('tv-hero');
     expect(screen.queryByText('Home')).toBeNull();
     expect(screen.getByTestId('home-scroll').props.refreshControl).toBeUndefined();
-    await fireEvent.press(screen.getByRole('button', { name: 'Settings' }));
-    expect(router.push).toHaveBeenCalledWith('/settings');
+    await fireEvent.press(screen.getByRole('button', { name: "Who's Watching" }));
+    expect(router.push).toHaveBeenCalledWith('/accounts');
+    // Regression: nothing led to the avatar - Right from the hero's last button now does.
+    expect(screen.getByTestId('tv-hero-right')).toBeOnTheScreen();
   });
 });
