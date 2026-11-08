@@ -7,7 +7,7 @@ import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
 import type { BaseItemDto } from '@/api';
-import { useSession } from '@/session';
+import { useSession, type SessionState } from '@/session';
 import type { Colors } from '@/theme';
 
 /** Route param marking the first-run flow (Welcome → Add server → Sign in → Quick Connect): step pills + intro copy. */
@@ -81,6 +81,15 @@ export function useOnboarding(): boolean {
 export function resetTo(href: Href) {
   if (router.canDismiss()) router.dismissAll();
   router.replace(href);
+}
+
+/**
+ * Where launch lands: Home when signed in, else Welcome. Apple TV with two or more signed-in accounts: Who's Watching
+ * first (the shared living-room screen; focus starts on the last used one). Signed-out accounts don't count.
+ */
+export function launchHref({ accounts, active }: Pick<SessionState, 'accounts' | 'active'>, tv: boolean): Href {
+  if (!active) return '/welcome';
+  return tv && accounts.filter((a) => !a.signedOut).length > 1 ? '/accounts' : '/home';
 }
 
 /**

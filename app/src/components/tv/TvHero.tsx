@@ -9,7 +9,7 @@ import { formatRemaining } from '@/format';
 import { ColorsContext, palettes, tv, useColors } from '@/theme';
 
 import { Text } from '../Text';
-import { TvButton } from './TvButton';
+import { TvButton, type TvButtonHandle } from './TvButton';
 
 export type TvHeroProps = {
   /** "Up Next", "Continue Watching". */
@@ -36,6 +36,11 @@ export type TvHeroProps = {
    * highest focusable spot - Home scrolls back to the top here, so the whole hero and the tab bar above come back.
    */
   onFocus?: () => void;
+  /**
+   * Where Right from the last button goes: the profile button at the top right (Home). Nothing sits to the right of
+   * the buttons and the system's tab bar doesn't hand focus on to it, so without this it can't be reached.
+   */
+  rightDestination?: TvButtonHandle | null;
 };
 
 /** Height of the hero's own area: the screen less the shelf peeking in. */
@@ -56,6 +61,7 @@ export function TvHero({
   onRestart,
   onMore,
   onFocus,
+  rightDestination,
 }: TvHeroProps) {
   const c = useColors();
   const { width, height } = useWindowDimensions();
@@ -135,6 +141,9 @@ export function TvHero({
               />
             )}
             {onMore && <TvButton round title="More" icon="ellipsis" onPress={onMore} onFocus={onFocus} />}
+            {rightDestination && (
+              <TVFocusGuideView testID="tv-hero-right" style={styles.toRight} destinations={[rightDestination]} />
+            )}
           </TVFocusGuideView>
         </View>
       </ColorsContext.Provider>
@@ -152,5 +161,7 @@ const styles = StyleSheet.create({
   onArt: { position: 'absolute', left: 0, right: 0, bottom: tv.gap.lg, gap: tv.gap.sm },
   text: { marginLeft: tv.margin, maxWidth: tv.hero.textWidth, gap: tv.gap.sm / 2 },
   eyebrow: { letterSpacing: 1 },
+  // The rest of the row, right of the buttons.
+  toRight: { flex: 1, alignSelf: 'stretch' },
   buttons: { flexDirection: 'row', alignItems: 'center', gap: tv.gap.sm, paddingHorizontal: tv.margin },
 });

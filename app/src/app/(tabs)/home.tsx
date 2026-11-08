@@ -23,6 +23,7 @@ import { Row } from '@/components/Row';
 import { useShelfCards, type CardSize } from '@/components/shelfCards';
 import { Screen } from '@/components/Screen';
 import { CardRowPlaceholder } from '@/components/Skeleton';
+import { type TvButtonHandle } from '@/components/tv/TvButton';
 import { TvHero, useTvHeroHeight } from '@/components/tv/TvHero';
 import { TvShelf } from '@/components/tv/TvShelf';
 import { heroFacts } from '@/detail';
@@ -70,6 +71,8 @@ export default function Home() {
   // TV: back on the hero → the top of Home (the full hero, the tab bar reachable above it).
   const scroll = useRef<ScrollViewInstance>(null);
   const scrollToTop = useCallback(() => scroll.current?.scrollTo({ y: 0, animated: true }), []);
+  // The TV profile button, for the hero's focus guide (state, so the hero gets it once it mounts).
+  const [profileView, setProfileView] = useState<TvButtonHandle | null>(null);
   const views = useFetch<ItemsResult>(userViews.path, { query: userViews.query });
   const resume = useFetch<ItemsResult>(continueWatching.path, { query: continueWatching.query });
   const next = useFetch<ItemsResult>(nextUp.path, { query: nextUp.query });
@@ -115,13 +118,15 @@ export default function Home() {
     />
   );
 
-  // Active user's avatar opens Settings (accounts live there), like the system apps' profile button. TV: bigger,
-  // beside the system's tab bar, and focus grows it with a ring.
+  // Active user's avatar opens Settings (accounts live there), like the system apps' profile button. TV: Who's
+  // Watching (Settings from there), bigger, beside the system's tab bar, and focus grows it with a ring.
   const profile = (
     <Pressable
+      ref={Platform.isTV ? setProfileView : undefined}
+      onFocus={Platform.isTV ? scrollToTop : undefined}
       accessibilityRole="button"
-      accessibilityLabel="Settings"
-      onPress={() => router.push('/settings')}
+      accessibilityLabel={Platform.isTV ? "Who's Watching" : 'Settings'}
+      onPress={() => router.push(Platform.isTV ? '/accounts' : '/settings')}
       style={({ pressed, focused }) => [
         Platform.isTV ? styles.profileTv : styles.profile,
         pressed && styles.pressed,
@@ -148,6 +153,7 @@ export default function Home() {
         onRestart={playback(hero).progress !== undefined ? () => openPlayer(hero, 0) : undefined}
         onMore={() => menu(hero)}
         onFocus={scrollToTop}
+        rightDestination={profileView}
       />
     ) : (
       <View style={styles.padded}>
