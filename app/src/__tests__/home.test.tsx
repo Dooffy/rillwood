@@ -9,7 +9,7 @@ import { ApiError, type BaseItemDto, type RequestOptions } from '@/api';
 import Home from '@/app/(tabs)/home';
 import { ItemMenuProvider } from '@/components/ItemMenu';
 import { ToastProvider } from '@/components/Toast';
-import { TvMenuHost } from '@/components/TvMenu';
+import { TvMenuHost } from '@/components/tv/TvMenu';
 import * as session from '@/session';
 import { resetDevice, setDevice } from '@/testDevice';
 

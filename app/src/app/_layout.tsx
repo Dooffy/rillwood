@@ -7,7 +7,7 @@ import { useEffect, useLayoutEffect } from 'react';
 import { Platform, useColorScheme } from 'react-native';
 
 import { ItemMenuProvider } from '@/components/ItemMenu';
-import { TvMenuHost } from '@/components/TvMenu';
+import { TvMenuHost } from '@/components/tv/TvMenu';
 import { SETTINGS_TITLES } from '@/components/SettingsLink';
 import { OffloadToast } from '@/components/OffloadToast';
 import { ToastProvider } from '@/components/Toast';

@@ -23,8 +23,8 @@ import { Row } from '@/components/Row';
 import { useShelfCards, type CardSize } from '@/components/shelfCards';
 import { Screen } from '@/components/Screen';
 import { CardRowPlaceholder } from '@/components/Skeleton';
-import { TvHero, useTvHeroHeight } from '@/components/TvHero';
-import { TvShelf } from '@/components/TvShelf';
+import { TvHero, useTvHeroHeight } from '@/components/tv/TvHero';
+import { TvShelf } from '@/components/tv/TvShelf';
 import { heroFacts } from '@/detail';
 import {
   backdropImage,

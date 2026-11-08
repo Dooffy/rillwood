@@ -5,7 +5,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Platform, TVEventControl } from 'react-native';
 
 import { ActionSheet } from '@/components/ActionSheet';
-import { TvMenuHost } from '@/components/TvMenu';
+import { TvMenuHost } from '@/components/tv/TvMenu';
 
 const isTV = Object.getOwnPropertyDescriptor(Platform, 'isTV')!;
 beforeEach(() => {

@@ -7,7 +7,7 @@ import { BackHandler, Platform, ScrollView, StyleSheet, TVEventControl, TVFocusG
 
 import { backdrop, scrollList, tv, useColors } from '@/theme';
 
-import { Text } from './Text';
+import { Text } from '../Text';
 import { TvButton } from './TvButton';
 
 export type TvMenuAction = {

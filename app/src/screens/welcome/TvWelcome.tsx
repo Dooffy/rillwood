@@ -12,8 +12,8 @@ import { useServerConnect } from '@/useServerConnect';
 import { LogoMark } from '@/components/LogoMark';
 import { WHERE } from '@/components/ServerHelp';
 import { Text } from '@/components/Text';
-import { TvButton } from '@/components/TvButton';
-import { TvTextField } from '@/components/TvTextField';
+import { TvButton } from '@/components/tv/TvButton';
+import { TvTextField } from '@/components/tv/TvTextField';
 
 const wall = {
   dark: require('../../../assets/images/welcome-wall-dark.svg'),
