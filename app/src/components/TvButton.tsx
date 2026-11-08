@@ -28,6 +28,8 @@ export type TvButtonProps = {
   progress?: number;
   /** Text after the track: "34m left". */
   trailing?: string;
+  /** Removes something (menus): the danger colour while not focused. */
+  destructive?: boolean;
   /** What VoiceOver reads when it isn't the title. */
   accessibilityLabel?: string;
   loading?: boolean;
@@ -50,6 +52,7 @@ export function TvButton({
   progress,
   trailing,
   accessibilityLabel,
+  destructive = false,
   loading = false,
   disabled = false,
   preferredFocus,
@@ -61,7 +64,15 @@ export function TvButton({
   const quiet = variant === 'quiet';
   const fill = variant === 'primary' ? c.accent : quiet ? 'transparent' : tv.unfocused;
   const ink = (focused: boolean) =>
-    focused ? c.background : variant === 'primary' ? c.onAccent : quiet ? c.textSecondary : c.text;
+    focused
+      ? c.background
+      : variant === 'primary'
+        ? c.onAccent
+        : destructive
+          ? c.danger
+          : quiet
+            ? c.textSecondary
+            : c.text;
   return (
     <Pressable
       ref={ref}

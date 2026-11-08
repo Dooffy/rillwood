@@ -81,8 +81,8 @@ describe('TvSignIn', () => {
     await render(<TvSignIn server={server} initialUserName="anna" />);
     await fireEvent.press(await screen.findByRole('button', { name: 'Use Password' }));
     expect(calls[0].options.signal.aborted).toBe(true);
-    expect(screen.getByLabelText('Username').props.value).toBe('anna');
-    await fireEvent.changeText(screen.getByLabelText('Password'), 'secret');
+    expect(screen.getByTestId('Username input').props.value).toBe('anna');
+    await fireEvent.changeText(screen.getByTestId('Password input'), 'secret');
     await fireEvent.press(screen.getByRole('button', { name: 'Sign In' }));
     expect(mocked.signIn).toHaveBeenCalledWith(server, 'anna', 'secret');
     expect(resetTo).toHaveBeenCalledWith('/home');
@@ -93,7 +93,7 @@ describe('TvSignIn', () => {
     mocked.quickConnectEnabled.mockResolvedValue(false);
     mocked.signIn.mockRejectedValue(new ApiError('http', 401));
     await render(<TvSignIn server={server} />);
-    await fireEvent.changeText(await screen.findByLabelText('Username'), 'anna');
+    await fireEvent.changeText(await screen.findByTestId('Username input'), 'anna');
     await fireEvent.press(screen.getByRole('button', { name: 'Sign In' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Wrong username or password.');
     expect(resetTo).not.toHaveBeenCalled();

@@ -210,7 +210,7 @@ Foundation:
 - [x] 2. Gate what TV doesn't have (`Platform.isTV`): downloads module + Downloads tab, offline queue / offload, orientation lock, file sharing; no touch gestures in the player (pinch crashes on tvOS)
 - [ ] 3. TV storage: accounts list + settings out of the kv-store (tvOS can purge caches) into UserDefaults / Keychain; tokens stay in secure-store
 - [ ] 4. Focus building blocks: focused styles for cards, buttons, rows, pills (scale + lift + white for buttons), focus guides between rows, preferred first focus per screen
-- [ ] 4b. TV menus: one in-app panel / card over a dimmed screen instead of RN `Modal` (remote presses don't reach a native modal), focus held inside, Menu closes it; TV item menu (`ActionSheet`) on it first - then reused by the Library sort / filter panel (10), detail More panel (12), player tracks menu (15) and long-press menus (19)
+- [x] 4b. TV menus: one in-app panel / card over a dimmed screen instead of RN `Modal` (remote presses don't reach a native modal), focus held inside, Menu closes it; TV item menu (`ActionSheet`) on it first - then reused by the Library sort / filter panel (10), detail More panel (12), player tracks menu (15) and long-press menus (19) - `TvMenu` via `TvMenuHost`, every `ActionSheet` on TV, no Cancel (Back closes); left: focus back on the button that opened it, the tracks menu anchor (15)
 - [x] 5. TV shell: the system's top tab bar Home / Library / Search (Liquid Glass, hides as focus moves into content; `react-native-screens` patched so it keeps it), Settings from the profile avatar, no tab titles; Menu = back one level, tab root → Home (system); no native modals on TV (remote presses don't reach them) - the player is a pushed screen, sheets and menus in task 4b
 
 Screens:

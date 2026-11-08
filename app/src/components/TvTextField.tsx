@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Apple TV text field: label above, icon inside, sunken fill + hairline so it reads as an input. The field itself is
-// the system's (its focused pill, its full-screen keyboard); its text colours are left to tvOS - the same field is
-// drawn on the screen and on the dark keyboard screen, so a fixed text colour turns unreadable on one of them.
+// Apple TV text field: label above, then a capsule we draw (icon, our font and colours; white when focused, like the
+// system's) that opens the system keyboard. The typing happens in a separate, hidden TextInput with no style at all:
+// tvOS copies a field's font, colour and padding into its full-screen keyboard screen and lays them out badly (tiny,
+// off centre - react-native-tvos #1134 only fixes the value), so the field it sees is a plain one. Clicking the
+// capsule mounts that input with autoFocus (the one way to start editing from code on tvOS).
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useState } from 'react';
-import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { Pressable, StyleSheet, TextInput, TVFocusGuideView, View, type TextInputProps } from 'react-native';
 
 import { radii, tv, useColors } from '@/theme';
 
@@ -19,37 +21,47 @@ export type TvTextFieldProps = Omit<TextInputProps, 'style'> & {
   preferredFocus?: boolean;
 };
 
-export function TvTextField({ label, icon, error, preferredFocus, onFocus, onBlur, ...rest }: TvTextFieldProps) {
+export function TvTextField({ label, icon, error, preferredFocus, ...input }: TvTextFieldProps) {
   const c = useColors();
-  // Only for the icon (it sits on the system's white pill while focused); the text keeps the system colours.
-  const [focused, setFocused] = useState(false);
+  // A new key per click mounts a new input, whose autoFocus opens the keyboard.
+  const [opened, setOpened] = useState(0);
+  const value = input.value ?? '';
+  const shown = input.secureTextEntry ? '•'.repeat(value.length) : value;
+  const editable = input.editable !== false;
   return (
     <View style={styles.root}>
       <Text secondary style={[tv.type.label, styles.label]}>
         {label}
       </Text>
-      <View>
-        <TextInput
-          accessibilityLabel={label}
-          placeholderTextColor={c.textSecondary}
-          hasTVPreferredFocus={preferredFocus}
-          onFocus={(e) => {
-            setFocused(true);
-            onFocus?.(e);
-          }}
-          onBlur={(e) => {
-            setFocused(false);
-            onBlur?.(e);
-          }}
-          style={[styles.field, tv.type.field, icon !== undefined && styles.withIcon]}
-          {...rest}
-        />
-        {icon && (
-          <View style={styles.icon} pointerEvents="none">
-            <SymbolView name={icon} tintColor={focused ? c.background : c.textSecondary} size={tv.icon.field} />
-          </View>
-        )}
-      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityValue={{ text: input.secureTextEntry || !value ? undefined : value }}
+        accessibilityState={{ disabled: !editable }}
+        hasTVPreferredFocus={preferredFocus}
+        onPress={editable ? () => setOpened((n) => n + 1) : undefined}
+        style={({ focused }) => [
+          styles.field,
+          { backgroundColor: focused ? c.text : tv.field.fill },
+          focused && styles.focused,
+        ]}
+      >
+        {({ focused }) => {
+          const ink = focused ? c.background : c.text;
+          return (
+            <>
+              {icon && <SymbolView name={icon} tintColor={focused ? ink : c.textSecondary} size={tv.icon.field} />}
+              <Text numberOfLines={1} style={[tv.type.field, styles.text, { color: value ? ink : c.textSecondary }]}>
+                {shown || input.placeholder}
+              </Text>
+            </>
+          );
+        }}
+      </Pressable>
+      {/* The typing field: no style, never focused by the remote, only opened by the capsule. */}
+      <TVFocusGuideView focusable={false} style={styles.hidden} pointerEvents="none">
+        <TextInput key={opened} testID={`${label} input`} accessible={false} autoFocus={opened > 0} {...input} />
+      </TVFocusGuideView>
       {error && (
         <Text accessibilityRole="alert" style={[tv.type.small, { color: c.danger }]}>
           {error}
@@ -64,11 +76,16 @@ const styles = StyleSheet.create({
   label: { marginLeft: tv.gap.sm / 2 },
   field: {
     height: tv.field.height,
-    borderRadius: radii.pill, // the system's focused pill is a capsule too
-    backgroundColor: tv.field.fill,
+    borderRadius: radii.pill,
     borderWidth: 2,
     borderColor: tv.field.hairline,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tv.gap.sm,
+    paddingHorizontal: tv.field.iconInset,
   },
-  withIcon: { paddingLeft: tv.field.textInset },
-  icon: { position: 'absolute', left: tv.field.iconInset, top: 0, bottom: 0, justifyContent: 'center' },
+  focused: { transform: [{ scale: tv.focus.buttonScale }], ...tv.focus.shadow, borderColor: 'transparent' },
+  text: { flex: 1 },
+  // Out of sight; still in the window, so it can open the keyboard.
+  hidden: { position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden' },
 });
