@@ -9,7 +9,7 @@ import { Page } from '@/components/Page';
 import { StepPills } from '@/components/StepPills';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
-import { TvSignIn } from '@/components/TvSignIn';
+import { TvSignIn } from '@/components/tv/TvSignIn';
 import { isOutdatedServer, MIN_SERVER_VERSION, ONBOARDING_STEPS } from '@/server';
 import { ONBOARDING, useOnboarding } from '@/navigation';
 import type { Server } from '@/session';

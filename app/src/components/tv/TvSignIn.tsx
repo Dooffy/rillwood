@@ -11,7 +11,7 @@ import type { Server } from '@/session';
 import { tv, useColors } from '@/theme';
 import { usePasswordSignIn, useQuickConnectCode, useQuickConnectEnabled } from '@/useSignIn';
 
-import { Text } from './Text';
+import { Text } from '../Text';
 import { TvButton, type TvButtonHandle } from './TvButton';
 import { TvTextField } from './TvTextField';
 

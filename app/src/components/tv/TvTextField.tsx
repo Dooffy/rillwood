@@ -10,7 +10,7 @@ import { Pressable, StyleSheet, TextInput, TVFocusGuideView, View, type TextInpu
 
 import { radii, tv, useColors } from '@/theme';
 
-import { Text } from './Text';
+import { Text } from '../Text';
 
 export type TvTextFieldProps = Omit<TextInputProps, 'style'> & {
   /** Shown above the field, read out, and the keyboard's title. */

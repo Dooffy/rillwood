@@ -8,7 +8,7 @@ import { ScrollView, StyleSheet, TVFocusGuideView, View } from 'react-native';
 
 import { tv } from '@/theme';
 
-import { Text } from './Text';
+import { Text } from '../Text';
 
 export type TvShelfProps = {
   title: string;

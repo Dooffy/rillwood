@@ -8,8 +8,8 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { pressedOpacity, radii, tv, useColors } from '@/theme';
 
-import { clamp01 } from './ProgressBar';
-import { Text } from './Text';
+import { clamp01 } from '../ProgressBar';
+import { Text } from '../Text';
 
 /** What a ref to a TvButton holds (a focus guide destination). */
 export type TvButtonHandle = ComponentRef<typeof Pressable>;

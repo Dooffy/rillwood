@@ -7,7 +7,7 @@ import { backdrop, radii, scrollList, spacing, useColors } from '@/theme';
 
 import { Checkmark } from './List';
 import { Text } from './Text';
-import { useTvMenu, useTvMenuHost } from './TvMenu';
+import { useTvMenu, useTvMenuHost } from './tv/TvMenu';
 
 /** Row height of the sheet's actions and Cancel (iOS action sheet). */
 const ROW_HEIGHT = 56;

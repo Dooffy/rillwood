@@ -8,7 +8,7 @@ import { StyleSheet, TVFocusGuideView, useWindowDimensions, View } from 'react-n
 import { formatRemaining } from '@/format';
 import { ColorsContext, palettes, tv, useColors } from '@/theme';
 
-import { Text } from './Text';
+import { Text } from '../Text';
 import { TvButton } from './TvButton';
 
 export type TvHeroProps = {
