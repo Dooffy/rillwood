@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { Storage } from 'expo-sqlite/kv-store';
+import { Platform } from 'react-native';
 
 import { logout, request, type AuthenticationResult } from '@/api';
 
@@ -158,6 +159,34 @@ describe('switch, sign out, remove', () => {
     expect(getSession().active).toBeNull();
     expect(getSession().accounts.find((a) => a.id === 'srv.u2')?.signedOut).toBe(true);
     expect(secure.has('tok_srv.u2')).toBe(false);
+  });
+});
+
+describe('Apple TV', () => {
+  const isTV = Object.getOwnPropertyDescriptor(Platform, 'isTV')!;
+  beforeEach(() => {
+    Object.defineProperty(Platform, 'isTV', { get: () => true, configurable: true });
+  });
+  afterEach(() => {
+    Object.defineProperty(Platform, 'isTV', isTV);
+  });
+
+  it('keeps the accounts list in the Keychain, not the kv-store', async () => {
+    await addAccount(server, auth('u1'), 'dev-1');
+    expect(Storage.getItemSync('session.accounts')).toBeNull();
+    const record = JSON.parse(secure.get('session.accounts')!) as { accounts: { id: string }[]; activeId: string };
+    expect(record).toMatchObject({ activeId: 'srv.u1', accounts: [{ id: 'srv.u1' }] });
+    expect(secure.get('session.accounts')).not.toContain('tok-u1');
+    expect(secure.get('tok_srv.u1')).toBe('tok-u1');
+  });
+
+  it('restores accounts from the Keychain at launch', async () => {
+    await addAccount(server, auth('u1'), 'dev-1');
+    let session!: typeof import('./session');
+    jest.isolateModules(() => {
+      session = jest.requireActual<typeof import('./session')>('./session');
+    });
+    expect(session.getSession().active?.id).toBe('srv.u1');
   });
 });
 

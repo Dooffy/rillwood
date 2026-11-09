@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Accounts + active account (docs/context/api.md). Records in kv-store, tokens in secure-store `tok_<accountId>`.
+// Accounts + active account (docs/context/api.md). Records in kv-store (the Keychain on Apple TV - `src/persist.ts`),
+// tokens in secure-store `tok_<accountId>`.
 // Read once (sync) on first use, then served from memory. A store, not Context: the 401 listener and the auth calls
 // change it from outside React.
-import { Storage } from 'expo-sqlite/kv-store';
 import * as SecureStore from 'expo-secure-store';
 import { useSyncExternalStore } from 'react';
 
 import { ApiError, logout, onUnauthorized, type AuthenticationResult, type Connection } from '@/api';
+import { getPersisted, setPersisted } from '@/persist';
 
 /** A probed Jellyfin server. `id` is the server's own id (`ServerId`). */
 export type Server = { id: string; url: string; name: string; version: string };
@@ -48,7 +49,7 @@ function readToken(id: string): string | null {
 
 function load(): SessionState {
   try {
-    const saved = JSON.parse(Storage.getItemSync(STORAGE_KEY) ?? 'null') as {
+    const saved = JSON.parse(getPersisted(STORAGE_KEY) ?? 'null') as {
       accounts: Account[];
       activeId: string | null;
     } | null;
@@ -73,7 +74,7 @@ export function getSession(): SessionState {
 
 function save(accounts: Account[], activeId: string | null | undefined) {
   state = withActive(accounts, activeId);
-  Storage.setItemSync(STORAGE_KEY, JSON.stringify({ accounts, activeId: state.active?.id ?? null }));
+  setPersisted(STORAGE_KEY, JSON.stringify({ accounts, activeId: state.active?.id ?? null }));
   listeners.forEach((l) => l());
 }
 

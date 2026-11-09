@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, renderHook } from '@testing-library/react-native';
 import { Storage } from 'expo-sqlite/kv-store';
-import { Appearance as RNAppearance } from 'react-native';
+import { Platform, Appearance as RNAppearance } from 'react-native';
 
 import {
   setAppearance,
@@ -318,5 +318,25 @@ describe('playback defaults', () => {
     expect(result.current).toBe('on');
     await act(() => setAutoplayNext('off'));
     expect(result.current).toBe('off');
+  });
+});
+
+describe('Apple TV', () => {
+  const isTV = Object.getOwnPropertyDescriptor(Platform, 'isTV')!;
+  const secure = jest.requireMock<{ __store: Map<string, string> }>('expo-secure-store').__store;
+  beforeEach(() => {
+    Storage.clearSync();
+    secure.clear();
+    Object.defineProperty(Platform, 'isTV', { get: () => true, configurable: true });
+  });
+  afterEach(() => {
+    Object.defineProperty(Platform, 'isTV', isTV);
+  });
+
+  it('keeps settings in the Keychain, not the kv-store, across launches', () => {
+    load().setAutoplayNext('off');
+    expect(secure.get('settings.autoplayNext')).toBe('off');
+    expect(Storage.getItemSync('settings.autoplayNext')).toBeNull();
+    expect(load().getAutoplayNext()).toBe('off');
   });
 });

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// User settings in kv-store (CLAUDE.md §2). Read once (sync) on first use, then served from memory.
-import { Storage } from 'expo-sqlite/kv-store';
+// User settings in kv-store (CLAUDE.md §2; the Keychain on Apple TV - `src/persist.ts`). Read once (sync) on first use,
+// then served from memory.
 import { useSyncExternalStore } from 'react';
 import { Platform, Appearance as RNAppearance } from 'react-native';
 
+import { getPersisted, setPersisted } from '@/persist';
 import type { TrackPrefs } from '@/playback';
 import type { SubtitleEdge, SubtitleFont, SubtitleStyle, VideoZoom } from '@/player/Player';
 
@@ -98,14 +99,14 @@ const listeners = new Set<() => void>();
 
 export function getAppearance(): Appearance {
   if (appearance === undefined) {
-    const stored = Storage.getItemSync(APPEARANCE_KEY);
+    const stored = getPersisted(APPEARANCE_KEY);
     appearance = APPEARANCE_OPTIONS.find((o) => o.value === stored)?.value ?? 'system';
   }
   return appearance;
 }
 
 export function setAppearance(value: Appearance): void {
-  Storage.setItemSync(APPEARANCE_KEY, value);
+  setPersisted(APPEARANCE_KEY, value);
   appearance = value;
   applyNativeAppearance();
   listeners.forEach((l) => l());
@@ -123,14 +124,14 @@ export function useAppearance(): Appearance {
 
 export function getSubtitleScale(): SubtitleScale {
   if (subtitleScale === undefined) {
-    const stored = Number(Storage.getItemSync(SUBTITLE_SCALE_KEY));
+    const stored = Number(getPersisted(SUBTITLE_SCALE_KEY));
     subtitleScale = SUBTITLE_SIZES.find((o) => o.value === stored)?.value ?? 1;
   }
   return subtitleScale;
 }
 
 export function setSubtitleScale(value: SubtitleScale): void {
-  Storage.setItemSync(SUBTITLE_SCALE_KEY, String(value));
+  setPersisted(SUBTITLE_SCALE_KEY, String(value));
   subtitleScale = value;
   listeners.forEach((l) => l());
 }
@@ -144,7 +145,7 @@ export function getSubtitleStyle(): SubtitleStyle {
   if (subtitleStyle === undefined) {
     let stored: Partial<Record<keyof SubtitleStyle, unknown>> = {};
     try {
-      stored = JSON.parse(Storage.getItemSync(SUBTITLE_STYLE_KEY) ?? '{}') ?? {};
+      stored = JSON.parse(getPersisted(SUBTITLE_STYLE_KEY) ?? '{}') ?? {};
     } catch {}
     const d = DEFAULT_SUBTITLE_STYLE;
     subtitleStyle = {
@@ -162,7 +163,7 @@ export function setSubtitleStyle(change: Partial<SubtitleStyle>): void {
   const parts = Object.entries(change).filter(([, v]) => v !== undefined);
   if (parts.every(([k, v]) => current[k as keyof SubtitleStyle] === v)) return;
   const next: SubtitleStyle = { ...current, ...Object.fromEntries(parts) };
-  Storage.setItemSync(SUBTITLE_STYLE_KEY, JSON.stringify(next));
+  setPersisted(SUBTITLE_STYLE_KEY, JSON.stringify(next));
   subtitleStyle = next;
   listeners.forEach((l) => l());
 }
@@ -188,13 +189,13 @@ export function useSubtitleSample(): SubtitleSample {
 // Player video zoom in landscape, same for every account.
 export function getVideoZoom(): VideoZoom {
   if (videoZoom === undefined) {
-    videoZoom = Storage.getItemSync(VIDEO_ZOOM_KEY) === 'fill' ? 'fill' : 'fit';
+    videoZoom = getPersisted(VIDEO_ZOOM_KEY) === 'fill' ? 'fill' : 'fit';
   }
   return videoZoom;
 }
 
 export function setVideoZoom(value: VideoZoom): void {
-  Storage.setItemSync(VIDEO_ZOOM_KEY, value);
+  setPersisted(VIDEO_ZOOM_KEY, value);
   videoZoom = value;
   listeners.forEach((l) => l());
 }
@@ -237,12 +238,12 @@ export const SUBTITLE_MODES = [
 export type SubtitleMode = (typeof SUBTITLE_MODES)[number]['value'];
 
 const readOption = <T extends string>(key: string, options: readonly { value: T }[], fallback: T): T => {
-  const value = Storage.getItemSync(key);
+  const value = getPersisted(key);
   return options.find((o) => o.value === value)?.value ?? fallback;
 };
 
 const save = (key: string, value: string) => {
-  Storage.setItemSync(key, value);
+  setPersisted(key, value);
   listeners.forEach((l) => l());
 };
 
@@ -304,13 +305,13 @@ export type DownloadNetwork = (typeof DOWNLOAD_NETWORK_OPTIONS)[number]['value']
 
 export function getDownloadNetwork(): DownloadNetwork {
   if (downloadNetwork === undefined) {
-    downloadNetwork = Storage.getItemSync(DOWNLOAD_NETWORK_KEY) === 'any' ? 'any' : 'wifi';
+    downloadNetwork = getPersisted(DOWNLOAD_NETWORK_KEY) === 'any' ? 'any' : 'wifi';
   }
   return downloadNetwork;
 }
 
 export function setDownloadNetwork(value: DownloadNetwork): void {
-  Storage.setItemSync(DOWNLOAD_NETWORK_KEY, value);
+  setPersisted(DOWNLOAD_NETWORK_KEY, value);
   downloadNetwork = value;
   listeners.forEach((l) => l());
 }
@@ -324,14 +325,14 @@ const toLimit = (gb: number) => (Number.isFinite(gb) && gb > 0 ? gb : 0);
 /** Most space every download together may take, in GB (decimal, as iOS Settings counts); 0 = no limit (default). */
 export function getDownloadLimit(): number {
   if (downloadLimit === undefined) {
-    downloadLimit = toLimit(Number(Storage.getItemSync(DOWNLOAD_LIMIT_KEY)));
+    downloadLimit = toLimit(Number(getPersisted(DOWNLOAD_LIMIT_KEY)));
   }
   return downloadLimit;
 }
 
 export function setDownloadLimit(gb: number): void {
   const value = toLimit(gb);
-  Storage.setItemSync(DOWNLOAD_LIMIT_KEY, String(value));
+  setPersisted(DOWNLOAD_LIMIT_KEY, String(value));
   downloadLimit = value;
   listeners.forEach((l) => l());
 }
@@ -364,14 +365,14 @@ export type OffloadWatched = (typeof OFFLOAD_WATCHED)[number]['value'];
 /** Days after download (or the last Reset Timer) a download goes; 0 = never. Default 90. */
 export function getOffloadDays(): OffloadDays {
   if (offloadDays === undefined) {
-    const stored = Storage.getItemSync(OFFLOAD_DAYS_KEY);
+    const stored = getPersisted(OFFLOAD_DAYS_KEY);
     offloadDays = OFFLOAD_DAYS.find((o) => stored !== null && o.value === Number(stored))?.value ?? 90;
   }
   return offloadDays;
 }
 
 export function setOffloadDays(value: OffloadDays): void {
-  Storage.setItemSync(OFFLOAD_DAYS_KEY, String(value));
+  setPersisted(OFFLOAD_DAYS_KEY, String(value));
   offloadDays = value;
   listeners.forEach((l) => l());
 }
@@ -383,14 +384,14 @@ export function useOffloadDays(): OffloadDays {
 /** Hours after watching a download goes; 0 = off (default). */
 export function getOffloadWatched(): OffloadWatched {
   if (offloadWatched === undefined) {
-    const stored = Storage.getItemSync(OFFLOAD_WATCHED_KEY);
+    const stored = getPersisted(OFFLOAD_WATCHED_KEY);
     offloadWatched = OFFLOAD_WATCHED.find((o) => stored !== null && o.value === Number(stored))?.value ?? 0;
   }
   return offloadWatched;
 }
 
 export function setOffloadWatched(value: OffloadWatched): void {
-  Storage.setItemSync(OFFLOAD_WATCHED_KEY, String(value));
+  setPersisted(OFFLOAD_WATCHED_KEY, String(value));
   offloadWatched = value;
   listeners.forEach((l) => l());
 }
