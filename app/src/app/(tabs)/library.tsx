@@ -42,6 +42,7 @@ import {
   type LibrarySort,
   type SearchScope,
 } from '@/items';
+import { features } from '@/device';
 import { openItem } from '@/navigation';
 import { addRecentSearch, clearRecentSearches, useRecentSearches } from '@/recentSearches';
 import { useSession } from '@/session';
@@ -267,7 +268,11 @@ export default function Library() {
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.rows}
-        refreshControl={<RefreshControl refreshing={rows.refreshing} onRefresh={rows.onRefresh} tintColor={c.text} />}
+        refreshControl={
+          features.touch ? (
+            <RefreshControl refreshing={rows.refreshing} onRefresh={rows.onRefresh} tintColor={c.text} />
+          ) : undefined
+        }
       >
         {content}
       </ScrollView>

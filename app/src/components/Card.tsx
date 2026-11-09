@@ -2,10 +2,10 @@
 import { memo } from 'react';
 
 import type { BaseItemDto } from '@/api';
-import { Platform, Pressable, StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
+import { Pressable, StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
 
 import { spokenRemaining } from '@/format';
-import { pressedOpacity, radii, spacing, tv, type, useColors } from '@/theme';
+import { deviceSizes, pressedOpacity, radii, spacing, tv, type, useColors } from '@/theme';
 
 import { Artwork } from './Artwork';
 import { isInProgress } from './ProgressBar';
@@ -105,11 +105,11 @@ const MediaCard = memo(function MediaCard({
         played={played}
       />
       <View>
-        <Text variant="label" numberOfLines={1} style={Platform.isTV && tv.type.cardTitle}>
+        <Text variant="label" numberOfLines={1} style={deviceSizes.cardTitle}>
           {title}
         </Text>
         {subtitle !== undefined && (
-          <Text variant="caption" secondary numberOfLines={1} style={Platform.isTV && tv.type.small}>
+          <Text variant="caption" secondary numberOfLines={1} style={deviceSizes.cardSubtitle}>
             {subtitle}
           </Text>
         )}

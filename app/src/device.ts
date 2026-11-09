@@ -16,3 +16,26 @@ export function screenFor<P extends object>(views: {
     return createElement(Platform.isTV ? views.tv : views.phone, props);
   };
 }
+
+/**
+ * What the device can do, for shared code that leaves a feature out where it's missing (not the platform itself).
+ * Getters, read on use: tests switch `Platform.isTV`. Apple TV today; Android TV later changes only this.
+ */
+export const features = {
+  /** Downloads: the tab, download buttons, offline "watch something downloaded" (tvOS doesn't build the module). */
+  get downloads() {
+    return !Platform.isTV;
+  },
+  /** Screen rotation (`expo-screen-orientation`, not built on tvOS). */
+  get rotation() {
+    return !Platform.isTV;
+  },
+  /** A touch screen: player gestures (tvOS has no pinch recogniser), pull to refresh. */
+  get touch() {
+    return !Platform.isTV;
+  },
+  /** The app's files last; tvOS keeps them in Caches, which it may purge (`src/persist.ts` uses the Keychain then). */
+  get lastingFiles() {
+    return !Platform.isTV;
+  },
+};

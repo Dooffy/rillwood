@@ -3,6 +3,7 @@ import { useCallback, type ReactElement } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { isConnectionError, type BaseItemDto } from '@/api';
+import { features } from '@/device';
 import { cardTitles, landscapeImage, playback, posterImage, ticksToSeconds } from '@/items';
 import { openItem } from '@/navigation';
 import type { PagedItems } from '@/usePagedItems';
@@ -173,7 +174,9 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
       initialNumToRender={posters ? columns * 4 : 8}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.text} />}
+      refreshControl={
+        features.touch ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.text} /> : undefined
+      }
       renderItem={renderItem}
     />
   );

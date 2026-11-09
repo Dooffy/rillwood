@@ -2,14 +2,15 @@
 // Rotation: phones stay upright portrait (only the player rotates), tablets rotate everywhere. Apple TV has no
 // rotation and tvOS doesn't build expo-screen-orientation (importing it there throws), so it's never loaded on TV.
 import type * as ScreenOrientationModule from 'expo-screen-orientation';
-import { Dimensions, Platform } from 'react-native';
+import { Dimensions } from 'react-native';
 
+import { features } from '@/device';
 import { isTabletScreen } from '@/theme';
 
-const ScreenOrientation: typeof ScreenOrientationModule | null = Platform.isTV
-  ? null
-  : // eslint-disable-next-line @typescript-eslint/no-require-imports -- loaded only off TV (see top)
-    require('expo-screen-orientation');
+const ScreenOrientation: typeof ScreenOrientationModule | null = features.rotation
+  ? // eslint-disable-next-line @typescript-eslint/no-require-imports -- loaded only where it's built (see top)
+    require('expo-screen-orientation')
+  : null;
 
 type Lock = 'DEFAULT' | 'PORTRAIT_UP';
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Design tokens (CLAUDE.md §3). Screens use these, never raw values.
 import { createContext, useContext, useSyncExternalStore } from 'react';
-import { Dimensions } from 'react-native';
+import { Dimensions, Platform } from 'react-native';
 
 const dark = {
   background: '#000000',
@@ -262,3 +262,26 @@ export const tv = {
     shadow: { shadowColor: '#000000', shadowOpacity: 0.5, shadowRadius: 20, shadowOffset: { width: 0, height: 16 } },
   },
 } as const;
+
+/**
+ * Sizes shared components take on Apple TV, picked here once (docs/decisions/tv-code-structure.md rule 3) so the
+ * components don't check the platform. Getters, read on use: tests switch `Platform.isTV`.
+ */
+export const deviceSizes = {
+  /** Text under a card's artwork (`Card`); undefined = the phone's `label` / `caption`. */
+  get cardTitle() {
+    return Platform.isTV ? tv.type.cardTitle : undefined;
+  },
+  get cardSubtitle() {
+    return Platform.isTV ? tv.type.small : undefined;
+  },
+  /**
+   * Tab shelves (`useShelfCards`) on Apple TV: the screen's safe margin, the card widths whole cards are fitted to, the
+   * gap. null on phones and tablets (sized from the tab's width).
+   */
+  get tvShelf() {
+    return Platform.isTV
+      ? { margin: tv.margin, poster: tv.shelf.posterWidth, landscape: tv.shelf.landscapeWidth, gap: tv.shelf.gap }
+      : null;
+  },
+};
