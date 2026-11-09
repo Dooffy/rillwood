@@ -1,110 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { Redirect, router, useLocalSearchParams } from 'expo-router';
-import { useRef } from 'react';
-import { Platform, StyleSheet, View, type TextInputInstance } from 'react-native';
+// Sign in. Route only: the server from the params, then the phone / tablet or the Apple TV screen
+// (`src/screens/phone/`, `src/screens/tv/`).
+import { Redirect, useLocalSearchParams } from 'expo-router';
 
 import { useServerParam } from '@/auth';
-import { Button } from '@/components/Button';
-import { Page } from '@/components/Page';
-import { StepPills } from '@/components/StepPills';
-import { Text } from '@/components/Text';
-import { TextField } from '@/components/TextField';
-import { TvSignIn } from '@/components/tv/TvSignIn';
-import { isOutdatedServer, MIN_SERVER_VERSION, ONBOARDING_STEPS } from '@/server';
-import { ONBOARDING, useOnboarding } from '@/navigation';
-import type { Server } from '@/session';
-import { spacing } from '@/theme';
-import { usePasswordSignIn, useQuickConnectEnabled } from '@/useSignIn';
+import { screenFor } from '@/device';
+import { PhoneSignIn } from '@/screens/phone/PhoneSignIn';
+import { TvSignIn } from '@/screens/tv/TvSignIn';
+
+const SignIn = screenFor({ phone: PhoneSignIn, tv: TvSignIn });
 
 export default function Login() {
   const server = useServerParam();
   // Prefilled when signing a signed-out account back in.
   const { userName } = useLocalSearchParams<{ userName?: string }>();
   if (!server) return <Redirect href="/server" />;
-  return Platform.isTV ? (
-    <TvSignIn server={server} initialUserName={userName} />
-  ) : (
-    <PhoneSignIn server={server} initialUserName={userName} />
-  );
+  return <SignIn server={server} initialUserName={userName} />;
 }
-
-/** Username + password, Quick Connect as a second button (phone, tablet). */
-function PhoneSignIn({ server, initialUserName }: { server: Server; initialUserName?: string }) {
-  const onboarding = useOnboarding();
-  const quickConnect = useQuickConnectEnabled(server) ?? false;
-  const { userName, setUserName, password, setPassword, canSubmit, error, loading, submit } = usePasswordSignIn(
-    server,
-    initialUserName,
-  );
-  const passwordRef = useRef<TextInputInstance>(null);
-
-  return (
-    <Page form busy={loading}>
-      {onboarding && (
-        <>
-          <StepPills steps={ONBOARDING_STEPS} current={1} />
-          <Text secondary>
-            {quickConnect
-              ? 'Sign in with your Jellyfin username and password, or use Quick Connect to approve this phone from a device where you are already signed in.'
-              : 'Sign in with your Jellyfin username and password.'}
-          </Text>
-        </>
-      )}
-      <View style={styles.server}>
-        <Text variant="label">{server.name}</Text>
-        <Text variant="caption" secondary>
-          {server.url}
-        </Text>
-      </View>
-      {isOutdatedServer(server.version) && (
-        <Text variant="caption" secondary>
-          This server runs Jellyfin {server.version}. Some features may not work below {MIN_SERVER_VERSION}.
-        </Text>
-      )}
-      <TextField
-        label="Username"
-        value={userName}
-        onChangeText={setUserName}
-        textContentType="username"
-        autoComplete="username"
-        autoCapitalize="none"
-        autoCorrect={false}
-        returnKeyType="next"
-        submitBehavior="submit"
-        onSubmitEditing={() => passwordRef.current?.focus()}
-        editable={!loading}
-      />
-      <TextField
-        ref={passwordRef}
-        label="Password"
-        secure
-        value={password}
-        onChangeText={setPassword}
-        error={error}
-        textContentType="password"
-        autoComplete="current-password"
-        returnKeyType="go"
-        onSubmitEditing={submit}
-        editable={!loading}
-      />
-      <Button title="Sign in" onPress={submit} loading={loading} disabled={!canSubmit} />
-      {quickConnect && (
-        <Button
-          title="Use Quick Connect"
-          variant="secondary"
-          disabled={loading}
-          onPress={() =>
-            router.push({
-              pathname: '/quick-connect',
-              params: { url: server.url, ...(onboarding && ONBOARDING) },
-            })
-          }
-        />
-      )}
-    </Page>
-  );
-}
-
-const styles = StyleSheet.create({
-  server: { gap: spacing.xs },
-});
