@@ -5,7 +5,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { ApiError } from '@/api';
 import * as auth from '@/auth';
-import { TvSignIn } from '@/components/tv/TvSignIn';
+import { TvSignIn } from '@/screens/tv/TvSignIn';
 import type { Server } from '@/session';
 
 jest.mock('expo-router', () => ({ router: { back: jest.fn(), replace: jest.fn(), dismissAll: jest.fn() } }));

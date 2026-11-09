@@ -6,14 +6,13 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
+import { Text } from '@/components/Text';
+import { TvButton } from '@/components/tv/TvButton';
+import { TvTextField } from '@/components/tv/TvTextField';
 import { isOutdatedServer, MIN_SERVER_VERSION } from '@/server';
 import type { Server } from '@/session';
 import { tv, useColors } from '@/theme';
 import { usePasswordSignIn, useQuickConnectCode, useQuickConnectEnabled } from '@/useSignIn';
-
-import { Text } from '../Text';
-import { TvButton } from './TvButton';
-import { TvTextField } from './TvTextField';
 
 export function TvSignIn({ server, initialUserName }: { server: Server; initialUserName?: string }) {
   const c = useColors();
