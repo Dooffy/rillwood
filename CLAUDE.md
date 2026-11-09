@@ -132,7 +132,7 @@ src/app/                 expo-router
   about.tsx              Settings → About: mark, overview, Source code / Privacy policy / Report a problem (browser, fixed links from `app.json` `extra.sourceUrl` / `privacyUrl` / `supportUrl`), Licences, Stand with Ukraine line (UNITED24)
   licences.tsx, licence/[id].tsx  Settings → About → Licences: the list, one entry (source, packages, full texts)
 src/theme.ts             design tokens
-src/device.ts            phone / tablet vs Apple TV: `screenFor` (a route's two views)
+src/device.ts            phone / tablet vs Apple TV: `screenFor` (a route's two views), `features` (downloads, rotation, touch, lasting files)
 src/screens/             a route's views when TV differs, per device: phone/ (phone + tablet: PhoneWelcome, PhoneSignIn, PhoneHome, PhoneAccounts), tv/ (TvWelcome, TvSignIn, TvHome, TvAccounts = Who's Watching)
 src/format.ts            display formatting (time left, clock, subtitle timing, file size)
 src/api.ts               fetch client + endpoints + DTO types

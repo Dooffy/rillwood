@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { Platform, useWindowDimensions } from 'react-native';
+import { useWindowDimensions } from 'react-native';
 
-import { spacing, tv, useWide } from '@/theme';
+import { deviceSizes, spacing, useWide } from '@/theme';
 
 import { LANDSCAPE_WIDTH, POSTER_WIDTH, WIDE_LANDSCAPE_WIDTH, WIDE_POSTER_WIDTH } from './Card';
 import { fitCards } from './Row';
@@ -22,13 +22,14 @@ export function useShelfCards(): { rowWidth: number; posters: CardSize; landscap
   const tabWidth = useTabContentWidth();
   const { width } = useWindowDimensions();
   const wide = useWide();
-  if (Platform.isTV) {
+  const tvShelf = deviceSizes.tvShelf;
+  if (tvShelf) {
     // Apple TV: the whole screen less its safe margins, TV-sized cards (`TvShelf`).
-    const tvRow = width - 2 * tv.margin;
+    const tvRow = width - 2 * tvShelf.margin;
     return {
       rowWidth: tvRow,
-      posters: fitCards(tvRow, tv.shelf.posterWidth, 1, tv.shelf.gap),
-      landscape: fitCards(tvRow, tv.shelf.landscapeWidth, 1, tv.shelf.gap),
+      posters: fitCards(tvRow, tvShelf.poster, 1, tvShelf.gap),
+      landscape: fitCards(tvRow, tvShelf.landscape, 1, tvShelf.gap),
     };
   }
   const rowWidth = tabWidth - 2 * spacing.md;

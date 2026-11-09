@@ -32,6 +32,7 @@ import { Spinner } from '@/components/Spinner';
 import { Text } from '@/components/Text';
 import { TracksMenu, type TracksPage, type TracksValue } from '@/components/TracksMenu';
 import { UpNext } from '@/components/UpNext';
+import { features } from '@/device';
 import { localCopy } from '@/downloads';
 import { cardTitles, isItemId, nextEpisode, nextEpisodes, playback, TICKS_PER_SECOND } from '@/items';
 import { holdPlaying } from '@/offload';
@@ -587,7 +588,7 @@ function TouchGestures({
   gesture: ReturnType<typeof useCompetingGestures>;
   children: ReactElement;
 }) {
-  return Platform.isTV ? children : <GestureDetector gesture={gesture}>{children}</GestureDetector>;
+  return features.touch ? <GestureDetector gesture={gesture}>{children}</GestureDetector> : children;
 }
 
 const styles = StyleSheet.create({

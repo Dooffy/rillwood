@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 import { ApiError } from '@/api';
 import * as navigation from '@/navigation';
@@ -63,6 +64,19 @@ describe('Message', () => {
     expect(screen.getByText(/^The server ran into a problem/)).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Go to Downloads' })).toBeNull();
     open.mockRestore();
+  });
+
+  it('Apple TV (no downloads): out of reach offers Retry only, no Go to Downloads', async () => {
+    const isTV = Object.getOwnPropertyDescriptor(Platform, 'isTV')!;
+    Object.defineProperty(Platform, 'isTV', { get: () => true, configurable: true });
+    try {
+      await render(<LoadError fill error={new ApiError('network')} retry={() => {}} />);
+      expect(screen.getByText('Check your connection.')).toBeOnTheScreen();
+      expect(screen.getByRole('button', { name: 'Retry' })).toBeOnTheScreen();
+      expect(screen.queryByRole('button', { name: 'Go to Downloads' })).toBeNull();
+    } finally {
+      Object.defineProperty(Platform, 'isTV', isTV);
+    }
   });
 
   it('offline names the active server', async () => {

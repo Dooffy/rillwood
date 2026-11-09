@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { SymbolView } from 'expo-symbols';
 import { useState, type ComponentProps, type ReactNode } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isConnectionError, type ApiError } from '@/api';
+import { features } from '@/device';
 import { openDownloads } from '@/navigation';
 import { useSession } from '@/session';
 import { minTouch, pressedOpacity, radii, spacing, useColors } from '@/theme';
@@ -95,10 +96,12 @@ export function Offline({
         alert
         icon={{ ios: 'wifi.slash', android: 'wifi_off' }}
         title={`Can't reach ${server}`}
-        text={Platform.isTV ? 'Check your connection.' : "Check your connection, or watch something you've downloaded."}
+        text={
+          features.downloads ? "Check your connection, or watch something you've downloaded." : 'Check your connection.'
+        }
       >
         <Button title="Retry" loading={busy} onPress={retry} />
-        {!Platform.isTV && (
+        {features.downloads && (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Go to Downloads"
