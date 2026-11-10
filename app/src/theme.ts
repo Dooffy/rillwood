@@ -276,6 +276,15 @@ export const deviceSizes = {
     return Platform.isTV ? tv.type.small : undefined;
   },
   /**
+   * The status over card artwork (`Artwork`: progress bar + time left, "✓ Watched") on Apple TV: a thicker bar, TV
+   * caption text, more inset. undefined on phones and tablets (the component's own sizes).
+   */
+  get artworkStatus() {
+    return Platform.isTV
+      ? { barHeight: 8, text: { fontSize: tv.type.caption.fontSize }, icon: 22, inset: 20, gap: tv.gap.sm / 2 }
+      : undefined;
+  },
+  /**
    * Tab shelves (`useShelfCards`) on Apple TV: the screen's safe margin, the card widths whole cards are fitted to, the
    * gap. null on phones and tablets (sized from the tab's width).
    */

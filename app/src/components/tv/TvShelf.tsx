@@ -4,11 +4,12 @@
 // swipe from any card above or below (even one far along its own shelf) lands on this shelf's last-focused card, the
 // first one on the first visit.
 import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, TVFocusGuideView, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { tv } from '@/theme';
 
 import { Text } from '../Text';
+import { TvFocusRow } from './focus';
 
 export type TvShelfProps = {
   title: string;
@@ -22,11 +23,11 @@ export function TvShelf({ title, children }: TvShelfProps) {
       <Text accessibilityRole="header" numberOfLines={1} style={[tv.type.shelf, styles.title]}>
         {title}
       </Text>
-      <TVFocusGuideView autoFocus>
+      <TvFocusRow>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.list}>
           {children}
         </ScrollView>
-      </TVFocusGuideView>
+      </TvFocusRow>
     </View>
   );
 }

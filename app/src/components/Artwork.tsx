@@ -7,7 +7,7 @@ import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { onArtwork, radii, spacing, type, useColors } from '@/theme';
+import { deviceSizes, onArtwork, radii, spacing, type, useColors } from '@/theme';
 
 import { formatRemaining } from '@/format';
 
@@ -32,6 +32,8 @@ export function Artwork({ image, aspectRatio, progress, remainingSeconds, played
   const showImage = image !== undefined && failed !== image;
   const remaining = remainingSeconds === undefined ? undefined : formatRemaining(remainingSeconds);
   const inProgress = isInProgress(progress, played);
+  // Apple TV: a thicker bar and bigger text, seen from the sofa.
+  const tv = deviceSizes.artworkStatus;
 
   return (
     <View style={[styles.box, { aspectRatio, backgroundColor: c.surface }]}>
@@ -55,26 +57,26 @@ export function Artwork({ image, aspectRatio, progress, remainingSeconds, played
         <>
           <View testID="artwork-fade" style={styles.fade} />
           {/* One status spot over the fade: "✓ Watched", or the bar with time left. */}
-          <View style={styles.status}>
+          <View style={[styles.status, tv && { left: tv.inset, right: tv.inset, bottom: tv.inset, gap: tv.gap }]}>
             {played ? (
               <View testID="artwork-played" style={styles.watched}>
                 <SymbolView
                   name={{ ios: 'checkmark', android: 'check' }}
                   tintColor={onArtwork.fill}
-                  size={12}
+                  size={tv?.icon ?? 12}
                   weight="bold"
                 />
-                <Text variant="caption" style={styles.statusText}>
+                <Text variant="caption" style={[styles.statusText, tv?.text]}>
                   Watched
                 </Text>
               </View>
             ) : (
               <>
                 <View style={styles.bar}>
-                  <ProgressBar progress={progress ?? 0} overArtwork />
+                  <ProgressBar progress={progress ?? 0} overArtwork height={tv?.barHeight} />
                 </View>
                 {remaining !== undefined && (
-                  <Text variant="caption" style={styles.statusText} numberOfLines={1}>
+                  <Text variant="caption" style={[styles.statusText, tv?.text]} numberOfLines={1}>
                     {remaining}
                   </Text>
                 )}

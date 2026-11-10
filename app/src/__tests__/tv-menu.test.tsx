@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Apple TV menus (roadmap TV task 4b): an ActionSheet draws in the app's own view, not an RN Modal.
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { fireEvent, render, screen } from '@testing-library/react-native';
-import { Platform, TVEventControl } from 'react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { useState } from 'react';
+import { BackHandler, Platform, TVEventControl } from 'react-native';
 
 import { ActionSheet } from '@/components/ActionSheet';
+import { TvButton } from '@/components/tv/TvButton';
 import { TvMenuHost } from '@/components/tv/TvMenu';
 
 const isTV = Object.getOwnPropertyDescriptor(Platform, 'isTV')!;
@@ -78,5 +80,55 @@ describe('ActionSheet on Apple TV', () => {
     expect(enable).toHaveBeenCalled();
     await view.rerender(sheet(false));
     expect(disable).toHaveBeenCalled();
+  });
+});
+
+describe('focus back on the opener', () => {
+  /** A button that opens a menu; its focus event carries a stand-in native view. */
+  function Opener({ onPick = jest.fn() }: { onPick?: () => void }) {
+    const [open, setOpen] = useState(false);
+    return (
+      <TvMenuHost>
+        <TvButton title="More" onPress={() => setOpen(true)} />
+        <ActionSheet
+          visible={open}
+          actions={[{ label: 'Mark Watched', onPress: onPick }]}
+          onClose={() => setOpen(false)}
+        />
+      </TvMenuHost>
+    );
+  }
+  const view = () => ({ requestTVFocus: jest.fn() });
+
+  it('an action hands focus back to the button that opened the menu, before it runs', async () => {
+    const opener = view();
+    const onPick = jest.fn();
+    await render(<Opener onPick={onPick} />);
+    await fireEvent(screen.getByRole('button', { name: 'More' }), 'focus', { currentTarget: opener });
+    await fireEvent.press(screen.getByRole('button', { name: 'More' }));
+    // The menu's own buttons aren't remembered.
+    await fireEvent(screen.getByRole('button', { name: 'Mark Watched' }), 'focus', { currentTarget: view() });
+    await fireEvent.press(screen.getByRole('button', { name: 'Mark Watched' }));
+    expect(opener.requestTVFocus).toHaveBeenCalledTimes(1);
+    expect(opener.requestTVFocus.mock.invocationCallOrder[0]).toBeLessThan(onPick.mock.invocationCallOrder[0]);
+    expect(screen.queryByTestId('tv-menu')).toBeNull();
+  });
+
+  it('Back closes the menu and hands focus back too', async () => {
+    const back: (() => boolean)[] = [];
+    const add = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_, handler) => {
+      back.push(handler as () => boolean);
+      return { remove: () => {} };
+    });
+    const opener = view();
+    await render(<Opener />);
+    await fireEvent(screen.getByRole('button', { name: 'More' }), 'focus', { currentTarget: opener });
+    await fireEvent.press(screen.getByRole('button', { name: 'More' }));
+    await act(() => {
+      back.at(-1)!();
+    });
+    expect(opener.requestTVFocus).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('tv-menu')).toBeNull();
+    add.mockRestore();
   });
 });

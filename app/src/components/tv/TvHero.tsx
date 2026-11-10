@@ -9,6 +9,7 @@ import { formatRemaining } from '@/format';
 import { ColorsContext, palettes, tv, useColors } from '@/theme';
 
 import { Text } from '../Text';
+import { TvFocusRow } from './focus';
 import { TvButton, type TvButtonHandle } from './TvButton';
 
 export type TvHeroProps = {
@@ -114,7 +115,7 @@ export function TvHero({
             )}
           </View>
           {/* Full width: a swipe up from a card anywhere in the shelf below lands here (on the last-focused button). */}
-          <TVFocusGuideView autoFocus style={styles.buttons}>
+          <TvFocusRow style={styles.buttons}>
             <TvButton
               title={label}
               accessibilityLabel={[
@@ -144,7 +145,7 @@ export function TvHero({
             {rightDestination && (
               <TVFocusGuideView testID="tv-hero-right" style={styles.toRight} destinations={[rightDestination]} />
             )}
-          </TVFocusGuideView>
+          </TvFocusRow>
         </View>
       </ColorsContext.Provider>
     </View>
