@@ -10,6 +10,7 @@ import { pressedOpacity, radii, tv, useColors } from '@/theme';
 
 import { clamp01 } from '../ProgressBar';
 import { Text } from '../Text';
+import { focusStyles, rememberFocus as remember } from './focus';
 
 /** What a ref to a TvButton holds (a focus guide destination). */
 export type TvButtonHandle = ComponentRef<typeof Pressable>;
@@ -40,6 +41,8 @@ export type TvButtonProps = {
   onFocus?: () => void;
   /** For a focus guide's destination. */
   ref?: Ref<TvButtonHandle>;
+  /** false inside menus: a closing menu hands focus back to what opened it, not to its own buttons. */
+  rememberFocus?: boolean;
 };
 
 export function TvButton({
@@ -58,6 +61,7 @@ export function TvButton({
   preferredFocus,
   onFocus,
   ref,
+  rememberFocus = true,
 }: TvButtonProps) {
   const c = useColors();
   const inactive = disabled || loading;
@@ -81,13 +85,16 @@ export function TvButton({
       accessibilityState={{ disabled: inactive, busy: loading }}
       onPress={inactive ? undefined : onPress}
       hasTVPreferredFocus={preferredFocus}
-      onFocus={onFocus}
+      onFocus={(e) => {
+        if (rememberFocus) remember(e);
+        onFocus?.();
+      }}
       style={({ focused }) => [
         quiet ? styles.quiet : styles.base,
         round && styles.round,
         wide && styles.wide,
         { backgroundColor: focused ? c.text : fill },
-        focused && styles.focused,
+        focused && focusStyles.lift,
         disabled && !focused && styles.dimmed,
       ]}
     >
@@ -147,6 +154,5 @@ const styles = StyleSheet.create({
   trackBack: { opacity: 0.3 },
   fill: { height: '100%', borderRadius: radii.pill },
   trailing: { fontWeight: '600', fontVariant: ['tabular-nums'] },
-  focused: { transform: [{ scale: tv.focus.buttonScale }], ...tv.focus.shadow },
   dimmed: { opacity: pressedOpacity },
 });

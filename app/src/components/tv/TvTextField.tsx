@@ -11,6 +11,7 @@ import { Pressable, StyleSheet, TextInput, TVFocusGuideView, View, type TextInpu
 import { radii, tv, useColors } from '@/theme';
 
 import { Text } from '../Text';
+import { focusStyles } from './focus';
 
 export type TvTextFieldProps = Omit<TextInputProps, 'style'> & {
   /** Shown above the field, read out, and the keyboard's title. */
@@ -43,7 +44,7 @@ export function TvTextField({ label, icon, error, preferredFocus, ...input }: Tv
         style={({ focused }) => [
           styles.field,
           { backgroundColor: focused ? c.text : tv.field.fill },
-          focused && styles.focused,
+          focused && [focusStyles.lift, styles.focused],
         ]}
       >
         {({ focused }) => {
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
     gap: tv.gap.sm,
     paddingHorizontal: tv.field.iconInset,
   },
-  focused: { transform: [{ scale: tv.focus.buttonScale }], ...tv.focus.shadow, borderColor: 'transparent' },
+  focused: { borderColor: 'transparent' },
   text: { flex: 1 },
   // Out of sight; still in the window, so it can open the keyboard.
   hidden: { position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden' },

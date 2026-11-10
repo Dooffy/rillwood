@@ -26,10 +26,10 @@ Move the screen's logic out of the route into `app/src/use<Screen>.ts`: fetches,
 ## Step 3 - Views
 
 - `app/src/screens/phone/Phone<Screen>.tsx` - the current phone / tablet JSX, moved as is (fix relative `require` paths).
-- `app/src/screens/tv/Tv<Screen>.tsx` - the TV view from the draft. Build from the TV pieces (`TvButton`, `TvTextField`, `TvShelf`, `TvHero`, `TvMenu` via `ActionSheet`) and `tv` tokens; new TV-only pieces go in `app/src/components/tv/Tv*.tsx` (shared ones stay in `app/src/components/`).
+- `app/src/screens/tv/Tv<Screen>.tsx` - the TV view from the draft. Build from the TV pieces (`TvButton`, `TvTextField`, `TvPill` / `TvPills`, `TvShelf`, `TvHero`, `TvMenu` via `ActionSheet`, `focus.tsx`: `focusStyles`, `TvFocusRow`, `rememberFocus` on any own focusable a menu opens from) and `tv` tokens; new TV-only pieces go in `app/src/components/tv/Tv*.tsx` (shared ones stay in `app/src/components/`).
 - Neither view checks `Platform.isTV`. A size-only difference in a shared component → `deviceSizes.*` in `app/src/theme.ts`; a missing feature → `features.*` in `app/src/device.ts`.
 
-TV rules (CLAUDE.md §3): focus by geometry - one column or a `TVFocusGuideView`; full-width `autoFocus` guides for rows; top buttons scroll back to the top; one `primary` button; never disable a TV button; no RN `Modal` (use `ActionSheet` → `TvMenu`); system text colours in text fields.
+TV rules (CLAUDE.md §3): focus by geometry - one column or a `TVFocusGuideView`; full-width `TvFocusRow` for rows; first focus with `preferredFocus` on one item per screen; top buttons scroll back to the top; one `primary` button; never disable a TV button; no RN `Modal` (use `ActionSheet` → `TvMenu`); system text colours in text fields.
 
 ---
 

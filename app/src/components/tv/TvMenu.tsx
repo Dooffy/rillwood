@@ -8,6 +8,7 @@ import { BackHandler, Platform, ScrollView, StyleSheet, TVEventControl, TVFocusG
 import { backdrop, scrollList, tv, useColors } from '@/theme';
 
 import { Text } from '../Text';
+import { lastFocused, restoreFocus } from './focus';
 import { TvButton } from './TvButton';
 
 export type TvMenuAction = {
@@ -80,6 +81,9 @@ export function useTvMenu(host: Host | null, visible: boolean, menu: TvMenuProps
 
 function TvMenu({ title, actions, children, closeLabel, onClose }: TvMenuProps) {
   const c = useColors();
+  // What had focus when the menu opened (its own buttons aren't remembered): it gets focus back when the menu closes,
+  // before an action runs - one that opens a screen then takes focus there.
+  const [opener] = useState(lastFocused);
   // Menu (Back) closes the menu, not the screen under it: the key comes to the app while the menu is open.
   // The latest onClose (a new one each render): the key is taken once per open menu, not on every render.
   const close = useRef(onClose);
@@ -89,6 +93,7 @@ function TvMenu({ title, actions, children, closeLabel, onClose }: TvMenuProps) 
   useEffect(() => {
     TVEventControl.enableTVMenuKey();
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      restoreFocus(opener);
       close.current();
       return true;
     });
@@ -96,9 +101,10 @@ function TvMenu({ title, actions, children, closeLabel, onClose }: TvMenuProps) 
       sub.remove();
       TVEventControl.disableTVMenuKey();
     };
-  }, []);
+  }, [opener]);
   // An action closes the menu first, then runs.
   const pick = (action: TvMenuAction) => {
+    restoreFocus(opener);
     onClose();
     action.onPress();
   };
@@ -131,12 +137,22 @@ function TvMenu({ title, actions, children, closeLabel, onClose }: TvMenuProps) 
               trailing={action.detail}
               destructive={action.destructive}
               preferredFocus={i === 0}
+              rememberFocus={false}
               onPress={() => pick(action)}
             />
           ))}
         </ScrollView>
         {closeLabel !== undefined && (
-          <TvButton variant="quiet" title={closeLabel} onPress={onClose} preferredFocus={actions.length === 0} />
+          <TvButton
+            variant="quiet"
+            title={closeLabel}
+            onPress={() => {
+              restoreFocus(opener);
+              onClose();
+            }}
+            preferredFocus={actions.length === 0}
+            rememberFocus={false}
+          />
         )}
       </TVFocusGuideView>
     </View>

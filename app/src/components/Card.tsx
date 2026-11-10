@@ -5,11 +5,12 @@ import type { BaseItemDto } from '@/api';
 import { Pressable, StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
 
 import { spokenRemaining } from '@/format';
-import { deviceSizes, pressedOpacity, radii, spacing, tv, type, useColors } from '@/theme';
+import { deviceSizes, pressedOpacity, radii, spacing, type, useColors } from '@/theme';
 
 import { Artwork } from './Artwork';
 import { isInProgress } from './ProgressBar';
 import { Text } from './Text';
+import { focusStyles, rememberFocus } from './tv/focus';
 
 export type CardProps = {
   title: string;
@@ -90,12 +91,14 @@ const MediaCard = memo(function MediaCard({
   const { press, longPress } = itemPress(props);
   return (
     <Pressable
+      // Apple TV: the card a menu opens from gets focus back when it closes.
+      onFocus={rememberFocus}
       accessibilityRole="button"
       accessibilityLabel={cardLabel(props)}
       {...longPressProps(longPress)}
       onPress={press}
       // Apple TV: focus grows the card and lifts it (the shelf leaves room for it).
-      style={({ pressed, focused }) => [styles.card, { width }, pressed && styles.pressed, focused && styles.focused]}
+      style={({ pressed, focused }) => [styles.card, { width }, pressed && styles.pressed, focused && focusStyles.card]}
     >
       <Artwork
         image={image}
@@ -180,7 +183,6 @@ export function CardPlaceholder({
 const styles = StyleSheet.create({
   card: { gap: spacing.sm },
   pressed: { opacity: pressedOpacity },
-  focused: { transform: [{ scale: tv.focus.cardScale }], ...tv.focus.shadow, zIndex: 1 },
   placeholderArt: { width: '100%', borderRadius: radii.card },
   placeholderLine: { height: type.caption.fontSize, borderRadius: radii.pill },
 });

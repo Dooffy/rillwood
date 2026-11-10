@@ -32,10 +32,11 @@ describe('features', () => {
 describe('deviceSizes', () => {
   it('phones and tablets: the components keep their own sizes', () => {
     setTV(false);
-    expect([deviceSizes.cardTitle, deviceSizes.cardSubtitle, deviceSizes.tvShelf]).toEqual([
+    expect([deviceSizes.cardTitle, deviceSizes.cardSubtitle, deviceSizes.tvShelf, deviceSizes.artworkStatus]).toEqual([
       undefined,
       undefined,
       null,
+      undefined,
     ]);
   });
 
@@ -43,6 +44,7 @@ describe('deviceSizes', () => {
     setTV(true);
     expect(deviceSizes.cardTitle).toBe(tv.type.cardTitle);
     expect(deviceSizes.cardSubtitle).toBe(tv.type.small);
+    expect(deviceSizes.artworkStatus).toMatchObject({ barHeight: 8, text: { fontSize: tv.type.caption.fontSize } });
     expect(deviceSizes.tvShelf).toEqual({
       margin: tv.margin,
       poster: tv.shelf.posterWidth,

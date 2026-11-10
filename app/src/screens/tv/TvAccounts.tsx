@@ -5,13 +5,14 @@
 // No downloads on TV, so Sign Out / Remove have none to delete or warn about.
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TVFocusGuideView, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { accountStatus, savedServers, signInAgain } from '@/components/AccountList';
 import { ActionSheet } from '@/components/ActionSheet';
 import { Avatar } from '@/components/Avatar';
 import { Text } from '@/components/Text';
 import { TvButton } from '@/components/tv/TvButton';
+import { focusStyles, rememberFocus, TvFocusRow } from '@/components/tv/focus';
 import { resetTo } from '@/navigation';
 import { serverHost } from '@/server';
 import { removeAccount, signOut, switchAccount, useSession, type Account } from '@/session';
@@ -39,14 +40,14 @@ export function TvAccounts() {
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
       {/* Full width: a swipe up from any account lands on Settings. */}
-      <TVFocusGuideView autoFocus style={styles.top}>
+      <TvFocusRow style={styles.top}>
         <TvButton round title="Settings" icon="gearshape" onPress={() => router.push('/settings')} />
-      </TVFocusGuideView>
+      </TvFocusRow>
       <View style={styles.content}>
         <Text accessibilityRole="header" style={[tv.type.title, styles.center]}>
           Who&apos;s watching?
         </Text>
-        <TVFocusGuideView autoFocus>
+        <TvFocusRow>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
             {accounts.map((a) => (
               <Profile
@@ -60,7 +61,7 @@ export function TvAccounts() {
             ))}
             <Profile add name="Add" detail="Account" preferredFocus={focusId === undefined} onPress={add} />
           </ScrollView>
-        </TVFocusGuideView>
+        </TvFocusRow>
       </View>
       <ActionSheet
         visible={menu !== undefined && menu.kind !== 'remove'}
@@ -140,6 +141,7 @@ function Profile({ name, detail, add, preferredFocus, onPress, onLongPress }: Pr
   const c = useColors();
   return (
     <Pressable
+      onFocus={rememberFocus}
       accessibilityRole="button"
       accessibilityLabel={add ? 'Add Account' : `${name}, ${detail}`}
       accessibilityHint={onLongPress ? 'Hold for Sign Out and Remove' : undefined}
@@ -150,7 +152,7 @@ function Profile({ name, detail, add, preferredFocus, onPress, onLongPress }: Pr
     >
       {({ focused }) => (
         <>
-          <View style={[styles.circle, { borderColor: focused ? c.text : 'transparent' }, focused && styles.focused]}>
+          <View style={[styles.circle, { borderColor: focused ? c.text : 'transparent' }, focused && focusStyles.card]}>
             {add ? (
               <View style={[styles.add, { backgroundColor: c.elevated2 }]}>
                 <Text secondary style={styles.plus}>
@@ -192,7 +194,6 @@ const styles = StyleSheet.create({
   },
   profile: { alignItems: 'center', gap: tv.gap.sm, width: tv.profile.avatar + 2 * ring },
   circle: { borderRadius: tv.profile.avatar, borderWidth: ring },
-  focused: { transform: [{ scale: tv.focus.cardScale }], ...tv.focus.shadow },
   add: {
     width: tv.profile.avatar,
     height: tv.profile.avatar,

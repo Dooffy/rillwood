@@ -14,6 +14,8 @@ export function isInProgress(progress: number | undefined, played = false): prog
 }
 
 export type ProgressBarProps = {
+  /** Bar thickness when it isn't the default (TV card artwork). */
+  height?: number;
   /** 0-1; out-of-range values are clamped. */
   progress: number;
   /** Drawn over artwork: white on a translucent track, in both themes, a little thicker. */
@@ -28,7 +30,7 @@ export type ProgressBarProps = {
 };
 
 /** Thin watched-progress bar (white fill in the dark palette). */
-export function ProgressBar({ progress, overArtwork = false, warning = false, label }: ProgressBarProps) {
+export function ProgressBar({ progress, overArtwork = false, warning = false, label, height }: ProgressBarProps) {
   const c = useColors();
   const p = clamp01(progress);
   return (
@@ -42,7 +44,11 @@ export function ProgressBar({ progress, overArtwork = false, warning = false, la
             accessibilityValue: { min: 0, max: 100, now: Math.round(p * 100) },
           }
         : { accessible: false })}
-      style={[styles.track, overArtwork ? styles.overArtwork : { backgroundColor: c.elevated2 }]}
+      style={[
+        styles.track,
+        overArtwork ? styles.overArtwork : { backgroundColor: c.elevated2 },
+        height !== undefined && { height },
+      ]}
     >
       <View
         testID="progress-fill"

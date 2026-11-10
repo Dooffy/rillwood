@@ -10,6 +10,7 @@ import { Avatar } from '@/components/Avatar';
 import { HomeRows } from '@/components/HomeRows';
 import { useItemMenu } from '@/components/ItemMenu';
 import { loadErrorMessage, Message, Offline } from '@/components/Message';
+import { focusStyles, rememberFocus } from '@/components/tv/focus';
 import { type TvButtonHandle } from '@/components/tv/TvButton';
 import { TvHero, useTvHeroHeight } from '@/components/tv/TvHero';
 import { TvShelf } from '@/components/tv/TvShelf';
@@ -40,14 +41,17 @@ export function TvHome() {
   const profile = (
     <Pressable
       ref={setProfileView}
-      onFocus={scrollToTop}
+      onFocus={(e) => {
+        rememberFocus(e);
+        scrollToTop();
+      }}
       accessibilityRole="button"
       accessibilityLabel="Who's Watching"
       onPress={() => router.push('/accounts')}
       style={({ pressed, focused }) => [
         styles.profile,
         pressed && styles.pressed,
-        focused && [styles.profileFocused, { borderColor: c.text }],
+        focused && [focusStyles.lift, { borderColor: c.text }],
       ]}
     >
       <Avatar name={home.active?.userName} size={tv.avatar} />
@@ -126,6 +130,5 @@ const styles = StyleSheet.create({
   profilePlace: { position: 'absolute', top: tv.marginTop - tv.gap.sm, right: tv.margin },
   // A clear ring around the avatar while focused (border kept transparent otherwise, so it doesn't shift).
   profile: { borderRadius: radii.pill, borderWidth: 4, borderColor: 'transparent' },
-  profileFocused: { transform: [{ scale: tv.focus.buttonScale }], ...tv.focus.shadow },
   pressed: { opacity: pressedOpacity },
 });
