@@ -29,6 +29,8 @@ export type TvMenuProps = {
    * context menus: Menu (Back) closes them.
    */
   closeLabel?: string;
+  /** A panel down the right edge instead of a centred card (Library Sort / Filter). */
+  side?: boolean;
   onClose: () => void;
 };
 
@@ -79,7 +81,7 @@ export function useTvMenu(host: Host | null, visible: boolean, menu: TvMenuProps
   useEffect(() => () => host?.hide(key), [host, key]);
 }
 
-function TvMenu({ title, actions, children, closeLabel, onClose }: TvMenuProps) {
+function TvMenu({ title, actions, children, closeLabel, side = false, onClose }: TvMenuProps) {
   const c = useColors();
   // What had focus when the menu opened (its own buttons aren't remembered): it gets focus back when the menu closes,
   // before an action runs - one that opens a screen then takes focus there.
@@ -109,18 +111,19 @@ function TvMenu({ title, actions, children, closeLabel, onClose }: TvMenuProps) 
     action.onPress();
   };
   return (
-    <View testID="tv-menu" style={[StyleSheet.absoluteFill, styles.backdrop]}>
+    <View testID="tv-menu" style={[StyleSheet.absoluteFill, styles.backdrop, side && styles.sideBackdrop]}>
       <TVFocusGuideView
         autoFocus
         trapFocusUp
         trapFocusDown
         trapFocusLeft
         trapFocusRight
+        testID="tv-menu-card"
         accessibilityRole="menu"
-        style={[styles.card, { backgroundColor: c.elevated }]}
+        style={[styles.card, side && styles.side, { backgroundColor: c.elevated }]}
       >
         {title !== undefined && (
-          <Text secondary numberOfLines={2} style={[tv.type.caption, styles.title]}>
+          <Text secondary numberOfLines={2} style={[tv.type.caption, !side && styles.title]}>
             {title}
           </Text>
         )}
@@ -168,6 +171,16 @@ const styles = StyleSheet.create({
     borderRadius: tv.panel.radius,
     padding: tv.gap.lg,
     gap: tv.gap.sm,
+  },
+  // Full height at the right edge, its content from the top margin.
+  sideBackdrop: { alignItems: 'flex-end', justifyContent: 'flex-start' },
+  side: {
+    width: tv.menu.sideWidth,
+    height: '100%',
+    maxHeight: '100%',
+    borderRadius: 0,
+    paddingTop: tv.marginTop,
+    paddingHorizontal: tv.margin,
   },
   title: { textAlign: 'center' },
   // Room for a focused button to grow.

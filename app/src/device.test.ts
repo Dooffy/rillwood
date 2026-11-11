@@ -50,6 +50,7 @@ describe('deviceSizes', () => {
       poster: tv.shelf.posterWidth,
       landscape: tv.shelf.landscapeWidth,
       gap: tv.shelf.gap,
+      focusRoom: tv.shelf.focusRoom,
     });
   });
 });

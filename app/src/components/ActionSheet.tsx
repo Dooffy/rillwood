@@ -41,6 +41,8 @@ export type ActionSheetProps = {
   closeLabel?: string;
   /** Hang the menu from this point instead (its top-right corner, from the screen's top-right): under its button. */
   anchor?: { top: number; right: number };
+  /** Apple TV: a panel down the right edge instead of a centred menu (Library Sort / Filter); other devices ignore it. */
+  side?: boolean;
   onClose: () => void;
 };
 
@@ -49,7 +51,16 @@ export type ActionSheetProps = {
  * action closes it first. With `anchor`, a menu under its button instead (tablets: the player's tracks menu). Apple TV:
  * a `TvMenu` instead (no anchor).
  */
-export function ActionSheet({ visible, title, actions = [], children, closeLabel, anchor, onClose }: ActionSheetProps) {
+export function ActionSheet({
+  visible,
+  title,
+  actions = [],
+  children,
+  closeLabel,
+  anchor,
+  side,
+  onClose,
+}: ActionSheetProps) {
   const c = useColors();
   const insets = useSafeAreaInsets();
   // iOS can't present another screen (the player is a full-screen modal) while this one is still closing: the picked
@@ -63,7 +74,7 @@ export function ActionSheet({ visible, title, actions = [], children, closeLabel
   const close = closeLabel ?? (anchor ? undefined : 'Cancel');
   // Apple TV: the menu is drawn in the app's own view (`TvMenuHost`) - the remote doesn't reach a native modal.
   const tvHost = useTvMenuHost();
-  useTvMenu(tvHost, visible, { title, actions, children, closeLabel, onClose });
+  useTvMenu(tvHost, visible, { title, actions, children, closeLabel, side, onClose });
   if (tvHost) return null;
   const pick = (action: SheetAction) => {
     pending.current = action.onPress;
