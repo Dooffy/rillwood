@@ -9,7 +9,7 @@ import { openItem } from '@/navigation';
 import type { PagedItems } from '@/usePagedItems';
 import { useImage } from '@/useImage';
 import { usePullToRefresh } from '@/usePullToRefresh';
-import { spacing, tabList, useColors, useWide } from '@/theme';
+import { deviceSizes, spacing, tabList, useColors, useWide } from '@/theme';
 
 import { LandscapeCard, PosterCard, WIDE_LANDSCAPE_WIDTH, WIDE_POSTER_WIDTH } from './Card';
 import { EpisodeRow, WIDE_EPISODE_ROW_STILL } from './EpisodeRow';
@@ -59,9 +59,17 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
   const wide = useWide();
   const episodeGrid = !posters && wide;
   const grid = posters || episodeGrid;
+  // Apple TV: the screen's safe margins, TV-sized cards and gaps (about 6 posters / 4 stills across).
+  const tvSizes = deviceSizes.tvShelf;
+  const margin = tvSizes?.margin ?? spacing.md;
+  const gap = tvSizes?.gap ?? CARD_GAP;
   const { count: columns, width: cardWidth } = posters
-    ? fitCards(width - 2 * spacing.md, WIDE_POSTER_WIDTH, MIN_COLUMNS)
-    : fitCards(width - 2 * spacing.md, WIDE_LANDSCAPE_WIDTH, MIN_EPISODE_COLUMNS);
+    ? fitCards(width - 2 * margin, tvSizes?.poster ?? WIDE_POSTER_WIDTH, MIN_COLUMNS, gap)
+    : fitCards(width - 2 * margin, tvSizes?.landscape ?? WIDE_LANDSCAPE_WIDTH, MIN_EPISODE_COLUMNS, gap);
+  const sized = tvSizes && {
+    content: { paddingHorizontal: margin, paddingTop: tvSizes.focusRoom },
+    columns: { gap },
+  };
   const menu = useItemMenu();
   const offline = useHeldOffline(list.items.length === 0 && isConnectionError(list.error), list.loading);
 
@@ -160,10 +168,10 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
       data={list.items}
       keyExtractor={(item) => item.Id}
       numColumns={grid ? columns : 1}
-      columnWrapperStyle={grid ? styles.columns : undefined}
-      contentContainerStyle={styles.content}
+      columnWrapperStyle={grid ? [styles.columns, sized?.columns] : undefined}
+      contentContainerStyle={[styles.content, sized?.content]}
       // Separators, not `gap`: gap would also space the placeholders that stand in for off-screen rows.
-      ItemSeparatorComponent={RowGap}
+      ItemSeparatorComponent={sized ? TvRowGap : RowGap}
       ListHeaderComponent={header}
       ListHeaderComponentStyle={styles.header}
       ListEmptyComponent={empty}
@@ -185,6 +193,11 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
 /** Space between rows (grid rows or episode rows). */
 function RowGap() {
   return <View style={styles.rowGap} />;
+}
+
+/** Apple TV: the shelves' gap, room for a focused card to grow. */
+function TvRowGap() {
+  return <View style={{ height: deviceSizes.tvShelf?.gap }} />;
 }
 
 const styles = StyleSheet.create({

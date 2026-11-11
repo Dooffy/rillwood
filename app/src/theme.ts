@@ -248,8 +248,8 @@ export const tv = {
   hero: { peek: 300, textWidth: 1000 },
   /** Who's Watching: the account circles, the gap between them, the focus ring. */
   profile: { avatar: 240, gap: 80, ring: 6 },
-  /** Menus (`TvMenu`): the card's width. */
-  menu: { width: 760 },
+  /** Menus (`TvMenu`): the card's width, a side panel's (Library Sort / Filter). */
+  menu: { width: 760, sideWidth: 680 },
   /** Card shelves: about this wide (whole cards across, `fitCards`), the gap, room above / below for a focused card. */
   shelf: { posterWidth: 250, landscapeWidth: 400, gap: 40, focusRoom: 40 },
   /** Active-server dot (Sign in). */
@@ -286,11 +286,18 @@ export const deviceSizes = {
   },
   /**
    * Tab shelves (`useShelfCards`) on Apple TV: the screen's safe margin, the card widths whole cards are fitted to, the
-   * gap. null on phones and tablets (sized from the tab's width).
+   * gap, room for a focused card to grow. Also the Library grid (`PagedList`). null on phones and tablets (sized from
+   * the tab's width).
    */
   get tvShelf() {
     return Platform.isTV
-      ? { margin: tv.margin, poster: tv.shelf.posterWidth, landscape: tv.shelf.landscapeWidth, gap: tv.shelf.gap }
+      ? {
+          margin: tv.margin,
+          poster: tv.shelf.posterWidth,
+          landscape: tv.shelf.landscapeWidth,
+          gap: tv.shelf.gap,
+          focusRoom: tv.shelf.focusRoom,
+        }
       : null;
   },
 };
