@@ -16,7 +16,7 @@ import { CARD_GAP } from './Row';
 const EPISODE_ROWS = 6;
 
 /** A grey block: a text line by default, or a box (`aspectRatio`, or a fixed `height`). */
-function Bone({
+export function Bone({
   width = '100%',
   height = 14,
   aspectRatio,
@@ -41,7 +41,7 @@ function Bone({
 }
 
 /** One "Loading" element for screen readers, whatever it draws. */
-function Loading({
+export function Loading({
   label = 'Loading',
   testID,
   style,
