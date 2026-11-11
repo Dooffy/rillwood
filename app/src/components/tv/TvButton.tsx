@@ -25,6 +25,8 @@ export type TvButtonProps = {
   wide?: boolean;
   /** Icon-only circle; `title` becomes its accessibility label. */
   round?: boolean;
+  /** A toggle that's on (Watched, Favourite): filled like the primary button, read as selected. */
+  selected?: boolean;
   /** 0-1 watched: a track after the title (play buttons). */
   progress?: number;
   /** Text after the track: "34m left". */
@@ -52,6 +54,7 @@ export function TvButton({
   icon,
   wide = false,
   round = false,
+  selected,
   progress,
   trailing,
   accessibilityLabel,
@@ -66,23 +69,17 @@ export function TvButton({
   const c = useColors();
   const inactive = disabled || loading;
   const quiet = variant === 'quiet';
-  const fill = variant === 'primary' ? c.accent : quiet ? 'transparent' : tv.unfocused;
+  // On (`selected`) looks like the primary button; focus still grows and lifts it.
+  const filled = variant === 'primary' || selected === true;
+  const fill = filled ? c.accent : quiet ? 'transparent' : tv.unfocused;
   const ink = (focused: boolean) =>
-    focused
-      ? c.background
-      : variant === 'primary'
-        ? c.onAccent
-        : destructive
-          ? c.danger
-          : quiet
-            ? c.textSecondary
-            : c.text;
+    focused ? c.background : filled ? c.onAccent : destructive ? c.danger : quiet ? c.textSecondary : c.text;
   return (
     <Pressable
       ref={ref}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? title}
-      accessibilityState={{ disabled: inactive, busy: loading }}
+      accessibilityState={{ disabled: inactive, busy: loading, selected }}
       onPress={inactive ? undefined : onPress}
       hasTVPreferredFocus={preferredFocus}
       onFocus={(e) => {
@@ -103,7 +100,7 @@ export function TvButton({
           <ActivityIndicator color={ink(focused)} />
         ) : (
           <>
-            {icon && <SymbolView name={icon} tintColor={ink(focused)} size={tv.icon.button} />}
+            {icon && <SymbolView name={icon} tintColor={ink(focused)} size={round ? tv.icon.round : tv.icon.button} />}
             {!round && (
               <Text numberOfLines={1} style={[quiet ? tv.type.quiet : tv.type.button, { color: ink(focused) }]}>
                 {title}

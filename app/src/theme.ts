@@ -224,7 +224,8 @@ export const tv = {
   gap: { sm: 26, lg: 44 },
   button: { height: 86, paddingHorizontal: 44 },
   quietButton: { height: 70, paddingHorizontal: 30 },
-  icon: { button: 26, field: 34 },
+  /** `round`: an icon-only circle's glyph, bigger than one beside a label. */
+  icon: { button: 26, round: 40, field: 34 },
   /** Sunken fill + hairline so a field reads as "type here" (the system draws its own pill on focus). */
   field: {
     height: 96,
@@ -246,6 +247,13 @@ export const tv = {
   tabBarInset: 150,
   /** Full-screen hero (Home): how much of the first shelf peeks in under it, its text column. */
   hero: { peek: 300, textWidth: 1000 },
+  /** Movie / episode detail (`TvItemDetail`): the credits column (bottom right), the outlined badges on the art. */
+  detail: {
+    creditsWidth: 520,
+    /** The play button's stand-in while the item loads. */
+    placeholderPlayWidth: 300,
+    badge: { border: 2, paddingHorizontal: 13, paddingVertical: 4, radius: 8 },
+  },
   /** Who's Watching: the account circles, the gap between them, the focus ring. */
   profile: { avatar: 240, gap: 80, ring: 6 },
   /** Menus (`TvMenu`): the card's width, a side panel's (Library Sort / Filter). */
