@@ -128,23 +128,25 @@ function TvMenu({ title, actions, children, closeLabel, side = false, onClose }:
           </Text>
         )}
         {children}
-        <ScrollView {...scrollList} contentContainerStyle={styles.actions}>
-          {actions.map((action, i) => (
-            <TvButton
-              // Labels can repeat (two tracks named alike).
-              key={`${i}-${action.label}`}
-              wide
-              title={action.label}
-              accessibilityLabel={action.detail ? `${action.label}, ${action.detail}` : action.label}
-              icon={action.selected ? 'checkmark' : undefined}
-              trailing={action.detail}
-              destructive={action.destructive}
-              preferredFocus={i === 0}
-              rememberFocus={false}
-              onPress={() => pick(action)}
-            />
-          ))}
-        </ScrollView>
+        {actions.length > 0 && (
+          <ScrollView {...scrollList} contentContainerStyle={styles.actions}>
+            {actions.map((action, i) => (
+              <TvButton
+                // Labels can repeat (two tracks named alike).
+                key={`${i}-${action.label}`}
+                wide
+                title={action.label}
+                accessibilityLabel={action.detail ? `${action.label}, ${action.detail}` : action.label}
+                icon={action.selected ? 'checkmark' : undefined}
+                trailing={action.detail}
+                destructive={action.destructive}
+                preferredFocus={i === 0}
+                rememberFocus={false}
+                onPress={() => pick(action)}
+              />
+            ))}
+          </ScrollView>
+        )}
         {closeLabel !== undefined && (
           <TvButton
             variant="quiet"

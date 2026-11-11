@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Apple TV Library (screen draft 05): type pills + Sort, All = Movies and Shows shelves, one type = a TV-sized grid.
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { Dimensions, Platform, StyleSheet } from 'react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
+import { BackHandler, Dimensions, Platform, StyleSheet } from 'react-native';
 
 import * as api from '@/api';
 import type { BaseItemDto, Query, RequestOptions } from '@/api';
@@ -10,6 +10,8 @@ import Library from '@/app/(tabs)/library';
 import { ItemMenuProvider } from '@/components/ItemMenu';
 import { ToastProvider } from '@/components/Toast';
 import { TvMenuHost } from '@/components/tv/TvMenu';
+import { NO_FILTERS } from '@/items';
+import { filterButtonLabel } from '@/screens/tv/TvLibrary';
 import * as session from '@/session';
 import { tv } from '@/theme';
 
@@ -58,8 +60,10 @@ beforeEach(async () => {
     ep(1),
     ep(2),
   ];
-  request.mockImplementation(
-    (_conn, _path, options?: RequestOptions) => Promise.resolve(answer(options?.query ?? {})) as Promise<never>,
+  request.mockImplementation((_conn, path, options?: RequestOptions) =>
+    path === '/Genres'
+      ? (Promise.resolve({ Items: [{ Name: 'Animation' }], TotalRecordCount: 1 }) as Promise<never>)
+      : (Promise.resolve(answer(options?.query ?? {})) as Promise<never>),
   );
 });
 afterEach(async () => {
@@ -132,5 +136,59 @@ describe('Library on Apple TV', () => {
     expect(await screen.findByText(/^Nothing on the server yet/)).toHaveTextContent(
       'Nothing on the server yet. Add some in Jellyfin, then come back here.',
     );
+  });
+
+  it('Filter opens a side panel: focus on the selected Show pill, a pick applies once picking pauses', async () => {
+    await renderTv();
+    await fireEvent.press(screen.getByRole('button', { name: 'Movies' }));
+    await screen.findByText('11 movies · by Name');
+    await fireEvent.press(screen.getByRole('button', { name: 'Filter' }));
+    const panel = within(screen.getByTestId('tv-menu-card'));
+    expect(StyleSheet.flatten(screen.getByTestId('tv-menu-card').props.style)).toMatchObject({ height: '100%' });
+    expect(panel.getByRole('button', { name: 'All' }).props.hasTVPreferredFocus).toBe(true);
+    expect(await panel.findByRole('button', { name: 'Animation' })).toBeOnTheScreen();
+    // No apply step, nothing to clear yet.
+    expect(panel.queryByRole('button', { name: /^Show( \d+)? Results?$/ })).toBeNull();
+    expect(panel.queryByRole('button', { name: 'Clear Filters' })).toBeNull();
+    await fireEvent.press(panel.getByRole('button', { name: 'Unwatched' }));
+    expect(panel.getByRole('button', { name: 'Clear Filters' })).toBeOnTheScreen();
+    // The grid behind follows once picking pauses; the panel stays open.
+    expect(await screen.findByRole('button', { name: 'Filter · Unwatched' })).toBeOnTheScreen();
+    expect(screen.getByTestId('tv-menu')).toBeOnTheScreen();
+    expect(request.mock.calls.filter(([, p]) => p === '/Items').at(-1)?.[2]?.query).toMatchObject({
+      filters: 'IsUnplayed',
+    });
+  });
+
+  it('Back closes and applies what is still waiting; Clear Filters stays while the panel is open', async () => {
+    const back: (() => boolean)[] = [];
+    const add = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_, handler) => {
+      back.push(handler as () => boolean);
+      return { remove: () => {} };
+    });
+    await renderTv();
+    await fireEvent.press(screen.getByRole('button', { name: 'Filter' }));
+    const panel = within(screen.getByTestId('tv-menu-card'));
+    await fireEvent.press(panel.getByRole('button', { name: '4K' }));
+    await fireEvent.press(panel.getByRole('button', { name: 'Clear Filters' }));
+    expect(panel.getByRole('button', { name: '4K' }).props.accessibilityState).toMatchObject({ selected: false });
+    // Still there, so focus isn't lost under it.
+    expect(panel.getByRole('button', { name: 'Clear Filters' })).toBeOnTheScreen();
+    // Back right after a pick: applied on close, not dropped.
+    await fireEvent.press(panel.getByRole('button', { name: 'Watched' }));
+    await act(() => {
+      back.at(-1)!();
+    });
+    expect(screen.queryByTestId('tv-menu')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Filter · Watched' })).toBeOnTheScreen();
+    add.mockRestore();
+  });
+});
+
+describe('filterButtonLabel', () => {
+  it('names one filter, counts more', () => {
+    expect(filterButtonLabel(NO_FILTERS)).toBe('Filter');
+    expect(filterButtonLabel({ ...NO_FILTERS, show: 'unwatched' })).toBe('Filter · Unwatched');
+    expect(filterButtonLabel({ ...NO_FILTERS, show: 'unwatched', only4K: true, genres: ['Drama'] })).toBe('Filter · 3');
   });
 });
