@@ -252,8 +252,15 @@ export const tv = {
     creditsWidth: 520,
     /** The play button's stand-in while the item loads. */
     placeholderPlayWidth: 300,
+    /** Scrolled this far down (a share of the screen's height): the art dims behind the shelves. */
+    belowAt: 0.3,
+    dim: 'rgba(0, 0, 0, 0.7)',
+    /** Media card: the label column (Video, Audio (3), Subtitles (12)). */
+    mediaLabelWidth: 220,
     badge: { border: 2, paddingHorizontal: 13, paddingVertical: 4, radius: 8 },
   },
+  /** Cast & Crew on a detail screen: the round photo, a card's width (photo + room for two-line names). */
+  person: { size: 140, cardWidth: 200 },
   /** Who's Watching: the account circles, the gap between them, the focus ring. */
   profile: { avatar: 240, gap: 80, ring: 6 },
   /** Menus (`TvMenu`): the card's width, a side panel's (Library Sort / Filter). */

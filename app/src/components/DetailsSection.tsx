@@ -16,7 +16,7 @@ import { MediaRow } from './MediaRow';
 import { Text } from './Text';
 
 /** "4.2 GB MKV" for the first file; undefined without a size. */
-function fileLine(item: BaseItemDto): string | undefined {
+export function fileLine(item: BaseItemDto): string | undefined {
   const source = item.MediaSources?.[0];
   if (!source?.Size) return undefined;
   return [formatBytes(source.Size), source.Container?.split(',')[0].toUpperCase()].filter(Boolean).join(' ');

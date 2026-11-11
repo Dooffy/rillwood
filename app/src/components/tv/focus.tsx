@@ -3,7 +3,7 @@
 // swipe from above or below lands on, and focus memory - a closing menu hands focus back to the button or card that
 // opened it (tvOS would otherwise pick something on its own).
 import type { ReactNode } from 'react';
-import { StyleSheet, TVFocusGuideView, type StyleProp, type ViewStyle } from 'react-native';
+import { TVEventControl, StyleSheet, TVFocusGuideView, type StyleProp, type ViewStyle } from 'react-native';
 
 import { tv } from '@/theme';
 
@@ -47,8 +47,8 @@ export function lastFocused(): Focusable | null {
 }
 
 /** Moves focus to `view` (if it's still on screen); off TV it does nothing. */
-export function restoreFocus(view: Focusable | null) {
-  view?.requestTVFocus?.();
+export function restoreFocus(view: Focusable | object | null) {
+  (view as Focusable | null)?.requestTVFocus?.();
 }
 
 /**
@@ -57,4 +57,21 @@ export function restoreFocus(view: Focusable | null) {
  */
 export function rememberFocus(event: { currentTarget: unknown }) {
   last = event.currentTarget as Focusable;
+}
+
+// Holders of the remote's Menu key (an open menu, a detail screen scrolled down): it comes to the app while any holds it.
+let menuKeyHolders = 0;
+
+/**
+ * Takes the Menu (Back) key for the app (`BackHandler`) instead of the system's back - counted, so one holder letting
+ * go (a menu closing) doesn't take it from another (the screen under it). Returns the release.
+ */
+export function holdMenuKey(): () => void {
+  if (menuKeyHolders++ === 0) TVEventControl.enableTVMenuKey();
+  let held = true;
+  return () => {
+    if (!held) return;
+    held = false;
+    if (--menuKeyHolders === 0) TVEventControl.disableTVMenuKey();
+  };
 }

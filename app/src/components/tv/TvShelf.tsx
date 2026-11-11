@@ -15,18 +15,28 @@ export type TvShelfProps = {
   title: string;
   /** Cards, scrolled horizontally. */
   children?: ReactNode;
+  /** A long shelf: its own horizontal list (virtualised, `tvShelfListContent`) instead of `children`. */
+  list?: ReactNode;
 };
 
-export function TvShelf({ title, children }: TvShelfProps) {
+/** Content padding for a shelf's own list (`list`): the margins and the room a focused card needs. */
+export const tvShelfListContent = {
+  paddingHorizontal: tv.margin,
+  paddingVertical: tv.shelf.focusRoom,
+};
+
+export function TvShelf({ title, children, list }: TvShelfProps) {
   return (
     <View>
       <Text accessibilityRole="header" numberOfLines={1} style={[tv.type.shelf, styles.title]}>
         {title}
       </Text>
       <TvFocusRow>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.list}>
-          {children}
-        </ScrollView>
+        {list ?? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.list}>
+            {children}
+          </ScrollView>
+        )}
       </TvFocusRow>
     </View>
   );
