@@ -23,6 +23,19 @@ const labels = (x: BaseItemDto, withDownload = true) =>
   itemActions(x, { mark: jest.fn(), download: withDownload ? [download] : undefined }).map((a) => a.label);
 
 describe('itemActions', () => {
+  it('details asked (Apple TV episode cards, where a click plays): Episode Details, before the download', () => {
+    const ep = item({ Type: 'Episode', RunTimeTicks: 2400 * TICKS });
+    const actions = itemActions(ep, { mark: jest.fn(), download: [download], details: true });
+    expect(actions.map((a) => a.label)).toEqual([
+      'Play',
+      'Mark as Watched',
+      'Add to Favourites',
+      'Episode Details',
+      'Download',
+    ]);
+    expect(labels(item({}))).not.toContain('Details');
+  });
+
   it('a movie not started: Play, watched, favourite, download', () => {
     expect(labels(item({ RunTimeTicks: 7200 * TICKS }))).toEqual([
       'Play',
