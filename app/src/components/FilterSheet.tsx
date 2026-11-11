@@ -34,12 +34,14 @@ function toggle<T>(list: T[], item: T): T[] {
 }
 
 /**
- * Tall sheet with every filter as tap-to-toggle chips: Show, Genres, Year, Rating, Quality. Edits a draft; Reset clears
- * it, the bottom button applies it (with the live result count when `countFor` knows it).
+ * The filters being edited in a sheet / panel: a draft that starts from the applied filters on each opening, edits, a
+ * reset, and the live result count once toggling pauses (`countEndpoint`). Phone sheet and Apple TV panel.
  */
-export function FilterSheet({ visible, value, genres, onApply, onClose, countEndpoint }: FilterSheetProps) {
-  const c = useColors();
-  const insets = useSafeAreaInsets();
+export function useFilterDraft(
+  visible: boolean,
+  value: Filters,
+  countEndpoint?: (draft: Filters) => Endpoint | undefined,
+) {
   const [draft, setDraft] = useState(value);
   const [opened, setOpened] = useState(visible);
   // Each opening starts from the applied filters.
@@ -57,6 +59,25 @@ export function FilterSheet({ visible, value, genres, onApply, onClose, countEnd
   const countRequest = visible ? countEndpoint?.(counted) : undefined;
   const { data } = useFetch<ItemsResult>(countRequest?.path ?? null, { query: countRequest?.query });
   const count = countRequest ? data?.TotalRecordCount : undefined;
+  return {
+    draft,
+    set,
+    reset: () => setDraft(NO_FILTERS),
+    toggleGenre: (genre: string) => set({ genres: toggle(draft.genres, genre) }),
+    toggleDecade: (decade: Filters['decades'][number]) => set({ decades: toggle(draft.decades, decade) }),
+    /** "Show 24 Results" (or without the number until it's known). */
+    showLabel: count === undefined ? 'Show Results' : `Show ${count} Result${count === 1 ? '' : 's'}`,
+  };
+}
+
+/**
+ * Tall sheet with every filter as tap-to-toggle chips: Show, Genres, Year, Rating, Quality. Edits a draft; Reset clears
+ * it, the bottom button applies it (with the live result count when `countFor` knows it).
+ */
+export function FilterSheet({ visible, value, genres, onApply, onClose, countEndpoint }: FilterSheetProps) {
+  const c = useColors();
+  const insets = useSafeAreaInsets();
+  const { draft, set, reset, toggleGenre, toggleDecade, showLabel } = useFilterDraft(visible, value, countEndpoint);
 
   const section = (title: string, chips: ReactNode) => (
     <View style={styles.section}>
@@ -75,7 +96,7 @@ export function FilterSheet({ visible, value, genres, onApply, onClose, countEnd
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Reset filters"
-            onPress={() => setDraft(NO_FILTERS)}
+            onPress={reset}
             style={styles.headerButton}
           >
             <Text secondary>Reset</Text>
@@ -96,12 +117,7 @@ export function FilterSheet({ visible, value, genres, onApply, onClose, countEnd
             section(
               'Genres',
               genres.map((g) => (
-                <Chip
-                  key={g}
-                  label={g}
-                  selected={draft.genres.includes(g)}
-                  onPress={() => set({ genres: toggle(draft.genres, g) })}
-                />
+                <Chip key={g} label={g} selected={draft.genres.includes(g)} onPress={() => toggleGenre(g)} />
               )),
             )}
           {section(
@@ -111,7 +127,7 @@ export function FilterSheet({ visible, value, genres, onApply, onClose, countEnd
                 key={d.key}
                 label={d.label}
                 selected={draft.decades.includes(d.key)}
-                onPress={() => set({ decades: toggle(draft.decades, d.key) })}
+                onPress={() => toggleDecade(d.key)}
               />
             )),
           )}
@@ -133,7 +149,7 @@ export function FilterSheet({ visible, value, genres, onApply, onClose, countEnd
         </ScrollView>
         <View style={[styles.footer, { borderTopColor: c.separator }]}>
           <Button
-            title={count === undefined ? 'Show Results' : `Show ${count} Result${count === 1 ? '' : 's'}`}
+            title={showLabel}
             onPress={() => {
               onApply(draft);
               onClose();

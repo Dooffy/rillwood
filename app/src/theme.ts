@@ -260,6 +260,8 @@ export const tv = {
     buttonScale: 1.08,
     cardScale: 1.1,
     shadow: { shadowColor: '#000000', shadowOpacity: 0.5, shadowRadius: 20, shadowOffset: { width: 0, height: 16 } },
+    /** Pills: small, often on a panel, in rows with little room - a soft shadow that stays inside the row's padding. */
+    pillShadow: { shadowColor: '#000000', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
   },
 } as const;
 

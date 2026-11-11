@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Apple TV Library (screen draft 05): type pills (All / Movies / Shows / Episodes) and Sort (a side panel) in one row
 // under the tab bar; All → a Movies and a Shows shelf, one type → an endless grid (posters 6 across, episodes 4). No
-// search field (Search is its own tab), no pull to refresh (no touch). Filters: a side panel too, roadmap TV task 10
-// (next).
+// search field (Search is its own tab), no pull to refresh (no touch). Filter: a side panel too (`TvFilterPanel`).
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
@@ -16,12 +15,20 @@ import { PosterRowsPlaceholder } from '@/components/Skeleton';
 import { Text } from '@/components/Text';
 import { TvFocusRow } from '@/components/tv/focus';
 import { TvButton } from '@/components/tv/TvButton';
+import { TvFilterPanel } from '@/components/tv/TvFilterPanel';
 import { TvPill } from '@/components/tv/TvPill';
 import { TvShelf } from '@/components/tv/TvShelf';
-import { cardTitles, LIBRARY_SORTS, playback, posterImage, SEARCH_SCOPES } from '@/items';
+import { activeFilters, cardTitles, LIBRARY_SORTS, playback, posterImage, SEARCH_SCOPES, type Filters } from '@/items';
 import { tabList, tv, useColors } from '@/theme';
 import { useImage } from '@/useImage';
 import { countLabel, emptyText, POSTER_ROWS, useLibrary } from '@/useLibrary';
+
+/** "Filter", "Filter · Unwatched" (one on), "Filter · 3" (more). */
+export function filterButtonLabel(filters: Filters): string {
+  const on = activeFilters(filters);
+  if (on.length === 0) return 'Filter';
+  return `Filter · ${on.length === 1 ? on[0].label : on.length}`;
+}
 
 export function TvLibrary() {
   const lib = useLibrary();
@@ -109,10 +116,24 @@ export function TvLibrary() {
               <TvPill key={s.key} label={s.label} selected={scope === s.key} onPress={() => lib.setScope(s.key)} />
             ))}
           </View>
-          <TvButton title={`Sort: ${lib.sortLabel}`} icon="arrow.up.arrow.down" onPress={() => setSortOpen(true)} />
+          <View style={styles.pills}>
+            <TvButton title={`Sort: ${lib.sortLabel}`} icon="arrow.up.arrow.down" onPress={() => setSortOpen(true)} />
+            <TvButton
+              title={filterButtonLabel(lib.filters)}
+              icon="line.3.horizontal.decrease"
+              onPress={lib.openFilters}
+            />
+          </View>
         </TvFocusRow>
       )}
       <View style={styles.fill}>{body}</View>
+      <TvFilterPanel
+        visible={lib.filtersOpen}
+        value={lib.filters}
+        genres={lib.genres}
+        onChange={lib.setFilters}
+        onClose={lib.closeFilters}
+      />
       <ActionSheet
         visible={sortOpen}
         side

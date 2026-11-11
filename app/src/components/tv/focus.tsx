@@ -10,6 +10,8 @@ import { tv } from '@/theme';
 /** Focused looks: scale up + lift. Buttons, pills and fields grow a little, cards and profile circles more. */
 export const focusStyles = StyleSheet.create({
   lift: { transform: [{ scale: tv.focus.buttonScale }], ...tv.focus.shadow },
+  // A softer shadow: pill rows (filters, types) leave little room, a harsh one is cut off at the row's edge.
+  pill: { transform: [{ scale: tv.focus.buttonScale }], ...tv.focus.pillShadow },
   // Above its neighbours, so the grown card isn't drawn under the next one.
   card: { transform: [{ scale: tv.focus.cardScale }], ...tv.focus.shadow, zIndex: 1 },
 });
