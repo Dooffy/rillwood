@@ -7,6 +7,7 @@ import { BackHandler, Platform, TVEventControl } from 'react-native';
 
 import { ActionSheet } from '@/components/ActionSheet';
 import { TvButton } from '@/components/tv/TvButton';
+import { holdMenuKey } from '@/components/tv/focus';
 import { TvMenuHost } from '@/components/tv/TvMenu';
 
 const isTV = Object.getOwnPropertyDescriptor(Platform, 'isTV')!;
@@ -80,6 +81,8 @@ describe('ActionSheet on Apple TV', () => {
     expect(enable).toHaveBeenCalled();
     await view.rerender(sheet(false));
     expect(disable).toHaveBeenCalled();
+    enable.mockRestore();
+    disable.mockRestore();
   });
 });
 
@@ -130,5 +133,24 @@ describe('focus back on the opener', () => {
     expect(opener.requestTVFocus).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('tv-menu')).toBeNull();
     add.mockRestore();
+  });
+});
+
+describe('holdMenuKey', () => {
+  it('counts holders: the key goes back to the system only when the last one lets go', () => {
+    const enable = jest.spyOn(TVEventControl, 'enableTVMenuKey');
+    const disable = jest.spyOn(TVEventControl, 'disableTVMenuKey');
+    enable.mockClear();
+    disable.mockClear();
+    const screenHold = holdMenuKey();
+    const menuHold = holdMenuKey();
+    expect(enable).toHaveBeenCalledTimes(1);
+    menuHold();
+    menuHold();
+    expect(disable).not.toHaveBeenCalled();
+    screenHold();
+    expect(disable).toHaveBeenCalledTimes(1);
+    enable.mockRestore();
+    disable.mockRestore();
   });
 });
