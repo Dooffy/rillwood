@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Apple TV Search tab (hidden on phones - search lives in Library there). Library's search until the TV Search screen
-// (roadmap TV task 11).
-export { default } from './library';
+// Search tab: Apple TV only (hidden on phones - search lives in Library there). Route only: the TV view
+// (`src/screens/tv/TvSearch`); a phone never shows the tab, Library stands in.
+import { screenFor } from '@/device';
+import { PhoneLibrary } from '@/screens/phone/PhoneLibrary';
+import { TvSearch } from '@/screens/tv/TvSearch';
+
+export default screenFor({ phone: PhoneLibrary, tv: TvSearch });
