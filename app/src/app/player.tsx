@@ -31,8 +31,9 @@ import { PlayerBottom, PlayerControls, PlayerScrubber, tracksAnchor } from '@/co
 import { Spinner } from '@/components/Spinner';
 import { Text } from '@/components/Text';
 import { TracksMenu, type TracksPage, type TracksValue } from '@/components/TracksMenu';
+import { TvPlayerBar, TvPlayerControls } from '@/components/tv/TvPlayerControls';
 import { UpNext } from '@/components/UpNext';
-import { features } from '@/device';
+import { features, screenFor } from '@/device';
 import { localCopy } from '@/downloads';
 import { cardTitles, isItemId, nextEpisode, nextEpisodes, playback, TICKS_PER_SECOND } from '@/items';
 import { holdPlaying } from '@/offload';
@@ -64,6 +65,8 @@ import {
 } from '@/player/controls';
 import { Player, type PlayerRef, type VideoZoom } from '@/player/Player';
 import { createProgress } from '@/player/progress';
+import { scrubTarget } from '@/player/tvRemote';
+import { useTvRemote } from '@/player/useTvRemote';
 import { useReporting } from '@/player/useReporting';
 import { connectionFor, getSession, useSession } from '@/session';
 import {
@@ -92,6 +95,10 @@ type State =
 
 const PLAYBACK_FAILED = "Couldn't play this video. Try again.";
 
+// The top of the controls: the phone / tablet bar (close, title, zoom, ⟲ ⏯ ⟳) or the Apple TV title (the remote does
+// the rest - `useTvRemote`).
+const Controls = screenFor({ phone: PlayerControls, tv: TvPlayerControls });
+
 // Always dark, whatever the Appearance setting. Loads the play source (docs/context/player.md), then plays it full
 // screen, Apple TV style: no chrome until a tap; tap toggles the controls (auto-hide), double-tap left / right seeks
 // ±10s, pull down closes (the video follows the finger and the screen below shows through). Episodes go on to the next
@@ -119,6 +126,10 @@ export default function PlayerScreen() {
   const [engineTracks, setEngineTracks] = useState<{ key: string; audio: EngineTrack[]; subs: EngineTrack[] }>();
   const [shown, setShown] = useState(true);
   const [scrubbing, setScrubbing] = useState(false);
+  // Apple TV: focus on the scrubber (Left / Right seek) or a track button (they move focus); a swipe's landing point.
+  const [onScrubber, setOnScrubber] = useState(true);
+  const [preview, setPreview] = useState<number>();
+  const scrubFrom = useRef(0);
   // Tracks menu page (null = closed) and the choices made in it; until a choice, the server's defaults. Choices outlive
   // a Retry (same item); speed applies to whatever plays, subtitle timing only to this item and subtitle track (each file
   // is off by its own amount). Subtitle size and style are phone settings (Settings → Subtitles).
@@ -335,6 +346,44 @@ export default function PlayerScreen() {
     touch();
     seekBy(delta);
   };
+  // Apple TV remote (`useTvRemote`, no-op elsewhere): click / Play-Pause, Left / Right 10 s, a swipe scrubs (the bar
+  // shows where it lands, the seek happens on release), Back hides the controls before it closes.
+  useTvRemote({
+    shown: playing && shown,
+    onScrubber,
+    toggle: () => {
+      if (!playing) return;
+      setPaused((p) => !p);
+      setShown(true);
+      touch();
+    },
+    seekBy: (seconds) => {
+      if (!playing) return;
+      setShown(true);
+      skip(seconds);
+    },
+    show: () => {
+      setShown(true);
+      touch();
+    },
+    hide: () => setShown(false),
+    scrub: (phase, dx) => {
+      if (!playing) return;
+      const { position, duration } = progress.get();
+      if (phase === 'start') {
+        scrubFrom.current = position;
+        setShown(true);
+        setScrubbing(true);
+        return;
+      }
+      const to = scrubTarget(scrubFrom.current, dx, duration);
+      if (phase === 'move') return setPreview(to);
+      setPreview(undefined);
+      setScrubbing(false);
+      if (dx !== 0) seek(to);
+      touch();
+    },
+  });
   // From the button: also restarts the controls' auto-hide.
   const toggleZoom = () => {
     touch();
@@ -519,7 +568,7 @@ export default function PlayerScreen() {
           </View>
         )}
         {controlsUp && (
-          <PlayerControls
+          <Controls
             title={titles?.title}
             subtitle={titles?.subtitle}
             started={playing}
@@ -537,8 +586,26 @@ export default function PlayerScreen() {
         {playing && (controlsUp || upNext) && (
           <PlayerBottom>
             {upNext}
-            {controlsUp && <PlayerScrubber progress={progress} onSeek={seek} onSeekBy={skip} onScrub={setScrubbing} />}
+            {controlsUp && !features.remote && (
+              <PlayerScrubber progress={progress} onSeek={seek} onSeekBy={skip} onScrub={setScrubbing} />
+            )}
           </PlayerBottom>
+        )}
+        {/* Apple TV: the scrubber + track buttons, at the screen's bottom. */}
+        {features.remote && playing && controlsUp && (
+          <TvPlayerBar
+            progress={progress}
+            preview={preview}
+            speed={tracks.speed}
+            subtitlesOn={subtitleTrack !== undefined}
+            paused={paused}
+            onTogglePause={() => {
+              setPaused((p) => !p);
+              touch();
+            }}
+            onPage={setMenu}
+            onScrubberFocus={setOnScrubber}
+          />
         )}
         {options && (
           <TracksMenu

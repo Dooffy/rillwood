@@ -23,7 +23,10 @@ export type TvButtonProps = {
   icon?: SymbolViewProps['name'];
   /** Fills its column (a form's main button). */
   wide?: boolean;
-  /** Icon-only circle; `title` becomes its accessibility label. */
+  /**
+   * A circle: its icon, `title` read by VoiceOver - or, with no icon, a short `title` in it ("1×"; pass the full name as
+   * `accessibilityLabel`).
+   */
   round?: boolean;
   /** A toggle that's on (Watched, Favourite): filled like the primary button, read as selected. */
   selected?: boolean;
@@ -101,7 +104,7 @@ export function TvButton({
         ) : (
           <>
             {icon && <SymbolView name={icon} tintColor={ink(focused)} size={round ? tv.icon.round : tv.icon.button} />}
-            {!round && (
+            {(!round || !icon) && (
               <Text numberOfLines={1} style={[quiet ? tv.type.quiet : tv.type.button, { color: ink(focused) }]}>
                 {title}
               </Text>

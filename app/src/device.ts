@@ -34,6 +34,13 @@ export const features = {
   get touch() {
     return !Platform.isTV;
   },
+  /**
+   * A TV remote in the player: click / Play-Pause / Left-Right / swipe events, Menu (Back) hides the controls before it
+   * closes (`useTvRemote`).
+   */
+  get remote() {
+    return Platform.isTV;
+  },
   /** The app's files last; tvOS keeps them in Caches, which it may purge (`src/persist.ts` uses the Keychain then). */
   get lastingFiles() {
     return !Platform.isTV;
