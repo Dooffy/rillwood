@@ -8,10 +8,11 @@ import { isConnectionError, type ApiError } from '@/api';
 import { features } from '@/device';
 import { openDownloads } from '@/navigation';
 import { useSession } from '@/session';
-import { minTouch, pressedOpacity, radii, spacing, useColors } from '@/theme';
+import { deviceSizes, minTouch, pressedOpacity, radii, spacing, useColors } from '@/theme';
 
 import { Button } from './Button';
 import { Text } from './Text';
+import { TvButton } from './tv/TvButton';
 
 /** Load-error copy that says what to do next: offline, a server failure, anything else (401 already signs out). */
 export function loadErrorMessage(error: ApiError): string {
@@ -35,12 +36,19 @@ export function Message({
   fill?: boolean;
   alert?: boolean;
 }) {
+  // Apple TV: bigger text, and a TV button for Retry (focus lift, remote-sized).
+  const tv = deviceSizes.message;
   return (
-    <View style={[styles.message, fill && styles.fill]}>
-      <Text secondary style={fill && styles.center} accessibilityRole={alert ? 'alert' : undefined}>
+    <View style={[styles.message, fill && styles.fill, tv && { gap: tv.gap }]}>
+      <Text secondary style={[fill && styles.center, tv?.text]} accessibilityRole={alert ? 'alert' : undefined}>
         {text}
       </Text>
-      {retry && <Button title="Retry" variant="secondary" onPress={retry} />}
+      {retry &&
+        (tv ? (
+          <TvButton title="Retry" onPress={retry} />
+        ) : (
+          <Button title="Retry" variant="secondary" onPress={retry} />
+        ))}
     </View>
   );
 }

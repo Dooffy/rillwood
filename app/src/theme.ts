@@ -259,6 +259,12 @@ export const tv = {
     mediaLabelWidth: 220,
     badge: { border: 2, paddingHorizontal: 13, paddingVertical: 4, radius: 8 },
   },
+  /** Empty state (`TvEmptyState`): its icon, the room above it, its widest line. */
+  empty: { icon: 96, top: 180, width: 900 },
+  /** Search tab: the left column (the field + `TvKeyboard`), the gap to the results. */
+  search: { columnWidth: 6 * 80 + 5 * 12, gap: 70 },
+  /** `TvKeyboard`: square keys, six to a row. */
+  keyboard: { key: 80, gap: 12, width: 6 * 80 + 5 * 12 },
   /** Cast & Crew on a detail screen: the round photo, a card's width (photo + room for two-line names). */
   person: { size: 140, cardWidth: 200 },
   /** Who's Watching: the account circles, the gap between them, the focus ring. */
@@ -288,6 +294,13 @@ export const deviceSizes = {
   /** Text under a card's artwork (`Card`); undefined = the phone's `label` / `caption`. */
   get cardTitle() {
     return Platform.isTV ? tv.type.cardTitle : undefined;
+  },
+  /**
+   * `Message` (empty / error text + Retry) on Apple TV: body text read from the sofa, the gap above its TV Retry button.
+   * undefined on phones and tablets (the phone's sizes and `Button`).
+   */
+  get message() {
+    return Platform.isTV ? { text: tv.type.body, gap: tv.gap.sm } : undefined;
   },
   get cardSubtitle() {
     return Platform.isTV ? tv.type.small : undefined;

@@ -18,6 +18,8 @@ export type TvShelfProps = {
   children?: ReactNode;
   /** A long shelf: its own horizontal list (virtualised, `tvShelfListContent`) instead of `children`. */
   list?: ReactNode;
+  /** Side inset for the title and cards: the screen's safe margin by default, less in a column (Search results). */
+  margin?: number;
   /** Where the first swipe into the shelf lands (`TvFocusRow` `start`). */
   start?: object | null;
 };
@@ -28,17 +30,21 @@ export const tvShelfListContent = {
   paddingVertical: tv.shelf.focusRoom,
 };
 
-export function TvShelf({ title, children, list, start }: TvShelfProps) {
+export function TvShelf({ title, children, list, start, margin = tv.margin }: TvShelfProps) {
   return (
     <View>
       {title !== undefined && (
-        <Text accessibilityRole="header" numberOfLines={1} style={[tv.type.shelf, styles.title]}>
+        <Text accessibilityRole="header" numberOfLines={1} style={[tv.type.shelf, { paddingHorizontal: margin }]}>
           {title}
         </Text>
       )}
       <TvFocusRow start={start}>
         {list ?? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.list}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={[styles.list, { paddingHorizontal: margin }]}
+          >
             {children}
           </ScrollView>
         )}
@@ -48,6 +54,5 @@ export function TvShelf({ title, children, list, start }: TvShelfProps) {
 }
 
 const styles = StyleSheet.create({
-  title: { paddingHorizontal: tv.margin },
   list: { paddingHorizontal: tv.margin, paddingVertical: tv.shelf.focusRoom, gap: tv.shelf.gap },
 });
