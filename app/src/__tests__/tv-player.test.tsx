@@ -2,8 +2,8 @@
 // Apple TV player controls (screen draft 10): the title on top, the scrubber + track buttons at the bottom, and the
 // remote - click / Play-Pause, Left / Right 10 s, a swipe scrubs with a preview, Back hides the controls then closes.
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { AccessibilityInfo, BackHandler, Platform } from 'react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
+import { AccessibilityInfo, BackHandler, Platform, StyleSheet } from 'react-native';
 
 import * as api from '@/api';
 import type { BaseItemDto, MediaSourceDto } from '@/api';
@@ -13,6 +13,8 @@ import * as downloads from '@/downloads';
 import type { PlayerProps } from '@/player/Player';
 import type { RemoteEvent } from '@/player/tvRemote';
 import * as session from '@/session';
+import * as settings from '@/settings';
+import { tv } from '@/theme';
 
 jest.mock('expo-router', () => ({
   router: { back: jest.fn(), setParams: jest.fn() },
@@ -48,7 +50,16 @@ const account: session.Account = {
   userName: 'anna',
   deviceId: 'dev',
 };
-const source: MediaSourceDto = { Id: 'ms', SupportsDirectPlay: true, MediaStreams: [] };
+const source: MediaSourceDto = {
+  Id: 'ms',
+  SupportsDirectPlay: true,
+  DefaultAudioStreamIndex: 1,
+  DefaultSubtitleStreamIndex: -1,
+  MediaStreams: [
+    { Type: 'Audio', Index: 1, DisplayTitle: 'English - AAC - Stereo - Default' },
+    { Type: 'Subtitle', Index: 2, Codec: 'subrip', IsExternal: true, Language: 'eng', DisplayTitle: 'English - SRT' },
+  ],
+};
 const movie: BaseItemDto = {
   Id: 'ecdda3284954ff60759e87e5ddb37fb8',
   Name: 'Sintel',
@@ -78,6 +89,9 @@ beforeEach(() => {
   jest.spyOn(downloads, 'localCopy').mockReturnValue(null);
   jest.spyOn(downloads, 'savedItem').mockReturnValue(null);
   jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(false);
+  settings.setSubtitleMode('server');
+  settings.setAudioLanguage('server');
+  settings.setSubtitleLanguage('server');
   jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_, handler) => {
     back.push(handler as () => boolean);
     return { remove: () => (back = back.filter((h) => h !== handler)) };
@@ -168,5 +182,63 @@ describe('Player on Apple TV', () => {
     // Any press brings them back.
     await press('down');
     expect(screen.getByTestId('tv-player-bar')).toBeOnTheScreen();
+  });
+
+  it('CC opens the subtitles above the buttons; once on, Subtitle Timing is at its end: − / + / Reset', async () => {
+    await renderPlaying();
+    await fireEvent.press(screen.getByRole('button', { name: 'Subtitles, off' }));
+    const card = screen.getByTestId('tv-menu-card');
+    // A small menu at the bottom-right, the video undimmed around it; the controls stay up.
+    expect(StyleSheet.flatten(card.props.style)).toMatchObject({ width: tv.menu.popoverWidth });
+    expect(StyleSheet.flatten(screen.getByTestId('tv-menu').props.style)).toMatchObject({ right: tv.margin });
+    expect(StyleSheet.flatten(screen.getByTestId('tv-menu').props.style).backgroundColor).toBeUndefined();
+    expect(screen.getByTestId('tv-player-bar')).toBeOnTheScreen();
+    const panel = within(card);
+    expect(panel.queryByRole('button', { name: /^Subtitle Timing/ })).toBeNull();
+    await fireEvent.press(panel.getByRole('button', { name: 'English - SRT' }));
+    expect(lastPlayer().subtitleTrack).not.toBe(-1);
+    // The CC button fills while subtitles are on.
+    expect(screen.getByRole('button', { name: 'Subtitles, on' }).props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+    await fireEvent.press(screen.getByRole('button', { name: 'Subtitles, on' }));
+    await fireEvent.press(
+      within(screen.getByTestId('tv-menu-card')).getByRole('button', { name: 'Subtitle Timing, In sync' }),
+    );
+    const timing = within(screen.getByTestId('tv-timing'));
+    expect(timing.getByText('In sync')).toBeOnTheScreen();
+    await fireEvent.press(timing.getByRole('button', { name: 'Later by 0.1 seconds' }));
+    await fireEvent.press(timing.getByRole('button', { name: 'Later by 0.1 seconds' }));
+    expect(lastPlayer().subtitleDelay).toBeCloseTo(0.2);
+    await fireEvent.press(timing.getByRole('button', { name: 'Earlier by 0.1 seconds' }));
+    expect(lastPlayer().subtitleDelay).toBeCloseTo(0.1);
+    await fireEvent.press(timing.getByRole('button', { name: 'Reset' }));
+    expect(lastPlayer().subtitleDelay).toBe(0);
+  });
+
+  it('with a menu open, swipes and Left / Right move through it - no seek', async () => {
+    await renderPlaying();
+    await fireEvent.press(screen.getByRole('button', { name: 'Speed, 1×' }));
+    await press('pan', { state: 'Began', x: 0 });
+    await press('pan', { state: 'Changed', x: 300 });
+    await press('pan', { state: 'Ended', x: 300 });
+    await fireEvent(screen.getByTestId('tv-scrubber'), 'focus', { currentTarget: {} });
+    await press('right');
+    expect(mockSeek).not.toHaveBeenCalled();
+  });
+
+  it('with a menu open, focus stays in it: the bar takes focus again once it closes', async () => {
+    await renderPlaying();
+    await fireEvent.press(screen.getByRole('button', { name: 'Speed, 1×' }));
+    for (const name of ['Subtitles, off', 'Audio', 'Speed, 1×'])
+      expect(screen.getByRole('button', { name }).props.focusable).toBe(false);
+    expect(screen.getByTestId('tv-scrubber').props.focusable).toBe(false);
+    // Menu (Back): the menu's handler, the latest.
+    await act(() => {
+      back.at(-1)!();
+    });
+    expect(screen.queryByTestId('tv-menu')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Speed, 1×' }).props.focusable).toBe(true);
+    expect(screen.getByTestId('tv-scrubber').props.focusable).toBe(true);
   });
 });

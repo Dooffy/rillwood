@@ -78,7 +78,7 @@ import {
   useVideoZoom,
 } from '@/settings';
 import { resumeRules } from '@/sync';
-import { ColorsContext, palettes, radii, spacing, useWide } from '@/theme';
+import { ColorsContext, palettes, radii, spacing, tv, useWide } from '@/theme';
 import { useDebounced } from '@/useDebounced';
 import { useFetch } from '@/useFetch';
 import { useItem } from '@/useItem';
@@ -128,6 +128,8 @@ export default function PlayerScreen() {
   const [scrubbing, setScrubbing] = useState(false);
   // Apple TV: focus on the scrubber (Left / Right seek) or a track button (they move focus); a swipe's landing point.
   const [onScrubber, setOnScrubber] = useState(true);
+  // Apple TV: the bottom bar's height - the tracks menu opens above it.
+  const [barHeight, setBarHeight] = useState(0);
   const [preview, setPreview] = useState<number>();
   const scrubFrom = useRef(0);
   // Tracks menu page (null = closed) and the choices made in it; until a choice, the server's defaults. Choices outlive
@@ -357,8 +359,9 @@ export default function PlayerScreen() {
       setShown(true);
       touch();
     },
+    // A menu over the video takes the remote's Left / Right and swipes (moving through its list).
     seekBy: (seconds) => {
-      if (!playing) return;
+      if (!playing || menuOpen) return;
       setShown(true);
       skip(seconds);
     },
@@ -368,7 +371,7 @@ export default function PlayerScreen() {
     },
     hide: () => setShown(false),
     scrub: (phase, dx) => {
-      if (!playing) return;
+      if (!playing || menuOpen) return;
       const { position, duration } = progress.get();
       if (phase === 'start') {
         scrubFrom.current = position;
@@ -604,7 +607,9 @@ export default function PlayerScreen() {
               touch();
             }}
             onPage={setMenu}
+            menu={menu}
             onScrubberFocus={setOnScrubber}
+            onHeight={setBarHeight}
           />
         )}
         {options && (
@@ -613,6 +618,8 @@ export default function PlayerScreen() {
             onPage={setMenu}
             // Tablets: under the button that opened it (the top bar's right end).
             anchor={wide ? tracksAnchor(insets) : undefined}
+            // Apple TV: above the track buttons, at the right margin (other devices ignore it).
+            above={{ bottom: (barHeight || tv.player.controlsHeight) + tv.gap.sm, right: tv.margin }}
             audio={options.audio}
             subtitles={options.subtitles}
             value={tracks}
