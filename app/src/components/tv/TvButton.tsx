@@ -48,6 +48,8 @@ export type TvButtonProps = {
   ref?: Ref<TvButtonHandle>;
   /** false inside menus: a closing menu hands focus back to what opened it, not to its own buttons. */
   rememberFocus?: boolean;
+  /** false: focus skips it (the player's buttons while its menu is open). */
+  focusable?: boolean;
 };
 
 export function TvButton({
@@ -68,6 +70,7 @@ export function TvButton({
   onFocus,
   ref,
   rememberFocus = true,
+  focusable,
 }: TvButtonProps) {
   const c = useColors();
   const inactive = disabled || loading;
@@ -85,6 +88,7 @@ export function TvButton({
       accessibilityState={{ disabled: inactive, busy: loading, selected }}
       onPress={inactive ? undefined : onPress}
       hasTVPreferredFocus={preferredFocus}
+      focusable={focusable}
       onFocus={(e) => {
         if (rememberFocus) remember(e);
         onFocus?.();

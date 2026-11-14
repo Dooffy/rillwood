@@ -7,7 +7,7 @@ import { backdrop, radii, scrollList, spacing, useColors } from '@/theme';
 
 import { Checkmark } from './List';
 import { Text } from './Text';
-import { useTvMenu, useTvMenuHost } from './tv/TvMenu';
+import { useTvMenu, useTvMenuHost, type TvMenuProps } from './tv/TvMenu';
 
 /** Row height of the sheet's actions and Cancel (iOS action sheet). */
 const ROW_HEIGHT = 56;
@@ -43,6 +43,8 @@ export type ActionSheetProps = {
   anchor?: { top: number; right: number };
   /** Apple TV: a panel down the right edge instead of a centred menu (Library Sort / Filter); other devices ignore it. */
   side?: boolean;
+  /** Apple TV: a small menu at the bottom-right, this far up (above its button, no dim); other devices ignore it. */
+  above?: TvMenuProps['above'];
   onClose: () => void;
 };
 
@@ -59,6 +61,7 @@ export function ActionSheet({
   closeLabel,
   anchor,
   side,
+  above,
   onClose,
 }: ActionSheetProps) {
   const c = useColors();
@@ -74,7 +77,7 @@ export function ActionSheet({
   const close = closeLabel ?? (anchor ? undefined : 'Cancel');
   // Apple TV: the menu is drawn in the app's own view (`TvMenuHost`) - the remote doesn't reach a native modal.
   const tvHost = useTvMenuHost();
-  useTvMenu(tvHost, visible, { title, actions, children, closeLabel, side, onClose });
+  useTvMenu(tvHost, visible, { title, actions, children, closeLabel, side, above, onClose });
   if (tvHost) return null;
   const pick = (action: SheetAction) => {
     pending.current = action.onPress;

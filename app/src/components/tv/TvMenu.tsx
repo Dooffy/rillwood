@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Apple TV menus: drawn in the app's own view, over a dimmed screen - never an RN `Modal`, whose separate window the
-// remote's presses don't reach (roadmap TV task 4b). `TvMenuHost` sits in the root layout; an `ActionSheet` on TV
-// hands it what to show. Focus starts on the first action and stays in the card; Menu (Back) closes it.
+// Apple TV menus: drawn in the app's own view, over a dimmed screen (a popover above its button: no dim) - never an RN
+// `Modal`, whose separate window the remote's presses don't reach (roadmap TV task 4b). `TvMenuHost` sits in the root
+// layout; an `ActionSheet` on TV hands it what to show. Focus starts on the first action and stays in the card; Menu
+// (Back) closes it.
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { BackHandler, Platform, ScrollView, StyleSheet, TVFocusGuideView, View } from 'react-native';
 
 import { backdrop, scrollList, tv, useColors } from '@/theme';
 
+import { Glass } from '../Glass';
 import { Text } from '../Text';
 import { holdMenuKey, lastFocused, restoreFocus } from './focus';
 import { TvButton } from './TvButton';
@@ -31,6 +33,11 @@ export type TvMenuProps = {
   closeLabel?: string;
   /** A panel down the right edge instead of a centred card (Library Sort / Filter). */
   side?: boolean;
+  /**
+   * A small menu at the screen's bottom-right instead, its bottom edge this far up (above the button that opened it):
+   * no dim, the video playing around it - the player's track buttons, like tvOS's own player.
+   */
+  above?: { bottom: number; right: number };
   onClose: () => void;
 };
 
@@ -81,7 +88,7 @@ export function useTvMenu(host: Host | null, visible: boolean, menu: TvMenuProps
   useEffect(() => () => host?.hide(key), [host, key]);
 }
 
-function TvMenu({ title, actions, children, closeLabel, side = false, onClose }: TvMenuProps) {
+function TvMenu({ title, actions, children, closeLabel, side = false, above, onClose }: TvMenuProps) {
   const c = useColors();
   // What had focus when the menu opened (its own buttons aren't remembered): it gets focus back when the menu closes,
   // before an action runs - one that opens a screen then takes focus there.
@@ -111,7 +118,14 @@ function TvMenu({ title, actions, children, closeLabel, side = false, onClose }:
     action.onPress();
   };
   return (
-    <View testID="tv-menu" style={[StyleSheet.absoluteFill, styles.backdrop, side && styles.sideBackdrop]}>
+    <View
+      testID="tv-menu"
+      style={[
+        StyleSheet.absoluteFill,
+        above ? [styles.popoverArea, { bottom: above.bottom, right: above.right }] : styles.backdrop,
+        side && !above && styles.sideBackdrop,
+      ]}
+    >
       <TVFocusGuideView
         autoFocus
         trapFocusUp
@@ -120,16 +134,34 @@ function TvMenu({ title, actions, children, closeLabel, side = false, onClose }:
         trapFocusRight
         testID="tv-menu-card"
         accessibilityRole="menu"
-        style={[styles.card, side && styles.side, { backgroundColor: c.elevated }]}
+        style={[styles.card, above ? styles.popover : side && styles.side, !above && { backgroundColor: c.elevated }]}
       >
+        {/* Over the video: darkened glass, the picture blurred through it. */}
+        {above && (
+          <Glass
+            tint={tv.menu.glassTint}
+            fallback={tv.menu.glassFallback}
+            style={[StyleSheet.absoluteFill, styles.glass]}
+          />
+        )}
         {title !== undefined && (
-          <Text secondary numberOfLines={2} style={[tv.type.caption, !side && styles.title]}>
+          <Text
+            secondary={!above}
+            numberOfLines={2}
+            // Over video, read from the sofa: a heading ("Audio"), not a small grey caption.
+            style={[above ? tv.type.shelf : tv.type.caption, !side && !above && styles.title]}
+          >
             {title}
           </Text>
         )}
         {children}
         {actions.length > 0 && (
-          <ScrollView {...scrollList} contentContainerStyle={styles.actions}>
+          <ScrollView
+            {...scrollList}
+            // Out to the card's edges: a focused button's lift and shadow fit inside the list, not cut at its edge.
+            style={[styles.list, closeLabel === undefined && styles.listToBottom]}
+            contentContainerStyle={styles.actions}
+          >
             {actions.map((action, i) => (
               <TvButton
                 // Labels can repeat (two tracks named alike).
@@ -184,7 +216,18 @@ const styles = StyleSheet.create({
     paddingTop: tv.marginTop,
     paddingHorizontal: tv.margin,
   },
+  // Bottom-right, under the top margin at most; taps / focus outside the card reach the screen (no backdrop).
+  popoverArea: { top: tv.marginTop, alignItems: 'flex-end', justifyContent: 'flex-end' },
+  popover: { width: tv.menu.popoverWidth, maxHeight: '100%' },
+  glass: { borderRadius: tv.panel.radius },
   title: { textAlign: 'center' },
-  // Room for a focused button to grow.
-  actions: { gap: tv.gap.sm, paddingVertical: tv.gap.sm, paddingHorizontal: tv.gap.sm },
+  list: { marginHorizontal: -tv.gap.lg },
+  listToBottom: { marginBottom: -tv.gap.lg },
+  // Room for a focused button to grow; below it its shadow (cast down).
+  actions: {
+    gap: tv.gap.sm,
+    paddingTop: tv.gap.sm,
+    paddingBottom: tv.shelf.focusRoom,
+    paddingHorizontal: tv.gap.lg,
+  },
 });

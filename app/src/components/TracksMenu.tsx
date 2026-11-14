@@ -2,11 +2,15 @@
 // Player tracks menu on the shared ActionSheet: a main page (audio, subtitles, speed with their current value) that opens
 // one list per setting (subtitle timing: a slider, only while subtitles are on). The screen owns the page so a pick can
 // close one sheet and open the next. How subtitles look is set in Settings → Subtitles. Tablets: a menu under its button
-// (`anchor`) instead of a bottom sheet.
+// (`anchor`) instead of a bottom sheet. Apple TV: a small menu above the player's round buttons (`above`, no dim, the
+// video playing around it - like tvOS's own player); those buttons open Subtitles / Audio / Speed directly, so timing
+// is a row at the end of Subtitles there, and the remote's − / + timing (`TvTimingSlider`) stands in for the slider.
 import type { ReactNode } from 'react';
 
 import { ActionSheet, type ActionSheetProps, type SheetAction } from '@/components/ActionSheet';
 import { TimingSlider } from '@/components/TimingSlider';
+import { TvTimingSlider } from '@/components/tv/TvTimingSlider';
+import { features, screenFor } from '@/device';
 import { formatDelay } from '@/format';
 import type { TrackChoice, TrackOption } from '@/playback';
 
@@ -24,6 +28,9 @@ type Page = { title: string; actions?: SheetAction[]; content?: ReactNode; close
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
+// The timing control: the phone's slider, or − / + on Apple TV (no drag on a remote).
+const Timing = screenFor({ phone: TimingSlider, tv: TvTimingSlider });
+
 const speedLabel = (speed: number) => (speed === 1 ? 'Normal' : `${speed}×`);
 
 export function TracksMenu({
@@ -34,6 +41,7 @@ export function TracksMenu({
   value,
   onChange,
   anchor,
+  above,
 }: {
   page: TracksPage | null;
   onPage: (page: TracksPage | null) => void;
@@ -42,6 +50,8 @@ export function TracksMenu({
   value: TracksValue;
   onChange: (next: Partial<TracksValue>) => void;
   anchor?: ActionSheetProps['anchor'];
+  /** Apple TV: where the menu's bottom edge sits (above the track buttons). */
+  above?: ActionSheetProps['above'];
 }) {
   const subtitleChoices = [{ id: -1, index: -1, label: 'Off' }, ...subtitles];
   const label = (options: TrackOption[], index: number | undefined) => options.find((t) => t.index === index)?.label;
@@ -72,7 +82,16 @@ export function TracksMenu({
       ],
     },
     audio: { title: 'Audio', actions: pick(audio, value.audio, 'audio') },
-    subtitles: { title: 'Subtitles', actions: pick(subtitleChoices, value.subtitle, 'subtitle') },
+    subtitles: {
+      title: 'Subtitles',
+      actions: [
+        ...pick(subtitleChoices, value.subtitle, 'subtitle'),
+        // Apple TV opens Subtitles straight from the player (no main page): timing goes at its end.
+        ...(features.remote && value.subtitle !== -1
+          ? [{ label: 'Subtitle Timing', detail: formatDelay(value.subtitleDelay), onPress: () => onPage('timing') }]
+          : []),
+      ],
+    },
     speed: {
       title: 'Speed',
       actions: SPEEDS.map((speed) => ({
@@ -84,7 +103,7 @@ export function TracksMenu({
     // A slider instead of a list: applied as it changes, the sheet closes with Done.
     timing: {
       title: 'Subtitle timing',
-      content: <TimingSlider value={value.subtitleDelay} onChange={(subtitleDelay) => onChange({ subtitleDelay })} />,
+      content: <Timing value={value.subtitleDelay} onChange={(subtitleDelay) => onChange({ subtitleDelay })} />,
       closeLabel: 'Done',
     },
   };
@@ -96,6 +115,7 @@ export function TracksMenu({
       actions={shown.actions}
       closeLabel={shown.closeLabel}
       anchor={anchor}
+      above={above}
       onClose={() => onPage(null)}
     >
       {shown.content}

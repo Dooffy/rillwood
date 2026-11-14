@@ -12,16 +12,22 @@ const liquid = isLiquidGlassAvailable();
 export function Glass({
   style,
   interactive = false,
+  tint,
+  fallback = glassFallback,
   children,
 }: {
   style?: ViewProps['style'];
   /** Native press feedback (buttons). */
   interactive?: boolean;
+  /** A colour over the glass (darker for text over a bright picture). */
+  tint?: string;
+  /** The fill without Liquid Glass. */
+  fallback?: string;
   children?: ReactNode;
 }) {
-  if (!liquid) return <View style={[{ backgroundColor: glassFallback }, style]}>{children}</View>;
+  if (!liquid) return <View style={[{ backgroundColor: fallback }, style]}>{children}</View>;
   return (
-    <GlassView glassEffectStyle="regular" colorScheme="dark" isInteractive={interactive} style={style}>
+    <GlassView glassEffectStyle="regular" colorScheme="dark" isInteractive={interactive} tintColor={tint} style={style}>
       {children}
     </GlassView>
   );

@@ -4,6 +4,7 @@
 // over the playhead, and the track buttons above it (Subtitles, Audio, Speed - the same menus as the phone's).
 // The remote does the rest (`useTvRemote`): click = play / pause, Left / Right = 10 s, swipe = scrub.
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
+import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { formatClock, formatEndsAt } from '@/format';
@@ -13,7 +14,8 @@ import { onArtwork, tv, useColors } from '@/theme';
 import type { PlayerControlsProps } from '../PlayerControls';
 import type { TracksPage } from '../TracksMenu';
 import { Text } from '../Text';
-import { TvButton } from './TvButton';
+import { restoreFocus } from './focus';
+import { TvButton, type TvButtonHandle } from './TvButton';
 
 /** Top of the screen: the title (and episode line) over a fade. Same props as the phone's controls. */
 export function TvPlayerControls({ title, subtitle, paused, started }: PlayerControlsProps) {
@@ -52,8 +54,15 @@ export type TvPlayerBarProps = {
   onTogglePause: () => void;
   /** A track button: its menu page. */
   onPage: (page: TracksPage) => void;
+  /**
+   * The menu's page while it's open: the bar can't take focus then (focus stays in the menu - a small menu above the
+   * buttons doesn't hold it on its own), and gets it back on the button that opened it when it closes.
+   */
+  menu: TracksPage | null;
   /** Focus moved: true on the scrubber, false on a button (Left / Right seek only on the scrubber). */
   onScrubberFocus: (on: boolean) => void;
+  /** The bar's height (buttons + scrubber): the tracks menu opens above it. */
+  onHeight?: (height: number) => void;
 };
 
 /** Bottom of the screen: track buttons, then the scrubber. */
@@ -65,7 +74,9 @@ export function TvPlayerBar({
   paused,
   onTogglePause,
   onPage,
+  menu,
   onScrubberFocus,
+  onHeight,
 }: TvPlayerBarProps) {
   const c = useColors();
   const { position, duration } = useProgress(progress);
@@ -73,6 +84,19 @@ export function TvPlayerBar({
   const fraction = duration > 0 ? Math.min(Math.max(at / duration, 0), 1) : 0;
   const left = Math.max(duration - at, 0);
   const endsAt = formatEndsAt(left / (speed || 1));
+  const free = menu === null;
+  // The button the open menu came from (Subtitle Timing is a Subtitles page); focus goes back to it once the menu closes
+  // and the bar is focusable again - the menu's own hand-back runs before that.
+  const refs = useRef<Partial<Record<TracksPage, TvButtonHandle | null>>>({});
+  const opener = useRef<TracksPage | null>(null);
+  useEffect(() => {
+    if (menu !== null) {
+      opener.current ??= menu === 'timing' ? 'subtitles' : menu;
+      return;
+    }
+    if (opener.current) restoreFocus(refs.current[opener.current] ?? null);
+    opener.current = null;
+  }, [menu]);
   // Round, like the detail screen's: CC (filled while subtitles are on), audio track (a waveform - a speaker reads as
   // volume), the speed as text in its circle.
   const button = (
@@ -80,7 +104,11 @@ export function TvPlayerBar({
     props: { title: string; icon?: SymbolViewProps['name']; label?: string; on?: boolean },
   ) => (
     <TvButton
+      ref={(view) => {
+        refs.current[page] = view;
+      }}
       round
+      focusable={free}
       title={props.title}
       icon={props.icon}
       accessibilityLabel={props.label ?? props.title}
@@ -90,7 +118,7 @@ export function TvPlayerBar({
     />
   );
   return (
-    <View testID="tv-player-bar" style={styles.bottom}>
+    <View testID="tv-player-bar" style={styles.bottom} onLayout={(e) => onHeight?.(e.nativeEvent.layout.height)}>
       <View style={[StyleSheet.absoluteFill, styles.fadeBottom]} pointerEvents="none" />
       <View style={styles.buttons}>
         {button('subtitles', {
@@ -106,6 +134,7 @@ export function TvPlayerBar({
       <Pressable
         testID="tv-scrubber"
         hasTVPreferredFocus
+        focusable={free}
         accessibilityRole="adjustable"
         accessibilityLabel={paused ? 'Paused' : 'Playing'}
         accessibilityValue={{ text: `${formatClock(at)} of ${formatClock(duration)}` }}

@@ -267,12 +267,21 @@ export const tv = {
   keyboard: { key: 80, gap: 12, width: 6 * 80 + 5 * 12 },
   /** Player (`TvPlayerControls`, `TvPlayerBar`): the scrubber's track, the playhead, the top fade's height. */
   player: { track: 10, trackFocused: 14, playhead: 26, controlsHeight: 260, previewWidth: 160, fadeAbove: 160 },
+  /** Subtitle timing (`TvTimingSlider`): the in-sync mark in the middle of the bar. */
+  timing: { mark: 4 },
   /** Cast & Crew on a detail screen: the round photo, a card's width (photo + room for two-line names). */
   person: { size: 140, cardWidth: 200 },
   /** Who's Watching: the account circles, the gap between them, the focus ring. */
   profile: { avatar: 240, gap: 80, ring: 6 },
   /** Menus (`TvMenu`): the card's width, a side panel's (Library Sort / Filter). */
-  menu: { width: 760, sideWidth: 680 },
+  menu: {
+    width: 760,
+    sideWidth: 680,
+    popoverWidth: 560,
+    /** The player's popover over video: Liquid Glass darkened for the text, or a translucent dark fill without it. */
+    glassTint: 'rgba(0, 0, 0, 0.5)',
+    glassFallback: 'rgba(28, 28, 30, 0.85)',
+  },
   /** Card shelves: about this wide (whole cards across, `fitCards`), the gap, room above / below for a focused card. */
   shelf: { posterWidth: 250, landscapeWidth: 400, gap: 40, focusRoom: 40 },
   /** Active-server dot (Sign in). */
