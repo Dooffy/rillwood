@@ -13,13 +13,20 @@ afterEach(() => {
 });
 
 describe('features', () => {
-  it('phones and tablets have every feature', () => {
+  it('phones and tablets have every feature but the TV remote', () => {
     setTV(false);
-    expect({ ...features }).toEqual({ downloads: true, rotation: true, touch: true, lastingFiles: true });
+    expect({ ...features }).toEqual({
+      downloads: true,
+      rotation: true,
+      touch: true,
+      remote: false,
+      lastingFiles: true,
+    });
   });
 
-  it('Apple TV: no downloads, rotation, touch or lasting files - read on use, not at import', () => {
+  it('Apple TV: no downloads, rotation, touch or lasting files, but the remote - read on use, not at import', () => {
     setTV(true);
+    expect(features.remote).toBe(true);
     expect([features.downloads, features.rotation, features.touch, features.lastingFiles]).toEqual([
       false,
       false,

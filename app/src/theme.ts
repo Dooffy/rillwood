@@ -265,6 +265,8 @@ export const tv = {
   search: { columnWidth: 6 * 80 + 5 * 12, gap: 70 },
   /** `TvKeyboard`: square keys, six to a row. */
   keyboard: { key: 80, gap: 12, width: 6 * 80 + 5 * 12 },
+  /** Player (`TvPlayerControls`, `TvPlayerBar`): the scrubber's track, the playhead, the top fade's height. */
+  player: { track: 10, trackFocused: 14, playhead: 26, controlsHeight: 260, previewWidth: 160, fadeAbove: 160 },
   /** Cast & Crew on a detail screen: the round photo, a card's width (photo + room for two-line names). */
   person: { size: 140, cardWidth: 200 },
   /** Who's Watching: the account circles, the gap between them, the focus ring. */
