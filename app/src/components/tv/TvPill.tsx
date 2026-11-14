@@ -17,6 +17,8 @@ export type TvPillProps = {
   onLongPress?: () => void;
   /** Takes focus when the screen opens. */
   preferredFocus?: boolean;
+  /** Focus landed on it (seasons: moving across the pills switches the shelf, no click needed). */
+  onFocus?: () => void;
   /** false inside menus and panels: a closing one hands focus back to what opened it, not to its own pills. */
   rememberFocus?: boolean;
 };
@@ -28,11 +30,15 @@ export function TvPill({
   onLongPress,
   preferredFocus,
   rememberFocus: remember = true,
+  onFocus,
 }: TvPillProps) {
   const c = useColors();
   return (
     <Pressable
-      onFocus={remember ? rememberFocus : undefined}
+      onFocus={(e) => {
+        if (remember) rememberFocus(e);
+        onFocus?.();
+      }}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected }}

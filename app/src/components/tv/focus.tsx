@@ -2,8 +2,8 @@
 // Apple TV focus building blocks (roadmap TV task 4): the focused looks every focusable shares, the full-width row a
 // swipe from above or below lands on, and focus memory - a closing menu hands focus back to the button or card that
 // opened it (tvOS would otherwise pick something on its own).
-import type { ReactNode } from 'react';
-import { TVEventControl, StyleSheet, TVFocusGuideView, type StyleProp, type ViewStyle } from 'react-native';
+import type { ComponentProps, ReactNode } from 'react';
+import { StyleSheet, TVEventControl, TVFocusGuideView, type StyleProp, type ViewStyle } from 'react-native';
 
 import { tv } from '@/theme';
 
@@ -18,6 +18,11 @@ export const focusStyles = StyleSheet.create({
 
 type TvFocusRowProps = {
   children: ReactNode;
+  /**
+   * Where the first swipe into the row lands, instead of its first item (a season's next episode). Later visits go back
+   * to the last-focused item as usual.
+   */
+  start?: object | null;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 };
@@ -27,9 +32,16 @@ type TvFocusRowProps = {
  * down from anywhere lands on the row's last-focused item, its first one on the first visit - not only on what sits
  * straight above or below. Rows are full width; their content keeps its own layout.
  */
-export function TvFocusRow({ children, style, testID }: TvFocusRowProps) {
+export function TvFocusRow({ children, style, testID, start }: TvFocusRowProps) {
   return (
-    <TVFocusGuideView autoFocus testID={testID} style={style}>
+    <TVFocusGuideView
+      autoFocus
+      testID={testID}
+      style={style}
+      destinations={
+        start ? [start as NonNullable<ComponentProps<typeof TVFocusGuideView>['destinations']>[number]] : undefined
+      }
+    >
       {children}
     </TVFocusGuideView>
   );

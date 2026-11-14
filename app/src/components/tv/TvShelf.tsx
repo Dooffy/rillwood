@@ -12,11 +12,14 @@ import { Text } from '../Text';
 import { TvFocusRow } from './focus';
 
 export type TvShelfProps = {
-  title: string;
+  /** Shelf heading; none when something above names it (a season's episodes under the season pills). */
+  title?: string;
   /** Cards, scrolled horizontally. */
   children?: ReactNode;
   /** A long shelf: its own horizontal list (virtualised, `tvShelfListContent`) instead of `children`. */
   list?: ReactNode;
+  /** Where the first swipe into the shelf lands (`TvFocusRow` `start`). */
+  start?: object | null;
 };
 
 /** Content padding for a shelf's own list (`list`): the margins and the room a focused card needs. */
@@ -25,13 +28,15 @@ export const tvShelfListContent = {
   paddingVertical: tv.shelf.focusRoom,
 };
 
-export function TvShelf({ title, children, list }: TvShelfProps) {
+export function TvShelf({ title, children, list, start }: TvShelfProps) {
   return (
     <View>
-      <Text accessibilityRole="header" numberOfLines={1} style={[tv.type.shelf, styles.title]}>
-        {title}
-      </Text>
-      <TvFocusRow>
+      {title !== undefined && (
+        <Text accessibilityRole="header" numberOfLines={1} style={[tv.type.shelf, styles.title]}>
+          {title}
+        </Text>
+      )}
+      <TvFocusRow start={start}>
         {list ?? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.list}>
             {children}
