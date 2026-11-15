@@ -4,13 +4,13 @@
 // layout; an `ActionSheet` on TV hands it what to show. Focus starts on the first action and stays in the card; Menu
 // (Back) closes it.
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { BackHandler, Platform, ScrollView, StyleSheet, TVFocusGuideView, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, TVFocusGuideView, View } from 'react-native';
 
 import { backdrop, scrollList, tv, useColors } from '@/theme';
 
 import { Glass } from '../Glass';
 import { Text } from '../Text';
-import { holdMenuKey, lastFocused, restoreFocus } from './focus';
+import { holdBack, lastFocused, restoreFocus } from './focus';
 import { TvButton } from './TvButton';
 
 export type TvMenuAction = {
@@ -99,18 +99,14 @@ function TvMenu({ title, actions, children, closeLabel, side = false, above, onC
   useEffect(() => {
     close.current = onClose;
   });
-  useEffect(() => {
-    const release = holdMenuKey();
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      restoreFocus(opener);
-      close.current();
-      return true;
-    });
-    return () => {
-      sub.remove();
-      release();
-    };
-  }, [opener]);
+  useEffect(
+    () =>
+      holdBack(() => {
+        restoreFocus(opener);
+        close.current();
+      }),
+    [opener],
+  );
   // An action closes the menu first, then runs.
   const pick = (action: TvMenuAction) => {
     restoreFocus(opener);

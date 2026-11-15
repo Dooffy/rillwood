@@ -8,7 +8,6 @@
 import { Image } from 'expo-image';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
-  BackHandler,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,7 +24,9 @@ import { ColorsContext, palettes, radii, scrollList, tv, useColors } from '@/the
 
 import { ActionSheet } from '../ActionSheet';
 import { Text } from '../Text';
-import { holdMenuKey, rememberFocus, restoreFocus, TvFocusRow } from './focus';
+import { TvBackView } from '../../../modules/tv-back';
+
+import { holdBack, rememberFocus, restoreFocus, TvFocusRow, useBackScope, useTvBack } from './focus';
 import { TvButton, type TvButtonHandle } from './TvButton';
 
 /** Play before there is something to play (a series still finding its episode): stays focusable, does nothing. */
@@ -93,22 +94,19 @@ export function TvDetailScreen({
   const [below, setBelow] = useState(false);
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) =>
     setBelow(e.nativeEvent.contentOffset.y > screenHeight * tv.detail.belowAt);
+  const scope = useBackScope();
   useEffect(() => {
     if (!below) return;
-    const release = holdMenuKey();
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+    return holdBack(() => {
       scroll.current?.scrollTo({ y: 0, animated: true });
       restoreFocus(play.current);
-      return true;
-    });
-    return () => {
-      sub.remove();
-      release();
-    };
-  }, [below]);
+    }, scope);
+  }, [below, scope]);
+  // A pushed screen: Back comes to its holders (this, a menu over it) through its own catcher.
+  const back = useTvBack();
 
   return (
-    <View style={[styles.fill, { backgroundColor: c.background }]}>
+    <TvBackView {...back} style={[styles.fill, { backgroundColor: c.background }]}>
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         {art !== undefined && (
           <Image
@@ -243,7 +241,7 @@ export function TvDetailScreen({
       <ActionSheet visible={aboutOpen} title={title} closeLabel="Done" onClose={() => setAboutOpen(false)}>
         <Text style={tv.type.body}>{overview}</Text>
       </ActionSheet>
-    </View>
+    </TvBackView>
   );
 }
 

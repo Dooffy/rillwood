@@ -35,7 +35,7 @@ export type UpNextProps = {
 };
 
 /** The countdown as a string snapshot ("left|fill", "" outside the window): equal strings don't re-render. */
-function useCountdown(store: ProgressStore) {
+export function useCountdown(store: ProgressStore) {
   const snapshot = useSyncExternalStore(store.subscribe, () => {
     const { position, duration } = store.get();
     const c = upNextCountdown(position, duration);
@@ -46,6 +46,24 @@ function useCountdown(store: ProgressStore) {
   return { left, fill };
 }
 
+/** In the last `UP_NEXT_SECONDS`: re-renders only when that flips (the screen, not each second). */
+export function useInUpNextWindow(store: ProgressStore): boolean {
+  return useSyncExternalStore(store.subscribe, () => {
+    const { position, duration } = store.get();
+    return upNextCountdown(position, duration) !== undefined;
+  });
+}
+
+/** VoiceOver: "Up next: S1, E2 · Title" once per next episode, also when seeks leave and re-enter the window. */
+export function useAnnounceUpNext(showing: boolean, line: string) {
+  const announced = useRef<string>(undefined);
+  useEffect(() => {
+    if (!showing || announced.current === line) return;
+    announced.current = line;
+    AccessibilityInfo.announceForAccessibility(`Up next: ${line}`);
+  }, [showing, line]);
+}
+
 /**
  * Nothing until the last `UP_NEXT_SECONDS`, and no re-render before then; then with each position update (the ring
  * re-syncs to it), not the screen. Mounted for the whole episode, so VoiceOver hears "Up next" once per next episode,
@@ -54,13 +72,7 @@ function useCountdown(store: ProgressStore) {
 export function UpNext(props: UpNextProps) {
   const countdown = useCountdown(props.progress);
   const line = episodeLine(props.next);
-  const showing = countdown !== undefined;
-  const announced = useRef<string>(undefined);
-  useEffect(() => {
-    if (!showing || announced.current === line) return;
-    announced.current = line;
-    AccessibilityInfo.announceForAccessibility(`Up next: ${line}`);
-  }, [showing, line]);
+  useAnnounceUpNext(countdown !== undefined, line);
   return countdown && !props.hidden && <UpNextCard {...props} {...countdown} />;
 }
 
