@@ -106,7 +106,11 @@ export default function RootLayout() {
               <Stack.Screen name="(auth)/account" options={pageOf('Account')} />
               <Stack.Screen name="item/[id]" options={detailOptions} />
               <Stack.Screen name="series/[id]" options={detailOptions} />
-              <Stack.Screen name="settings" options={pageOf('Settings')} />
+              {/* TV Settings draws its own title over its two columns (screen draft 13). */}
+              <Stack.Screen
+                name="settings"
+                options={Platform.isTV ? { title: 'Settings', headerShown: false } : pageOf('Settings')}
+              />
               <Stack.Screen name="subtitles" options={pageOf(SETTINGS_TITLES.subtitles)} />
               {/* A show's downloaded episodes (Downloads tab): the show's name comes with the link. */}
               <Stack.Screen
