@@ -226,10 +226,19 @@ Screens:
 - [x] 13. Series detail: hero, season pills switch the episode shelf, next unwatched episode first (09) - `useSeriesDetail` + `PhoneSeriesDetail` / `TvSeriesDetail` on the shared `TvDetailScreen` (also `TvItemDetail`): Play / Resume the next episode ("S2, E5" + time left), Watched / Favourite for the show; `TvSeasons`: pills switch the shelf on focus, the shelf starts at the next episode and the first swipe down lands on it (`TvFocusRow` `start`); episode cards: still + progress, "E5 · Title", runtime, two-line summary; click plays (resumes, a watched one from the start), hold = item menu with Episode Details (the episode screen looked the same as the series one - decided 2026-11-11); then Cast & Crew, More Like This, Details; left: a season's ⋯ menu (mark season watched) with long-press menus (19)
 - [x] 14. Player controls: remote mapping (select, play / pause, ±10 s, swipe-to-scrub, Menu hides then closes), title + scrubber + track buttons, auto-hide (10) - `useTvRemote` + pure `remoteAction` (`src/player/tvRemote.ts`), `TvPlayerControls` (title) + `TvPlayerBar` (track buttons over the scrubber, swipe preview); the phone player's logic stays in `player.tsx`, only the controls switch (`screenFor`); left: the tracks menu as a TV panel (15), Up Next (16)
 - [x] 15. Player tracks menu: subtitles / audio / speed lists, subtitle timing slider (11) - `TracksMenu` as a popover above the track buttons on TV (no dim), Subtitle Timing at the end of Subtitles, `TvTimingSlider` (− / + / Reset)
-- [ ] 16. Up Next: next episode takes the screen, video in the corner, text countdown, Back to Credits (12)
+- [x] 16. Up Next (12) - `TvUpNext`: a card at the bottom-right over the full-screen video (the draft's full-screen takeover hid the last scene), text countdown, Play Now (focus) and Cancel; controls and player keys off while it shows; left for later: More Like This after the last episode
+- [x] 16b. Back (Menu / Esc) on pushed screens (player, detail, series) - the native stack took the key before `BackHandler`, so Back always left the screen. `modules/tv-back` (`TvBackView`, own Expo module) wraps those screens and catches Back while something on the screen takes it (`holdBack` / `useTvBack`, scoped per screen); else the stack pops as usual. Tried first: `usePreventRemove` (the pop starts, then is cancelled - the screen flashes), `gestureEnabled: false` (no effect)
 - [ ] 17. Settings: tvOS split layout (preview left, list right), option pages, About with QR codes (no browser) (13)
 - [ ] 18. Offline / error / empty states, signed-out → Sign in (14)
 - [ ] 19. Long-press item menus on cards everywhere (Mark Watched, Play from Start, Go to Series)
+- [ ] 19b. Polish pass once 16-19 are merged - small fixes found on the simulator:
+  - Library: Down from the type pills doesn't reach a lone poster at the left (Shows with one result) - focus needs a way into the grid's first card
+  - Player: auto-hide 3 s vs the draft's 4 s; swipe scrub speed (0.2 s per point) on a real Siri Remote
+  - Player: press and hold Left / Right should keep seeking, faster the longer it's held (tvOS player style); now each 10 s needs its own click
+  - Player tracks menu: look and focus handling (see `docs/open-items.md`)
+  - Search: People results (phone + TV together)
+  - Up Next: start at the credits when the server marks them (Jellyfin media segments, 10.10+), else at 30 s left; there a bigger takeover could work
+  - To discuss: the tab bar switches screens on focus, no click (tvOS's own tab bar does this, no setting to turn it off) - keep as is and make switches cheap (tabs keep their content and focus, no refetch on each pass), or our own tab bar
 
 Release:
 

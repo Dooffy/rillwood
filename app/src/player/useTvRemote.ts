@@ -3,9 +3,9 @@
 // on swipe events for scrubbing while the player is open, and takes Menu (Back) while the controls are up - it hides
 // them first; with them down, Back closes the player as usual. Off TV (`features.remote`) it does nothing.
 import { useEffect, useRef } from 'react';
-import { BackHandler, TVEventControl, useTVEventHandler } from 'react-native';
+import { TVEventControl, useTVEventHandler } from 'react-native';
 
-import { holdMenuKey } from '@/components/tv/focus';
+import { holdBack, useBackScope } from '@/components/tv/focus';
 import { features } from '@/device';
 
 import { remoteAction, SCRUB_MIN_POINTS, type RemoteEvent } from './tvRemote';
@@ -49,18 +49,11 @@ export function useTvRemote(handlers: TvRemoteHandlers) {
     return () => TVEventControl.disableTVPanGesture();
   }, [on]);
 
+  const scope = useBackScope();
   // Controls up: Back hides them (the next Back closes).
   const { shown } = handlers;
   useEffect(() => {
     if (!on || !shown) return;
-    const release = holdMenuKey();
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      latest.current.hide();
-      return true;
-    });
-    return () => {
-      sub.remove();
-      release();
-    };
-  }, [on, shown]);
+    return holdBack(() => latest.current.hide(), scope);
+  }, [on, shown, scope]);
 }

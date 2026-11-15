@@ -39,7 +39,10 @@ jest.mock('react-native/Libraries/Components/TV/useTVEventHandler', () => ({
   },
 }));
 
-const { router } = jest.requireMock<{ router: { back: jest.Mock } }>('expo-router');
+const { router, useLocalSearchParams } = jest.requireMock<{
+  router: { back: jest.Mock; setParams: jest.Mock };
+  useLocalSearchParams: jest.Mock;
+}>('expo-router');
 const { renderPlayer: Player } = jest.requireMock<{ renderPlayer: jest.Mock }>('@/player/Player');
 const lastPlayer = () => Player.mock.calls.at(-1)![0] as PlayerProps;
 
@@ -240,5 +243,103 @@ describe('Player on Apple TV', () => {
     expect(screen.queryByTestId('tv-menu')).toBeNull();
     expect(screen.getByRole('button', { name: 'Speed, 1×' }).props.focusable).toBe(true);
     expect(screen.getByTestId('tv-scrubber').props.focusable).toBe(true);
+  });
+
+  describe('Up Next', () => {
+    const EP1 = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1';
+    const EP2 = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2';
+    const episode = (Id: string, n: number): BaseItemDto => ({
+      Id,
+      Name: n === 1 ? 'Pilot' : 'Second',
+      Type: 'Episode',
+      SeriesId: 'show',
+      SeriesName: 'Test Show',
+      ParentIndexNumber: 1,
+      IndexNumber: n,
+    });
+    const episodes = [episode(EP1, 1), episode(EP2, 2)];
+
+    beforeEach(() => {
+      useLocalSearchParams.mockReturnValue({ id: EP1, start: '0' });
+      jest
+        .spyOn(api, 'request')
+        .mockImplementation(((_c: unknown, path: string) =>
+          Promise.resolve(
+            path === '/Shows/show/Episodes'
+              ? { Items: episodes, TotalRecordCount: 2 }
+              : episodes.find((e) => path === `/Items/${e.Id}`),
+          )) as never);
+    });
+    afterEach(() => {
+      useLocalSearchParams.mockReturnValue({ id: 'ecdda3284954ff60759e87e5ddb37fb8', start: '100' });
+    });
+
+    async function playAt(position: number) {
+      await render(
+        <TvMenuHost>
+          <PlayerScreen />
+        </TvMenuHost>,
+      );
+      await act(() => lastPlayer().onLoad?.({ duration: 1400, audio: [], subs: [] }));
+      await act(() => lastPlayer().onProgress?.({ position, duration: 1400 }));
+    }
+
+    it('the last 30 s: a card over the video with Play Now focused; the remote leaves playback alone', async () => {
+      await playAt(1300);
+      expect(screen.queryByTestId('tv-up-next')).toBeNull();
+      await act(() => lastPlayer().onProgress?.({ position: 1388.2, duration: 1400 }));
+      const upNext = within(screen.getByTestId('tv-up-next'));
+      // Text, no ring: reads from the sofa.
+      expect(upNext.getByText('NEXT EPISODE IN 12')).toBeOnTheScreen();
+      expect(upNext.getByText('S1, E2 · Second')).toBeOnTheScreen();
+      expect(upNext.getByRole('button', { name: 'Play next episode, S1, E2 · Second' }).props.hasTVPreferredFocus).toBe(
+        true,
+      );
+      // The video stays full screen; the card sits at the bottom-right over it.
+      expect(StyleSheet.flatten(screen.getByLabelText('Video').props.style).position).toBeUndefined();
+      expect(StyleSheet.flatten(screen.getByTestId('tv-up-next').props.style)).toMatchObject({
+        width: tv.upNext.width,
+      });
+      // No player controls over it; a click or a swipe doesn't pause or show them.
+      expect(screen.queryByTestId('tv-player-bar')).toBeNull();
+      await press('select');
+      await press('down');
+      expect(lastPlayer().paused).toBe(false);
+      expect(screen.queryByTestId('tv-player-bar')).toBeNull();
+
+      await fireEvent.press(upNext.getByRole('button', { name: 'Play next episode, S1, E2 · Second' }));
+      expect(router.setParams).toHaveBeenCalledWith(expect.objectContaining({ id: EP2 }));
+    });
+
+    it('Back hides the card: the end pauses instead of playing on', async () => {
+      await playAt(1390);
+      expect(screen.getByTestId('tv-up-next')).toBeOnTheScreen();
+      await act(() => {
+        back.at(-1)!();
+      });
+      expect(screen.queryByTestId('tv-up-next')).toBeNull();
+      await act(() => lastPlayer().onEnd?.());
+      expect(router.setParams).not.toHaveBeenCalled();
+      expect(lastPlayer().paused).toBe(true);
+    });
+
+    it('Cancel hides the card: no autoplay, the end pauses', async () => {
+      await playAt(1390);
+      await fireEvent.press(screen.getByRole('button', { name: 'Cancel Up Next' }));
+      expect(screen.queryByTestId('tv-up-next')).toBeNull();
+      await act(() => lastPlayer().onEnd?.());
+      expect(router.setParams).not.toHaveBeenCalled();
+      expect(lastPlayer().paused).toBe(true);
+    });
+
+    it('autoplay off: "UP NEXT", no countdown', async () => {
+      settings.setAutoplayNext('off');
+      try {
+        await playAt(1390);
+        expect(within(screen.getByTestId('tv-up-next')).getByText('UP NEXT')).toBeOnTheScreen();
+      } finally {
+        settings.setAutoplayNext('on');
+      }
+    });
   });
 });

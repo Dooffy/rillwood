@@ -32,7 +32,9 @@ import { Spinner } from '@/components/Spinner';
 import { Text } from '@/components/Text';
 import { TracksMenu, type TracksPage, type TracksValue } from '@/components/TracksMenu';
 import { TvPlayerBar, TvPlayerControls } from '@/components/tv/TvPlayerControls';
-import { UpNext } from '@/components/UpNext';
+import { useTvBack } from '@/components/tv/focus';
+import { TvUpNext } from '@/components/tv/TvUpNext';
+import { UpNext, useInUpNextWindow } from '@/components/UpNext';
 import { features, screenFor } from '@/device';
 import { localCopy } from '@/downloads';
 import { cardTitles, isItemId, nextEpisode, nextEpisodes, playback, TICKS_PER_SECOND } from '@/items';
@@ -83,6 +85,8 @@ import { useDebounced } from '@/useDebounced';
 import { useFetch } from '@/useFetch';
 import { useItem } from '@/useItem';
 
+import { TvBackView } from '../../modules/tv-back';
+
 // Tracks menu choices. Audio / subtitle are Jellyfin indexes of one file: kept with the id of the item they were picked
 // on, ignored for any other. `picks` is what carries to the next episode: the picked tracks' language + label (subtitle
 // null = off).
@@ -98,6 +102,8 @@ const PLAYBACK_FAILED = "Couldn't play this video. Try again.";
 // The top of the controls: the phone / tablet bar (close, title, zoom, ⟲ ⏯ ⟳) or the Apple TV title (the remote does
 // the rest - `useTvRemote`).
 const Controls = screenFor({ phone: PlayerControls, tv: TvPlayerControls });
+// Up Next: the phone's tile, or Apple TV's card (text countdown, Play Now focused).
+const UpNextView = screenFor({ phone: UpNext, tv: TvUpNext });
 
 // Always dark, whatever the Appearance setting. Loads the play source (docs/context/player.md), then plays it full
 // screen, Apple TV style: no chrome until a tap; tap toggles the controls (auto-hide), double-tap left / right seeks
@@ -176,6 +182,9 @@ export default function PlayerScreen() {
   // Off: Up Next waits for a tap (Settings → Autoplay next episode).
   const autoplay = useAutoplayNext() === 'on';
   const next = id && hiddenOn !== id ? nextEpisode(nextList?.Items, id) : undefined;
+  // Apple TV: while the Up Next card is up (`TvUpNext`) it has focus - the controls and the remote's player keys step
+  // aside (a click is Play Now, not play / pause); Back hides it.
+  const inUpNext = useInUpNextWindow(progress);
 
   const state: State = !isItemId(id)
     ? { status: 'error', message: playErrorMessage('none') }
@@ -184,6 +193,7 @@ export default function PlayerScreen() {
       : { status: 'loading' };
   const ready = state.status === 'ready';
   const playing = ready && started === key;
+  const upNextUp = features.remote && playing && next !== undefined && inUpNext;
   const play = state.status === 'ready' ? state.play : undefined;
   const options = play && engineTracks?.key === key ? matchTracks(play, engineTracks) : play;
   // Picks made on an earlier episode, found again here by language (in the server's list: stable for the load, unlike
@@ -348,30 +358,35 @@ export default function PlayerScreen() {
     touch();
     seekBy(delta);
   };
+  // Apple TV Back: the native stack would take it first, so the screen catches it itself (`TvBackView`) while Up Next, a
+  // menu or the controls take it.
+  const back = useTvBack();
   // Apple TV remote (`useTvRemote`, no-op elsewhere): click / Play-Pause, Left / Right 10 s, a swipe scrubs (the bar
   // shows where it lands, the seek happens on release), Back hides the controls before it closes.
   useTvRemote({
     shown: playing && shown,
     onScrubber,
+    // Up Next card up: it takes the remote (a click there is Play Now, not play / pause).
     toggle: () => {
-      if (!playing) return;
+      if (!playing || upNextUp) return;
       setPaused((p) => !p);
       setShown(true);
       touch();
     },
     // A menu over the video takes the remote's Left / Right and swipes (moving through its list).
     seekBy: (seconds) => {
-      if (!playing || menuOpen) return;
+      if (!playing || menuOpen || upNextUp) return;
       setShown(true);
       skip(seconds);
     },
     show: () => {
+      if (upNextUp) return;
       setShown(true);
       touch();
     },
     hide: () => setShown(false),
     scrub: (phase, dx) => {
-      if (!playing || menuOpen) return;
+      if (!playing || menuOpen || upNextUp) return;
       const { position, duration } = progress.get();
       if (phase === 'start') {
         scrubFrom.current = position;
@@ -477,7 +492,7 @@ export default function PlayerScreen() {
   const controlsUp = shown || !playing;
   const upNext =
     playing && next ? (
-      <UpNext
+      <UpNextView
         next={next}
         progress={progress}
         rate={paused || waiting ? 0 : tracks.speed}
@@ -491,152 +506,155 @@ export default function PlayerScreen() {
   return (
     // Own root: gestures in a native modal need one (Android).
     <GestureHandlerRootView style={styles.root}>
-      <ColorsContext.Provider value={palettes.dark}>
-        <StatusBar style="light" hidden={!controlsUp} />
-        <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]} pointerEvents="none" />
-        <TouchGestures gesture={gestures}>
-          <Animated.View
-            style={[styles.root, styles.clip, videoStyle]}
-            accessible={playing && !controlsUp}
-            accessibilityLabel="Video"
-            accessibilityHint="Shows the player controls"
-            onAccessibilityTap={() => setShown(true)}
-            onAccessibilityEscape={close}
-          >
-            {state.status === 'ready' && (
-              // Fit keeps the picture clear of the notch / Dynamic Island; fill covers the screen.
-              <View style={[StyleSheet.absoluteFill, videoFrame(insets, landscape, zoom)]}>
-                <Player
-                  ref={player}
-                  source={state.play.source}
-                  externalSubs={state.play.externalSubs}
-                  startSeconds={state.start}
-                  paused={paused}
-                  audioTrack={audioTrack?.id}
-                  subtitleTrack={subtitleTrack?.id ?? -1}
-                  speed={tracks.speed}
-                  subtitleScale={subtitleScaleFor(subtitleScale, !landscape)}
-                  subtitleStyle={subtitleStyle}
-                  subtitleDelay={tracks.subtitleDelay}
-                  zoom={zoom}
-                  aspect={state.play.aspect}
-                  onLoad={(e) => {
-                    progress.set({ duration: e.duration });
-                    setStarted(key);
-                  }}
-                  onTracks={(e) => setEngineTracks({ key, ...e })}
-                  onProgress={progress.set}
-                  // The next episode, if any and autoplay is on; else the engine holds the last frame paused: show it
-                  // as paused (the pause reports the end - played), controls up; Play replays from the start, Up Next
-                  // (autoplay off) plays the next one.
-                  onEnd={() => {
-                    if (next && autoplay) return playNext(next);
-                    setPaused(true);
-                    setShown(true);
-                  }}
-                  // Lock screen, headphones, a call: the controls and the reports follow.
-                  onPausedChange={setPaused}
-                  // PiP closed while away stops there (nothing plays unseen); restored: back with the controls up. A restore
-                  // may report the stop before the app is active again - still away after the grace = closed.
-                  onPipChange={(active) => {
-                    pip.current = active;
-                    if (active) return;
-                    setShown(true);
-                    setTimeout(() => {
-                      if (away.current && !pip.current) setPaused(true);
-                    }, PIP_GRACE_MS);
-                  }}
-                  onBuffering={setWaiting}
-                  onError={() => {
-                    setWaiting(false);
-                    setLoaded({ key, state: { status: 'error', message: PLAYBACK_FAILED } });
-                  }}
-                />
-              </View>
-            )}
-            {state.status !== 'error' && (!playing || stalled) && <Spinner fill />}
-            {state.status === 'error' &&
-              (state.connection ? (
-                <Offline header retry={retry} />
-              ) : (
-                <Message fill text={state.message} retry={retry} />
-              ))}
-          </Animated.View>
-        </TouchGestures>
-        {releaseHint && (
-          <View style={[styles.hint, { top: insets.top + spacing.lg }]} pointerEvents="none">
-            <Glass style={styles.hintPill}>
-              <Text variant="label">Release to close</Text>
-            </Glass>
-          </View>
-        )}
-        {controlsUp && (
-          <Controls
-            title={titles?.title}
-            subtitle={titles?.subtitle}
-            started={playing}
-            paused={paused}
-            onClose={close}
-            onTracks={() => setMenu('main')}
-            zoom={zoom}
-            onToggleZoom={landscape ? toggleZoom : undefined}
-            onTogglePause={() => setPaused((p) => !p)}
-            onSeekBy={skip}
-          />
-        )}
-        {/* Up Next stays mounted while the controls come and go (the ring keeps running, announced once); the
+      <TvBackView {...back} style={styles.root}>
+        <ColorsContext.Provider value={palettes.dark}>
+          <StatusBar style="light" hidden={!controlsUp} />
+          <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]} pointerEvents="none" />
+          <TouchGestures gesture={gestures}>
+            <Animated.View
+              style={[styles.root, styles.clip, videoStyle]}
+              accessible={playing && !controlsUp}
+              accessibilityLabel="Video"
+              accessibilityHint="Shows the player controls"
+              onAccessibilityTap={() => setShown(true)}
+              onAccessibilityEscape={close}
+            >
+              {state.status === 'ready' && (
+                // Fit keeps the picture clear of the notch / Dynamic Island; fill covers the screen.
+                <View style={[StyleSheet.absoluteFill, videoFrame(insets, landscape, zoom)]}>
+                  <Player
+                    ref={player}
+                    source={state.play.source}
+                    externalSubs={state.play.externalSubs}
+                    startSeconds={state.start}
+                    paused={paused}
+                    audioTrack={audioTrack?.id}
+                    subtitleTrack={subtitleTrack?.id ?? -1}
+                    speed={tracks.speed}
+                    subtitleScale={subtitleScaleFor(subtitleScale, !landscape)}
+                    subtitleStyle={subtitleStyle}
+                    subtitleDelay={tracks.subtitleDelay}
+                    zoom={zoom}
+                    aspect={state.play.aspect}
+                    onLoad={(e) => {
+                      progress.set({ duration: e.duration });
+                      setStarted(key);
+                    }}
+                    onTracks={(e) => setEngineTracks({ key, ...e })}
+                    onProgress={progress.set}
+                    // The next episode, if any and autoplay is on; else the engine holds the last frame paused: show it
+                    // as paused (the pause reports the end - played), controls up; Play replays from the start, Up Next
+                    // (autoplay off) plays the next one.
+                    onEnd={() => {
+                      if (next && autoplay) return playNext(next);
+                      setPaused(true);
+                      setShown(true);
+                    }}
+                    // Lock screen, headphones, a call: the controls and the reports follow.
+                    onPausedChange={setPaused}
+                    // PiP closed while away stops there (nothing plays unseen); restored: back with the controls up. A restore
+                    // may report the stop before the app is active again - still away after the grace = closed.
+                    onPipChange={(active) => {
+                      pip.current = active;
+                      if (active) return;
+                      setShown(true);
+                      setTimeout(() => {
+                        if (away.current && !pip.current) setPaused(true);
+                      }, PIP_GRACE_MS);
+                    }}
+                    onBuffering={setWaiting}
+                    onError={() => {
+                      setWaiting(false);
+                      setLoaded({ key, state: { status: 'error', message: PLAYBACK_FAILED } });
+                    }}
+                  />
+                </View>
+              )}
+              {state.status !== 'error' && (!playing || stalled) && <Spinner fill />}
+              {state.status === 'error' &&
+                (state.connection ? (
+                  <Offline header retry={retry} />
+                ) : (
+                  <Message fill text={state.message} retry={retry} />
+                ))}
+            </Animated.View>
+          </TouchGestures>
+          {releaseHint && (
+            <View style={[styles.hint, { top: insets.top + spacing.lg }]} pointerEvents="none">
+              <Glass style={styles.hintPill}>
+                <Text variant="label">Release to close</Text>
+              </Glass>
+            </View>
+          )}
+          {controlsUp && !upNextUp && (
+            <Controls
+              title={titles?.title}
+              subtitle={titles?.subtitle}
+              started={playing}
+              paused={paused}
+              onClose={close}
+              onTracks={() => setMenu('main')}
+              zoom={zoom}
+              onToggleZoom={landscape ? toggleZoom : undefined}
+              onTogglePause={() => setPaused((p) => !p)}
+              onSeekBy={skip}
+            />
+          )}
+          {/* Up Next stays mounted while the controls come and go (the ring keeps running, announced once); the
             scrubber shows with the controls, under it. */}
-        {playing && (controlsUp || upNext) && (
-          <PlayerBottom>
-            {upNext}
-            {controlsUp && !features.remote && (
-              <PlayerScrubber progress={progress} onSeek={seek} onSeekBy={skip} onScrub={setScrubbing} />
-            )}
-          </PlayerBottom>
-        )}
-        {/* Apple TV: the scrubber + track buttons, at the screen's bottom. */}
-        {features.remote && playing && controlsUp && (
-          <TvPlayerBar
-            progress={progress}
-            preview={preview}
-            speed={tracks.speed}
-            subtitlesOn={subtitleTrack !== undefined}
-            paused={paused}
-            onTogglePause={() => {
-              setPaused((p) => !p);
-              touch();
-            }}
-            onPage={setMenu}
-            menu={menu}
-            onScrubberFocus={setOnScrubber}
-            onHeight={setBarHeight}
-          />
-        )}
-        {options && (
-          <TracksMenu
-            page={menu}
-            onPage={setMenu}
-            // Tablets: under the button that opened it (the top bar's right end).
-            anchor={wide ? tracksAnchor(insets) : undefined}
-            // Apple TV: above the track buttons, at the right margin (other devices ignore it).
-            above={{ bottom: (barHeight || tv.player.controlsHeight) + tv.gap.sm, right: tv.margin }}
-            audio={options.audio}
-            subtitles={options.subtitles}
-            value={tracks}
-            onChange={(next) =>
-              setChoice(({ speed, picks, ...tracksOf }) => ({
-                speed,
-                ...(tracksOf.id === id ? tracksOf : {}),
-                ...next,
-                // Another subtitle track (or off) is another file's timing: back in sync.
-                ...(next.subtitle !== undefined && next.subtitle !== tracks.subtitle && { subtitleDelay: 0 }),
-                id,
-                picks: { ...picks, ...picksOf(options, next) },
-              }))
-            }
-          />
-        )}
-      </ColorsContext.Provider>
+          {playing && (controlsUp || upNext) && (
+            <PlayerBottom>
+              {!features.remote && upNext}
+              {controlsUp && !features.remote && (
+                <PlayerScrubber progress={progress} onSeek={seek} onSeekBy={skip} onScrub={setScrubbing} />
+              )}
+            </PlayerBottom>
+          )}
+          {/* Apple TV: the scrubber + track buttons, at the screen's bottom. */}
+          {features.remote && upNext}
+          {features.remote && playing && controlsUp && !upNextUp && (
+            <TvPlayerBar
+              progress={progress}
+              preview={preview}
+              speed={tracks.speed}
+              subtitlesOn={subtitleTrack !== undefined}
+              paused={paused}
+              onTogglePause={() => {
+                setPaused((p) => !p);
+                touch();
+              }}
+              onPage={setMenu}
+              menu={menu}
+              onScrubberFocus={setOnScrubber}
+              onHeight={setBarHeight}
+            />
+          )}
+          {options && (
+            <TracksMenu
+              page={menu}
+              onPage={setMenu}
+              // Tablets: under the button that opened it (the top bar's right end).
+              anchor={wide ? tracksAnchor(insets) : undefined}
+              // Apple TV: above the track buttons, at the right margin (other devices ignore it).
+              above={{ bottom: (barHeight || tv.player.controlsHeight) + tv.gap.sm, right: tv.margin }}
+              audio={options.audio}
+              subtitles={options.subtitles}
+              value={tracks}
+              onChange={(next) =>
+                setChoice(({ speed, picks, ...tracksOf }) => ({
+                  speed,
+                  ...(tracksOf.id === id ? tracksOf : {}),
+                  ...next,
+                  // Another subtitle track (or off) is another file's timing: back in sync.
+                  ...(next.subtitle !== undefined && next.subtitle !== tracks.subtitle && { subtitleDelay: 0 }),
+                  id,
+                  picks: { ...picks, ...picksOf(options, next) },
+                }))
+              }
+            />
+          )}
+        </ColorsContext.Provider>
+      </TvBackView>
     </GestureHandlerRootView>
   );
 }
