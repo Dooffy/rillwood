@@ -230,7 +230,7 @@ Screens:
 - [x] 16b. Back (Menu / Esc) on pushed screens (player, detail, series) - the native stack took the key before `BackHandler`, so Back always left the screen. `modules/tv-back` (`TvBackView`, own Expo module) wraps those screens and catches Back while something on the screen takes it (`holdBack` / `useTvBack`, scoped per screen); else the stack pops as usual. Tried first: `usePreventRemove` (the pop starts, then is cancelled - the screen flashes), `gestureEnabled: false` (no effect)
 - [ ] 17. Settings: tvOS split layout (preview left, list right), option pages, About with QR codes (no browser) (13)
 - [ ] 18. Offline / error / empty states, signed-out → Sign in (14)
-- [ ] 19. Long-press item menus on cards everywhere (Mark Watched, Play from Start, Go to Series)
+- [x] 19. Long-press item menus on cards everywhere (Mark Watched, Play from Start, Go to Series) - every TV card already opened the item menu (Home, Library, Search, More Like This, episodes); added: Go to Series for episodes (`itemActions` `series`, TV only, not on the series screen itself) and a hold on a season pill: Mark as Watched / Unwatched for that season (`TvSeasons` `onMark`)
 - [ ] 19b. Polish pass once 16-19 are merged - small fixes found on the simulator:
   - Library: Down from the type pills doesn't reach a lone poster at the left (Shows with one result) - focus needs a way into the grid's first card
   - Player: auto-hide 3 s vs the draft's 4 s; swipe scrub speed (0.2 s per point) on a real Siri Remote
@@ -238,6 +238,8 @@ Screens:
   - Player tracks menu: look and focus handling (see `docs/open-items.md`)
   - Search: People results (phone + TV together)
   - Up Next: start at the credits when the server marks them (Jellyfin media segments, 10.10+), else at 30 s left; there a bigger takeover could work
+  - Movie / series page: opened while the previous screen was scrolled a little, it loads at the wrong spot (not at the top) - should always open at the hero
+  - To discuss: Home Next Up / Continue Watching cards - a click plays the episode / movie straight away (as the series screen's episode cards do) or opens its page (now: the page)
   - To discuss: the tab bar switches screens on focus, no click (tvOS's own tab bar does this, no setting to turn it off) - keep as is and make switches cheap (tabs keep their content and focus, no refetch on each pass), or our own tab bar
 
 Release:

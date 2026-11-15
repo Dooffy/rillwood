@@ -57,6 +57,7 @@ export function TvSeriesDetail({ series }: { series: BaseItemDto }) {
         seasonId={detail.seasonId}
         onPick={detail.pickSeason}
         startAt={detail.nextEpisode?.Id}
+        onMark={detail.markItem}
       />
       <TvCast people={view.people} />
       <MoreLikeThis id={series.Id} Shelf={TvShelf} />

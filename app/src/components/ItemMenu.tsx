@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Long press on a card (Home, Library, More Like This, series episodes): one shared action sheet for the item - play,
-// mark watched, favourite, download / pause / resume / cancel / delete download. Mounted once in the root layout; cards open it with `useItemMenu()`.
+// mark watched, favourite, Go to Series (Apple TV episodes), download / pause / resume / cancel / delete download.
+// Mounted once in the root layout; cards open it with `useItemMenu()`.
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import { Keyboard } from 'react-native';
 
 import type { BaseItemDto } from '@/api';
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
+import { features } from '@/device';
 import { cardTitles, playback } from '@/items';
 import { openItem, openPlayer } from '@/navigation';
 import { useSession } from '@/session';
@@ -14,23 +16,28 @@ import { useUserFlag } from '@/useUserFlag';
 
 /**
  * Opens the menu for an item; `title` overrides the heading (the series screen names episodes without the show).
- * `details`: a way to the item's own screen too (Apple TV episode cards, where a click plays).
+ * `details`: a way to the item's own screen too (Apple TV episode cards, where a click plays). `series: false`: no Go to
+ * Series (already on it).
  */
-type OpenItemMenu = (item: BaseItemDto, title?: string, options?: { details?: boolean }) => void;
+type OpenItemMenu = (item: BaseItemDto, title?: string, options?: { details?: boolean; series?: boolean }) => void;
 
 // Plays straight from the menu. A show or season needs its next episode first - its detail screen has Play.
 const PLAYABLE = new Set(['Movie', 'Episode', 'Video']);
 
 const ItemMenuContext = createContext<OpenItemMenu | null>(null);
 
-/** The actions for an item: Resume + Play from Start (or Play), watched, favourite, its details (when asked), download. */
+/**
+ * The actions for an item: Resume + Play from Start (or Play), watched, favourite, its details (when asked), Go to
+ * Series (an episode, when asked), download.
+ */
 export function itemActions(
   item: BaseItemDto,
   {
     mark,
     download = [],
     details = false,
-  }: { mark: ReturnType<typeof useUserFlag>; download?: SheetAction[]; details?: boolean },
+    series = false,
+  }: { mark: ReturnType<typeof useUserFlag>; download?: SheetAction[]; details?: boolean; series?: boolean },
 ): SheetAction[] {
   const { progress, resumeSeconds = 0 } = playback(item);
   const play: SheetAction[] = !PLAYABLE.has(item.Type)
@@ -53,6 +60,14 @@ export function itemActions(
     ...(details
       ? [{ label: `${item.Type === 'Episode' ? 'Episode' : ''} Details`.trim(), onPress: () => openItem(item) }]
       : []),
+    ...(series && item.Type === 'Episode' && item.SeriesId
+      ? [
+          {
+            label: 'Go to Series',
+            onPress: () => openItem({ Id: item.SeriesId!, Name: item.SeriesName ?? '', Type: 'Series' }),
+          },
+        ]
+      : []),
     ...download,
   ];
 }
@@ -60,7 +75,13 @@ export function itemActions(
 /** Needs `ToastProvider` above it (failure toasts). */
 export function ItemMenuProvider({ children }: { children: ReactNode }) {
   // The item stays after closing: the sheet keeps its content while it fades out.
-  const [menu, setMenu] = useState<{ item: BaseItemDto; title: string; details?: boolean; accountId?: string }>();
+  const [menu, setMenu] = useState<{
+    item: BaseItemDto;
+    title: string;
+    details?: boolean;
+    series?: boolean;
+    accountId?: string;
+  }>();
   const [visible, setVisible] = useState(false);
   const mark = useUserFlag();
   // Only for the account that opened it: after a switch or sign-out the item isn't theirs, its screen is gone.
@@ -76,6 +97,8 @@ export function ItemMenuProvider({ children }: { children: ReactNode }) {
         item,
         title: title ?? [name, subtitle].filter(Boolean).join(' · '),
         details: options?.details,
+        // Apple TV: an episode card's way to its show (a click there plays; phones open the episode, its show above).
+        series: features.remote && options?.series !== false,
         accountId,
       });
       setVisible(true);
@@ -88,7 +111,7 @@ export function ItemMenuProvider({ children }: { children: ReactNode }) {
       <ActionSheet
         visible={visible}
         title={menu?.title}
-        actions={menu ? itemActions(menu.item, { mark, download, details: menu.details }) : []}
+        actions={menu ? itemActions(menu.item, { mark, download, details: menu.details, series: menu.series }) : []}
         onClose={() => setVisible(false)}
       />
     </ItemMenuContext.Provider>
