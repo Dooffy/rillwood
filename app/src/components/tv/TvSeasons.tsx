@@ -3,18 +3,20 @@
 // the pills switches the shelf (no click needed); the shelf starts at the next episode, and the first swipe down lands
 // on it. An episode card: the still with progress / ✓ Watched, "E5 · Title", runtime, a two-line summary. Click plays
 // it (resumes if started, a watched one from the start) - the card already shows what you'd decide on; hold opens its
-// menu: Play from Start, Mark Watched, Favourite, Episode Details (the episode's own screen).
+// menu: Play from Start, Mark Watched, Favourite, Episode Details (the episode's own screen). Hold a season's pill: Mark
+// as Watched / Unwatched for the season (the phone's ⋯ beside the pills).
 import { memo, useState, type ComponentRef } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import type { BaseItemDto, ItemsResult } from '@/api';
 import { formatRemaining } from '@/format';
-import { episodeLine, episodes, landscapeImage, playback, ticksToSeconds } from '@/items';
+import { episodeLine, episodes, landscapeImage, playback, ticksToSeconds, type UserFlag } from '@/items';
 import { openPlayer } from '@/navigation';
 import { tv } from '@/theme';
 import { useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
 
+import { ActionSheet } from '../ActionSheet';
 import { Artwork } from '../Artwork';
 import { longPressProps } from '../Card';
 import { useItemMenu } from '../ItemMenu';
@@ -47,7 +49,7 @@ const TvEpisodeCard = memo(function TvEpisodeCard({ ep, width, ref }: EpisodeCar
       accessibilityHint="Plays the episode. Hold for more."
       // Watched: from the start (resuming at the credits helps no one).
       onPress={() => openPlayer(ep, state.played ? 0 : (state.resumeSeconds ?? 0))}
-      {...longPressProps(() => menu(ep, episodeLine(ep), { details: true }))}
+      {...longPressProps(() => menu(ep, episodeLine(ep), { details: true, series: false }))}
       style={({ focused }) => [styles.card, { width }, focused && focusStyles.card]}
     >
       <Artwork
@@ -144,9 +146,14 @@ export type TvSeasonsProps = {
   onPick: (seasonId: string) => void;
   /** The next episode: its card is where the shelf starts. */
   startAt?: string;
+  /** Hold a season's pill: mark that season watched / unwatched. */
+  onMark: (season: BaseItemDto, flag: UserFlag, value: boolean) => void;
 };
 
-export function TvSeasons({ seriesId, seasons, error, retry, seasonId, onPick, startAt }: TvSeasonsProps) {
+export function TvSeasons({ seriesId, seasons, error, retry, seasonId, onPick, startAt, onMark }: TvSeasonsProps) {
+  // The season whose pill was held: its menu (the item stays while the menu closes).
+  const [held, setHeld] = useState<BaseItemDto>();
+  const [menuOpen, setMenuOpen] = useState(false);
   if (!seasons) {
     return error ? (
       <View style={styles.padded}>
@@ -173,6 +180,10 @@ export function TvSeasons({ seriesId, seasons, error, retry, seasonId, onPick, s
               selected={s.Id === seasonId}
               onPress={() => onPick(s.Id)}
               onFocus={() => onPick(s.Id)}
+              onLongPress={() => {
+                setHeld(s);
+                setMenuOpen(true);
+              }}
             />
           ))}
         </TvFocusRow>
@@ -181,6 +192,21 @@ export function TvSeasons({ seriesId, seasons, error, retry, seasonId, onPick, s
         // key: a new season starts a new list (its own start, not the last season's scroll).
         <EpisodeShelf key={seasonId} seriesId={seriesId} seasonId={seasonId} startAt={startAt} />
       )}
+      <ActionSheet
+        visible={menuOpen}
+        title={held?.Name}
+        actions={
+          held
+            ? [
+                {
+                  label: held.UserData?.Played ? 'Mark as Unwatched' : 'Mark as Watched',
+                  onPress: () => onMark(held, 'played', !held.UserData?.Played),
+                },
+              ]
+            : []
+        }
+        onClose={() => setMenuOpen(false)}
+      />
     </View>
   );
 }

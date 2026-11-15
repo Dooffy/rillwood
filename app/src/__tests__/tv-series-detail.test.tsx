@@ -161,8 +161,20 @@ describe('Series detail on Apple TV', () => {
     const menu = within(screen.getByTestId('tv-menu-card'));
     expect(menu.getByRole('button', { name: 'Play from Start' })).toBeOnTheScreen();
     expect(menu.getByRole('button', { name: 'Mark as Watched' })).toBeOnTheScreen();
+    // Already on its show: no Go to Series.
+    expect(menu.queryByRole('button', { name: 'Go to Series' })).toBeNull();
     await fireEvent.press(menu.getByRole('button', { name: 'Episode Details' }));
     expect(router.push).toHaveBeenLastCalledWith({ pathname: '/item/[id]', params: { id: 'ep-2-2' } });
+  });
+
+  it("holding a season's pill: Mark as Watched for that season", async () => {
+    await renderTv();
+    await fireEvent(await screen.findByRole('button', { name: 'Season 1' }), 'longPress');
+    const menu = within(screen.getByTestId('tv-menu-card'));
+    expect(menu.getByText('Season 1')).toBeOnTheScreen();
+    const setPlayed = jest.spyOn(api, 'setPlayed').mockResolvedValue({ PlaybackPositionTicks: 0, Played: true });
+    await fireEvent.press(menu.getByRole('button', { name: 'Mark as Watched' }));
+    expect(setPlayed).toHaveBeenCalledWith(expect.anything(), 'season-1', true);
   });
 
   it('loading: the TV placeholder, not the tablet one', async () => {

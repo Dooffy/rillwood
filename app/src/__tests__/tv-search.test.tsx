@@ -105,6 +105,16 @@ describe('Search on Apple TV', () => {
     expect(router.push).toHaveBeenCalledWith({ pathname: '/item/[id]', params: { id: 'sintel' } });
   });
 
+  it('holding an episode: Go to Series opens its show', async () => {
+    items[2] = { ...items[2], SeriesId: 'show' };
+    await renderTv();
+    await type('sin');
+    await fireEvent(await screen.findByRole('button', { name: /Sintel Returns/ }), 'longPress');
+    const menu = within(screen.getByTestId('tv-menu-card'));
+    await fireEvent.press(menu.getByRole('button', { name: 'Go to Series' }));
+    expect(router.push).toHaveBeenLastCalledWith({ pathname: '/series/[id]', params: { id: 'show' } });
+  });
+
   it('nothing found: says so', async () => {
     await renderTv();
     await type('zzz');
