@@ -228,7 +228,7 @@ Screens:
 - [x] 15. Player tracks menu: subtitles / audio / speed lists, subtitle timing slider (11) - `TracksMenu` as a popover above the track buttons on TV (no dim), Subtitle Timing at the end of Subtitles, `TvTimingSlider` (− / + / Reset)
 - [x] 16. Up Next (12) - `TvUpNext`: a card at the bottom-right over the full-screen video (the draft's full-screen takeover hid the last scene), text countdown, Play Now (focus) and Cancel; controls and player keys off while it shows; left for later: More Like This after the last episode
 - [x] 16b. Back (Menu / Esc) on pushed screens (player, detail, series) - the native stack took the key before `BackHandler`, so Back always left the screen. `modules/tv-back` (`TvBackView`, own Expo module) wraps those screens and catches Back while something on the screen takes it (`holdBack` / `useTvBack`, scoped per screen); else the stack pops as usual. Tried first: `usePreventRemove` (the pop starts, then is cancelled - the screen flashes), `gestureEnabled: false` (no effect)
-- [ ] 17. Settings: tvOS split layout (preview left, list right), option pages, About with QR codes (no browser) (13)
+- [x] 17. Settings: tvOS split layout (preview left, list right), option pages, About with QR codes (no browser) (13) - `TvSettings` (pages in one screen, Back steps out, focus back on the opening row): the left side follows the focused row (subtitle preview, the option's icon + footer, the account); account → Who's Watching, Subtitles, Autoplay (On / Off toggles in place), Audio language, Show subtitles, About; no Appearance, no Downloads. About: Source code + Privacy policy as QR codes with the address under them (own encoder `src/qr.ts`, decided 2026-11-15 - no dependency), Licences (full texts, a paragraph per focus stop)
 - [ ] 18. Offline / error / empty states, signed-out → Sign in (14)
 - [x] 19. Long-press item menus on cards everywhere (Mark Watched, Play from Start, Go to Series) - every TV card already opened the item menu (Home, Library, Search, More Like This, episodes); added: Go to Series for episodes (`itemActions` `series`, TV only, not on the series screen itself) and a hold on a season pill: Mark as Watched / Unwatched for that season (`TvSeasons` `onMark`)
 - [ ] 19b. Polish pass once 16-19 are merged - small fixes found on the simulator:
@@ -240,6 +240,7 @@ Screens:
   - Up Next: start at the credits when the server marks them (Jellyfin media segments, 10.10+), else at 30 s left; there a bigger takeover could work
   - Movie / series page: opened while the previous screen was scrolled a little, it loads at the wrong spot (not at the top) - should always open at the hero
   - To discuss: Home Next Up / Continue Watching cards - a click plays the episode / movie straight away (as the series screen's episode cards do) or opens its page (now: the page)
+  - To discuss: how to reach Switch User and Settings - today both sit behind the profile avatar (Home, top right) → Who's Watching → gear; options: a Settings tab (draft 13 shows one), Switch User in the Settings list, or the avatar opening a small menu (Switch User / Settings)
   - To discuss: the tab bar switches screens on focus, no click (tvOS's own tab bar does this, no setting to turn it off) - keep as is and make switches cheap (tabs keep their content and focus, no refetch on each pass), or our own tab bar
 
 Release:

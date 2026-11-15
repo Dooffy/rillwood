@@ -267,6 +267,20 @@ export const tv = {
   keyboard: { key: 80, gap: 12, width: 6 * 80 + 5 * 12 },
   /** Player (`TvPlayerControls`, `TvPlayerBar`): the scrubber's track, the playhead, the top fade's height. */
   player: { track: 10, trackFocused: 14, playhead: 26, controlsHeight: 260, previewWidth: 160, fadeAbove: 160 },
+  /**
+   * Settings (`TvSettings`, tvOS Settings style): the list column on the right, the gap to the picture / text for the
+   * focused row on the left, a row (`TvListRow`), the big icon on the left, the About page's QR codes (fixed black on
+   * white whatever the palette - phones read dark on light).
+   */
+  settings: {
+    listWidth: 980,
+    gap: 100,
+    row: { height: 86, radius: 16, paddingHorizontal: 36, gap: 4 },
+    asideIcon: 220,
+    asideWidth: 620,
+    rowAvatar: 48,
+    qr: { size: 300, dark: '#000000', light: '#FFFFFF' },
+  },
   /** Up Next (`TvUpNext`): the card at the bottom-right, over the video. */
   upNext: { width: 520 },
   /** Subtitle timing (`TvTimingSlider`): the in-sync mark in the middle of the bar. */

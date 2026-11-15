@@ -14,7 +14,7 @@ import { useSettingsLink } from './SettingsLink';
 import { Text } from './Text';
 
 /** Credit for FFmpeg inside the player binaries (both platforms); changes with the LGPL rebuild (CLAUDE.md §7). */
-const FFMPEG_CREDIT =
+export const FFMPEG_CREDIT =
   'This app uses code of FFmpeg (ffmpeg.org) licensed under the GPL-3.0. Its source is at the links of the player libraries above.';
 
 type Section = { key: string; title?: string; footer?: string; data: Licence[] };
