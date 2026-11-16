@@ -130,12 +130,13 @@ describe('Library on Apple TV', () => {
     expect(screen.queryByTestId('tv-menu')).toBeNull();
   });
 
-  it('an empty server: no pull to refresh in the message', async () => {
+  it('an empty server: the TV empty state, no pull to refresh', async () => {
     items = [];
     await renderTv();
-    expect(await screen.findByText(/^Nothing on the server yet/)).toHaveTextContent(
-      'Nothing on the server yet. Add some in Jellyfin, then come back here.',
-    );
+    // The TV empty state: big icon and title.
+    expect(
+      await screen.findByLabelText('Nothing on the server yet. Add some in Jellyfin, then come back here.'),
+    ).toBeOnTheScreen();
   });
 
   it('Filter opens a side panel: focus on the selected Show pill, a pick applies once picking pauses', async () => {

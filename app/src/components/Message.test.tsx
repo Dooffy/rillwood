@@ -66,14 +66,25 @@ describe('Message', () => {
     open.mockRestore();
   });
 
-  it('Apple TV (no downloads): out of reach offers Retry only, no Go to Downloads', async () => {
+  it('Apple TV (screen draft 14): out of reach - Try Again (focus) and Switch Account, no Go to Downloads', async () => {
     const isTV = Object.getOwnPropertyDescriptor(Platform, 'isTV')!;
     Object.defineProperty(Platform, 'isTV', { get: () => true, configurable: true });
+    jest.spyOn(session, 'useSession').mockReturnValue({ accounts: [anna], active: anna });
     try {
-      await render(<LoadError fill error={new ApiError('network')} retry={() => {}} />);
-      expect(screen.getByText('Check your connection.')).toBeOnTheScreen();
-      expect(screen.getByRole('button', { name: 'Retry' })).toBeOnTheScreen();
+      const retry = jest.fn();
+      await render(<LoadError fill error={new ApiError('network')} retry={retry} />);
+      expect(
+        screen.getByLabelText(
+          "Can't reach Home server. Check that the server is on and this Apple TV is on the same network. Rillwood keeps trying.",
+        ),
+      ).toBeOnTheScreen();
+      const tryAgain = screen.getByRole('button', { name: 'Try Again' });
+      expect(tryAgain.props.hasTVPreferredFocus).toBe(true);
+      await fireEvent.press(tryAgain);
+      expect(retry).toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Switch Account' })).toBeOnTheScreen();
       expect(screen.queryByRole('button', { name: 'Go to Downloads' })).toBeNull();
+      jest.mocked(session.useSession).mockRestore();
     } finally {
       Object.defineProperty(Platform, 'isTV', isTV);
     }

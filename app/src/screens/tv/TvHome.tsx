@@ -10,6 +10,7 @@ import { Avatar } from '@/components/Avatar';
 import { HomeRows } from '@/components/HomeRows';
 import { useItemMenu } from '@/components/ItemMenu';
 import { loadErrorMessage, Message, Offline } from '@/components/Message';
+import { TvEmptyState } from '@/components/tv/TvEmptyState';
 import { focusStyles, rememberFocus } from '@/components/tv/focus';
 import { type TvButtonHandle } from '@/components/tv/TvButton';
 import { TvHero, useTvHeroHeight } from '@/components/tv/TvHero';
@@ -104,9 +105,11 @@ export function TvHome() {
             <>
               {offline.offline && <Offline busy={offline.busy} retry={refreshHome} />}
               {layout.empty && (
-                <View style={styles.padded}>
-                  <Message text="Nothing to watch yet. Add movies and shows to your Jellyfin server." />
-                </View>
+                <TvEmptyState
+                  icon="film.stack"
+                  title="Nothing to watch yet"
+                  text="Add movies and shows to your Jellyfin server, then come back."
+                />
               )}
               {heroView}
               <HomeRows home={home} Shelf={TvShelf} />

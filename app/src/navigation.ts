@@ -7,7 +7,7 @@ import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
 import type { BaseItemDto } from '@/api';
-import { useSession, type SessionState } from '@/session';
+import { useSession, type Account, type SessionState } from '@/session';
 import type { Colors } from '@/theme';
 
 /** Route param marking the first-run flow (Welcome → Add server → Sign in → Quick Connect): step pills + intro copy. */
@@ -93,16 +93,29 @@ export function launchHref({ accounts, active }: Pick<SessionState, 'accounts' |
 }
 
 /**
- * Losing the active account (signed out, removed, 401) clears the stack to Welcome - the one signed-out start.
- * Saved signed-out accounts are one tap away there ("Use a saved account").
+ * Where losing the active account (signed out, removed, 401) lands, the stack cleared. Phones: Welcome - the one
+ * signed-out start, saved accounts one tap away there ("Use a saved account"). Apple TV (screen draft 14): Who's Watching
+ * while another account is still signed in, else Sign in for the lost account's server (removed: Welcome).
  */
+export function signedOutHref(
+  lost: Account | undefined,
+  { accounts }: Pick<SessionState, 'accounts'>,
+  tv: boolean,
+): Href {
+  if (!tv) return '/welcome';
+  if (accounts.some((a) => !a.signedOut)) return '/accounts';
+  const saved = lost && accounts.find((a) => a.id === lost.id);
+  return saved ? { pathname: '/login', params: { url: saved.server.url, userName: saved.userName } } : '/welcome';
+}
+
 export function useSignedOutRedirect() {
-  const { active } = useSession();
-  const wasSignedIn = useRef(active !== null);
+  const session = useSession();
+  const { active } = session;
+  const last = useRef(active);
   useEffect(() => {
-    if (wasSignedIn.current && !active) resetTo('/welcome');
-    wasSignedIn.current = active !== null;
-  }, [active]);
+    if (last.current && !active) resetTo(signedOutHref(last.current, session, Platform.isTV));
+    last.current = active;
+  }, [active, session]);
 }
 
 /** Leaf for the root layout, so account changes don't re-render the whole navigator. */

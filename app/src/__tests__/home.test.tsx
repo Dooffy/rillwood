@@ -393,6 +393,26 @@ describe('Home on Apple TV', () => {
     expect(screen.queryByRole('button', { name: 'Play from Start' })).toBeNull();
   });
 
+  it('nothing on the server: the TV empty state', async () => {
+    routes = { '/UserViews': items(), '/UserItems/Resume': items(), '/Shows/NextUp': items() };
+    await render(<Home />);
+    expect(
+      await screen.findByLabelText(
+        'Nothing to watch yet. Add movies and shows to your Jellyfin server, then come back.',
+      ),
+    ).toBeOnTheScreen();
+  });
+
+  it('server out of reach, nothing loaded: the full-screen TV offline state, focus on Try Again', async () => {
+    const offline = new ApiError('network');
+    routes = { '/UserViews': offline, '/UserItems/Resume': offline, '/Shows/NextUp': offline };
+    await render(<Home />);
+    expect(await screen.findByTestId('offline')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Try Again' }).props.hasTVPreferredFocus).toBe(true);
+    expect(screen.getByRole('button', { name: 'Switch Account' })).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Go to Downloads' })).toBeNull();
+  });
+
   it("has no title, no pull to refresh, and the avatar opens Who's Watching", async () => {
     await render(<Home />);
     await screen.findByTestId('tv-hero');
