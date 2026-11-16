@@ -97,7 +97,32 @@
       "expo-image",
       "expo-status-bar",
       "./modules/mpv/app.plugin.js",
-      "@react-native-tvos/config-tv"
+      [
+        "@react-native-tvos/config-tv",
+        {
+          "appleTVImages": {
+            "iconLayers": {
+              "front": "./assets/tv/icon-front-1280x768.png",
+              "middle": "./assets/tv/icon-middle-1280x768.png",
+              "back": "./assets/tv/icon-back-1280x768.png"
+            },
+            "iconSmallLayers": {
+              "front": "./assets/tv/icon-front-400x240.png",
+              "middle": "./assets/tv/icon-middle-400x240.png",
+              "back": "./assets/tv/icon-back-400x240.png"
+            },
+            "iconSmall2xLayers": {
+              "front": "./assets/tv/icon-front-800x480.png",
+              "middle": "./assets/tv/icon-middle-800x480.png",
+              "back": "./assets/tv/icon-back-800x480.png"
+            },
+            "topShelf": "./assets/tv/top-shelf-1920x720.png",
+            "topShelf2x": "./assets/tv/top-shelf-3840x1440.png",
+            "topShelfWide": "./assets/tv/top-shelf-wide-2320x720.png",
+            "topShelfWide2x": "./assets/tv/top-shelf-wide-4640x1440.png"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

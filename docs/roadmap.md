@@ -245,7 +245,7 @@ Screens:
 
 Release:
 
-- [ ] 20. Assets: layered app icon, Top Shelf images, launch screen
+- [x] 20. Assets: layered app icon, Top Shelf images, launch screen - `app/assets/tv/`, drawn by `app/scripts/make-tv-assets.swift` from the logo mark (no fonts, no deps): icon in three layers (dark fill, white pebble, play triangle - parallax on focus) at 1280x768 / 400x240 / 800x480, Top Shelf (+ wide, @1x / @2x) = the Welcome poster wall with the mark; wired through `@react-native-tvos/config-tv` `appleTVImages` (app.json); launch screen = the phone splash, mark 280 pt on TV (`app.config.ts`, `EXPO_TV=1`)
 - [ ] 21. Device test plan `docs/test-plans/tv.md` + run on a real Apple TV 4K: hardware decoding, HDR / Dolby Vision, Atmos, frame-rate match, remote
 - [ ] 22. App Store: tvOS on the existing app (Universal Purchase), screenshots, review
 - [ ] 23. Optional: Top Shelf extension (Continue Watching on the Apple TV home screen)
