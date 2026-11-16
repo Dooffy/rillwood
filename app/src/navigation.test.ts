@@ -5,7 +5,7 @@ import { renderHook } from '@testing-library/react-native';
 import { useSession, type Account } from '@/session';
 import { palettes } from '@/theme';
 
-import { readablePage, openDownloads, resetTo, tabsTitle, useSignedOutRedirect } from './navigation';
+import { readablePage, openDownloads, resetTo, signedOutHref, tabsTitle, useSignedOutRedirect } from './navigation';
 
 jest.mock('expo-router', () => ({
   router: { canDismiss: jest.fn(), dismissAll: jest.fn(), replace: jest.fn(), navigate: jest.fn() },
@@ -89,6 +89,30 @@ describe('useSignedOutRedirect', () => {
     const { rerender } = await renderHook(() => useSignedOutRedirect());
     await rerender({});
     expect(router.replace).not.toHaveBeenCalled();
+  });
+});
+
+describe('signedOutHref', () => {
+  const sam: Account = { ...anna, id: 'srv.s', userId: 's', userName: 'sam' };
+  const out = { ...anna, signedOut: true };
+
+  it('phones: Welcome, whatever is left', () => {
+    expect(signedOutHref(anna, { accounts: [out, sam] }, false)).toBe('/welcome');
+  });
+
+  it("Apple TV, another account still signed in: Who's Watching", () => {
+    expect(signedOutHref(anna, { accounts: [out, sam] }, true)).toBe('/accounts');
+  });
+
+  it('Apple TV, signed out (401) and nobody else: Sign in for that server and user', () => {
+    expect(signedOutHref(anna, { accounts: [out] }, true)).toEqual({
+      pathname: '/login',
+      params: { url: 'https://jf.example.com', userName: 'anna' },
+    });
+  });
+
+  it('Apple TV, the account removed: Welcome', () => {
+    expect(signedOutHref(anna, { accounts: [] }, true)).toBe('/welcome');
   });
 });
 

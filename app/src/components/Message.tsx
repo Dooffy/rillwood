@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { SymbolView } from 'expo-symbols';
 import { useState, type ComponentProps, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isConnectionError, type ApiError } from '@/api';
@@ -13,6 +13,7 @@ import { deviceSizes, minTouch, pressedOpacity, radii, spacing, useColors } from
 import { Button } from './Button';
 import { Text } from './Text';
 import { TvButton } from './tv/TvButton';
+import { TvOffline } from './tv/TvOffline';
 
 /** Load-error copy that says what to do next: offline, a server failure, anything else (401 already signs out). */
 export function loadErrorMessage(error: ApiError): string {
@@ -80,7 +81,8 @@ export function Empty({
  * The one offline state - the server out of reach (no network, server down, timeout, TLS): a card with the wifi icon
  * in a circle, which server, what still works, Retry (filled) and Go to Downloads (text). A page that loaded keeps
  * its content instead; back online, failed screens reload by themselves. Always at the top of the screen: under a
- * tab's title, or `header` - under a floating header (detail, player).
+ * tab's title, or `header` - under a floating header (detail, player). Apple TV: `TvOffline` (screen draft 14) - the
+ * TV look, centred (one hand-off here, as `ActionSheet` → `TvMenu`).
  */
 export function Offline({
   retry,
@@ -94,6 +96,21 @@ export function Offline({
   /** Takes the screen (nothing to scroll), the card at its top. */
   fill?: boolean;
   header?: boolean;
+}) {
+  if (Platform.isTV) return <TvOffline retry={retry} busy={busy} fill={fill || header} />;
+  return <PhoneOffline retry={retry} busy={busy} fill={fill} header={header} />;
+}
+
+function PhoneOffline({
+  retry,
+  busy,
+  fill,
+  header,
+}: {
+  retry: () => void;
+  busy: boolean;
+  fill: boolean;
+  header: boolean;
 }) {
   const { top } = useSafeAreaInsets();
   const server = useSession().active?.server.name ?? 'the server';

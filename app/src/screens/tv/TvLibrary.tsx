@@ -9,6 +9,7 @@ import type { BaseItemDto } from '@/api';
 import { ActionSheet } from '@/components/ActionSheet';
 import { PosterCard } from '@/components/Card';
 import { loadErrorMessage, Message, Offline } from '@/components/Message';
+import { TvEmptyState } from '@/components/tv/TvEmptyState';
 import { PagedList } from '@/components/PagedList';
 import { useShelfCards } from '@/components/shelfCards';
 import { PosterRowsPlaceholder } from '@/components/Skeleton';
@@ -85,11 +86,7 @@ export function TvLibrary() {
       <PosterRowsPlaceholder rows={2} />
     );
   } else if (groups.movies.length + groups.shows.length === 0) {
-    body = (
-      <View style={styles.padded}>
-        <Message text={emptyText(query)} />
-      </View>
-    );
+    body = <TvEmptyState icon="film.stack" title={emptyText(query)} />;
   } else {
     body = (
       <ScrollView {...tabList} testID="library-rows" contentContainerStyle={styles.rows}>
