@@ -18,9 +18,9 @@ export function useHeroAspect() {
 }
 
 export type HeroProps = Omit<CardProps, 'width'> & {
-  /** Small line above the title: "Continue Watching", "Up Next". */
+  /** Small line above the title: "Resume", "Next Episode" (`heroEyebrow`). */
   eyebrow: string;
-  /** Wide screens: the play button on the art (with the progress); phones open the item and play from there. */
+  /** Wide screens: the play button on the art (with the progress); phones play from a tap on the card. */
   onPlay?: () => void;
 };
 
@@ -29,7 +29,7 @@ const PLAY_ACTION = { name: 'play', label: 'Play' } as const;
 /**
  * Top of Home (Up Next). Phones: a 16:9 card, then eyebrow, title, subtitle under it. Wide screens: the art cropped wide
  * with the eyebrow, title, subtitle and the play button (carrying the progress) on it, over a dark fade on its left -
- * white whatever the theme, like the player. A tap opens the item; VoiceOver offers Play and More as actions.
+ * white whatever the theme, like the player. Home's tap plays the item; VoiceOver offers Play and More as actions.
  */
 export function Hero({ eyebrow, onPlay, ...props }: HeroProps) {
   const { title, subtitle, image, progress, remainingSeconds, played, onPress, onLongPress } = props;

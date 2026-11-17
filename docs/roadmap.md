@@ -239,7 +239,7 @@ Screens:
   - Search: People results (phone + TV together)
   - Up Next: start at the credits when the server marks them (Jellyfin media segments, 10.10+), else at 30 s left; there a bigger takeover could work
   - Movie / series page: opened while the previous screen was scrolled a little, it loads at the wrong spot (not at the top) - should always open at the hero
-  - To discuss: Home Next Up / Continue Watching cards - a click plays the episode / movie straight away (as the series screen's episode cards do) or opens its page (now: the page)
+  - Home: check and update the play flow to match phones (decided 2026-11-17) - the hero, Continue Watching and Next Up cards play on a click (resume; a watched one from the start, `playItem`), the page from Details in the hold menu; now TV still opens the page (`HomeRows` without `playOnTap`); hero Play / Play from Start stay
   - To discuss: how to reach Switch User and Settings - today both sit behind the profile avatar (Home, top right) → Who's Watching → gear; options: a Settings tab (draft 13 shows one), Switch User in the Settings list, or the avatar opening a small menu (Switch User / Settings)
   - To discuss: the tab bar switches screens on focus, no click (tvOS's own tab bar does this, no setting to turn it off) - keep as is and make switches cheap (tabs keep their content and focus, no refetch on each pass), or our own tab bar
 

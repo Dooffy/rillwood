@@ -5,7 +5,7 @@ import { useCallback, useState } from 'react';
 
 import { isConnectionError, type ItemsResult } from '@/api';
 import { useHeldOffline } from '@/components/Message';
-import { continueWatching, homeLayout, homePaths, nextUp, userViews } from '@/items';
+import { continueWatching, heroEyebrow, homeLayout, homePaths, nextUp, userViews } from '@/items';
 import { useSession } from '@/session';
 import { invalidate, useFetch } from '@/useFetch';
 
@@ -56,7 +56,7 @@ export function useHome() {
     layout,
     offline,
     alone: offline.offline && !views.data,
-    heroEyebrow: layout.heroFromResume ? 'Continue Watching' : 'Up Next',
+    heroEyebrow: layout.hero ? heroEyebrow(layout.hero, layout.heroFromResume) : '',
     countKey,
     onLatestCount,
   };

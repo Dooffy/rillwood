@@ -23,6 +23,7 @@ import {
   episodeTitle,
   continueWatching,
   episodeCode,
+  heroEyebrow,
   homeLayout,
   homeLibraries,
   homePaths,
@@ -296,6 +297,18 @@ describe('images', () => {
     expect(imageUrl('https://jf', { itemId: 'i', type: 'Thumb', tag: 't' }, width, scale)).toContain(
       `fillWidth=${pixels}&`,
     );
+  });
+});
+
+describe('heroEyebrow', () => {
+  it('names the item, never a row title', () => {
+    expect(heroEyebrow(movie, true)).toBe('Resume');
+    expect(heroEyebrow(episode(2), true)).toBe('Resume');
+    expect(heroEyebrow(episode(2), false)).toBe('Next Episode');
+    expect(heroEyebrow(episode(1), false)).toBe('Start Watching');
+    expect(heroEyebrow(episode(1, { ParentIndexNumber: 3 }), false)).toBe('New Season');
+    expect(heroEyebrow(episode(1, { ParentIndexNumber: undefined }), false)).toBe('Start Watching');
+    expect(heroEyebrow(movie, false)).toBe('Next Episode');
   });
 });
 

@@ -7,6 +7,7 @@ import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
 import type { BaseItemDto } from '@/api';
+import { playback } from '@/items';
 import { useSession, type Account, type SessionState } from '@/session';
 import type { Colors } from '@/theme';
 
@@ -138,6 +139,12 @@ export function openLibrary() {
 export function openDownloads() {
   if (router.canDismiss()) router.dismissAll();
   router.navigate('/downloads');
+}
+
+/** Plays a card's item (Home's Continue Watching / Next Up): resumes a started one, a watched one from the start. */
+export function playItem(item: BaseItemDto) {
+  const { played, resumeSeconds } = playback(item);
+  openPlayer(item, played ? 0 : (resumeSeconds ?? 0));
 }
 
 /** Opens the player (M4) on an item at `start` seconds; `source` plays that version (a download's), else the default. */
