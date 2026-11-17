@@ -225,12 +225,26 @@ describe('SeriesDetail', () => {
     expect(await screen.findByText('2019-2023 · 1 Season')).toBeOnTheScreen();
   });
 
-  it('plays an episode from its card, and opens its detail on tap', async () => {
+  it('plays an episode on tap (as on Apple TV), its detail from the menu', async () => {
     await render(<SeriesDetail />);
-    await fireEvent.press(await screen.findByRole('button', { name: 'Play Episode 2, Chapter 2' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Episode 2, Chapter 2' }));
     expect(router.push).toHaveBeenLastCalledWith({ pathname: '/player', params: { id: 'ep-2-2', start: '0' } });
-    await fireEvent.press(screen.getByRole('button', { name: 'Episode 2, Chapter 2' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'More for Episode 2, Chapter 2' }));
+    expect(screen.queryByRole('menuitem', { name: 'Go to Series' })).toBeNull();
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Episode Details' }));
     expect(router.push).toHaveBeenLastCalledWith({ pathname: '/item/[id]', params: { id: 'ep-2-2' } });
+  });
+
+  it('resumes a started episode on tap, plays a watched one from the start', async () => {
+    routes['episodes:season-2'] = items(
+      episode(2, 1, { UserData: { PlaybackPositionTicks: 6_000_000_000, Played: false } }),
+      episode(2, 2, { UserData: { PlaybackPositionTicks: 6_000_000_000, Played: true } }),
+    );
+    await render(<SeriesDetail />);
+    await fireEvent.press(await screen.findByRole('button', { name: /^Episode 1, Chapter 1/ }));
+    expect(router.push).toHaveBeenLastCalledWith({ pathname: '/player', params: { id: 'ep-2-1', start: '600' } });
+    await fireEvent.press(screen.getByRole('button', { name: 'Episode 2, Chapter 2, watched' }));
+    expect(router.push).toHaveBeenLastCalledWith({ pathname: '/player', params: { id: 'ep-2-2', start: '0' } });
   });
 
   it('opens episode actions from ⋯ and long press; labels follow the state, Download starts it', async () => {

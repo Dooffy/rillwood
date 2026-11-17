@@ -141,7 +141,7 @@ export function openDownloads() {
   router.navigate('/downloads');
 }
 
-/** Plays a card's item (Home's Continue Watching / Next Up): resumes a started one, a watched one from the start. */
+/** Plays a card's item (Home's Continue Watching / Next Up, series episode cards): resumes a started one, a watched one from the start. */
 export function playItem(item: BaseItemDto) {
   const { played, resumeSeconds } = playback(item);
   openPlayer(item, played ? 0 : (resumeSeconds ?? 0));

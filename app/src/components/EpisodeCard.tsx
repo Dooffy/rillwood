@@ -39,10 +39,8 @@ export type EpisodeCardProps = {
   favourite?: boolean;
   /** Reserve 3 overview lines (some episode in the season has an overview), so the cards in a row line up. */
   overviewLines?: boolean;
-  /** Card tap: the episode's detail. */
+  /** Card tap: play / resume (as on Apple TV - the episode's detail is in its ⋯ menu). */
   onPress: () => void;
-  /** ▶ in the footer: play / resume. */
-  onPlay: () => void;
   /** ⋯ and long press: more actions. */
   onMore: () => void;
 };
@@ -60,7 +58,7 @@ function timeLabel({ played, progress, remainingSeconds, runtimeSeconds }: Episo
 /**
  * Apple TV style episode card: still fading into the card, EPISODE n, title, 3 lines of overview (none reserved when
  * the season has no overviews); footer with ▶ (progress ring + time left / runtime), ♥ when a favourite, and ⋯.
- * VoiceOver reads the card as one element with Play and More actions.
+ * A tap plays; VoiceOver reads the card as one element with a More action.
  */
 export const EpisodeCard = memo(function EpisodeCard(props: EpisodeCardProps) {
   const {
@@ -74,7 +72,6 @@ export const EpisodeCard = memo(function EpisodeCard(props: EpisodeCardProps) {
     favourite = false,
     overviewLines = true,
     onPress,
-    onPlay,
     onMore,
   } = props;
   const c = useColors();
@@ -83,20 +80,22 @@ export const EpisodeCard = memo(function EpisodeCard(props: EpisodeCardProps) {
   const time = timeLabel(props);
   const name = episode === undefined ? title : `Episode ${episode}, ${title}`;
   const spokenLeft = inProgress ? spokenRemaining(remainingSeconds ?? 0) : undefined;
-  const playLabel = [inProgress ? `Resume ${name}` : `Play ${name}`, spokenLeft && `${spokenLeft} left`]
-    .filter(Boolean)
-    .join(', ');
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={[name, played ? 'watched' : undefined, favourite ? 'favourite' : undefined]
+      accessibilityLabel={[
+        name,
+        played ? 'watched' : undefined,
+        favourite ? 'favourite' : undefined,
+        spokenLeft && `${spokenLeft} left`,
+      ]
         .filter(Boolean)
         .join(', ')}
-      accessibilityHint="Opens the episode"
-      // The ▶ and ⋯ buttons sit inside the card, which VoiceOver reads as one element: offer them as actions.
-      accessibilityActions={[{ name: 'play', label: inProgress ? 'Resume' : 'Play' }, MORE_ACTION]}
-      onAccessibilityAction={({ nativeEvent }) => (nativeEvent.actionName === 'play' ? onPlay() : onMore())}
+      accessibilityHint={inProgress ? 'Resumes the episode' : 'Plays the episode'}
+      // The ⋯ button sits inside the card, which VoiceOver reads as one element: offer it as an action.
+      accessibilityActions={[MORE_ACTION]}
+      onAccessibilityAction={onMore}
       onPress={onPress}
       onLongPress={onMore}
       style={({ pressed }) => [styles.card, { width, backgroundColor: c.surface }, pressed && styles.pressed]}
@@ -132,12 +131,7 @@ export const EpisodeCard = memo(function EpisodeCard(props: EpisodeCardProps) {
         )}
       </View>
       <View style={styles.footer}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={playLabel}
-          onPress={onPlay}
-          style={({ pressed }) => [styles.play, pressed && styles.pressed]}
-        >
+        <View style={styles.play}>
           <ProgressRing progress={played ? 1 : (progress ?? 0)} size={RING_SIZE}>
             <SymbolView name={{ ios: 'play.fill', android: 'play_arrow' }} tintColor={c.text} size={RING_SIZE / 2.4} />
           </ProgressRing>
@@ -147,7 +141,7 @@ export const EpisodeCard = memo(function EpisodeCard(props: EpisodeCardProps) {
             </Text>
           ) : null}
           {favourite && <SymbolView name={{ ios: 'heart.fill', android: 'favorite' }} tintColor={c.text} size={13} />}
-        </Pressable>
+        </View>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`More for ${name}`}

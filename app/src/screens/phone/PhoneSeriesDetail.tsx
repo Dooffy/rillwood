@@ -27,7 +27,7 @@ import { EpisodeCardsPlaceholder } from '@/components/Skeleton';
 import { Text } from '@/components/Text';
 import type { SavedItem } from '@/downloads';
 import { episodeLine, episodes, landscapeImage, playback, ticksToSeconds } from '@/items';
-import { openItem, openPlayer } from '@/navigation';
+import { playItem } from '@/navigation';
 import { scrollList, spacing } from '@/theme';
 import { useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
@@ -233,9 +233,9 @@ const SeasonEpisode = memo(function SeasonEpisode({ ep, withOverviews }: { ep: B
       played={state.played}
       favourite={ep.UserData?.IsFavorite === true}
       overviewLines={withOverviews}
-      onPress={() => openItem(ep)}
-      onPlay={() => openPlayer(ep, state.resumeSeconds ?? 0)}
-      onMore={() => menu(ep, episodeLine(ep))}
+      // As on Apple TV: a tap plays (resumes, a watched one from the start), the detail is in the menu.
+      onPress={() => playItem(ep)}
+      onMore={() => menu(ep, episodeLine(ep), { details: true })}
     />
   );
 });
