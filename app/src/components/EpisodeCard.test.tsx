@@ -13,21 +13,23 @@ import {
   WIDE_EPISODE_CARD_WIDTH,
 } from './EpisodeCard';
 
-const handlers = () => ({ onPress: jest.fn(), onPlay: jest.fn(), onMore: jest.fn() });
+const handlers = () => ({ onPress: jest.fn(), onMore: jest.fn() });
 
 describe('EpisodeCard', () => {
-  it('opens on tap, plays from ▶, shows more on ⋯ and on long press', async () => {
+  it('plays on tap, shows more on ⋯ and on long press', async () => {
     const h = handlers();
     await render(<EpisodeCard episode={3} title="Pilot" overview="It begins." runtimeSeconds={2700} {...h} />);
     expect(screen.getByText('EPISODE 3')).toBeOnTheScreen();
     expect(screen.getByText('It begins.')).toBeOnTheScreen();
     expect(screen.getByText('45m')).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole('button', { name: 'Episode 3, Pilot' }));
-    await fireEvent.press(screen.getByRole('button', { name: 'Play Episode 3, Pilot' }));
+    const card = screen.getByRole('button', { name: 'Episode 3, Pilot' });
+    expect(card.props.accessibilityHint).toBe('Plays the episode');
+    // ▶ is part of the card, not a button of its own.
+    expect(screen.queryByRole('button', { name: /^Play / })).toBeNull();
+    await fireEvent.press(card);
     await fireEvent.press(screen.getByRole('button', { name: 'More for Episode 3, Pilot' }));
-    await fireEvent(screen.getByRole('button', { name: 'Episode 3, Pilot' }), 'longPress');
+    await fireEvent(card, 'longPress');
     expect(h.onPress).toHaveBeenCalledTimes(1);
-    expect(h.onPlay).toHaveBeenCalledTimes(1);
     expect(h.onMore).toHaveBeenCalledTimes(2);
   });
 
@@ -43,7 +45,8 @@ describe('EpisodeCard', () => {
       />,
     );
     expect(screen.getByText('32m left')).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Resume Episode 3, Pilot, 32 minutes left' })).toBeOnTheScreen();
+    const card = screen.getByRole('button', { name: 'Episode 3, Pilot, 32 minutes left' });
+    expect(card.props.accessibilityHint).toBe('Resumes the episode');
   });
 
   it('says watched when played', async () => {
@@ -52,18 +55,14 @@ describe('EpisodeCard', () => {
     expect(screen.getByRole('button', { name: 'Episode 1, Pilot, watched' })).toBeOnTheScreen();
   });
 
-  it('offers Play and More as VoiceOver actions on the card', async () => {
+  it('offers More as a VoiceOver action on the card', async () => {
     const h = handlers();
-    await render(<EpisodeCard episode={3} title="Pilot" progress={0.3} remainingSeconds={1920} {...h} />);
+    await render(<EpisodeCard episode={3} title="Pilot" {...h} />);
     const card = screen.getByRole('button', { name: 'Episode 3, Pilot' });
-    expect(card.props.accessibilityActions).toEqual([
-      { name: 'play', label: 'Resume' },
-      { name: 'more', label: 'More' },
-    ]);
-    await fireEvent(card, 'accessibilityAction', { nativeEvent: { actionName: 'play' } });
+    expect(card.props.accessibilityActions).toEqual([{ name: 'more', label: 'More' }]);
     await fireEvent(card, 'accessibilityAction', { nativeEvent: { actionName: 'more' } });
-    expect(h.onPlay).toHaveBeenCalledTimes(1);
     expect(h.onMore).toHaveBeenCalledTimes(1);
+    expect(h.onPress).not.toHaveBeenCalled();
   });
 
   it('shows ♥ for a favourite and reads it out', async () => {

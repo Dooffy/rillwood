@@ -16,7 +16,7 @@ import { useUserFlag } from '@/useUserFlag';
 
 /**
  * Opens the menu for an item; `title` overrides the heading (the series screen names episodes without the show).
- * `details`: a way to the item's own screen too (Apple TV episode cards, where a click plays). `series: false`: no Go to
+ * `details`: a way to the item's own screen too (series episode cards, where a tap plays). `series: false`: no Go to
  * Series (already on it).
  */
 type OpenItemMenu = (item: BaseItemDto, title?: string, options?: { details?: boolean; series?: boolean }) => void;
