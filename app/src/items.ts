@@ -88,6 +88,16 @@ export function homeLayout(
   };
 }
 
+/**
+ * Label over the Home hero: what the item is, not a row name (the rows under it are Continue Watching and Next Up).
+ * Started → Resume; a next episode → Next Episode, New Season (first episode of a later season) or Start Watching (S1, E1).
+ */
+export function heroEyebrow(item: BaseItemDto, fromResume: boolean): string {
+  if (fromResume) return 'Resume';
+  if (item.Type !== 'Episode' || item.IndexNumber !== 1) return 'Next Episode';
+  return (item.ParentIndexNumber ?? 1) > 1 ? 'New Season' : 'Start Watching';
+}
+
 /** Libraries with a Recently Added row, in server order. */
 export function homeLibraries(views: BaseItemDto[]): BaseItemDto[] {
   return views.filter((v) => v.CollectionType === 'movies' || v.CollectionType === 'tvshows');

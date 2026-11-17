@@ -13,7 +13,7 @@ import { TvFocusRow } from './focus';
 import { TvButton, type TvButtonHandle } from './TvButton';
 
 export type TvHeroProps = {
-  /** "Up Next", "Continue Watching". */
+  /** "Resume", "Next Episode" (`heroEyebrow`). */
   eyebrow: string;
   title: string;
   /** Episodes: "S2, E5 · The Signal Box". */

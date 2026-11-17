@@ -14,7 +14,7 @@ import { Row } from '@/components/Row';
 import { useShelfCards } from '@/components/shelfCards';
 import { Screen } from '@/components/Screen';
 import { backdropImage, cardTitles, playback } from '@/items';
-import { openItem, openPlayer } from '@/navigation';
+import { playItem } from '@/navigation';
 import { minTouch, pressedOpacity, spacing, tabList, useColors } from '@/theme';
 import { refreshHome, useHome } from '@/useHome';
 import { useImage } from '@/useImage';
@@ -53,9 +53,10 @@ export function PhoneHome() {
         {...cardTitles(hero)}
         {...playback(hero)}
         image={image(backdropImage(hero), heroWidth)}
-        onPress={() => openItem(hero)}
-        onPlay={() => openPlayer(hero, playback(hero).resumeSeconds ?? 0)}
-        onLongPress={() => menu(hero)}
+        // It says Resume / Next Episode, so a tap plays (resumes); the page is in the menu's Details.
+        onPress={() => playItem(hero)}
+        onPlay={() => playItem(hero)}
+        onLongPress={() => menu(hero, undefined, { details: true })}
       />
     </View>
   ) : (
@@ -94,7 +95,7 @@ export function PhoneHome() {
                 </View>
               )}
               {heroView}
-              <HomeRows home={home} Shelf={Row} />
+              <HomeRows home={home} playOnTap Shelf={Row} />
             </>
           )}
         </ScrollView>

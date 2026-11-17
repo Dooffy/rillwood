@@ -128,9 +128,9 @@ function calls(route: string) {
 describe('Home', () => {
   it('shows the latest started item as the hero and leaves it out of Continue Watching', async () => {
     await render(<Home />);
-    const hero = await screen.findByRole('button', { name: /^Continue Watching, Sintel, 2010/ });
+    const hero = await screen.findByRole('button', { name: /^Resume, Sintel, 2010/ });
     // Tablet (Jest's default window): the eyebrow on the art, and ▶ with the progress plays from the saved position.
-    expect(within(hero).getByText('CONTINUE WATCHING')).toBeOnTheScreen();
+    expect(within(hero).getByText('RESUME')).toBeOnTheScreen();
     await fireEvent.press(within(hero).getByRole('button', { name: /^Resume, / }));
     expect(router.push).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/player' }));
     expect(
@@ -143,7 +143,7 @@ describe('Home', () => {
   it('a long press on any card opens its menu', async () => {
     await render(<Home />);
     // The hero too.
-    await fireEvent(await screen.findByRole('button', { name: /^Continue Watching, Sintel, 2010/ }), 'longPress');
+    await fireEvent(await screen.findByRole('button', { name: /^Resume, Sintel, 2010/ }), 'longPress');
     expect(screen.getByText('Sintel · 2010')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
     const resume = await screen.findByRole('button', { name: /^Tears of Steel, 2012, 8% watched/ });
@@ -226,7 +226,7 @@ describe('Home', () => {
   it('uses the next episode as the hero when nothing is in progress', async () => {
     routes['/UserItems/Resume'] = items();
     await render(<Home />);
-    expect(await screen.findByRole('button', { name: /^Up Next, Test Show, S1:E2/ })).toBeOnTheScreen();
+    expect(await screen.findByRole('button', { name: /^Next Episode, Test Show, S1:E2/ })).toBeOnTheScreen();
     expect(screen.queryByText('Continue Watching')).toBeNull();
     expect(screen.queryByText('Next Up')).toBeNull();
   });
@@ -264,7 +264,7 @@ describe('Home', () => {
     fullServer();
     routes['/Shows/NextUp'] = new ApiError('network');
     await render(<Home />);
-    expect(await screen.findByRole('button', { name: /^Continue Watching, Sintel/ })).toBeOnTheScreen();
+    expect(await screen.findByRole('button', { name: /^Resume, Sintel/ })).toBeOnTheScreen();
     expect(screen.queryByText('Next Up')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
   });
@@ -300,7 +300,7 @@ describe('Home', () => {
     expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(1);
     fullServer();
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
-    expect(await screen.findByRole('button', { name: /^Continue Watching, Sintel/ })).toBeOnTheScreen();
+    expect(await screen.findByRole('button', { name: /^Resume, Sintel/ })).toBeOnTheScreen();
     expect(await screen.findByText('Recently Added in Movies')).toBeOnTheScreen();
   });
 
@@ -325,10 +325,25 @@ describe('Home', () => {
     expect(screen.queryByText('Recently Added in Movies')).toBeNull();
   });
 
-  it('opens movies and episodes as items, series as series', async () => {
+  it('plays the hero, Continue Watching and Next Up on tap, their pages from the menu', async () => {
     await render(<Home />);
-    await fireEvent.press(await screen.findByRole('button', { name: /^Continue Watching, Sintel/ }));
+    await fireEvent.press(await screen.findByRole('button', { name: /^Resume, Sintel/ }));
+    expect(router.push).toHaveBeenLastCalledWith({ pathname: '/player', params: { id: 'sintel', start: '120' } });
+    await fireEvent.press(screen.getByRole('button', { name: /^Tears of Steel, 2012, 8% watched/ }));
+    expect(router.push).toHaveBeenLastCalledWith({ pathname: '/player', params: { id: 'tears', start: '60' } });
+    await fireEvent.press(screen.getByRole('button', { name: 'Test Show, S1:E2 · Episode 2' }));
+    expect(router.push).toHaveBeenLastCalledWith({ pathname: '/player', params: { id: 'ep-2', start: '0' } });
+
+    await fireEvent(screen.getByRole('button', { name: /^Resume, Sintel/ }), 'longPress');
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Details' }));
     expect(router.push).toHaveBeenLastCalledWith({ pathname: '/item/[id]', params: { id: 'sintel' } });
+    await fireEvent(screen.getByRole('button', { name: 'Test Show, S1:E2 · Episode 2' }), 'longPress');
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Episode Details' }));
+    expect(router.push).toHaveBeenLastCalledWith({ pathname: '/item/[id]', params: { id: 'ep-2' } });
+  });
+
+  it('opens Recently Added cards: series as series', async () => {
+    await render(<Home />);
     await fireEvent.press(await screen.findByRole('button', { name: 'Test Show' }));
     expect(router.push).toHaveBeenLastCalledWith({ pathname: '/series/[id]', params: { id: 'show' } });
   });
@@ -341,9 +356,7 @@ describe('Home', () => {
     await act(() => refreshControl().onRefresh?.());
     expect(refreshControl().refreshing).toBe(true);
     await act(() => answer());
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /^Continue Watching, Tears of Steel/ })).toBeOnTheScreen(),
-    );
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Resume, Tears of Steel/ })).toBeOnTheScreen());
     // Held briefly after the rows answer, so the native control ends its pull animation first.
     expect(refreshControl().refreshing).toBe(true);
     await waitFor(() => expect(refreshControl().refreshing).toBe(false));
@@ -365,7 +378,7 @@ describe('Home on Apple TV', () => {
   it('opens on the full-screen hero with focus on Play, which resumes', async () => {
     await render(<Home />);
     await screen.findByTestId('tv-hero');
-    expect(screen.getByText('CONTINUE WATCHING')).toBeOnTheScreen();
+    expect(screen.getByText('RESUME')).toBeOnTheScreen();
     expect(screen.getByRole('header', { name: 'Sintel' })).toBeOnTheScreen();
     expect(screen.getByText('2010 · 15m')).toBeOnTheScreen();
     const play = screen.getByRole('button', { name: 'Resume, 13m left' });
@@ -383,11 +396,11 @@ describe('Home on Apple TV', () => {
     expect(screen.getByText('Sintel · 2010')).toBeOnTheScreen();
   });
 
-  it('names the episode on an Up Next hero, no Play from Start when not started', async () => {
+  it('names the episode on a Next Episode hero, no Play from Start when not started', async () => {
     routes['/UserItems/Resume'] = items();
     await render(<Home />);
     await screen.findByTestId('tv-hero');
-    expect(screen.getByText('UP NEXT')).toBeOnTheScreen();
+    expect(screen.getByText('NEXT EPISODE')).toBeOnTheScreen();
     expect(screen.getByText('S1, E2 · Episode 2')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Play S1, E2' })).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Play from Start' })).toBeNull();

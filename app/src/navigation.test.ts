@@ -2,18 +2,27 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { renderHook } from '@testing-library/react-native';
 
+import type { BaseItemDto } from '@/api';
 import { useSession, type Account } from '@/session';
 import { palettes } from '@/theme';
 
-import { readablePage, openDownloads, resetTo, signedOutHref, tabsTitle, useSignedOutRedirect } from './navigation';
+import {
+  readablePage,
+  openDownloads,
+  playItem,
+  resetTo,
+  signedOutHref,
+  tabsTitle,
+  useSignedOutRedirect,
+} from './navigation';
 
 jest.mock('expo-router', () => ({
-  router: { canDismiss: jest.fn(), dismissAll: jest.fn(), replace: jest.fn(), navigate: jest.fn() },
+  router: { canDismiss: jest.fn(), dismissAll: jest.fn(), replace: jest.fn(), navigate: jest.fn(), push: jest.fn() },
 }));
 jest.mock('@/session', () => ({ useSession: jest.fn() }));
 
 const { router } = jest.requireMock<{
-  router: { canDismiss: jest.Mock; dismissAll: jest.Mock; replace: jest.Mock; navigate: jest.Mock };
+  router: { canDismiss: jest.Mock; dismissAll: jest.Mock; replace: jest.Mock; navigate: jest.Mock; push: jest.Mock };
 }>('expo-router');
 
 const anna: Account = {
@@ -31,6 +40,28 @@ function signedIn(active: Account | null, others: Account[] = []) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+});
+
+describe('playItem', () => {
+  const at = (positionTicks: number, played: boolean): BaseItemDto => ({
+    Id: 'm',
+    Name: 'Movie',
+    Type: 'Movie',
+    RunTimeTicks: 36_000_000_000,
+    UserData: { PlaybackPositionTicks: positionTicks, Played: played },
+  });
+
+  it('resumes a started item, plays a new one from the start', () => {
+    playItem(at(6_000_000_000, false));
+    expect(router.push).toHaveBeenLastCalledWith({ pathname: '/player', params: { id: 'm', start: '600' } });
+    playItem(at(0, false));
+    expect(router.push).toHaveBeenLastCalledWith({ pathname: '/player', params: { id: 'm', start: '0' } });
+  });
+
+  it('plays a watched item from the start, not at its old position', () => {
+    playItem(at(30_000_000_000, true));
+    expect(router.push).toHaveBeenLastCalledWith({ pathname: '/player', params: { id: 'm', start: '0' } });
+  });
 });
 
 describe('resetTo', () => {

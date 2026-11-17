@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Home's shelves under the hero, for both views: Continue Watching, Next Up, Recently Added per library. The view
 // passes its shelf (`Row` on phones and tablets, `TvShelf` on Apple TV).
-import { memo, useEffect, type ComponentType, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, type ComponentType, type ReactNode } from 'react';
 
 import { ApiError, isConnectionError, type BaseItemDto } from '@/api';
 import { LandscapeCard, PosterCard } from '@/components/Card';
@@ -10,7 +10,7 @@ import { LoadError } from '@/components/Message';
 import { useShelfCards, type CardSize } from '@/components/shelfCards';
 import { CardRowPlaceholder } from '@/components/Skeleton';
 import { cardTitles, landscapeImage, latest, playback, posterImage, recentlyAdded } from '@/items';
-import { openItem } from '@/navigation';
+import { openItem, playItem } from '@/navigation';
 import type { HomeState } from '@/useHome';
 import { useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
@@ -18,9 +18,22 @@ import { useImage } from '@/useImage';
 /** A titled horizontal shelf of cards. */
 export type ShelfView = ComponentType<{ title: string; children?: ReactNode }>;
 
-export function HomeRows({ home, Shelf }: { home: HomeState; Shelf: ShelfView }) {
+/**
+ * `playOnTap`: a Continue Watching / Next Up card plays (resumes) on tap, its page from the menu's Details (phones and
+ * tablets); else a tap opens the page (Apple TV for now - roadmap TV 19b).
+ */
+export function HomeRows({
+  home,
+  Shelf,
+  playOnTap = false,
+}: {
+  home: HomeState;
+  Shelf: ShelfView;
+  playOnTap?: boolean;
+}) {
   const image = useImage();
   const menu = useItemMenu();
+  const detailsMenu = useCallback((item: BaseItemDto) => menu(item, undefined, { details: true }), [menu]);
   // Tablets: whole cards across the row, so it never ends in a gap.
   const { posters, landscape: cards } = useShelfCards();
   const { layout, offline, views, resume, next } = home;
@@ -33,8 +46,8 @@ export function HomeRows({ home, Shelf }: { home: HomeState; Shelf: ShelfView })
       width={cards.width}
       image={image(landscapeImage(item), cards.width)}
       item={item}
-      onOpen={openItem}
-      onMenu={menu}
+      onOpen={playOnTap ? playItem : openItem}
+      onMenu={playOnTap ? detailsMenu : menu}
     />
   );
 
