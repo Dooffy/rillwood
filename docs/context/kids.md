@@ -14,6 +14,8 @@ Phones and tablets only. Apple TV: later, own draft.
 | Who filters | The server - everything, incl. Resume, Next Up, Latest, search; blocked items 404 | The app (below) - hides, doesn't block: anyone through the gate sees everything |
 | Opens in kids mode | Whenever it's the active account | Until a grown-up leaves (survives kill / relaunch) |
 
+Detection: `isKidsAccount` (`src/kids.ts`) - any `MaxParentalRating` number, 0 included.
+
 Not detected: a kids user limited by libraries only (adults have limited libraries too) - marked by hand.
 
 Storage, per account, `src/settings.ts`: `kids: off | account | { age, libraries, unrated }`. Read on boot to pick the first screen (`launchHref`).
@@ -58,7 +60,7 @@ Server rules (both versions):
 - `hasParentalRating=true` drops unrated movies / series; **broken on episodes** (every episode counts as rated).
 - `/UserItems/Resume`, `/Shows/NextUp`, `/Items/Latest` **ignore** `maxOfficialRating`.
 
-So:
+So (`src/kids.ts`: `ratingQuery`, `allowedShows`, `keepAllowed`):
 - **Allowed shows** = `/Items?includeItemTypes=Series&recursive=true&maxOfficialRating=X` (+ `hasParentalRating=true` when unrated is hidden). This is the faces row too.
 - Movies: `maxOfficialRating` (+ `hasParentalRating=true`).
 - Episodes: kept only when `SeriesId` is in the allowed shows (pure app check) - covers unrated and Next Up.
