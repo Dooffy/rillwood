@@ -8,6 +8,7 @@ import { Platform } from 'react-native';
 
 import type { BaseItemDto } from '@/api';
 import { playback } from '@/items';
+import { getKids, kidsMode } from '@/kidsSettings';
 import { useSession, type Account, type SessionState } from '@/session';
 import type { Colors } from '@/theme';
 
@@ -85,12 +86,21 @@ export function resetTo(href: Href) {
 }
 
 /**
- * Where launch lands: Home when signed in, else Welcome. Apple TV with two or more signed-in accounts: Who's Watching
- * first (the shared living-room screen; focus starts on the last used one). Signed-out accounts don't count.
+ * An account's start screen: kids Home while kids mode is on for it (a kids account, or a shared phone until a grown-up
+ * leaves - docs/context/kids.md), else Home. Kids mode is phones and tablets only.
+ */
+export function homeHref(accountId: string | undefined, tv: boolean): Href {
+  return !tv && kidsMode(getKids(accountId)) !== 'off' ? '/kids' : '/home';
+}
+
+/**
+ * Where launch lands: the account's start screen when signed in (`homeHref`), else Welcome. Apple TV with two or more
+ * signed-in accounts: Who's Watching first (the shared living-room screen; focus starts on the last used one).
+ * Signed-out accounts don't count.
  */
 export function launchHref({ accounts, active }: Pick<SessionState, 'accounts' | 'active'>, tv: boolean): Href {
   if (!active) return '/welcome';
-  return tv && accounts.filter((a) => !a.signedOut).length > 1 ? '/accounts' : '/home';
+  return tv && accounts.filter((a) => !a.signedOut).length > 1 ? '/accounts' : homeHref(active.id, tv);
 }
 
 /**

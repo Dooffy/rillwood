@@ -22,12 +22,15 @@ State per account: `src/kidsSettings.ts` (persisted key `settings.kids`, one ent
 
 ## Screens
 
-- **Home:** one screen, no tabs. Top bar: brand lockup (mark + "Rillwood" + "kids" tag) left, search right. Show faces (round posters) on top, then one feed of big 16:9 pictures: Continue, Next Up, newest - each item once, only items with a file. No hero, no big Resume button. Tap a picture = play (resume); tap a face = the show.
-- **Show:** episodes in one list, seasons as thin dividers, the next one marked and scrolled to. Tap = play.
+- **Home:** one screen, no tabs. Top bar: brand lockup (mark + "Rillwood" + "kids" tag) left, search right. Then every show and movie the kid can see, once each, as a 2:3 poster - two across on phones, no text (names only for VoiceOver), last watched first then A-Z (`kidsTitles`). No faces row, no feed of episodes, no hero, no Resume button. A show poster sits on a stack of two cards peeking out at its bottom right (there's more inside; the whole stack fills a movie poster's tile, the show's poster a little smaller) and opens its page; a movie (no stack) plays (resumes). Decided 2026-11-19 (draft 01b, option A): a feed of episodes showed a show's poster over and over (episodes have no poster, only a 16:9 still); characters are the menu for young kids.
+- **Show:** the show's art + name, then every episode as a big 16:9 still (its own picture) with its name on it (white over the bottom fade, one line), ✓ icon when watched (no word), progress bar under the name when started, seasons flattened in order with a thin divider only when there are several, specials left out (`episodeRows`). The next one (the server's Next Up for the show) carries a ▶ chip (no ring) and is scrolled into view on open. Tap = play. Big round Back (52 pt) always on top.
 - **Search:** quick search by name, big results, same filter.
 - **Player:** the app's player, unchanged. Closing it returns to kids mode.
-- Tablet: faces row + a 3-across grid.
+- Tablet: Home posters at least 200 pt wide (11": 3 across upright, 5 landscape; 13": 4 upright, 6 landscape); show page stills at least 320 pt (2-3 across). Phones: Home two across, show page one column.
 - No detail pages, menus, filters, sort, long-press, download buttons.
+- Fast double taps open one screen (`once`, 800 ms, `src/components/kids/KidsCards.tsx`).
+
+Built (tasks 3 + 5): `app/kids.tsx` → `KidsHome`, `app/kids-show/[id].tsx` → `KidsShow` (`src/screens/kids/`), data `useKidsHome` / `useKidsShow`, cards `src/components/kids/`, sizes `kids` in `src/theme.ts`. Start screen per account: `homeHref` (`src/navigation.ts`) - launch, sign-in, account switch and the account removal hand-over land on `/kids` while kids mode is on; Apple TV never. Until later tasks: no way in (Settings row, task 7; setup, task 8) and no way out (gate, task 4); no search button (task 6); the libraries pick isn't applied yet (task 8); no new-episode dot on show posters yet; offline shows the Offline card (downloads, task 10).
 
 ## Grown-up gate
 

@@ -2,7 +2,16 @@
 import { describe, expect, it } from '@jest/globals';
 
 import type { BaseItemDto, UserDto } from './api';
-import { AGE_STEPS, allowedShows, isKidsAccount, keepAllowed, ratingQuery } from './kids';
+import {
+  AGE_STEPS,
+  allowedShows,
+  episodeRows,
+  isKidsAccount,
+  keepAllowed,
+  kidsEpisodes,
+  kidsTitles,
+  ratingQuery,
+} from './kids';
 
 const user = (policy?: UserDto['Policy']): UserDto => ({ Id: 'u', Name: 'Mia', Policy: policy });
 const item = (Id: string, Type: string, SeriesId?: string) => ({ Id, Name: Id, Type, SeriesId }) as BaseItemDto;
@@ -73,5 +82,62 @@ describe('keepAllowed', () => {
   it('keeps the order', () => {
     const items = [item('m', 'Movie'), item('e', 'Episode', 'ok'), item('m2', 'Movie')];
     expect(keepAllowed(items, shows).map((i) => i.Id)).toEqual(['m', 'e', 'm2']);
+  });
+});
+
+describe('kids requests', () => {
+  it('asks a kids account for nothing extra - the server filters', () => {
+    expect(ratingQuery(undefined)).toEqual({});
+  });
+
+  it('lists every show and movie, last watched first then A-Z, filtered', () => {
+    expect(kidsTitles({ age: 10, unrated: false })).toEqual({
+      path: '/Items',
+      query: {
+        includeItemTypes: 'Movie,Series',
+        recursive: true,
+        sortBy: 'DatePlayed,SortName',
+        sortOrder: 'Descending,Ascending',
+        limit: 300,
+        maxOfficialRating: 'PG',
+        hasParentalRating: true,
+      },
+    });
+    expect(kidsTitles(undefined).query).not.toHaveProperty('maxOfficialRating');
+  });
+
+  it("asks for a show's episodes with the filter as a backstop", () => {
+    expect(kidsEpisodes('a/b', { age: 3, unrated: true })).toEqual({
+      path: '/Shows/a%2Fb/Episodes',
+      query: { isMissing: false, maxOfficialRating: 'TV-G' },
+    });
+  });
+});
+
+describe('episodeRows', () => {
+  const ep = (Id: string, season: number, extra: Partial<BaseItemDto> = {}) =>
+    ({ Id, Name: Id, Type: 'Episode', ParentIndexNumber: season, ...extra }) as BaseItemDto;
+  const shape = (rows: ReturnType<typeof episodeRows>) =>
+    rows.map((r) => (r.kind === 'season' ? `S${r.season}` : r.items.map((i) => i.Id).join('+')));
+
+  it('lists one season without a divider, one episode per row on phones', () => {
+    expect(shape(episodeRows([ep('a', 1), ep('b', 1)], 1))).toEqual(['a', 'b']);
+  });
+
+  it('puts a divider before each season when there are several', () => {
+    expect(shape(episodeRows([ep('a', 1), ep('b', 2), ep('c', 2)], 1))).toEqual(['S1', 'a', 'S2', 'b', 'c']);
+  });
+
+  it('groups a season into rows of the column count, a short last row', () => {
+    expect(shape(episodeRows([ep('a', 1), ep('b', 1), ep('c', 1)], 2))).toEqual(['a+b', 'c']);
+  });
+
+  it('leaves out specials and episodes without a file', () => {
+    const rows = episodeRows([ep('special', 0), ep('virtual', 1, { LocationType: 'Virtual' }), ep('a', 1)], 1);
+    expect(shape(rows)).toEqual(['a']);
+  });
+
+  it('takes an episode without a season as season 1', () => {
+    expect(shape(episodeRows([{ Id: 'x', Name: 'x', Type: 'Episode' } as BaseItemDto], 1))).toEqual(['x']);
   });
 });

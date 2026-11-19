@@ -2,11 +2,12 @@
 // Sign-in state shared by Sign in / Quick Connect (phone, tablet) and the TV Sign in: password form, whether the
 // server offers Quick Connect, and the Quick Connect code while it waits for approval.
 import { useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 
 import { ApiError } from '@/api';
 import { authErrorMessage, quickConnect, quickConnectEnabled, signIn } from '@/auth';
-import { resetTo } from '@/navigation';
-import type { Server } from '@/session';
+import { homeHref, resetTo } from '@/navigation';
+import { getSession, type Server } from '@/session';
 
 /** Whether the server has Quick Connect on; undefined until it answers (false if it can't). */
 export function useQuickConnectEnabled(server: Server | null): boolean | undefined {
@@ -51,7 +52,7 @@ export function usePasswordSignIn(server: Server | null, initialUserName = '') {
     setLoading(true);
     try {
       await signIn(server, name, password);
-      resetTo('/home');
+      resetTo(homeHref(getSession().active?.id, Platform.isTV));
     } catch (e) {
       busy.current = false;
       setError(authErrorMessage(e, 'signIn'));
@@ -86,7 +87,7 @@ export function useQuickConnectCode(server: Server | null, { active = true, rene
     // Aborted on unmount / retry: stops polling and a cancelled sign-in never adds the account.
     const controller = new AbortController();
     quickConnect(server, { signal: controller.signal, onCode: setCode })
-      .then(() => resetTo('/home'))
+      .then(() => resetTo(homeHref(getSession().active?.id, Platform.isTV)))
       .catch((e: unknown) => {
         if (controller.signal.aborted) return;
         if (renewExpired && e instanceof ApiError && e.status === 404) setAttempt((a) => a + 1);

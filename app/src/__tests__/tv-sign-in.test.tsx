@@ -9,7 +9,10 @@ import { TvSignIn } from '@/screens/tv/TvSignIn';
 import type { Server } from '@/session';
 
 jest.mock('expo-router', () => ({ router: { back: jest.fn(), replace: jest.fn(), dismissAll: jest.fn() } }));
-jest.mock('@/navigation', () => ({ resetTo: jest.fn() }));
+jest.mock('@/navigation', () => ({
+  homeHref: jest.requireActual<typeof import('@/navigation')>('@/navigation').homeHref,
+  resetTo: jest.fn(),
+}));
 jest.mock('@/auth', () => ({
   ...jest.requireActual<typeof import('@/auth')>('@/auth'),
   signIn: jest.fn(),

@@ -182,6 +182,43 @@ export const spacing = {
   lg: 24,
 } as const;
 
+/**
+ * Kids mode (docs/context/kids.md): big pictures and touch targets, no words on them. Home: 2:3 posters, two across on
+ * phones, as many as fit on wide windows (each at least `posterWide`). Show page: 16:9 episode pictures, one column on
+ * phones, a grid of at least `episodeWide` on wide windows.
+ */
+export const kids = {
+  radius: 20,
+  gutter: 16,
+  gap: 22,
+  grid: { gap: 16, gapWide: 20, posterWide: 200 },
+  /**
+   * Show posters sit on two cards peeking out at their bottom right, each one `step` further right (1.5x down); the
+   * stack fills the same tile as a movie poster.
+   */
+  stack: { step: 6 },
+  show: {
+    header: 300,
+    headerRadius: 30,
+    back: 52,
+    backIcon: 26,
+    episodeWide: 320,
+    watched: 24,
+    chip: 36,
+    chipIcon: 16,
+    chipInset: 12,
+    titleInset: 24,
+  },
+  mark: 34,
+  tag: { paddingHorizontal: 9, paddingVertical: 2 },
+  type: {
+    brand: { fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
+    tag: { fontSize: 13, fontWeight: '800' },
+    show: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
+    episode: { fontSize: 18, fontWeight: '700' },
+  },
+} as const;
+
 /** Every vertical list: no scroll bar. */
 export const scrollList = { showsVerticalScrollIndicator: false } as const;
 

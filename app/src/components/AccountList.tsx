@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
-import { resetTo } from '@/navigation';
+import { homeHref, resetTo } from '@/navigation';
 import { serverHost } from '@/server';
 import { switchAccount, useSession, type Account, type Server } from '@/session';
 import { spacing, useColors } from '@/theme';
@@ -38,13 +38,13 @@ export function signInAgain(account: Account) {
   router.push({ pathname: '/login', params: { url: account.server.url, userName: account.userName } });
 }
 
-/** Switch and land on the new account's Home (the stack clears - screens of the old account go). */
+/** Switch and land on the new account's start screen - Home or kids Home (the stack clears - screens of the old account go). */
 export function useSwitchAccount() {
   const toast = useToast();
   return (account: Account) => {
     switchAccount(account.id);
     toast(`Switched to ${account.userName}`);
-    resetTo('/home');
+    resetTo(homeHref(account.id, Platform.isTV));
   };
 }
 

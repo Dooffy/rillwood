@@ -14,6 +14,7 @@ import Welcome from '@/app/(auth)/welcome';
 import * as auth from '@/auth';
 import { savedServers } from '@/components/AccountList';
 import * as downloads from '@/downloads';
+import { forgetKids, setKids } from '@/kidsSettings';
 import type { Download } from '@/downloads';
 import { ToastProvider } from '@/components/Toast';
 import {
@@ -431,6 +432,14 @@ describe('Accounts list', () => {
     expect(getSession().active?.id).toBe('srv.ben');
     expect(router.replace).toHaveBeenCalledWith('/home');
     expect(screen.getByText('Switched to ben')).toBeOnTheScreen();
+  });
+
+  it('switches to an account in kids mode and lands on kids Home', async () => {
+    setKids('srv.ben', { shared: true });
+    await withToast(<Accounts />);
+    await fireEvent.press(screen.getByRole('button', { name: 'ben, Home server' }));
+    expect(router.replace).toHaveBeenCalledWith('/kids');
+    forgetKids('srv.ben');
   });
 
   it('opens the details of the active account on tap, any account from its info button', async () => {

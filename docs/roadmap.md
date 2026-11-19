@@ -257,9 +257,9 @@ Phones + tablets. Rules: `docs/context/kids.md`, screens: `docs/research/kids-sc
 - [x] 0. Draft screens, context doc, parental rating checks on 12.1 + 10.11 (`docs/research/jellyfin-api.md` §6b)
 - [x] 1. Rating code: `/Users/Me` limit read (kids account detection), age step → `maxOfficialRating`, allowed-shows episode check - pure, tested
 - [x] 2. Kids state per account (`kids: off | account | { age, libraries, unrated }`), persisted, survives relaunch
-- [ ] 3. Kids Home + routing: `launchHref`, sign-in, account switch, signed-out redirect → kids; faces, feed, tablet grid, empty / loading (01, 08)
+- [x] 3. Kids Home + routing: `launchHref`, sign-in, account switch, signed-out redirect → kids; one poster per show / movie, tablet grid, empty / loading (01, 08)
 - [ ] 4. Grown-up gate: hold the mark, math sheet, Downloads / Settings / Switch Account or Leave; first-time coach mark (05)
-- [ ] 5. Show page: episodes in one list, next one marked (03)
+- [x] 5. Show page: episodes in one list, next one marked (03)
 - [ ] 6. Search by name (02)
 - [ ] 7. Settings: Kids Mode row, Kids tag on account rows, Account page Kids account On / Off, back to Kids Mode (06)
 - [ ] 8. Setup: "Who's it for?" after sign-in when detected, Kids Mode page (07)
