@@ -18,7 +18,7 @@ Detection: `isKidsAccount` (`src/kids.ts`) - any `MaxParentalRating` number, 0 i
 
 Not detected: a kids user limited by libraries only (adults have limited libraries too) - marked by hand.
 
-Storage, per account, `src/settings.ts`: `kids: off | account | { age, libraries, unrated }`. Read on boot to pick the first screen (`launchHref`).
+State per account: `src/kidsSettings.ts` (persisted key `settings.kids`, one entry per account id, survives relaunch; `removeAccount` drops it) - `{ account, shared, age, unrated, libraries? }`, default off / 7+ / unrated hidden / every library. `kidsMode`: `account` wins over `shared` (the server filters, no app filter on top); `kidsFilter` = the shared filter or none. The age is kept while kids mode is off (the last pick comes back). Read on boot to pick the first screen (`launchHref`, task 3).
 
 ## Screens
 

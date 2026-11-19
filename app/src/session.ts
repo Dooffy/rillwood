@@ -7,6 +7,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useSyncExternalStore } from 'react';
 
 import { ApiError, logout, onUnauthorized, type AuthenticationResult, type Connection } from '@/api';
+import { forgetKids } from '@/kidsSettings';
 import { getPersisted, setPersisted } from '@/persist';
 
 /** A probed Jellyfin server. `id` is the server's own id (`ServerId`). */
@@ -171,6 +172,7 @@ export function removeAccount(id: string): Account | null {
   if (!account) return active;
   revoke(account);
   forgetToken(id);
+  forgetKids(id);
   const rest = accounts.filter((a) => a.id !== id);
   save(rest, active?.id === id ? rest.find((a) => !a.signedOut)?.id : active?.id);
   return getSession().active;

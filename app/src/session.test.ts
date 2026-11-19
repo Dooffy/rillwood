@@ -4,6 +4,7 @@ import { Storage } from 'expo-sqlite/kv-store';
 import { Platform } from 'react-native';
 
 import { logout, request, type AuthenticationResult } from '@/api';
+import { getKids, setKids } from '@/kidsSettings';
 
 import { addAccount, connectionFor, getSession, removeAccount, signOut, switchAccount, type Server } from './session';
 
@@ -103,6 +104,14 @@ describe('switch, sign out, remove', () => {
     expect(getSession().accounts.map((a) => a.id)).toEqual(['srv.u1']);
     expect(getSession().active?.id).toBe('srv.u1');
     expect(secure.has('tok_srv.u2')).toBe(false);
+  });
+
+  it("drops the removed account's kids settings, keeps the others'", () => {
+    setKids('srv.u1', { shared: true });
+    setKids('srv.u2', { account: true });
+    removeAccount('srv.u2');
+    expect(getKids('srv.u2').account).toBe(false);
+    expect(getKids('srv.u1').shared).toBe(true);
   });
 
   // Regression: addAccount saved the list it read before awaiting the keychain, undoing a sign-out in between.
