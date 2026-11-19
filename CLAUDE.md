@@ -195,6 +195,7 @@ modules/tv-back/         Apple TV: `TvBackView` catches Back on a pushed screen 
 | `modules/mpv/`, player binaries | `docs/context/mpv.md` - binaries, NDK pin, mpv options, logs |
 | `downloads.ts`, `offload.ts`, `modules/downloads/`, Downloads screen | `docs/context/downloads.md` - native contract, HTTP resume rules, store, offload |
 | `sync.ts`, offline progress | `docs/context/sync.md` - offline sync flow |
+| Kids mode (draft, not built) | `docs/context/kids.md` - two kinds, gate, rating filter, downloads |
 | `dev/jellyfin/`, test media | `docs/context/dev-server.md` |
 | Picking / ticking milestone work | `docs/roadmap.md` (§8) |
 | Planning, decisions, releases | `docs/open-items.md` (§11) |
