@@ -91,6 +91,9 @@ export default function RootLayout() {
               {/* (auth) has no layout of its own, so its screens join this stack. */}
               {/* Header hidden, but the title labels the back button on Add server (else iOS shows the route path). */}
               <Stack.Screen name="(auth)/welcome" options={{ title: 'Welcome' }} />
+              {/* Kids mode's start screen: no back swipe (it's the root; grown-ups leave through the gate). */}
+              <Stack.Screen name="kids" options={{ title: 'Kids', gestureEnabled: false }} />
+              <Stack.Screen name="kids-show/[id]" options={{ title: 'Show' }} />
               <Stack.Screen name="(auth)/server" options={pageOf('Add server')} />
               {/* TV Sign in draws its own title (screen draft 02). */}
               <Stack.Screen

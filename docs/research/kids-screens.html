@@ -125,6 +125,51 @@
   .pressed .art { transform: scale(.96); filter: brightness(.85); }
   .more { padding: 26px 0 8px; text-align: center; color: var(--text-2); font-size: 14px; }
 
+
+  /* 01b Feed options */
+  .opt { display: flex; flex-direction: column; gap: 10px; }
+  .opt > h3 { margin: 0; font-size: 16px; } .opt > h3 span { color: var(--page-muted); font-weight: 500; }
+  .opt > p { margin: 0; max-width: 412px; color: var(--page-muted); font-size: 14px; }
+  .pgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 18px 16px 0; }
+  .pgrid .art { aspect-ratio: 2 / 3; border-radius: 20px; }
+  .pgrid .glyph { font-size: 70px; }
+  .pgrid .prog { left: 12px; right: 12px; bottom: 12px; height: 6px; }
+  .pgrid .newdot { position: absolute; top: 10px; right: 10px; z-index: 2; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(0,0,0,.35); }
+  .pgrid .movie { position: absolute; left: 10px; top: 10px; z-index: 2; padding: 3px 9px; border-radius: 999px; background: rgba(0,0,0,.55); font-size: 12px; font-weight: 800; }
+  .sgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 18px 16px 0; }
+  .sgrid .art { aspect-ratio: 16 / 9; border-radius: 16px; }
+  .sgrid .glyph { font-size: 42px; }
+  .sgrid .prog { left: 10px; right: 10px; bottom: 9px; height: 5px; }
+  .badge { position: absolute; left: 8px; bottom: 8px; z-index: 3; width: 30px; height: 30px; border-radius: 50%; box-shadow: 0 0 0 2px #fff; }
+  .badge .glyph { font-size: 17px; }
+  .sgrid .art.has-prog .badge { bottom: 20px; }
+  .shelf { padding: 16px 0 0; }
+  .shelf-head { display: flex; align-items: center; gap: 10px; padding: 0 16px 10px; font-size: 18px; font-weight: 800; }
+  .shelf-head .art { width: 40px; height: 40px; border-radius: 50%; } .shelf-head .glyph { font-size: 22px; }
+  .shelf-row { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding: 0 16px; }
+  .shelf-row::-webkit-scrollbar { display: none; }
+  .shelf-row .art { flex: none; width: 210px; aspect-ratio: 16 / 9; border-radius: 16px; }
+  .shelf-row .glyph { font-size: 46px; }
+  .shelf-row .art.next { box-shadow: 0 0 0 3px #fff; }
+  .shelf-row .prog { left: 10px; right: 10px; bottom: 9px; height: 5px; }
+
+
+  /* Show posters: a stack of two cards peeking out bottom right, the whole stack the size of a movie poster */
+  .st { position: relative; padding: 0 12px 18px 0; }
+  .st > i { position: absolute; border-radius: 20px; }
+  .st > i.k2 { top: 18px; left: 12px; right: 0; bottom: 0; background: var(--surface-3, #3a3a3c); }
+  .st > i.k1 { top: 9px; left: 6px; right: 6px; bottom: 9px; background: var(--surface-2, #2c2c2e); }
+  .st > .art { position: relative; z-index: 1; }
+  /* Episode pictures: name on the art, watched = icon */
+  .epname { position: absolute; left: 14px; right: 14px; bottom: 12px; z-index: 2; display: flex; flex-direction: column; gap: 7px; }
+  .epname .row { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 700; color: #fff; }
+  .epname .row span { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .epname .row b { width: 24px; height: 24px; border-radius: 50%; background: #fff; color: #000; display: grid; place-items: center; font-size: 14px; }
+  .epname .bar { height: 5px; border-radius: 3px; background: rgba(255,255,255,.35); overflow: hidden; } .epname .bar b { display: block; height: 100%; background: #fff; }
+  .art.named::after { background: var(--fade); top: 40%; }
+  .tablet .pgrid { grid-template-columns: repeat(5, 1fr); gap: 20px; padding: 10px 40px 34px; }
+  .tablet .pgrid .glyph { font-size: 90px; }
+
   /* Show screen */
   .back { position: absolute; top: 56px; left: 16px; z-index: 5; width: var(--k-tap); height: var(--k-tap); border-radius: 50%; background: rgba(0,0,0,.45); backdrop-filter: blur(20px); display: grid; place-items: center; }
   .back svg { width: 30px; height: 30px; stroke: #fff; stroke-width: 3.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
@@ -352,6 +397,7 @@
     <p>Frames are real size - scroll them. Show names and art are fictional stand-ins.</p>
     <ul class="toc">
       <li><a href="#s-home">01 Home</a></li>
+      <li><a href="#s-feed-options">01b Feed options</a></li>
       <li><a href="#s-search">02 Search</a></li>
       <li><a href="#s-show">03 Show</a></li>
       <li><a href="#s-player">04 Player</a></li>
@@ -374,10 +420,65 @@
 
   <!-- 01 Home -->
   <section class="screen" id="s-home">
-    <h2><span>01</span>Home - one feed</h2>
-    <p>Shows first, as round faces; then an endless column of big pictures. No hero, no giant Resume - nothing tells the kid what to watch. What they were watching is simply the first picture, with its progress bar. Pull to refresh is the only gesture besides tap and scroll.</p>
+    <h2><span>01</span>Home - one poster per show</h2>
+    <p>Every show and movie the kid can see, once each, as a 2:3 poster - two across, last watched first, then A-Z. No faces row, no feed of episodes, no hero, no text: the characters are the menu (decided 2026-11-19, option A in 01b). A show opens its page (03); a movie plays.</p>
     <div class="pair">
       <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="scroll">
+          <div class="kbar">
+            <div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div>
+            <div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div>
+          </div>
+          <div class="pgrid">
+            <div class="st"><i class="k2"></i><i class="k1"></i><div class="art c1 has-prog"><div class="glyph">🐰</div><div class="prog"><b style="width:40%"></b></div></div></div>
+            <div class="st"><i class="k2"></i><i class="k1"></i><div class="art c2"><div class="glyph">🦕</div></div></div>
+            <div class="art c6 has-prog"><div class="glyph">🌋</div><div class="prog"><b style="width:25%"></b></div></div>
+            <div class="st"><i class="k2"></i><i class="k1"></i><div class="art c3"><div class="glyph">🚂</div></div></div>
+            <div class="st"><i class="k2"></i><i class="k1"></i><div class="art c4"><div class="glyph">🐱</div></div></div>
+            <div class="st"><i class="k2"></i><i class="k1"></i><div class="art c7"><div class="glyph">🐙</div></div></div>
+            <div class="st"><i class="k2"></i><i class="k1"></i><div class="art c5"><div class="glyph">🦉</div></div></div>
+            <div class="art c8"><div class="glyph">🐸</div></div>
+          </div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><b>One tile per title:</b> shows and movies in one grid, 2:3, two across (16 pt gaps), nothing written under them - VoiceOver reads the names.</li>
+        <li><b>Order:</b> last watched first, then A-Z. What the kid was watching is simply the first poster; no "Resume" label.</li>
+        <li><b>Show poster:</b> sits on a stack of two cards peeking out bottom right (there's more inside); the whole stack fills a movie poster's tile, the show's poster a little smaller. Tap opens the show (03), where the next episode is the first big picture. White dot = a new episode since the kid last opened the show (later). Fully watched shows show ✓.</li>
+        <li><b>Movie poster:</b> flat (no stack); tap plays (resumes when started) - progress bar on the art, same as the main app.</li>
+        <li><b>Top bar:</b> the brand lockup (hold 2 s = grown-ups, 05) and search (02). No title, no tabs.</li>
+        <li><b>Mis-taps:</b> fast double taps open one screen; a tap that stops a fling doesn't open anything.</li>
+      </ul>
+    </div>
+  </section>
+
+
+  <!-- 01b Feed options -->
+  <section class="screen" id="s-feed-options">
+    <h2><span>01b</span>Feed options - one tile per what?</h2>
+    <p>The poster feed showed a show's episodes as the same poster four times (an episode has no poster of its own, only a 16:9 still). Three ways kids video apps solve it - pick one before building.</p>
+    <div class="pair">
+      <div class="opt">
+        <h3>A <span>- one poster per show</span></h3>
+        <p>Every show and movie once, as a 2:3 poster, last watched first. No faces row - the grid <i>is</i> the shows. Tap a show → its page (next episode first, big); tap a movie → plays. Progress bar = the show's current episode; white dot = new episode.</p>
+        <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="scroll">
+          <div class="kbar">
+            <div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div>
+            <div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div>
+          </div>
+          <div class="pgrid"><div class="art c1 has-prog"><div class="glyph">🐰</div><div class="prog"><b style="width:40%"></b></div><span class="newdot"></span></div><div class="art c2 has-prog"><div class="glyph">🦕</div><div class="prog"><b style="width:62%"></b></div></div><div class="art c3"><div class="glyph">🚂</div></div><div class="art c6"><div class="glyph">🌋</div><span class="movie">Movie</span></div><div class="art c4"><div class="glyph">🐱</div></div><div class="art c7"><div class="glyph">🐙</div><span class="newdot"></span></div><div class="art c5"><div class="glyph">🦉</div></div><div class="art c8"><div class="glyph">🐸</div><span class="movie">Movie</span></div></div>
+        </div>
+      </div>
+      </div>
+      <div class="opt">
+        <h3>B <span>- faces + episode pictures</span></h3>
+        <p>Faces row on top (shows), then a grid of 16:9 stills two across - every episode looks different. A small round face on each still says which show. Tap = play.</p>
+        <div class="phone">
         <div class="island"></div>
         <div class="status"><span>9:41</span><span>100%</span></div>
         <div class="scroll">
@@ -391,37 +492,32 @@
             <div class="face"><div class="art c3"><div class="glyph">🚂</div></div>Tiny Trains</div>
             <div class="face"><div class="art c4"><div class="glyph">🐱</div></div>Cloud Kittens</div>
             <div class="face"><div class="art c7"><div class="glyph">🐙</div></div>Deep Blue</div>
-            <div class="face"><div class="art c5"><div class="glyph">🦉</div></div>Night Owls</div>
-          </div>
-          <div class="feed">
-            <div class="tile"><div class="art c1 has-prog"><div class="glyph">🚀</div><div class="prog"><b style="width:40%"></b></div></div>
-              <div class="t"><span class="face-sm art c1"><span class="glyph">🐰</span></span><span>Moon Carrots<small>Rocket Rabbits</small></span></div></div>
-            <div class="tile"><div class="art c2 has-prog"><div class="glyph">🦕</div><div class="prog"><b style="width:62%"></b></div></div>
-              <div class="t"><span class="face-sm art c2"><span class="glyph">🦕</span></span><span>The Giant Muffin<small>Dino Bakery</small></span></div></div>
-            <div class="tile pressed"><div class="art c3"><div class="glyph">🚂</div><span class="len">11 min</span></div>
-              <div class="t"><span class="face-sm art c3"><span class="glyph">🚂</span></span><span>Over the Snowy Bridge<small>Tiny Trains</small></span></div></div>
-            <div class="tile"><div class="art c6"><div class="glyph">🌋</div><span class="len">1 h 24</span></div>
-              <div class="t"><span class="face-sm art c6"><span class="glyph">🎬</span></span><span>Moss and the Sleepy Volcano<small>Movie</small></span></div></div>
-            <div class="tile"><div class="art c4"><div class="glyph">🐱</div><span class="done">✓</span></div>
-              <div class="t"><span class="face-sm art c4"><span class="glyph">🐱</span></span><span>Rainbow Puddles<small>Cloud Kittens</small></span></div></div>
-            <div class="tile"><div class="art c7"><div class="glyph">🐙</div><span class="len">9 min</span></div>
-              <div class="t"><span class="face-sm art c7"><span class="glyph">🐙</span></span><span>The Lost Shell<small>Deep Blue</small></span></div></div>
-            <div class="tile"><div class="art c8"><div class="glyph">🐸</div><span class="len">1 h 08</span></div>
-              <div class="t"><span class="face-sm art c8"><span class="glyph">🎬</span></span><span>Pond Jumpers<small>Movie</small></span></div></div>
-            <div class="more">more keeps loading as you scroll</div>
-          </div>
+          </div><div class="sgrid"><div class="art c1 has-prog"><div class="glyph">🚀</div><div class="prog"><b style="width:40%"></b></div><span class="badge art c1"><span class="glyph">🐰</span></span></div><div class="art c2 has-prog"><div class="glyph">🧁</div><div class="prog"><b style="width:62%"></b></div><span class="badge art c2"><span class="glyph">🦕</span></span></div><div class="art c1"><div class="glyph">🥕</div><span class="badge art c1"><span class="glyph">🐰</span></span></div><div class="art c1"><div class="glyph">🌙</div><span class="badge art c1"><span class="glyph">🐰</span></span></div><div class="art c3"><div class="glyph">🌨️</div><span class="badge art c3"><span class="glyph">🚂</span></span></div><div class="art c3"><div class="glyph">🌉</div><span class="badge art c3"><span class="glyph">🚂</span></span></div><div class="art c6"><div class="glyph">🌋</div><span class="badge art c6"><span class="glyph">🎬</span></span></div><div class="art c4"><div class="glyph">🌈</div><span class="badge art c4"><span class="glyph">🐱</span></span></div><div class="art c7"><div class="glyph">🐚</div><span class="badge art c7"><span class="glyph">🐙</span></span></div><div class="art c8"><div class="glyph">🐸</div><span class="badge art c8"><span class="glyph">🎬</span></span></div></div>
         </div>
       </div>
-      <ul class="notes">
-        <li><b>No hero, no call to action:</b> the kid picks. Continue Watching is just the first tiles of the feed (progress bar, tap resumes) - same size as the rest, no "Resume" label.</li>
-        <li><b>Faces on top:</b> every show the kid can see, one row that scrolls sideways, last watched first. White ring = new episode since last open. Tap opens Show (03).</li>
-        <li><b>Feed:</b> one column, 16:9, full width minus 16 pt. Order: Continue Watching → Next Up → Recently Added → the rest shuffled per day, paged like Library. Episodes and movies mixed; never a whole series tile here (that's a face).</li>
-        <li><b>Tile:</b> tap plays (episode resumes). Press = shrink to 96 %, no long-press menu. Length pill for unstarted, ✓ for watched, progress bar for started (same rules as the main app).</li>
-        <li><b>No header title, no tab bar.</b> Left: the brand lockup (mark + "Rillwood" + "kids" tag) - a tap does nothing, a 2 s hold fills a ring around the mark and opens the grown-up gate (05); no lock icon to make kids curious. Right: search (52 pt, opens 02), alone on its side so nothing else sits next to it.</li>
-        <li><b>Mis-taps:</b> a tap that starts after a scroll fling is a stop, not a play (RN's default on ScrollView, keep it). The second tap within 600 ms on the same tile is ignored.</li>
-        <li><b>Debounce navigation:</b> one open player / show at a time - fast double taps never stack two screens.</li>
-      </ul>
+      </div>
+      <div class="opt">
+        <h3>C <span>- a row per show</span></h3>
+        <p>One shelf per show, last watched first: its face + name, then its episodes sideways, the next one first (white ring). Movies get one shelf. Tap = play.</p>
+        <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="scroll">
+          <div class="kbar">
+            <div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div>
+            <div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div>
+          </div>
+          <div class="shelf"><div class="shelf-head"><span class="art c1"><span class="glyph">🐰</span></span>Rocket Rabbits</div><div class="shelf-row"><div class="art c1 has-prog next"><div class="glyph">🚀</div><div class="prog"><b style="width:40%"></b></div></div><div class="art c1"><div class="glyph">🥕</div></div><div class="art c1"><div class="glyph">🌙</div></div></div></div><div class="shelf"><div class="shelf-head"><span class="art c2"><span class="glyph">🦕</span></span>Dino Bakery</div><div class="shelf-row"><div class="art c2 next"><div class="glyph">🧁</div></div><div class="art c2"><div class="glyph">🍩</div></div><div class="art c2"><div class="glyph">🎂</div></div></div></div><div class="shelf"><div class="shelf-head"><span class="art c3"><span class="glyph">🚂</span></span>Tiny Trains</div><div class="shelf-row"><div class="art c3 next"><div class="glyph">🌨️</div></div><div class="art c3"><div class="glyph">🌉</div></div><div class="art c3"><div class="glyph">⛰️</div></div></div></div><div class="shelf"><div class="shelf-head"><span class="art c6"><span class="glyph">🎬</span></span>Movies</div><div class="shelf-row"><div class="art c6"><div class="glyph">🌋</div></div><div class="art c8"><div class="glyph">🐸</div></div><div class="art c5"><div class="glyph">🦉</div></div></div></div>
+        </div>
+      </div>
+      </div>
     </div>
+    <ul class="notes" style="max-width:900px;margin-top:20px">
+      <li><b>A</b> - fewest tiles, nothing repeats, works for kids who can't read (characters are the navigation). Costs one more tap for a show; the page then has to make "next" obvious.</li>
+      <li><b>B</b> - one tap plays anything, closest to today's build. Small pictures (≈ 170 × 96 pt on a phone); a show with many new episodes still fills the grid.</li>
+      <li><b>C</b> - most like the main app; most to scroll (two directions). Better for older kids (7+) than for 3-year-olds.</li>
+      <li><b>Recommendation: A</b>, with the show page doing one job well - a big next episode on top. Fits 3+ best and removes the duplicates problem at the root.</li>
+    </ul>
   </section>
 
   <!-- 02 Search -->
@@ -504,8 +600,8 @@
 
   <!-- 03 Show -->
   <section class="screen" id="s-show">
-    <h2><span>03</span>Show - one long list</h2>
-    <p>No seasons pills, no ⋯, no download ring. All episodes in order, the next one marked and scrolled into view on open.</p>
+    <h2><span>03</span>Show - big episode pictures</h2>
+    <p>Where a show poster leads. Every episode is a different picture here, so this is where the episode stills live: one big 16:9 picture each, the next one marked and scrolled into view. No seasons pills, no ⋯, no download ring - only the episode name on each picture.</p>
     <div class="pair">
       <div class="phone">
         <div class="island"></div>
@@ -515,22 +611,23 @@
           <div class="showhead art c2"><div class="glyph">🦕</div><h3>Dino Bakery</h3></div>
           <div class="feed">
             <div class="divider">Season 1</div>
-            <div class="tile"><div class="art c2"><div class="glyph">🥐</div><span class="done">✓</span></div><div class="t"><span>1. Rex Learns to Knead</span></div></div>
-            <div class="tile"><div class="art c8"><div class="glyph">🍪</div><span class="done">✓</span></div><div class="t"><span>2. Too Many Cookies</span></div></div>
-            <div class="tile next"><div class="art c6 has-prog"><div class="glyph">🧁</div><span class="next-badge"><i></i>Next</span><div class="prog"><b style="width:62%"></b></div></div><div class="t"><span>3. The Giant Muffin</span></div></div>
-            <div class="tile"><div class="art c1"><div class="glyph">🎂</div><span class="len">11 min</span></div><div class="t"><span>4. Birthday Surprise</span></div></div>
+            <div class="tile"><div class="art c2 named"><div class="glyph">🥐</div><div class="epname"><div class="row"><span>Rex Learns to Knead</span><b>✓</b></div></div></div></div>
+            <div class="tile"><div class="art c8 named"><div class="glyph">🍪</div><div class="epname"><div class="row"><span>Too Many Cookies</span><b>✓</b></div></div></div></div>
+            <div class="tile"><div class="art c6 named"><div class="glyph">🧁</div><span class="next-badge"><i></i></span><div class="epname"><div class="row"><span>The Giant Muffin</span></div><div class="bar"><b style="width:62%"></b></div></div></div></div>
+            <div class="tile"><div class="art c1 named"><div class="glyph">🎂</div><div class="epname"><div class="row"><span>Birthday Surprise</span></div></div></div></div>
             <div class="divider">Season 2</div>
-            <div class="tile"><div class="art c3"><div class="glyph">🍩</div><span class="len">11 min</span></div><div class="t"><span>1. Donut Day</span></div></div>
-            <div class="tile"><div class="art c4"><div class="glyph">🥧</div><span class="len">12 min</span></div><div class="t"><span>2. Pie in the Sky</span></div></div>
+            <div class="tile"><div class="art c3 named"><div class="glyph">🍩</div><div class="epname"><div class="row"><span>Donut Day</span></div></div></div></div>
+            <div class="tile"><div class="art c4 named"><div class="glyph">🥧</div><div class="epname"><div class="row"><span>Pie in the Sky</span></div></div></div></div>
           </div>
         </div>
       </div>
       <ul class="notes">
-        <li><b>Header:</b> show art + name, nothing else (no overview, cast, ratings, details).</li>
-        <li><b>Episodes:</b> every season flattened, a thin "Season 2" divider between. Specials left out.</li>
-        <li><b>Next:</b> white ring + "▶ Next" chip; the list opens scrolled so it sits in the top third.</li>
+        <li><b>Header:</b> show art + name (for grown-ups), nothing else.</li>
+        <li><b>Episodes:</b> every season flattened, in order; a thin "Season 2" divider only when there's more than one. Specials left out. Phones: one column of full-width 16:9 stills; tablets: a grid.</li>
+        <li><b>On each picture:</b> the episode name (white, bottom-left over the fade), a ✓ icon when watched, the progress bar under the name when started.</li>
+        <li><b>Next:</b> ▶ chip, no ring; the list opens scrolled so it sits in the top third. Watched: ✓; started: progress bar.</li>
         <li><b>Tap = play</b> that episode; the player's Up Next carries on down the list.</li>
-        <li><b>Back:</b> 64 pt glass circle, always visible, plus the edge swipe. Android back works too.</li>
+        <li><b>Back:</b> big round button, always visible, plus the edge swipe / Android back.</li>
         <li>Only two depths in the whole mode: Home → Show, or Search → Show. The player sits on top of any of them.</li>
       </ul>
     </div>
@@ -777,38 +874,21 @@
   <!-- 08 Tablet -->
   <section class="screen" id="s-tablet">
     <h2><span>08</span>Tablet landscape</h2>
-    <p>Kids' most common device. Faces in one row on top, then a 3-across grid of the same tiles. Portrait = 2 across.</p>
+    <p>Kids' most common device. The same poster grid as phones, wider: posters at least 200 pt, so 5 across in landscape on an 11" (6 on a 13"), 3-4 upright. The show page: episode pictures 2-3 across.</p>
     <div class="tablet-wrap" id="tabletWrap">
       <div class="tablet">
         <div class="kbar">
           <div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div>
           <div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div>
         </div>
-        <div class="t-top">
-          <div class="faces">
-            <div class="face new"><div class="art c1"><div class="glyph">🐰</div></div>Rabbits</div>
-            <div class="face"><div class="art c2"><div class="glyph">🦕</div></div>Dino Bakery</div>
-            <div class="face"><div class="art c3"><div class="glyph">🚂</div></div>Tiny Trains</div>
-            <div class="face"><div class="art c4"><div class="glyph">🐱</div></div>Cloud Kittens</div>
-            <div class="face"><div class="art c7"><div class="glyph">🐙</div></div>Deep Blue</div>
-            <div class="face"><div class="art c5"><div class="glyph">🦉</div></div>Night Owls</div>
-          </div>
-        </div>
-        <div class="feed">
-          <div class="tile"><div class="art c2 has-prog"><div class="glyph">🦕</div><div class="prog"><b style="width:62%"></b></div></div><div class="t"><span class="face-sm art c2"><span class="glyph">🦕</span></span><span>The Giant Muffin<small>Dino Bakery</small></span></div></div>
-          <div class="tile"><div class="art c3"><div class="glyph">🚂</div><span class="len">11 min</span></div><div class="t"><span class="face-sm art c3"><span class="glyph">🚂</span></span><span>Over the Snowy Bridge<small>Tiny Trains</small></span></div></div>
-          <div class="tile"><div class="art c6"><div class="glyph">🌋</div><span class="len">1 h 24</span></div><div class="t"><span class="face-sm art c6"><span class="glyph">🎬</span></span><span>Moss and the Sleepy Volcano<small>Movie</small></span></div></div>
-          <div class="tile"><div class="art c4"><div class="glyph">🐱</div><span class="done">✓</span></div><div class="t"><span class="face-sm art c4"><span class="glyph">🐱</span></span><span>Rainbow Puddles<small>Cloud Kittens</small></span></div></div>
-          <div class="tile"><div class="art c7"><div class="glyph">🐙</div><span class="len">9 min</span></div><div class="t"><span class="face-sm art c7"><span class="glyph">🐙</span></span><span>The Lost Shell<small>Deep Blue</small></span></div></div>
-          <div class="tile"><div class="art c8"><div class="glyph">🐸</div><span class="len">1 h 08</span></div><div class="t"><span class="face-sm art c8"><span class="glyph">🎬</span></span><span>Pond Jumpers<small>Movie</small></span></div></div>
-        </div>
+        <div class="pgrid"><div class="st"><i class="k2"></i><i class="k1"></i><div class="art c1 has-prog"><div class="glyph">🐰</div><div class="prog"><b style="width:40%"></b></div></div></div><div class="st"><i class="k2"></i><i class="k1"></i><div class="art c2"><div class="glyph">🦕</div></div></div><div class="art c6 has-prog"><div class="glyph">🌋</div><div class="prog"><b style="width:25%"></b></div></div><div class="st"><i class="k2"></i><i class="k1"></i><div class="art c3"><div class="glyph">🚂</div></div></div><div class="st"><i class="k2"></i><i class="k1"></i><div class="art c4"><div class="glyph">🐱</div></div></div><div class="st"><i class="k2"></i><i class="k1"></i><div class="art c7"><div class="glyph">🐙</div></div></div><div class="st"><i class="k2"></i><i class="k1"></i><div class="art c5"><div class="glyph">🦉</div></div></div><div class="art c8"><div class="glyph">🐸</div></div><div class="st"><i class="k2"></i><i class="k1"></i><div class="art c2"><div class="glyph">🐢</div></div></div><div class="art c3"><div class="glyph">🛸</div></div></div>
       </div>
     </div>
     <ul class="notes" style="margin-top:16px">
-      <li>Tiles fit whole (<code>fitCards</code>-style), ~340 pt wide; never stretched past that.</li>
-      <li>Faces: one row, bigger (104 pt), scrolls sideways like on phones.</li>
-      <li>No sidebar - kids mode has no tabs to show.</li>
-    </ul>
+        <li>Posters fit whole (at least 200 pt wide, 20 pt gaps); never stretched. Rotation and Split View re-flow the grid; narrow windows get the phone layout (2 across).</li>
+        <li>Show page: episode stills at least 320 pt, 2 across upright, 3 in landscape; name, ✓ and progress on the art as on phones.</li>
+        <li>No sidebar - kids mode has no tabs to show.</li>
+      </ul>
   </section>
 
   <!-- 09 Offline -->

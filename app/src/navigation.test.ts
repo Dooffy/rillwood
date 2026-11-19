@@ -3,10 +3,13 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { renderHook } from '@testing-library/react-native';
 
 import type { BaseItemDto } from '@/api';
+import { forgetKids, setKids } from '@/kidsSettings';
 import { useSession, type Account } from '@/session';
 import { palettes } from '@/theme';
 
 import {
+  homeHref,
+  launchHref,
   readablePage,
   openDownloads,
   playItem,
@@ -120,6 +123,35 @@ describe('useSignedOutRedirect', () => {
     const { rerender } = await renderHook(() => useSignedOutRedirect());
     await rerender({});
     expect(router.replace).not.toHaveBeenCalled();
+  });
+});
+
+describe('homeHref / launchHref', () => {
+  beforeEach(() => forgetKids(anna.id));
+
+  it('starts on Home while kids mode is off', () => {
+    expect(homeHref(anna.id, false)).toBe('/home');
+    expect(homeHref(undefined, false)).toBe('/home');
+    expect(launchHref({ accounts: [anna], active: anna }, false)).toBe('/home');
+  });
+
+  it('starts on kids Home on a shared phone in kids mode and on a kids account', () => {
+    setKids(anna.id, { shared: true });
+    expect(homeHref(anna.id, false)).toBe('/kids');
+    expect(launchHref({ accounts: [anna], active: anna }, false)).toBe('/kids');
+    setKids(anna.id, { shared: false, account: true });
+    expect(homeHref(anna.id, false)).toBe('/kids');
+  });
+
+  it('never starts in kids mode on Apple TV', () => {
+    setKids(anna.id, { account: true });
+    expect(homeHref(anna.id, true)).toBe('/home');
+    expect(launchHref({ accounts: [anna], active: anna }, true)).toBe('/home');
+  });
+
+  it('starts nowhere signed out', () => {
+    setKids(anna.id, { shared: true });
+    expect(launchHref({ accounts: [anna], active: null }, false)).toBe('/welcome');
   });
 });
 

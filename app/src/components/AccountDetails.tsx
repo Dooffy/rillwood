@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, Platform, StyleSheet, View } from 'react-native';
 
 import { accountDownloads, deleteAccountDownloads } from '@/downloads';
 import { formatBytes } from '@/format';
 import { removeAccount, signOut, useSession, type Account as SavedAccount } from '@/session';
-import { resetTo } from '@/navigation';
+import { homeHref, resetTo } from '@/navigation';
 import { radii, spacing, useColors } from '@/theme';
 
 import { accountStatus, signInAgain, useSwitchAccount, type AccountStatus } from './AccountList';
@@ -45,7 +45,7 @@ export function AccountDetails({ id, onBack }: { id?: string; onBack: () => void
     if (!next && active) return;
     if (next && isActive) {
       toast(`Switched to ${next.userName}`);
-      resetTo('/home');
+      resetTo(homeHref(next.id, Platform.isTV));
     } else onBack();
   };
 
