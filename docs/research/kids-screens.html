@@ -1,0 +1,981 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rillwood Kids</title>
+<style>
+  /* Page around the screens */
+  :root {
+    --page: #0b0b0c;
+    --page-text: #e9e9ec;
+    --page-muted: #8d8d94;
+    --page-line: #26262a;
+    /* App tokens (CLAUDE.md §3, dark) */
+    --bg: #000000;
+    --surface: #1c1c1e;
+    --surface-2: #2c2c2e;
+    --surface-3: #3a3a3c;
+    --separator: #38383a;
+    --text: #ffffff;
+    --text-2: #98989f;
+    --inactive: #8e8e93;
+    --success: #30d158;
+    --fade: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.75) 100%);
+    /* Kids sizes (proposal: own tokens, `kids` in theme.ts) */
+    --k-radius: 24px;
+    --k-tap: 64px;
+    --k-title: 22px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--page-text);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+  }
+  .doc { max-width: 1280px; margin: 0 auto; padding: 48px 16px 96px; }
+  .doc > header h1 { font-size: 34px; margin: 0 0 8px; letter-spacing: -0.02em; }
+  .doc > header p { margin: 0 0 8px; color: var(--page-muted); max-width: 760px; }
+  .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 8px; padding: 0; list-style: none; }
+  .toc a { display: inline-block; padding: 6px 14px; border-radius: 999px; background: #1a1a1d; color: var(--page-text); text-decoration: none; font-size: 14px; }
+  .toc a:hover { background: #26262a; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 24px 0 0; }
+  .rules div { background: #141416; border: 1px solid var(--page-line); border-radius: 14px; padding: 14px 16px; font-size: 14px; color: var(--page-muted); }
+  .rules b { display: block; color: var(--page-text); margin-bottom: 4px; font-size: 15px; }
+
+  section.screen { margin-top: 64px; scroll-margin-top: 24px; }
+  section.screen > h2 { font-size: 22px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  section.screen > h2 span { color: var(--page-muted); font-weight: 500; margin-right: 8px; }
+  section.screen > p { margin: 0 0 20px; color: var(--page-muted); font-size: 15px; max-width: 760px; }
+  .pair { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
+  .notes { flex: 1 1 300px; margin: 0; padding-left: 20px; color: var(--page-muted); font-size: 14px; }
+  .notes li { margin-bottom: 6px; }
+  .notes b { color: var(--page-text); font-weight: 600; }
+
+  /* Phone: 390 x 844, real size, scrolls like the app */
+  .phone {
+    position: relative; flex: none;
+    width: min(390px, 100%); height: 844px;
+    border-radius: 48px; overflow: hidden;
+    background: var(--bg); color: var(--text);
+    box-shadow: 0 0 0 10px #1d1d20, 0 0 0 11px #333, 0 30px 60px rgba(0,0,0,.5);
+    margin: 11px;
+  }
+  .scroll { position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none; padding: 54px 0 34px; }
+  .scroll::-webkit-scrollbar { display: none; }
+  .status { position: absolute; top: 0; left: 0; right: 0; height: 50px; display: flex; justify-content: space-between; align-items: center; padding: 6px 30px 0; font-size: 15px; font-weight: 600; z-index: 6; pointer-events: none; }
+  .island { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 120px; height: 34px; border-radius: 20px; background: #000; z-index: 7; }
+
+  /* Tablet landscape: 1180 x 820, scaled to fit */
+  .tablet-wrap { width: 100%; max-width: 1180px; aspect-ratio: 1180 / 820; position: relative; border-radius: 28px; overflow: hidden; box-shadow: 0 0 0 10px #1d1d20, 0 0 0 11px #333, 0 30px 60px rgba(0,0,0,.5); margin: 11px 0; }
+  .tablet { position: absolute; top: 0; left: 0; width: 1180px; height: 820px; transform: scale(var(--s, .5)); transform-origin: top left; background: var(--bg); color: var(--text); overflow: hidden; }
+
+  /* Art: gradient stand-ins, brighter for kids */
+  .art { position: relative; overflow: hidden; background: var(--g, #333); }
+  .art::after { content: ''; position: absolute; inset: 0; background: radial-gradient(120% 80% at 20% 0%, rgba(255,255,255,.22), transparent 60%); }
+  .art .glyph { position: absolute; inset: 0; display: grid; place-items: center; font-size: 64px; z-index: 1; filter: drop-shadow(0 6px 14px rgba(0,0,0,.35)); }
+  .c1 { --g: linear-gradient(160deg, #ffb347, #e8590c); }
+  .c2 { --g: linear-gradient(160deg, #5fd3a0, #0f7a55); }
+  .c3 { --g: linear-gradient(160deg, #6aa8ff, #2747b8); }
+  .c4 { --g: linear-gradient(160deg, #ff8fb1, #c2255c); }
+  .c5 { --g: linear-gradient(160deg, #b197fc, #5f3dc4); }
+  .c6 { --g: linear-gradient(160deg, #ffe066, #e67700); }
+  .c7 { --g: linear-gradient(160deg, #66d9e8, #0b7285); }
+  .c8 { --g: linear-gradient(160deg, #a9e34b, #5c940d); }
+
+  /* Top bar: no title, no tabs - the mark (hold = grown-ups) and search */
+  .kbar { display: flex; justify-content: space-between; align-items: center; padding: 0 20px 14px; }
+  .mark { width: 34px; height: 34px; border-radius: 50%; background: #fff; display: grid; place-items: center; }
+  .mark i { width: 0; height: 0; border-left: 12px solid #000; border-top: 8px solid transparent; border-bottom: 8px solid transparent; margin-left: 3px; }
+  .lock { width: 44px; height: 44px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; color: var(--inactive); }
+  .lock svg { width: 20px; height: 20px; fill: currentColor; }
+
+  /* Hero: the next thing, one giant play */
+  .hero { margin: 0 16px; border-radius: var(--k-radius); aspect-ratio: 4 / 3; }
+  .hero .glyph { font-size: 120px; }
+  .hero::after { background: var(--fade); top: 35%; }
+  .bigplay { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 2; height: 72px; padding: 0 34px 0 26px; border-radius: 999px; background: #fff; color: #000; display: flex; align-items: center; gap: 14px; font-size: 24px; font-weight: 800; box-shadow: 0 12px 30px rgba(0,0,0,.45); white-space: nowrap; }
+  .bigplay i { width: 0; height: 0; border-left: 22px solid #000; border-top: 14px solid transparent; border-bottom: 14px solid transparent; }
+  .bigplay .bar { width: 70px; height: 8px; border-radius: 4px; background: rgba(0,0,0,.15); overflow: hidden; }
+  .bigplay .bar b { display: block; height: 100%; width: 40%; background: #000; }
+
+  /* Show faces: round, tap = that show */
+  .faces { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; padding: 22px 16px 8px; }
+  .faces::-webkit-scrollbar { display: none; }
+  .face { flex: none; width: 84px; text-align: center; font-size: 13px; font-weight: 600; color: var(--text-2); }
+  .face .art { width: 84px; height: 84px; border-radius: 50%; margin-bottom: 6px; box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px rgba(255,255,255,.12); }
+  .face .glyph { font-size: 40px; }
+  .face.new .art { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #fff; }
+
+  /* Feed: one column of big pictures, tap = play */
+  .feed { display: flex; flex-direction: column; gap: 22px; padding: 18px 16px 0; }
+  .tile { display: block; }
+  .tile .art { border-radius: var(--k-radius); aspect-ratio: 16 / 9; }
+  .tile .glyph { font-size: 76px; }
+  .tile .t { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 0 4px; font-size: var(--k-title); font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; }
+  .tile .t small { display: block; font-size: 15px; font-weight: 600; color: var(--text-2); letter-spacing: 0; }
+  .tile .face-sm { flex: none; width: 36px; height: 36px; border-radius: 50%; }
+  .tile .face-sm .glyph { font-size: 20px; }
+  .prog { position: absolute; left: 16px; right: 16px; bottom: 14px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.35); overflow: hidden; z-index: 2; }
+  .prog b { display: block; height: 100%; background: #fff; }
+  .art.has-prog::after { background: var(--fade); top: 45%; }
+  .done { position: absolute; right: 12px; top: 12px; z-index: 2; width: 40px; height: 40px; border-radius: 50%; background: rgba(0,0,0,.55); display: grid; place-items: center; font-weight: 800; font-size: 20px; }
+  .len { position: absolute; right: 12px; bottom: 12px; z-index: 2; padding: 3px 10px; border-radius: 999px; background: rgba(0,0,0,.6); font-size: 14px; font-weight: 700; }
+  .pressed .art { transform: scale(.96); filter: brightness(.85); }
+  .more { padding: 26px 0 8px; text-align: center; color: var(--text-2); font-size: 14px; }
+
+  /* Show screen */
+  .back { position: absolute; top: 56px; left: 16px; z-index: 5; width: var(--k-tap); height: var(--k-tap); border-radius: 50%; background: rgba(0,0,0,.45); backdrop-filter: blur(20px); display: grid; place-items: center; }
+  .back svg { width: 30px; height: 30px; stroke: #fff; stroke-width: 3.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .showhead { margin: -54px 0 0; height: 330px; border-radius: 0 0 36px 36px; }
+  .showhead .glyph { font-size: 130px; padding-top: 30px; }
+  .showhead::after { background: var(--fade); top: 40%; }
+  .showhead h3 { position: absolute; left: 0; right: 0; bottom: 18px; margin: 0; text-align: center; font-size: 32px; font-weight: 900; letter-spacing: -0.02em; z-index: 2; }
+  .divider { display: flex; align-items: center; gap: 12px; color: var(--text-2); font-size: 15px; font-weight: 700; padding: 6px 4px 0; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--separator); }
+  .next-badge { position: absolute; left: 12px; top: 12px; z-index: 2; padding: 6px 14px; border-radius: 999px; background: #fff; color: #000; font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+  .next-badge i { width: 0; height: 0; border-left: 11px solid #000; border-top: 7px solid transparent; border-bottom: 7px solid transparent; }
+  .tile.next .art { box-shadow: 0 0 0 4px #fff; }
+
+  /* Player (landscape phone: 844 x 390) */
+  .landscape { position: relative; flex: none; width: 100%; max-width: 844px; aspect-ratio: 844 / 390; border-radius: 48px; overflow: hidden; color: #fff; box-shadow: 0 0 0 10px #1d1d20, 0 0 0 11px #333, 0 30px 60px rgba(0,0,0,.5); margin: 11px; }
+  .landscape .video { position: absolute; inset: 0; }
+  .landscape .video .glyph { font-size: 140px; }
+  .landscape .dim { position: absolute; inset: 0; background: rgba(0,0,0,.35); z-index: 2; }
+  .pc { position: absolute; z-index: 3; display: grid; place-items: center; border-radius: 50%; background: rgba(60,60,64,.55); backdrop-filter: blur(24px); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+  .pc svg { fill: #fff; }
+  .pc.main { left: 50%; top: 50%; transform: translate(-50%, -50%); width: 22%; aspect-ratio: 1; max-width: 120px; }
+  .pc.main svg { width: 42%; }
+  .pc.x { left: 5%; top: 9%; width: 9%; max-width: 64px; aspect-ratio: 1; }
+  .pc.x svg { width: 42%; stroke: #fff; stroke-width: 3.5; stroke-linecap: round; fill: none; }
+  .pc.hand { right: 5%; top: 9%; width: 9%; max-width: 64px; aspect-ratio: 1; }
+  .pc.hand svg { width: 46%; }
+  .kscrub { position: absolute; z-index: 3; left: 9%; right: 9%; bottom: 13%; height: 14px; border-radius: 7px; background: rgba(255,255,255,.3); }
+  .kscrub b { position: absolute; left: 0; top: 0; bottom: 0; width: 38%; border-radius: 7px; background: #fff; }
+  .kscrub i { position: absolute; left: 38%; top: 50%; width: 34px; height: 34px; border-radius: 50%; background: #fff; transform: translate(-50%, -50%); box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+  .ptitle { position: absolute; z-index: 3; left: 0; right: 0; top: 11%; text-align: center; font-size: clamp(14px, 2.4vw, 20px); font-weight: 800; text-shadow: 0 2px 8px rgba(0,0,0,.5); }
+  .locked-note { position: absolute; z-index: 3; left: 50%; bottom: 12%; transform: translateX(-50%); padding: 8px 18px; border-radius: 999px; background: rgba(0,0,0,.55); font-size: 14px; font-weight: 600; white-space: nowrap; }
+
+  /* Up Next / All done (landscape) */
+  .endscreen { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4%; background: rgba(0,0,0,.72); }
+  .endscreen h4 { margin: 0; font-size: clamp(18px, 3.4vw, 28px); font-weight: 900; }
+  .picks { display: flex; gap: 3%; width: 86%; justify-content: center; }
+  .pick { flex: 1; max-width: 230px; }
+  .pick .art { border-radius: 18px; aspect-ratio: 16 / 9; }
+  .pick .glyph { font-size: clamp(28px, 6vw, 54px); }
+  .pick.auto .art { box-shadow: 0 0 0 4px #fff; }
+  .pick .t { margin-top: 6px; font-size: clamp(11px, 1.8vw, 15px); font-weight: 700; text-align: center; }
+  .count { position: absolute; z-index: 3; inset: 0; display: grid; place-items: center; }
+  .count span { width: 52px; height: 52px; border-radius: 50%; background: rgba(0,0,0,.55); display: grid; place-items: center; font-size: 24px; font-weight: 900; box-shadow: inset 0 0 0 4px #fff; }
+  .bye { font-size: clamp(50px, 10vw, 90px); line-height: 1; }
+  .endscreen p { margin: 0; color: rgba(255,255,255,.75); font-size: clamp(12px, 1.9vw, 16px); }
+
+  /* Grown-up gate */
+  .gate { position: absolute; inset: 0; padding: 120px 28px 40px; display: flex; flex-direction: column; align-items: center; text-align: center; background: var(--bg); }
+  .gate h4 { margin: 0 0 8px; font-size: 28px; font-weight: 800; letter-spacing: -0.01em; }
+  .gate p { margin: 0 0 36px; color: var(--text-2); font-size: 16px; }
+  .holdring { --p: 0; position: relative; width: 156px; height: 156px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(#fff calc(var(--p) * 1%), var(--surface-2) 0); cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
+  .holdring::before { content: ''; position: absolute; inset: 10px; border-radius: 50%; background: var(--surface); }
+  .ringmark { position: relative; width: 72px; height: 72px; }
+  .ringmark i { border-left-width: 24px; border-top-width: 16px; border-bottom-width: 16px; margin-left: 6px; }
+  .holdring svg { position: relative; width: 52px; height: 52px; fill: #fff; }
+  .holdhint { margin-top: 18px; font-size: 15px; color: var(--text-2); min-height: 22px; }
+  .pin { display: none; flex-direction: column; align-items: center; width: 100%; }
+  .gate.open .holdwrap { display: none; }
+  .gate.open .pin { display: flex; }
+  .dots { display: flex; gap: 18px; margin: 4px 0 30px; }
+  .dots i { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--text-2); }
+  .dots i.on { background: #fff; box-shadow: none; }
+  .keys { display: grid; grid-template-columns: repeat(3, 78px); gap: 16px 26px; }
+  .keys span { width: 78px; height: 78px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font-size: 30px; font-weight: 500; }
+  .keys span.blank { background: none; }
+  .gate .cancel { position: absolute; bottom: 40px; font-size: 17px; color: var(--text-2); }
+
+  /* Settings (grown-up side, normal app look) */
+  .navbar { display: flex; align-items: center; padding: 0 16px 6px; height: 44px; font-size: 17px; }
+  .navbar .bk { color: #fff; display: flex; align-items: center; gap: 4px; }
+  .navbar .bk svg { width: 13px; height: 21px; stroke: #fff; stroke-width: 3; fill: none; }
+  .ltitle { font-size: 34px; font-weight: 700; padding: 0 16px 14px; letter-spacing: -0.02em; }
+  .group { margin: 0 16px 8px; border-radius: 12px; background: var(--surface); overflow: hidden; }
+  .grow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 10px 16px; font-size: 17px; }
+  .grow + .grow { box-shadow: inset 0 1px 0 var(--separator); }
+  .grow .v { color: var(--text-2); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .grow .v::after { content: '›'; font-size: 22px; line-height: 1; color: var(--inactive); }
+  .grow .av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; }
+  .ghead { margin: 18px 32px 6px; font-size: 13px; text-transform: uppercase; color: var(--text-2); letter-spacing: .02em; }
+  .gfoot { margin: 6px 32px 18px; font-size: 13px; color: var(--text-2); }
+  .primary { margin: 24px 16px 0; height: 54px; border-radius: 999px; background: #fff; color: #000; display: grid; place-items: center; font-size: 17px; font-weight: 700; }
+
+  /* Tablet layout */
+  .tablet .kbar { padding: 34px 40px 18px; }
+  .tablet .t-top { padding: 0 40px; }
+  .tablet .hero { flex: 1.35; margin: 0; aspect-ratio: auto; height: 320px; }
+  .tablet .hero .glyph { font-size: 150px; }
+  .tablet .faces { gap: 24px; padding: 6px 0 0; overflow: visible; }
+  .tablet .face { width: 104px; font-size: 15px; }
+  .tablet .face .art { width: 104px; height: 104px; }
+  .tablet .face .glyph { font-size: 50px; }
+  .tablet .feed { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px 28px; padding: 34px 40px; }
+
+  /* Offline chip */
+  .offchip { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: 999px; background: var(--surface); color: var(--text-2); font-size: 14px; font-weight: 600; }
+
+  /* Search */
+  .kright { display: flex; align-items: center; gap: 14px; }
+  .sbtn { width: 52px; height: 52px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; }
+  .sbtn svg, .sfield svg { width: 26px; height: 26px; fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; }
+  .stop { display: flex; align-items: center; gap: 12px; padding: 0 16px 18px; }
+  .sfield { flex: 1; height: 56px; border-radius: 999px; background: var(--surface-2); display: flex; align-items: center; gap: 10px; padding: 0 18px; font-size: 22px; font-weight: 700; }
+  .sfield svg { width: 22px; height: 22px; stroke: var(--text-2); flex: none; }
+  .sfield .ph { color: var(--text-2); font-weight: 600; }
+  .sfield .caret { width: 2px; height: 26px; background: #fff; margin-left: -8px; }
+  .sfield .clr { margin-left: auto; width: 26px; height: 26px; border-radius: 50%; background: var(--surface-3); display: grid; place-items: center; font-size: 14px; color: var(--text-2); flex: none; }
+  .sclose { flex: none; width: 56px; height: 56px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; }
+  .sclose svg { width: 24px; height: 24px; stroke: #fff; stroke-width: 3; stroke-linecap: round; fill: none; }
+  .shead { padding: 4px 20px 12px; font-size: 15px; font-weight: 700; color: var(--text-2); }
+  .facegrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 8px; padding: 0 16px; justify-items: center; }
+  .facegrid .face { width: 100px; }
+  .facegrid .face .art { width: 96px; height: 96px; }
+  .facegrid .face .glyph { font-size: 46px; }
+  mark { background: none; color: inherit; text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 4px; }
+  .kb { position: absolute; left: 0; right: 0; bottom: 0; height: 300px; background: #2a2a2c; padding: 10px 4px 0; display: flex; flex-direction: column; gap: 11px; z-index: 5; }
+  .kb .r { display: flex; justify-content: center; gap: 6px; }
+  .kb span { flex: 0 0 calc((100% - 54px) / 10); height: 44px; border-radius: 6px; background: #6b6b6f; display: grid; place-items: center; font-size: 22px; }
+  .kb .w { flex-basis: 15%; background: #464649; font-size: 15px; }
+  .kb .sp { flex: 1 1 auto; font-size: 15px; }
+  .kb .mic { position: absolute; right: 26px; bottom: 26px; font-size: 22px; }
+  .nomatch { text-align: center; padding: 28px 20px 22px; }
+  .nomatch .bye { font-size: 64px; line-height: 1; }
+  .nomatch b { display: block; font-size: 20px; margin-top: 10px; }
+
+  /* Brand lockup = the grown-up hold: a ring fills around the mark while pressed */
+  .brand { position: relative; display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
+  .mring { --p: 0; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(#fff calc(var(--p) * 1%), transparent 0); transition: transform .15s; }
+  .mring .mark { box-shadow: 0 0 0 4px var(--bg); }
+  .brand.held .mring { transform: scale(1.12); }
+  .word { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; display: flex; align-items: center; gap: 6px; }
+  .word span { padding: 2px 9px; border-radius: 999px; background: var(--surface-2); font-size: 13px; font-weight: 800; letter-spacing: .02em; color: var(--text-2); }
+  .gup { position: absolute; left: 0; top: 52px; padding: 6px 12px; border-radius: 999px; background: var(--surface-2); font-size: 13px; font-weight: 600; white-space: nowrap; opacity: 0; transform: translateY(-4px); transition: opacity .15s, transform .15s; pointer-events: none; z-index: 8; }
+  .brand.held .gup, .brand.hint .gup { opacity: 1; transform: none; }
+  .brand .gup { transition: opacity .4s, transform .4s; }
+  /* Grown-up sheet over Home */
+  .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 9; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; height: 640px; border-radius: 32px 32px 0 0; background: var(--surface); padding: 34px 28px 40px; display: flex; flex-direction: column; align-items: center; text-align: center; transform: translateY(100%); transition: transform .3s cubic-bezier(.2,.8,.2,1); z-index: 10; }
+  .sheet h4 { margin: 0 0 6px; font-size: 26px; font-weight: 800; }
+  .sheet p { margin: 0 0 26px; color: var(--text-2); font-size: 15px; }
+  .sheet .grab { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 36px; height: 5px; border-radius: 3px; background: var(--surface-3); }
+  .sheet .keys span { background: var(--surface-2); }
+  .sheet .cancel { margin-top: auto; font-size: 17px; color: var(--text-2); cursor: pointer; }
+  .gatephone.open .scrim { opacity: 1; pointer-events: auto; }
+  .gatephone.open .sheet { transform: none; }
+
+  /* Math gate */
+  .ask, .behind { display: flex; flex-direction: column; align-items: center; width: 100%; }
+  .behind { display: none; padding-top: 30px; }
+  .sheet.solved .ask { display: none; }
+  .sheet.solved .behind { display: flex; }
+  .q { font-size: 24px; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 18px; }
+  .ans { display: flex; gap: 10px; margin-bottom: 26px; }
+  .ans i { width: 54px; height: 64px; border-radius: 14px; background: var(--surface-2); display: grid; place-items: center; font-style: normal; font-size: 32px; font-weight: 700; }
+  .ans.wrong { animation: shake .35s; }
+  .ans.wrong i { box-shadow: inset 0 0 0 2px var(--danger, #ff453a); }
+  @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+  .keys span { cursor: pointer; }
+  .keys span:active { background: var(--surface-3); }
+  .keys .del { background: none !important; }
+  .primary.wide { align-self: stretch; margin: 0 0 12px; }
+  .grow2 { align-self: stretch; height: 54px; border-radius: 999px; background: var(--surface-2); display: grid; place-items: center; font-size: 17px; font-weight: 600; }
+
+  /* Setup flows */
+  .pickcard { margin: 0 16px 12px; min-height: 76px; border-radius: 16px; background: var(--surface); display: flex; align-items: center; gap: 14px; padding: 12px 18px; font-size: 17px; }
+  .pickcard.on { box-shadow: inset 0 0 0 2px #fff; }
+  .pickcard .pc-ic { font-size: 30px; }
+  .pickcard b, .backkids b, .dlrow b { display: block; font-weight: 600; }
+  .pickcard small, .backkids small, .dlrow small, .grow small { display: block; color: var(--text-2); font-size: 14px; }
+  .pickcard .ck, .grow .ck { margin-left: auto; font-weight: 700; font-size: 18px; }
+  .hintline { margin: 4px 32px 0; font-size: 13px; color: var(--success); }
+  .grow.col { min-height: 60px; }
+  .fullbar { display: flex; justify-content: space-between; align-items: center; padding: 6px 16px 14px; }
+  .backkids { margin: 0 16px 18px; border-radius: 16px; background: var(--surface); display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; font-size: 15px; }
+  .backkids span:nth-child(2) { flex: 1; }
+  .bk-btn { height: 36px; padding: 0 14px; border-radius: 999px; background: #fff; color: #000; display: grid; place-items: center; font-size: 14px; font-weight: 700; white-space: nowrap; }
+  .dlrow { display: flex; align-items: center; gap: 14px; padding: 8px 16px; font-size: 16px; }
+  .dlrow .art { flex: none; width: 56px; height: 84px; border-radius: 8px; }
+  .dlrow .art .glyph { font-size: 28px; }
+  .dlrow span:nth-child(2) { flex: 1; }
+  .ring { width: 30px; height: 30px; border-radius: 50%; box-shadow: inset 0 0 0 3px #fff; }
+  .ring.part { background: conic-gradient(#fff 62%, var(--surface-3) 0); -webkit-mask: radial-gradient(circle, transparent 11px, #000 12px); mask: radial-gradient(circle, transparent 11px, #000 12px); box-shadow: none; }
+  .tabbar { position: absolute; left: 16px; right: 16px; bottom: 26px; height: 62px; border-radius: 999px; background: rgba(44,44,48,.85); backdrop-filter: blur(20px); display: flex; justify-content: space-around; align-items: center; font-size: 13px; font-weight: 600; color: var(--inactive); }
+  .tabbar .on { color: #fff; }
+
+  /* Getting in */
+  .acc { display: flex; align-items: center; gap: 12px; }
+  .acc b { display: block; font-weight: 400; }
+  .acc small { display: block; color: var(--text-2); font-size: 13px; }
+  .grow .av { flex: none; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--success); }
+  .ktag { font-style: normal; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: var(--surface-3); color: var(--text-2); margin-left: 4px; vertical-align: 2px; }
+  .kic { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(160deg, #ffb347, #e8590c); display: grid; place-items: center; font-size: 17px; }
+  .coach { position: absolute; inset: 0; z-index: 10; }
+  .coach .spot { position: absolute; left: 14px; top: 48px; width: 56px; height: 56px; border-radius: 50%; background: var(--bg); display: grid; place-items: center; }
+  .pulse { --p: 100; animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,.5); } 50% { box-shadow: 0 0 0 12px rgba(255,255,255,0); } }
+  .coachcard { position: absolute; left: 16px; right: 16px; top: 124px; padding: 20px; border-radius: 22px; background: var(--surface); }
+  .coachcard::before { content: ''; position: absolute; left: 30px; top: -9px; width: 18px; height: 18px; background: var(--surface); transform: rotate(45deg); border-radius: 3px; }
+  .coachcard b { display: block; font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+  .coachcard p { margin: 0; color: var(--text-2); font-size: 16px; }
+  .grow.hl { min-height: 60px; }
+
+  /* Kids downloads page */
+  .storage { margin: 0 16px 6px; }
+  .storage .sbar { position: relative; height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; display: flex; }
+  .storage .sbar b { background: #fff; }
+  .storage .sbar i { background: var(--text-2); }
+  .storage small { display: block; margin-top: 6px; color: var(--text-2); font-size: 13px; }
+  .kdl { display: flex; align-items: center; gap: 14px; padding: 8px 16px; font-size: 16px; }
+  .kdl .art { flex: none; width: 96px; height: 54px; border-radius: 10px; }
+  .kdl .art .glyph { font-size: 26px; }
+  .kdl > span:nth-child(2) { flex: 1; min-width: 0; }
+  .kdl b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kdl small { display: block; color: var(--text-2); font-size: 13px; }
+  .kdlbtn { flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font-weight: 700; font-size: 17px; }
+  .kdlbtn.on { background: #fff; color: #000; }
+  .kdlbtn.part { background: conic-gradient(#fff 60%, var(--surface-3) 0); -webkit-mask: radial-gradient(circle, transparent 15px, #000 16px); mask: radial-gradient(circle, transparent 15px, #000 16px); }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header>
+    <h1>Rillwood Kids</h1>
+    <p>Draft of a kids mode for phones and tablets (roadmap Ideas). Kids tap fast and scroll fast: one screen, big pictures, a quick search by name, nothing to set. Two ways in: a kids user on Jellyfin, or kids mode on your own account with an age filter. Grown-ups get out through a hold + a quick math question.</p>
+    <p>Frames are real size - scroll them. Show names and art are fictional stand-ins.</p>
+    <ul class="toc">
+      <li><a href="#s-home">01 Home</a></li>
+      <li><a href="#s-search">02 Search</a></li>
+      <li><a href="#s-show">03 Show</a></li>
+      <li><a href="#s-player">04 Player</a></li>
+      <li><a href="#s-gate">05 Grown-up gate</a></li>
+      <li><a href="#s-enter">06 Getting in</a></li>
+      <li><a href="#s-setup">07 Setup: kids account / shared phone</a></li>
+      <li><a href="#s-tablet">08 Tablet</a></li>
+      <li><a href="#s-offline">09 Offline</a></li>
+      <li><a href="#s-downloads">10 Downloads</a></li>
+    </ul>
+    <div class="rules">
+      <div><b>Big picture = play</b>Every 16:9 tile starts playing on one tap. No detail page, no Play button to find.</div>
+      <div><b>Round face = a show</b>The only other thing to tap. Opens that show's episodes, one long list.</div>
+      <div><b>One screen, no tabs</b>No Library, Downloads, filters, sort, menus, long-press. One search button for "find it by name". Back is a 64pt circle.</div>
+      <div><b>No reading needed</b>Art carries it. Titles stay (older kids, grown-ups) but nothing depends on them.</div>
+      <div><b>Grown-ups: hold the Rillwood mark</b>Hold the mark (top-left) 2 s, then answer a math question. Leaving, switching and downloads live behind it.</div>
+      <div><b>Two kinds, one look</b><i>Kids account</i>: a kids user on Jellyfin, the server filters, the app always opens in kids mode. <i>Shared phone</i>: kids mode on your own account, the app hides what's above the age you pick.</div>
+    </div>
+  </header>
+
+  <!-- 01 Home -->
+  <section class="screen" id="s-home">
+    <h2><span>01</span>Home - one feed</h2>
+    <p>Shows first, as round faces; then an endless column of big pictures. No hero, no giant Resume - nothing tells the kid what to watch. What they were watching is simply the first picture, with its progress bar. Pull to refresh is the only gesture besides tap and scroll.</p>
+    <div class="pair">
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="scroll">
+          <div class="kbar">
+            <div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div>
+            <div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div>
+          </div>
+          <div class="faces">
+            <div class="face new"><div class="art c1"><div class="glyph">🐰</div></div>Rabbits</div>
+            <div class="face"><div class="art c2"><div class="glyph">🦕</div></div>Dino Bakery</div>
+            <div class="face"><div class="art c3"><div class="glyph">🚂</div></div>Tiny Trains</div>
+            <div class="face"><div class="art c4"><div class="glyph">🐱</div></div>Cloud Kittens</div>
+            <div class="face"><div class="art c7"><div class="glyph">🐙</div></div>Deep Blue</div>
+            <div class="face"><div class="art c5"><div class="glyph">🦉</div></div>Night Owls</div>
+          </div>
+          <div class="feed">
+            <div class="tile"><div class="art c1 has-prog"><div class="glyph">🚀</div><div class="prog"><b style="width:40%"></b></div></div>
+              <div class="t"><span class="face-sm art c1"><span class="glyph">🐰</span></span><span>Moon Carrots<small>Rocket Rabbits</small></span></div></div>
+            <div class="tile"><div class="art c2 has-prog"><div class="glyph">🦕</div><div class="prog"><b style="width:62%"></b></div></div>
+              <div class="t"><span class="face-sm art c2"><span class="glyph">🦕</span></span><span>The Giant Muffin<small>Dino Bakery</small></span></div></div>
+            <div class="tile pressed"><div class="art c3"><div class="glyph">🚂</div><span class="len">11 min</span></div>
+              <div class="t"><span class="face-sm art c3"><span class="glyph">🚂</span></span><span>Over the Snowy Bridge<small>Tiny Trains</small></span></div></div>
+            <div class="tile"><div class="art c6"><div class="glyph">🌋</div><span class="len">1 h 24</span></div>
+              <div class="t"><span class="face-sm art c6"><span class="glyph">🎬</span></span><span>Moss and the Sleepy Volcano<small>Movie</small></span></div></div>
+            <div class="tile"><div class="art c4"><div class="glyph">🐱</div><span class="done">✓</span></div>
+              <div class="t"><span class="face-sm art c4"><span class="glyph">🐱</span></span><span>Rainbow Puddles<small>Cloud Kittens</small></span></div></div>
+            <div class="tile"><div class="art c7"><div class="glyph">🐙</div><span class="len">9 min</span></div>
+              <div class="t"><span class="face-sm art c7"><span class="glyph">🐙</span></span><span>The Lost Shell<small>Deep Blue</small></span></div></div>
+            <div class="tile"><div class="art c8"><div class="glyph">🐸</div><span class="len">1 h 08</span></div>
+              <div class="t"><span class="face-sm art c8"><span class="glyph">🎬</span></span><span>Pond Jumpers<small>Movie</small></span></div></div>
+            <div class="more">more keeps loading as you scroll</div>
+          </div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><b>No hero, no call to action:</b> the kid picks. Continue Watching is just the first tiles of the feed (progress bar, tap resumes) - same size as the rest, no "Resume" label.</li>
+        <li><b>Faces on top:</b> every show the kid can see, one row that scrolls sideways, last watched first. White ring = new episode since last open. Tap opens Show (03).</li>
+        <li><b>Feed:</b> one column, 16:9, full width minus 16 pt. Order: Continue Watching → Next Up → Recently Added → the rest shuffled per day, paged like Library. Episodes and movies mixed; never a whole series tile here (that's a face).</li>
+        <li><b>Tile:</b> tap plays (episode resumes). Press = shrink to 96 %, no long-press menu. Length pill for unstarted, ✓ for watched, progress bar for started (same rules as the main app).</li>
+        <li><b>No header title, no tab bar.</b> Left: the brand lockup (mark + "Rillwood" + "kids" tag) - a tap does nothing, a 2 s hold fills a ring around the mark and opens the grown-up gate (05); no lock icon to make kids curious. Right: search (52 pt, opens 02), alone on its side so nothing else sits next to it.</li>
+        <li><b>Mis-taps:</b> a tap that starts after a scroll fling is a stop, not a play (RN's default on ScrollView, keep it). The second tap within 600 ms on the same tile is ignored.</li>
+        <li><b>Debounce navigation:</b> one open player / show at a time - fast double taps never stack two screens.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 02 Search -->
+  <section class="screen" id="s-search">
+    <h2><span>02</span>Search - find it by name</h2>
+    <p>One button on Home. Opens with the keyboard up and every show as a face, so a kid who can't spell still finds it by picture. Results come in with each letter - no Search key to press.</p>
+    <div class="pair">
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="scroll">
+          <div class="stop">
+            <div class="sfield"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><span class="caret"></span><span class="ph">Search</span></div>
+            <div class="sclose"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></div>
+          </div>
+          <div class="shead">Your shows</div>
+          <div class="facegrid">
+            <div class="face"><div class="art c1"><div class="glyph">🐰</div></div>Rabbits</div><div class="face"><div class="art c2"><div class="glyph">🦕</div></div>Dino Bakery</div><div class="face"><div class="art c3"><div class="glyph">🚂</div></div>Tiny Trains</div>
+            <div class="face"><div class="art c4"><div class="glyph">🐱</div></div>Cloud Kittens</div><div class="face"><div class="art c7"><div class="glyph">🐙</div></div>Deep Blue</div><div class="face"><div class="art c5"><div class="glyph">🦉</div></div>Night Owls</div>
+          </div>
+        </div>
+        <div class="kb">
+          <div class="r"><span>q</span><span>w</span><span>e</span><span>r</span><span>t</span><span>y</span><span>u</span><span>i</span><span>o</span><span>p</span></div>
+          <div class="r"><span>a</span><span>s</span><span>d</span><span>f</span><span>g</span><span>h</span><span>j</span><span>k</span><span>l</span></div>
+          <div class="r"><span class="w">⇧</span><span>z</span><span>x</span><span>c</span><span>v</span><span>b</span><span>n</span><span>m</span><span class="w">⌫</span></div>
+          <div class="r"><span class="w">123</span><span class="sp">space</span><span class="w">Done</span></div>
+          <div class="mic">🎙</div>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="scroll">
+          <div class="stop">
+            <div class="sfield"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>din<span class="clr">✕</span></div>
+            <div class="sclose"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></div>
+          </div>
+          <div class="faces" style="padding-top:0">
+            <div class="face"><div class="art c2"><div class="glyph">🦕</div></div><mark>Din</mark>o Bakery</div>
+          </div>
+          <div class="feed">
+            <div class="tile"><div class="art c8"><div class="glyph">🦖</div><span class="len">1 h 12</span></div>
+              <div class="t"><span class="face-sm art c8"><span class="glyph">🎬</span></span><span><mark>Din</mark>osaur Picnic<small>Movie</small></span></div></div>
+            <div class="tile"><div class="art c6 has-prog"><div class="glyph">🧁</div><div class="prog"><b style="width:62%"></b></div></div>
+              <div class="t"><span class="face-sm art c2"><span class="glyph">🦕</span></span><span>The Giant Muffin<small><mark>Din</mark>o Bakery</small></span></div></div>
+            <div class="tile"><div class="art c3"><div class="glyph">🍽️</div><span class="len">11 min</span></div>
+              <div class="t"><span class="face-sm art c3"><span class="glyph">🚂</span></span><span>The <mark>Din</mark>ing Car<small>Tiny Trains</small></span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="scroll">
+          <div class="stop">
+            <div class="sfield"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>zzq<span class="clr">✕</span></div>
+            <div class="sclose"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></div>
+          </div>
+          <div class="nomatch"><div class="bye">🔍</div><b>Nothing called that</b></div>
+          <div class="shead">Your shows</div>
+          <div class="facegrid">
+            <div class="face"><div class="art c1"><div class="glyph">🐰</div></div>Rabbits</div><div class="face"><div class="art c2"><div class="glyph">🦕</div></div>Dino Bakery</div><div class="face"><div class="art c3"><div class="glyph">🚂</div></div>Tiny Trains</div>
+            <div class="face"><div class="art c4"><div class="glyph">🐱</div></div>Cloud Kittens</div><div class="face"><div class="art c7"><div class="glyph">🐙</div></div>Deep Blue</div><div class="face"><div class="art c5"><div class="glyph">🦉</div></div>Night Owls</div>
+          </div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><b>Open:</b> the search button on Home (and on Offline / Tablet). The field is focused, keyboard up, nothing to tap first.</li>
+        <li><b>Before typing:</b> every show as a big face (3 across) - search for kids who can't spell yet. Tap = Show (03).</li>
+        <li><b>While typing:</b> results from the 1st letter, 250 ms after the last key (<code>useDebounced</code>), no Search key. Matching shows as faces on top, then movies + episodes as the same big tiles (tap = play). The match is underlined, nothing else changes look.</li>
+        <li><b>Match:</b> by name only - show names, movie names, episode names; an episode also matches by its show's name. Server <code>searchTerm</code> on <code>/Items</code> (Series, Movie, Episode), same as Library. Typos: none in v1 - the faces cover kids who can't spell.</li>
+        <li><b>Voice:</b> the keyboard's mic (iOS dictation) - nothing of ours. Big win for kids who can't type.</li>
+        <li><b>No match:</b> a calm "Nothing called that" and the faces again, so there's always something to tap.</li>
+        <li><b>Close:</b> 56 pt ✕ (top-right) back to Home; scrolling the results hides the keyboard. The term is forgotten on close - no recent searches, no suggestions.</li>
+        <li><b>Offline:</b> searches the downloaded items only (saved item JSON), no server call.</li>
+        <li><b>Tablet:</b> faces 5-6 across, results in the 3-across tile grid.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 03 Show -->
+  <section class="screen" id="s-show">
+    <h2><span>03</span>Show - one long list</h2>
+    <p>No seasons pills, no ⋯, no download ring. All episodes in order, the next one marked and scrolled into view on open.</p>
+    <div class="pair">
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="back"><svg viewBox="0 0 24 24"><path d="M15 4 7 12l8 8"/></svg></div>
+        <div class="scroll">
+          <div class="showhead art c2"><div class="glyph">🦕</div><h3>Dino Bakery</h3></div>
+          <div class="feed">
+            <div class="divider">Season 1</div>
+            <div class="tile"><div class="art c2"><div class="glyph">🥐</div><span class="done">✓</span></div><div class="t"><span>1. Rex Learns to Knead</span></div></div>
+            <div class="tile"><div class="art c8"><div class="glyph">🍪</div><span class="done">✓</span></div><div class="t"><span>2. Too Many Cookies</span></div></div>
+            <div class="tile next"><div class="art c6 has-prog"><div class="glyph">🧁</div><span class="next-badge"><i></i>Next</span><div class="prog"><b style="width:62%"></b></div></div><div class="t"><span>3. The Giant Muffin</span></div></div>
+            <div class="tile"><div class="art c1"><div class="glyph">🎂</div><span class="len">11 min</span></div><div class="t"><span>4. Birthday Surprise</span></div></div>
+            <div class="divider">Season 2</div>
+            <div class="tile"><div class="art c3"><div class="glyph">🍩</div><span class="len">11 min</span></div><div class="t"><span>1. Donut Day</span></div></div>
+            <div class="tile"><div class="art c4"><div class="glyph">🥧</div><span class="len">12 min</span></div><div class="t"><span>2. Pie in the Sky</span></div></div>
+          </div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><b>Header:</b> show art + name, nothing else (no overview, cast, ratings, details).</li>
+        <li><b>Episodes:</b> every season flattened, a thin "Season 2" divider between. Specials left out.</li>
+        <li><b>Next:</b> white ring + "▶ Next" chip; the list opens scrolled so it sits in the top third.</li>
+        <li><b>Tap = play</b> that episode; the player's Up Next carries on down the list.</li>
+        <li><b>Back:</b> 64 pt glass circle, always visible, plus the edge swipe. Android back works too.</li>
+        <li>Only two depths in the whole mode: Home → Show, or Search → Show. The player sits on top of any of them.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 04 Player -->
+  <section class="screen" id="s-player">
+    <h2><span>04</span>Player - the app's player, unchanged</h2>
+    <p>Kids mode only changes how you get to a video. Once it plays, it's the normal player: same controls, tracks menu, Up Next + autoplay, resume, reporting, PiP, offline play (<code>docs/context/player.md</code>). No kids overlay, no screen lock.</p>
+    <ul class="notes" style="max-width:760px">
+      <li><b>Close</b> returns to where the kid came from (Home, Search or Show).</li>
+      <li><b>Up Next</b> plays the next episode of the show, as today; autoplay follows Settings → Playback.</li>
+      <li><b>Audio + subtitles</b> from the grown-up defaults (Settings → Playback) - the kid can still change them in the tracks menu.</li>
+    </ul>
+  </section>
+
+  <!-- 05 Grown-up gate -->
+  <section class="screen" id="s-gate">
+    <h2><span>05</span>Grown-up gate</h2>
+    <p>Happens right on Home: hold the Rillwood mark 2 s - a ring fills around it - then a sheet slides up with a math question. Try it: press and hold the mark in any frame (this one opens the question - answer it on the pad).</p>
+    <div class="pair">
+      <div class="phone gatephone" id="gate">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="scroll">
+          <div class="kbar">
+            <div class="brand" id="ring"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div>
+            <div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div>
+          </div>
+          <div class="faces">
+            <div class="face"><div class="art c2"><div class="glyph">🦕</div></div>Dino Bakery</div>
+            <div class="face"><div class="art c3"><div class="glyph">🚂</div></div>Tiny Trains</div>
+            <div class="face"><div class="art c4"><div class="glyph">🐱</div></div>Cloud Kittens</div>
+            <div class="face"><div class="art c7"><div class="glyph">🐙</div></div>Deep Blue</div>
+          </div>
+        </div>
+        <div class="scrim" id="scrim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div class="ask" id="ask">
+            <h4>Grown-ups</h4>
+            <p>Answer to leave Kids mode</p>
+            <div class="q" id="q">What is seven times eight?</div>
+            <div class="ans" id="ans"><i></i><i></i></div>
+            <div class="keys" id="keys">
+              <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span class="blank"></span><span>0</span><span class="del">⌫</span>
+            </div>
+          </div>
+          <div class="behind" id="behind">
+            <h4>Grown-ups</h4>
+            <p>Mia is a kids account</p>
+            <a class="primary wide" href="#s-downloads" style="text-decoration:none">Downloads</a>
+            <div class="grow2" style="margin-bottom:12px">Settings</div>
+            <div class="grow2">Switch Account</div>
+          </div>
+          <div class="cancel" id="cancel">Cancel</div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><b>Step 1, hold:</b> the mark is the top-left brand lockup ("Rillwood" + a small "kids" tag) - it reads as a logo, not a button. Pressed, it grows a little and a white ring fills around it over 2 s, with a small "Grown-ups: keep holding" tag under it. Letting go drains the ring; the tag stays 3 s after a tap or an early let-go, so it can be read, then fades. A quick tap opens nothing.</li>
+        <li><b>Step 2, math:</b> a sheet over Home (Cancel, a tap outside or a swipe down closes). One multiplication, both numbers 6-9 (36-81), written in words ("seven times eight") so digits alone don't give it away; type the answer on the pad - no answer choices to guess from. It checks once both digits are in: wrong = a shake and a new question, right = what's behind it.</li>
+        <li><b>Why no PIN:</b> nothing to set up or forget, and nothing a kid can watch over a shoulder. Trade-off: a kid who knows the times tables gets out - fine for the "don't wander out by accident" goal; Screen Time is the real lock.</li>
+        <li><b>Behind it, kids account</b> (shown): <b>Downloads</b> - the kids download page (10), without leaving kids mode; <b>Settings</b> - grown-up settings for kids mode (07c); <b>Switch Account</b> - the account list. <b>Shared phone:</b> <b>Downloads</b>, <b>Settings</b> and <b>Leave Kids Mode</b> - back to your normal app. No "full app" on a kids account: everything a grown-up needs there is Downloads + Settings.</li>
+        <li><b>Store:</b> this also serves as the App Store "parental gate" (Guideline 1.3) if links out ever show up in kids mode - today there are none.</li>
+        <li><b>Relaunch:</b> kids mode survives app kill and restart - the app opens straight into it until a grown-up leaves (shared phone); a kids account always opens in it.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 06 Getting in -->
+  <section class="screen" id="s-enter">
+    <h2><span>06</span>Getting in</h2>
+    <p>No new tab, no Home button. Kids mode lives where accounts live - Settings, right under the account list - and a kids account just <i>is</i> kids mode. The first time in, the grown-up is shown the way out.</p>
+    <div class="pair">
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="scroll">
+          <div class="navbar"><span class="bk"><svg viewBox="0 0 13 21"><path d="M11 2 3 10.5 11 19"/></svg>Home</span></div>
+          <div class="ltitle">Settings</div>
+          <div class="group">
+            <div class="grow"><span class="acc"><span class="av art c9" style="background:linear-gradient(135deg,#5f7f73,#2b4a40)"><span class="glyph" style="font-size:14px">A</span></span><span><b>Alex</b><small>Home server</small></span></span><span class="dot"></span></div>
+            <div class="grow"><span class="acc"><span class="av art c1"><span class="glyph" style="font-size:16px">🐰</span></span><span><b>Mia <em class="ktag">Kids</em></b><small>Home server</small></span></span><span class="v"></span></div>
+            <div class="grow"><span style="color:var(--text-2)">Add Account</span></div>
+          </div>
+          <div class="group" style="margin-top:20px">
+            <a class="grow hl" href="#s-setup" style="color:inherit;text-decoration:none"><span class="acc"><span class="kic">🧒</span><span><b>Kids Mode</b><small>Hand your phone to a kid</small></span></span><span class="v">7+</span></a>
+          </div>
+          <div class="ghead">Display</div>
+          <div class="group">
+            <div class="grow"><span>Appearance</span><span class="v">System</span></div>
+            <div class="grow"><span>Subtitles</span><span class="v"></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="scroll">
+          <div class="navbar"><span class="bk"><svg viewBox="0 0 13 21"><path d="M11 2 3 10.5 11 19"/></svg>Settings</span></div>
+          <div class="ltitle">Mia</div>
+          <div class="group">
+            <div class="grow"><span>Server</span><span class="v" style="--x:0">Home server</span></div>
+            <div class="grow"><span>Signed in</span><span class="v">Password</span></div>
+          </div>
+          <div class="ghead">Kids</div>
+          <div class="group">
+            <div class="grow"><span>Kids account</span><span class="v">On</span></div>
+          </div>
+          <div class="gfoot">On: opens in Kids mode whenever Mia is the active account. Off: the normal app. Either way, what Mia can watch is set on the server.</div>
+          <div class="group" style="margin-top:20px">
+            <div class="grow"><span style="color:var(--danger,#ff453a)">Sign Out</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="scroll">
+          <div class="kbar"><div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div><div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div></div>
+          <div class="faces">
+            <div class="face"><div class="art c1"><div class="glyph">🐰</div></div>Rabbits</div>
+            <div class="face"><div class="art c2"><div class="glyph">🦕</div></div>Dino Bakery</div>
+            <div class="face"><div class="art c3"><div class="glyph">🚂</div></div>Tiny Trains</div>
+            <div class="face"><div class="art c4"><div class="glyph">🐱</div></div>Cloud Kittens</div>
+          </div>
+          <div class="feed">
+            <div class="tile"><div class="art c1"><div class="glyph">🚀</div></div><div class="t"><span>Moon Carrots<small>Rocket Rabbits</small></span></div></div>
+            <div class="tile"><div class="art c2"><div class="glyph">🦕</div></div><div class="t"><span>The Giant Muffin<small>Dino Bakery</small></span></div></div>
+          </div>
+        </div>
+        <div class="scrim" style="opacity:1"></div>
+        <div class="coach">
+          <div class="spot"><div class="mring pulse"><div class="mark"><i></i></div></div></div>
+          <div class="coachcard">
+            <b>You're in Kids mode</b>
+            <p>To get out, hold the Rillwood mark for 2 seconds, then answer a quick sum.</p>
+            <div class="primary" style="margin:16px 0 0">Got It</div>
+          </div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><b>Shared phone - the row:</b> <b>Kids Mode</b> in Settings, its own group right under the accounts (it's "who's using the phone", like the accounts). Value = the age once set up, else "Set up". Tap → the Kids Mode page (07b) → <b>Start Kids Mode</b>. From Home: avatar → Kids Mode → Start = 3 taps.</li>
+        <li><b>Kids account - no button at all:</b> switching to Mia (tap her row) <i>is</i> entering kids mode. Her row carries a small <b>Kids</b> tag so it's clear what the tap does.</li>
+        <li><b>Account page:</b> a <b>Kids account</b> row (On / Off checkmark list, like every setting). How an undetected kids user gets marked, or a mark gets undone.</li>
+        <li><b>Way in = a short fade</b> to kids Home (no slide - it replaces the whole app, the stack is cleared like an account switch).</li>
+        <li><b>First time only</b> (per device): a coach mark over kids Home - the Rillwood mark lit up with a pulsing ring, "hold it 2 s, then answer a quick sum", <b>Got It</b>. The way out is hidden on purpose, so the grown-up has to be told once.</li>
+        <li><b>Not now:</b> an iOS / Android home-screen quick action "Kids Mode" (long-press the app icon) - nice for shared phones, but a new dep (<code>expo-quick-actions</code>, approval). Later.</li>
+        <li><b>Apple TV:</b> Who's Watching shows a kids account with the same tag; picking it opens kids mode. Shared-phone mode is phone / tablet only.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 07 Setup -->
+  <section class="screen" id="s-setup">
+    <h2><span>07</span>Setup - kids account or shared phone</h2>
+    <p>Two ways in, the same kids screens. A kids account is the strong one (the server filters); a shared phone is the quick one (the app hides what's above an age). Both in the normal app look.</p>
+    <div class="pair">
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="scroll">
+          <div class="navbar"><span class="bk"><svg viewBox="0 0 13 21"><path d="M11 2 3 10.5 11 19"/></svg>Sign in</span></div>
+          <div class="ltitle">Who's it for?</div>
+          <div class="gfoot" style="margin:0 32px 14px">Signed in as Mia on Home server.</div>
+          <div class="pickcard"><span class="pc-ic">🧑</span><span><b>A grown-up</b><small>The full app</small></span></div>
+          <div class="pickcard on"><span class="pc-ic">🧒</span><span><b>A kid</b><small>Always opens in Kids mode</small></span><span class="ck">✓</span></div>
+          <div class="hintline">✓ This user has a rating limit on the server (up to PG)</div>
+          <div class="primary">Continue</div>
+          <div class="gfoot" style="text-align:center;margin-top:12px">Shown only when detected. Change it later in Settings → Mia.</div>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="scroll">
+          <div class="navbar"><span class="bk"><svg viewBox="0 0 13 21"><path d="M11 2 3 10.5 11 19"/></svg>Settings</span></div>
+          <div class="ltitle">Kids Mode</div>
+          <div class="gfoot" style="margin:0 32px 14px">Hand your phone to a kid: big pictures, nothing else to tap, only what fits their age.</div>
+          <div class="ghead">Age</div>
+          <div class="group">
+            <div class="grow col"><span>3+<small>G, TV-Y, TV-G</small></span></div>
+            <div class="grow col"><span>7+<small>adds TV-Y7</small></span><span class="ck">✓</span></div>
+            <div class="grow col"><span>10+<small>adds PG, TV-PG</small></span></div>
+            <div class="grow col"><span>13+<small>adds PG-13</small></span></div>
+          </div>
+          <div class="ghead">Show</div>
+          <div class="group">
+            <div class="grow"><span>Libraries</span><span class="v">Kids, Movies</span></div>
+            <div class="grow"><span>Unrated videos</span><span class="v">Hide</span></div>
+          </div>
+          <div class="gfoot">Hides what's above the age - it doesn't block it. For real limits, add a kids user on your server.</div>
+          <div class="primary">Start Kids Mode</div>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="scroll">
+          <div class="navbar"><span class="bk"><svg viewBox="0 0 13 21"><path d="M11 2 3 10.5 11 19"/></svg>Kids Mode</span></div>
+          <div class="ltitle">Settings</div>
+          <div class="ghead">Kids Mode</div>
+          <div class="group">
+            <div class="grow"><span>Age</span><span class="v">3+</span></div>
+            <div class="grow"><span>Libraries</span><span class="v">Kids, Movies</span></div>
+            <div class="grow"><span>Unrated videos</span><span class="v">Hide</span></div>
+          </div>
+          <div class="gfoot">Shared phone only. A kids account's limits are set on the server.</div>
+          <div class="ghead">Playback</div>
+          <div class="group">
+            <div class="grow"><span>Audio language</span><span class="v">English</span></div>
+            <div class="grow"><span>Subtitles</span><span class="v">Off</span></div>
+            <div class="grow"><span>Play next episode</span><span class="v">On</span></div>
+          </div>
+          <div class="ghead">Downloads</div>
+          <div class="group">
+            <div class="grow"><span>Download over</span><span class="v">Wi-Fi only</span></div>
+            <div class="grow"><span>Storage limit</span><span class="v">20 GB</span></div>
+          </div>
+          <div class="ghead">Display</div>
+          <div class="group">
+            <div class="grow"><span>Appearance</span><span class="v">Dark</span></div>
+            <div class="grow"><span>Subtitle style</span><span class="v"></span></div>
+          </div>
+          <div class="primary" style="margin-top:20px">Back to Kids Mode</div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><b>07a Kids account - marking it:</b> after sign-in (password or Quick Connect), <b>only when detected</b>, one more step: <b>Who's it for?</b> A grown-up / A kid. Detected = the user's server policy has a rating limit; "A kid" pre-picked (<code>/Users/Me</code> → <code>Policy.MaxParentalRating</code>, readable without admin) - with the hint line saying why. Not detected (most sign-ins): no extra step. Any account can be marked on its Account page (06). A kids user limited by libraries only isn't detected - grown-ups have limited libraries too - so it's marked by hand.</li>
+        <li><b>Kids account - using it:</b> while it's the active account the app is kids mode - at launch and on every switch to it. The server decides what shows up (rating, libraries); the app adds no filter.</li>
+        <li><b>07b Shared phone:</b> Settings → Kids Mode on your own account (also a row in the avatar menu). Age: 3+ / 7+ / 10+ / 13+, remembered per account. Libraries (default: all), Unrated videos (default: Hide - home videos and odd files have no rating). Start = kids mode on your account until a grown-up leaves through the gate.</li>
+        <li><b>Age → ratings:</b> each step maps to a score on the server's own rating table (<code>/Localization/ParentalRatings</code>, per server country), so US, UK, DE ratings all line up. The small line under each step lists the ratings it lets in on this server (draft shows US examples).</li>
+        <li><b>Shared filter, where</b> (tested on 12.1 + 10.11, <code>docs/context/kids.md</code>): every list is an <code>/Items</code> request with the limit (<code>maxOfficialRating</code>) - faces, search, and Continue / newest too (<code>/UserItems/Resume</code> and <code>/Items/Latest</code> ignore it). Episodes have no rating: one is kept when its show is in the allowed shows - that also filters Next Up (no server filter) and unrated shows. TV-14 stays out at 13+. Offline: a download saves its rating score (an episode: its show's); older ones count as unrated.</li>
+        <li><b>Say it plainly:</b> the shared filter hides, it doesn't block - anyone through the gate sees everything. The footer says so and points to a kids user on the server.</li>
+        <li><b>07c Settings from kids mode:</b> gate → <b>Settings</b>. The grown-up bits that matter while kids mode is on, in the normal Settings look, without leaving it: <b>Kids Mode</b> (age, libraries, unrated - shared phone only), <b>Playback</b> (audio / subtitle language, play next), <b>Downloads</b> (network, storage limit), <b>Display</b> (appearance, subtitle style). Same settings as the full app - one store, not a copy. <b>Back to Kids Mode</b> or ‹ returns.</li>
+        <li><b>Left out there:</b> accounts (the gate has Switch Account), About, Licences, sign out - full-app things.</li>
+        <li><b>Downloads - grown-ups only:</b> kids never see a download button; gate → <b>Downloads</b> (10). Needs "Allow downloads" for the user on the server.</li>
+        <li><b>Shared phone downloads:</b> your own downloads, shown in the kids offline feed only if they pass the age filter.</li>
+        <li><b>Storage:</b> one setting per account: <code>kids: off | account | { age, libraries, unrated }</code> in <code>src/settings.ts</code>; read on boot to pick the first screen.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 08 Tablet -->
+  <section class="screen" id="s-tablet">
+    <h2><span>08</span>Tablet landscape</h2>
+    <p>Kids' most common device. Faces in one row on top, then a 3-across grid of the same tiles. Portrait = 2 across.</p>
+    <div class="tablet-wrap" id="tabletWrap">
+      <div class="tablet">
+        <div class="kbar">
+          <div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div>
+          <div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div>
+        </div>
+        <div class="t-top">
+          <div class="faces">
+            <div class="face new"><div class="art c1"><div class="glyph">🐰</div></div>Rabbits</div>
+            <div class="face"><div class="art c2"><div class="glyph">🦕</div></div>Dino Bakery</div>
+            <div class="face"><div class="art c3"><div class="glyph">🚂</div></div>Tiny Trains</div>
+            <div class="face"><div class="art c4"><div class="glyph">🐱</div></div>Cloud Kittens</div>
+            <div class="face"><div class="art c7"><div class="glyph">🐙</div></div>Deep Blue</div>
+            <div class="face"><div class="art c5"><div class="glyph">🦉</div></div>Night Owls</div>
+          </div>
+        </div>
+        <div class="feed">
+          <div class="tile"><div class="art c2 has-prog"><div class="glyph">🦕</div><div class="prog"><b style="width:62%"></b></div></div><div class="t"><span class="face-sm art c2"><span class="glyph">🦕</span></span><span>The Giant Muffin<small>Dino Bakery</small></span></div></div>
+          <div class="tile"><div class="art c3"><div class="glyph">🚂</div><span class="len">11 min</span></div><div class="t"><span class="face-sm art c3"><span class="glyph">🚂</span></span><span>Over the Snowy Bridge<small>Tiny Trains</small></span></div></div>
+          <div class="tile"><div class="art c6"><div class="glyph">🌋</div><span class="len">1 h 24</span></div><div class="t"><span class="face-sm art c6"><span class="glyph">🎬</span></span><span>Moss and the Sleepy Volcano<small>Movie</small></span></div></div>
+          <div class="tile"><div class="art c4"><div class="glyph">🐱</div><span class="done">✓</span></div><div class="t"><span class="face-sm art c4"><span class="glyph">🐱</span></span><span>Rainbow Puddles<small>Cloud Kittens</small></span></div></div>
+          <div class="tile"><div class="art c7"><div class="glyph">🐙</div><span class="len">9 min</span></div><div class="t"><span class="face-sm art c7"><span class="glyph">🐙</span></span><span>The Lost Shell<small>Deep Blue</small></span></div></div>
+          <div class="tile"><div class="art c8"><div class="glyph">🐸</div><span class="len">1 h 08</span></div><div class="t"><span class="face-sm art c8"><span class="glyph">🎬</span></span><span>Pond Jumpers<small>Movie</small></span></div></div>
+        </div>
+      </div>
+    </div>
+    <ul class="notes" style="margin-top:16px">
+      <li>Tiles fit whole (<code>fitCards</code>-style), ~340 pt wide; never stretched past that.</li>
+      <li>Faces: one row, bigger (104 pt), scrolls sideways like on phones.</li>
+      <li>No sidebar - kids mode has no tabs to show.</li>
+    </ul>
+  </section>
+
+  <!-- 09 Offline -->
+  <section class="screen" id="s-offline">
+    <h2><span>09</span>Offline - just what's downloaded</h2>
+    <p>Online: 20 shows. Offline: the 10 with downloads. Same screens, same layout - only fewer things in them. Nothing greyed out, no locked tiles, no error screens: a kid can't tell what's missing, so there's nothing to cry about.</p>
+    <div class="pair">
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="scroll">
+          <div class="kbar"><div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div><div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div></div>
+          <div class="shead" style="padding-top:18px">Online · 20 shows</div>
+          <div class="faces" style="padding-top:0">
+            <div class="face"><div class="art c1"><div class="glyph">🐰</div></div>Rabbits</div><div class="face"><div class="art c2"><div class="glyph">🦕</div></div>Dino Bakery</div><div class="face"><div class="art c3"><div class="glyph">🚂</div></div>Tiny Trains</div><div class="face"><div class="art c4"><div class="glyph">🐱</div></div>Cloud Kittens</div><div class="face"><div class="art c7"><div class="glyph">🐙</div></div>Deep Blue</div><div class="face"><div class="art c5"><div class="glyph">🦉</div></div>Night Owls</div><div class="face"><div class="art c8"><div class="glyph">🐸</div></div>Pond Pals</div>
+          </div>
+          <div class="feed">
+            <div class="tile"><div class="art c4"><div class="glyph">🐱</div><span class="len">10 min</span></div><div class="t"><span class="face-sm art c4"><span class="glyph">🐱</span></span><span>Rainbow Puddles<small>Cloud Kittens</small></span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>✈︎</span></div>
+        <div class="scroll">
+          <div class="kbar"><div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div><div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div></div>
+          <div style="padding:0 16px 14px"><span class="offchip">✈︎ Downloaded</span></div>
+          <div class="shead" style="padding-top:18px">Offline · 10 shows</div>
+          <div class="faces" style="padding-top:0">
+            <div class="face"><div class="art c2"><div class="glyph">🦕</div></div>Dino Bakery</div><div class="face"><div class="art c3"><div class="glyph">🚂</div></div>Tiny Trains</div><div class="face"><div class="art c7"><div class="glyph">🐙</div></div>Deep Blue</div><div class="face"><div class="art c8"><div class="glyph">🐸</div></div>Pond Pals</div>
+          </div>
+          <div class="feed">
+            <div class="tile"><div class="art c3"><div class="glyph">🚂</div><span class="len">11 min</span></div><div class="t"><span class="face-sm art c3"><span class="glyph">🚂</span></span><span>Over the Snowy Bridge<small>Tiny Trains</small></span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>✈︎</span></div>
+        <div class="back"><svg viewBox="0 0 24 24"><path d="M15 4 7 12l8 8"/></svg></div>
+        <div class="scroll">
+          <div class="showhead art c2"><div class="glyph">🦕</div><h3>Dino Bakery</h3></div>
+          <div class="feed">
+            <div class="divider">Season 1</div>
+            <div class="tile next"><div class="art c6 has-prog"><div class="glyph">🧁</div><span class="next-badge"><i></i>Next</span><div class="prog"><b style="width:62%"></b></div></div><div class="t"><span>3. The Giant Muffin</span></div></div>
+            <div class="tile"><div class="art c1"><div class="glyph">🎂</div><span class="len">11 min</span></div><div class="t"><span>4. Birthday Surprise</span></div></div>
+            <div class="divider">Season 2</div>
+            <div class="tile"><div class="art c3"><div class="glyph">🍩</div><span class="len">11 min</span></div><div class="t"><span>1. Donut Day</span></div></div>
+          </div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><b>The switch:</b> the app's connection check (<code>connection.ts</code>) flips kids mode between the server and the downloads store. Home re-fills from downloads when the check says offline, and back when it's online again - no message, only the chip appears / goes.</li>
+        <li><b>Opened on the plane:</b> straight into kids mode on the last account (kept on the phone, no sign-in). The launch check fails at once in airplane mode (no 8 s wait), Home fills from downloads; posters + stills come from the art saved with each download. Weak Wi-Fi that doesn't answer: loading placeholders until the 8 s check gives up, never a half-filled screen. Landing: back to the full list on the next check (foreground / while offline), flight progress syncs.</li>
+        <li><b>Offline Home:</b> faces = shows with at least one downloaded episode; feed = downloaded movies + episodes, same order rules. Search finds only downloads.</li>
+        <li><b>Offline Show:</b> only its downloaded episodes, seasons as dividers if more than one; "Next" = the next one <i>among the downloaded</i>. Not downloaded ones are left out, not greyed.</li>
+        <li><b>Chip:</b> "✈︎ Downloaded" under the bar, not tappable - tells the grown-up why things are missing.</li>
+        <li><b>Lost mid-tap:</b> the connection drops right as a not-downloaded tile is tapped → a calm full-screen "☁︎ Needs the internet" with one big Back, then Home re-fills from downloads.</li>
+        <li><b>Online, downloaded items look the same</b> - no badge for kids. The grown-up checks on the downloads page (10).</li>
+        <li><b>Nothing downloaded:</b> a big moon + "Nothing to watch offline" and nothing else to press.</li>
+        <li><b>Shared phone:</b> your downloads, only those that pass the age filter. Auto-remove still runs; the player hold keeps a file that's playing.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 10 Downloads -->
+  <section class="screen" id="s-downloads">
+    <h2><span>10</span>Downloads - grown-ups, from inside kids mode</h2>
+    <p>Gate → <b>Downloads</b>. A grown-up page that looks like the kids feed: every show and movie the kid can see, one download button each. Picking a show keeps its next episodes on the phone and tops them up as the kid watches.</p>
+    <div class="pair">
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>100%</span></div>
+        <div class="scroll">
+          <div class="navbar"><span class="bk"><svg viewBox="0 0 13 21"><path d="M11 2 3 10.5 11 19"/></svg>Kids Mode</span></div>
+          <div class="ltitle">Downloads</div>
+          <div class="storage"><div class="sbar"><b style="width:34%"></b><i style="width:8%"></i></div><small>6.8 GB for Mia · 41 GB free · Wi-Fi only</small></div>
+          <div class="ghead">Shows</div>
+          <div class="kdl"><div class="art c2"><div class="glyph">🦕</div></div><span><b>Dino Bakery</b><small>Next 5 episodes · 1.4 GB</small></span><span class="kdlbtn on">✓</span></div>
+          <div class="kdl"><div class="art c3"><div class="glyph">🚂</div></div><span><b>Tiny Trains</b><small>Next 5 episodes · 3 of 5</small></span><span class="kdlbtn part"></span></div>
+          <div class="kdl"><div class="art c4"><div class="glyph">🐱</div></div><span><b>Cloud Kittens</b><small>32 episodes</small></span><span class="kdlbtn">↓</span></div>
+          <div class="kdl"><div class="art c7"><div class="glyph">🐙</div></div><span><b>Deep Blue</b><small>Next 5 episodes · 1.1 GB</small></span><span class="kdlbtn on">✓</span></div>
+          <div class="ghead">Movies</div>
+          <div class="kdl"><div class="art c6"><div class="glyph">🌋</div></div><span><b>Moss and the Sleepy Volcano</b><small>1.9 GB</small></span><span class="kdlbtn on">✓</span></div>
+          <div class="kdl"><div class="art c8"><div class="glyph">🐸</div></div><span><b>Pond Jumpers</b><small>1 h 08</small></span><span class="kdlbtn">↓</span></div>
+          <div class="primary" style="margin-top:20px">Back to Kids Mode</div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><b>Way in:</b> hold the Rillwood mark → math → <b>Downloads</b>. Kids mode stays on underneath; <b>Back to Kids Mode</b> (or ‹) returns to kids Home. Kids never see a download button anywhere.</li>
+        <li><b>The list:</b> the kid's shows (faces) and movies, A-Z, plus a search field on scroll-up. Already kept ones first. Same filter as the kids screens (server on a kids account, the age filter on a shared phone).</li>
+        <li><b>One button per show:</b> ↓ = keep the <b>next 5 episodes</b> (from Next Up, across seasons). ✓ = kept; tap again → Remove. Ring = downloading. A kid never thinks in seasons, and 5 is a car trip.</li>
+        <li><b>Tops itself up:</b> a watched episode makes room - auto-remove takes it (watched cooldown setting), the next one downloads on the next sync run (Wi-Fi only by default). So a kept show always has ~5 ready.</li>
+        <li><b>Movies:</b> ↓ / ✓ like today's download button.</li>
+        <li><b>Storage line:</b> space used by this account's downloads, free space, the network rule (Settings → Downloads). The storage limit and Wi-Fi rule are the app's, unchanged.</li>
+        <li><b>Under the hood:</b> the normal downloads store and native module (<code>docs/context/downloads.md</code>) for the active account; new is only the "keep next N of a show" rule. Needs "Allow downloads" for the user on the server.</li>
+        <li><b>Exact episodes:</b> tap a show's row (not its button) → its episodes by season, each with ↓ - for picking a whole season or one special episode.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="screen">
+    <h2><span>-</span>Open questions</h2>
+    <ul class="notes" style="max-width:820px">
+      <li><b>Apple TV:</b> same idea, but focus + remote change it (faces as the top shelf, hold Menu for the gate). Separate draft once the phone version is agreed.</li>
+      <li><b>Look:</b> draft keeps the app's dark palette + white accent with brighter art. Alternative: a light, softer kids palette - decide before building.</li>
+      <li><b>Limits (episodes, bedtime, daily time):</b> left out - iOS Screen Time / Android Digital Wellbeing cover it.</li>
+      <li><b>Feed order "shuffled per day":</b> or strictly newest? Shuffle keeps old favourites in view; strict order is more predictable for grown-ups.</li>
+      <li><b>Code shape:</b> own route group <code>(kids)/</code> with <code>home</code>, <code>show/[id]</code>; the player stays as is. Lists are filtered <code>/Items</code> requests (above) plus Next Up.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+  // Tablet frame: scale 1180 x 820 to the column
+  const wrap = document.getElementById('tabletWrap');
+  const fit = () => wrap.style.setProperty('--s', wrap.clientWidth / 1180);
+  fit(); addEventListener('resize', fit);
+
+  // Grown-up hold: any brand lockup fills its ring over 2 s; the one in the gate frame opens the math sheet
+  const gate = document.getElementById('gate');
+  document.querySelectorAll('.brand').forEach(brand => {
+    const ring = brand.querySelector('.mring');
+    let start = 0, raf = 0;
+    let linger = 0;
+    // Let go early (or just a tap): the hint stays 3 s so it can be read, then fades. Done: it goes at once.
+    const reset = (done) => {
+      cancelAnimationFrame(raf);
+      if (done === true) { clearTimeout(linger); brand.classList.remove('hint'); }
+      else if (start) { clearTimeout(linger); brand.classList.add('hint'); linger = setTimeout(() => brand.classList.remove('hint'), 3000); }
+      start = 0; brand.classList.remove('held'); ring.style.setProperty('--p', 0);
+    };
+    const tick = () => {
+      const p = Math.min(100, (performance.now() - start) / 20);
+      ring.style.setProperty('--p', p);
+      if (p >= 100) { reset(true); if (brand.id === 'ring') gate.classList.add('open'); return; }
+      raf = requestAnimationFrame(tick);
+    };
+    brand.addEventListener('pointerdown', e => { e.preventDefault(); clearTimeout(linger); brand.classList.remove('hint'); start = performance.now(); brand.classList.add('held'); raf = requestAnimationFrame(tick); });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => brand.addEventListener(t, reset));
+  });
+  // Math gate: a × b (6-9) in words, typed on the pad, checked once both digits are in
+  const words = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+  const sheet = gate.querySelector('.sheet'), q = document.getElementById('q'), ans = document.getElementById('ans');
+  let answer = 0, typed = '';
+  const ask = () => {
+    const a = 6 + Math.floor(Math.random() * 4), b = 6 + Math.floor(Math.random() * 4);
+    answer = a * b; typed = '';
+    q.textContent = `What is ${words[a]} times ${words[b]}?`;
+    draw();
+  };
+  const draw = () => ans.querySelectorAll('i').forEach((cell, i) => (cell.textContent = typed[i] ?? ''));
+  document.getElementById('keys').addEventListener('click', e => {
+    const key = e.target.closest('span');
+    if (!key || key.classList.contains('blank')) return;
+    ans.classList.remove('wrong');
+    if (key.classList.contains('del')) typed = typed.slice(0, -1);
+    else if (typed.length < 2) typed += key.textContent;
+    draw();
+    if (typed.length < 2) return;
+    if (Number(typed) === answer) sheet.classList.add('solved');
+    else { ans.classList.add('wrong'); setTimeout(ask, 450); }
+  });
+  ask();
+  const close = () => { gate.classList.remove('open'); setTimeout(() => { sheet.classList.remove('solved'); ask(); }, 300); };
+  document.getElementById('cancel').addEventListener('click', close);
+  document.getElementById('scrim').addEventListener('click', close);
+</script>
+</body>
+</html>

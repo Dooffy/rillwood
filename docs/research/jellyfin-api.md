@@ -276,6 +276,22 @@ curl -H "$AUTH" -H 'Range: bytes=1000000-' -H 'If-Range: <Last-Modified>' -o par
 curl -o p.jpg "$S/Items/<id>/Images/Primary?fillWidth=300&quality=90&tag=<ImageTags.Primary>"
 ```
 
+## 6b. Parental ratings (kids mode)
+
+Tested 2026-11-19 on 12.1.0 and 10.11.11 (same answers unless noted), showcase library (rated G ... R, TV-G ... TV-14) + test media (unrated). Temp user with `MaxParentalRating` 10, deleted after.
+
+| Check | Result |
+|---|---|
+| `/Localization/ParentalRatings` | 56 ratings, all countries. `{Name, Value, RatingScore: {score, subScore}}`; `Unrated` has no value. US: G / TV-G / TV-Y 0, TV-Y7 7, PG / TV-PG 10, PG-13 13, TV-14 14, R / NC-17 / TV-MA 17 |
+| `/Users/Me` (non-admin) | `Policy.MaxParentalRating` readable (number, absent when no limit); `BlockUnratedItems` = item types, `[]` by default |
+| Episode `OfficialRating` | absent - episodes take the series rating in every server filter |
+| **Limited user** (server policy) | Filters everything: `/Items` (incl. search, episodes), `/UserItems/Resume`, `/Shows/NextUp`, `/Items/Latest`, `/Items/{id}/Similar`. A blocked item's `/Items/{id}` + `PlaybackInfo` → 404; blocked show's `/Shows/{id}/Episodes`: 404 on 12.1, `200` empty on 10.11. Unrated items stay visible unless `BlockUnratedItems` lists the type (`Movie`, `Series` - their episodes go too). `/Genres` not filtered (names only) |
+| **`maxOfficialRating=<name>`** on `/Items` (adult user) | Works: compares by score (`PG` = `TV-PG`), episodes by their series, `searchTerm` too, `/Shows/{id}/Episodes` too. **Keeps unrated items** |
+| `hasParentalRating=true` | Drops unrated movies / series. **Not usable on episodes** (counts every episode as rated) |
+| `maxOfficialRating` on `/UserItems/Resume`, `/Shows/NextUp`, `/Items/Latest` | **Ignored** - all rows come back |
+| Continue Watching via `/Items?filters=IsResumable&sortBy=DatePlayed` + `maxOfficialRating` | Works (one request, filtered) |
+| Next Up | No filtered form - filter its answer in the app (episode → allowed series id) |
+
 ## 7. Open questions
 
 - Quick Connect disabled path not tested. Server source suggests 401 on Initiate - gate the button on `/QuickConnect/Enabled`.

@@ -250,9 +250,24 @@ Release:
 - [ ] 22. App Store: tvOS on the existing app (Universal Purchase), screenshots, review
 - [ ] 23. Optional: Top Shelf extension (Continue Watching on the Apple TV home screen)
 
+## Kids mode (post-MVP)
+
+Phones + tablets. Rules: `docs/context/kids.md`, screens: `docs/research/kids-screens.html` (numbers in brackets).
+
+- [x] 0. Draft screens, context doc, parental rating checks on 12.1 + 10.11 (`docs/research/jellyfin-api.md` §6b)
+- [ ] 1. Rating code: `/Users/Me` limit read (kids account detection), age step → `maxOfficialRating`, allowed-shows episode check - pure, tested
+- [ ] 2. Kids state per account (`kids: off | account | { age, libraries, unrated }`), persisted, survives relaunch
+- [ ] 3. Kids Home + routing: `launchHref`, sign-in, account switch, signed-out redirect → kids; faces, feed, tablet grid, empty / loading (01, 08)
+- [ ] 4. Grown-up gate: hold the mark, math sheet, Downloads / Settings / Switch Account or Leave; first-time coach mark (05)
+- [ ] 5. Show page: episodes in one list, next one marked (03)
+- [ ] 6. Search by name (02)
+- [ ] 7. Settings: Kids Mode row, Kids tag on account rows, Account page Kids account On / Off, back to Kids Mode (06)
+- [ ] 8. Setup: "Who's it for?" after sign-in when detected, Kids Mode page (07)
+- [ ] 9. Downloads: standard view + Add for the trip, keep the next 5 episodes per show, rating score saved with each download (10)
+- [ ] 10. Offline: feed + faces from downloads, same filter; test plan `docs/test-plans/kids.md` (09)
+
 ## Ideas
 
 - [ ] Research Google TV / Android TV: same RN TV fork as Apple TV (`docs/research/apple-tv.md`), player + focus on Android TV, Play TV requirements
-- [ ] Kids mode (post-MVP): a simpler, YouTube-like look for children - big thumbnails in one feed, minimal chrome, only their allowed libraries / parental rating; switch in and out from the profile
 - [ ] Download space limit setting: the user picks the most space downloads may use (e.g. 5 / 10 / 25 / 50 GB / no limit), used bytes shown against it; the pre-flight refuses past the limit as well as on free space
 - [ ] Pick audio / subtitles on the detail screen (idea, every device): tap a track in the expanded Media list to tick it, Play / Resume starts with it (`openPlayer` passes the Jellyfin indexes, the player already takes them). The pick lasts while the page is open; the player's reports save it on the server once it plays. Today the list only shows the server's defaults, picks happen in the player's tracks menu
