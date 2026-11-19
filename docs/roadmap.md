@@ -255,7 +255,7 @@ Release:
 Phones + tablets. Rules: `docs/context/kids.md`, screens: `docs/research/kids-screens.html` (numbers in brackets).
 
 - [x] 0. Draft screens, context doc, parental rating checks on 12.1 + 10.11 (`docs/research/jellyfin-api.md` §6b)
-- [ ] 1. Rating code: `/Users/Me` limit read (kids account detection), age step → `maxOfficialRating`, allowed-shows episode check - pure, tested
+- [x] 1. Rating code: `/Users/Me` limit read (kids account detection), age step → `maxOfficialRating`, allowed-shows episode check - pure, tested
 - [ ] 2. Kids state per account (`kids: off | account | { age, libraries, unrated }`), persisted, survives relaunch
 - [ ] 3. Kids Home + routing: `launchHref`, sign-in, account switch, signed-out redirect → kids; faces, feed, tablet grid, empty / loading (01, 08)
 - [ ] 4. Grown-up gate: hold the mark, math sheet, Downloads / Settings / Switch Account or Leave; first-time coach mark (05)

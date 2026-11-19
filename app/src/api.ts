@@ -184,8 +184,8 @@ export type UserDto = {
   ServerId?: string;
   PrimaryImageTag?: string;
   HasPassword?: boolean;
-  /** `/Users/Me` only. */
-  Policy?: { EnableContentDownloading?: boolean };
+  /** `/Users/Me` only. `MaxParentalRating`: the user's rating limit as a score (absent or null = no limit). */
+  Policy?: { EnableContentDownloading?: boolean; MaxParentalRating?: number | null };
 };
 
 export type AuthenticationResult = {
