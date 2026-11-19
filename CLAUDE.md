@@ -148,6 +148,7 @@ src/useItemDetail.ts     movie / episode detail for both views: `detailView`, pl
 src/useSeriesDetail.ts   series detail for both views: seasons, Next Up, the season shown, what Play plays (`useSeriesPlayTarget`, `episodePlay`), show watched / favourite
 src/useLibrary.ts        Library data for both views: search, type, sort, filters, All rows, paged list, offline state, card handlers
 src/kids.ts              kids mode rating rules (pure): kids account detection (`/Users/Me` limit), age step → `maxOfficialRating` (+ `hasParentalRating`), allowed shows, `keepAllowed` (episodes by their show)
+src/kidsSettings.ts      kids mode state per account (persisted): kids account mark, shared phone mode + age / unrated / libraries; `kidsMode`, `kidsFilter`, `useKids`; dropped with the account
 src/connection.ts        offline mode: `/System/Info/Public` check at launch, foreground, account switch + backoff while offline; back online → failed screens reload
 src/navigation.ts        resetTo (clear stack), signed-out redirect (`signedOutHref`: TV → Who's Watching / Sign in), openItem, openPlayer, openDownloads, openLibrary, tabs list, header options (page, plainPage, readablePage)
 src/orientation.ts       rotation lock: phones upright (player excepted), tablets free; never loaded on Apple TV
