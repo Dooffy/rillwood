@@ -6,7 +6,7 @@
 // for a saved setting (CLAUDE.md §3).
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import type { ItemsResult } from '@/api';
 
@@ -43,9 +43,30 @@ function enterKidsMode(accountId: string) {
 }
 
 /**
+ * A kids account → the normal app, after asking. The server's limit stays (it's the server's), the text says so. Back:
+ * Account → Kids account On.
+ */
+export function confirmAdultAccount(accountId: string, userName: string) {
+  Alert.alert(
+    `Make ${userName} an adult account?`,
+    `Rillwood opens the normal app for ${userName}. What ${userName} can watch is still set on the server - change the limit there too.`,
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Make Adult Account',
+        onPress: () => {
+          setKids(accountId, { account: false });
+          resetTo('/home');
+        },
+      },
+    ],
+  );
+}
+
+/**
  * Settings' Kids Mode card for the active account. Kids mode off: the shared phone filter (age pills, unrated toggle) +
  * Start. Opened from kids mode (gate → Settings) on a shared phone: the same picks (they apply at once) + Switch to Adult
- * Mode. A kids account: no picks (the server filters) + Switch Account. Back to kids mode = the header's back button.
+ * Mode. A kids account: no picks (the server filters) + Make an Adult Account + Switch Account. Back to kids mode = the header's back button.
  */
 export function KidsModeCard() {
   const { active } = useSession();
@@ -99,7 +120,14 @@ export function KidsModeCard() {
           }}
         />
       ) : account ? (
-        <Button title="Switch Account" variant="secondary" onPress={() => router.push('/accounts')} />
+        <>
+          <Button
+            title="Make an Adult Account"
+            variant="secondary"
+            onPress={() => confirmAdultAccount(id, active.userName)}
+          />
+          <Button title="Switch Account" variant="secondary" onPress={() => router.push('/accounts')} />
+        </>
       ) : (
         <Button
           title="Switch to Adult Mode"

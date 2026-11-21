@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { Storage } from 'expo-sqlite/kv-store';
+import { Alert } from 'react-native';
 
 import * as api from '@/api';
 import Account from '@/app/(auth)/account';
@@ -144,6 +145,32 @@ describe('Settings opened from kids mode', () => {
     expect(screen.queryByRole('button', { name: 'Switch to Adult Mode' })).toBeNull();
     await fireEvent.press(screen.getByRole('button', { name: 'Switch Account' }));
     expect(router.push).toHaveBeenCalledWith('/accounts');
+  });
+
+  it('kids account: the app settings under the card (a kids-only device can change them) - no accounts, no Kids Mode row', async () => {
+    setKids(anna.id, { account: true });
+    await withToast(<Settings />);
+    for (const name of ['DISPLAY', 'PLAYBACK', 'DOWNLOADS', 'ABOUT'])
+      expect(screen.getByRole('header', { name })).toBeOnTheScreen();
+    expect(screen.queryByRole('header', { name: 'ACCOUNTS' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Kids Mode/ })).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: /^Storage limit/ }));
+    expect(router.push).toHaveBeenCalledWith('/download-storage');
+  });
+
+  it('kids account: Make an Adult Account asks (the server limit stays), then the normal Home', async () => {
+    const alert = jest.spyOn(Alert, 'alert');
+    setKids(anna.id, { account: true });
+    await withToast(<Settings />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Make an Adult Account' }));
+    const [title, text, buttons] = alert.mock.calls[0];
+    expect(title).toBe('Make anna an adult account?');
+    expect(text).toMatch(/still set on the server/);
+    expect(getKids(anna.id).account).toBe(true);
+    await act(async () => buttons?.find((b) => b.text === 'Make Adult Account')?.onPress?.());
+    expect(getKids(anna.id).account).toBe(false);
+    expect(router.replace).toHaveBeenCalledWith('/home');
+    alert.mockRestore();
   });
 
   it('tablet landscape: no account page beside the list', async () => {
