@@ -13,21 +13,22 @@ import { useSession } from '@/session';
 import { formatDownloadLimit, useDownloadLimit } from '@/settings';
 import { kids as kidsTheme, useWideLandscape } from '@/theme';
 
-/** Kids mode is on for the active account: Settings was opened through the gate. */
-function useFromKidsMode() {
+/** Kids mode for the active account ('off' = the full app); on, Settings was opened through the gate. */
+function useKidsModeNow() {
   const { active } = useSession();
   const kids = useKids(active?.id);
-  return active !== null && kidsMode(kids) !== 'off';
+  return active ? kidsMode(kids) : 'off';
 }
 
 /**
  * Accounts on top (one tap switches), the Kids Mode row (its screen starts kids mode), then app settings. Opened from
- * kids mode: only the Kids Mode card (the kid's filter and the way out). Tablets in landscape: the page a row opens
- * shows beside it.
+ * kids mode on a shared phone: only the Kids Mode card (the kid's filter and the way out - the grown-up turns kids mode
+ * off for the rest). A kids account: the card, then the app settings (the device may have no other account to change
+ * them from). Tablets in landscape: the page a row opens shows beside it.
  */
 export function PhoneSettings() {
   // From kids mode the pane starts empty - no account page there.
-  const start = useFromKidsMode() ? null : undefined;
+  const start = useKidsModeNow() !== 'off' ? null : undefined;
   return useWideLandscape() ? (
     <SettingsSplit start={start}>
       <SettingsList />
@@ -42,19 +43,19 @@ export function PhoneSettings() {
 function SettingsList() {
   const { active } = useSession();
   const kids = useKids(active?.id);
-  const fromKids = useFromKidsMode();
+  const mode = useKidsModeNow();
   const subtitleSize = usePicker('subtitle-size').choice?.label;
   const subtitleColour = usePicker('subtitle-colour').choice?.label;
   const downloadLimit = useDownloadLimit();
   const link = useSettingsLink();
 
-  // Opened from kids mode (gate → Settings): only the card - the kid's filter and the way out. The rest is device-wide
-  // (it would change the grown-ups' settings too): it waits in the full app.
-  if (fromKids) return <KidsModeCard />;
+  // Shared phone in kids mode (gate → Settings): only the card - the kid's filter and the way out. The rest is
+  // device-wide: it waits in the full app.
+  if (mode === 'shared') return <KidsModeCard />;
 
   const subtitles = { page: 'subtitles' } as const;
   const storage = { page: 'storage' } as const;
-  const about = { page: 'about' } as const;
+  const aboutPage = { page: 'about' } as const;
   const kidsPage = { page: 'kids-mode' } as const;
 
   const display = (
@@ -90,6 +91,24 @@ function SettingsList() {
     </ListSection>
   );
 
+  const about = (
+    <ListSection title="About">
+      <ListRow label="About Rillwood" selected={link.selected(aboutPage)} onPress={() => link.open(aboutPage)} />
+    </ListSection>
+  );
+
+  // A kids account (gate → Settings): the card (its way out), then the app settings - no accounts, no Kids Mode row.
+  if (mode === 'account')
+    return (
+      <>
+        <KidsModeCard />
+        {display}
+        {playback}
+        {downloads}
+        {about}
+      </>
+    );
+
   return (
     <>
       <AccountsSection />
@@ -109,9 +128,7 @@ function SettingsList() {
       {display}
       {playback}
       {downloads}
-      <ListSection title="About">
-        <ListRow label="About Rillwood" selected={link.selected(about)} onPress={() => link.open(about)} />
-      </ListSection>
+      {about}
     </>
   );
 }

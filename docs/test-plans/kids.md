@@ -33,7 +33,8 @@ Setup on the server: an adult user, a kids user with a parental rating limit (e.
 | K11 | Tap the gear (a sum like 15 + 2 = ?), answer wrong, then right                                         | Shake + new question; right: green check ~1.7 s, then the actions           |
 | K12 | Gate → Settings (shared phone)                                                 | Only the Kids Mode card; age / unrated change kids Home on ‹ Kids Mode      |
 | K13 | Card → Switch to Adult Mode                                                    | Normal Home; relaunch stays in the normal app                                |
-| K14 | Kids account: gate → Settings, then Switch Account                             | Card without picks; Switch Account opens the accounts                        |
+| K14 | Kids account: gate → Settings, then Switch Account                             | Card without picks, then Display / Playback / Downloads / About (no accounts); Switch Account opens the accounts |
+| K14b | Kids account: gate → Settings → Storage limit, set one; then Make an Adult Account | The limit saves; asks (server limit stays), then the normal Home; relaunch stays normal; Account → Kids account On brings kids mode back |
 
 ## Downloads (gate → Downloads)
 
