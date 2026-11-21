@@ -10,6 +10,7 @@ import { kidsFilter, useKids } from '@/kidsSettings';
 import { useSession } from '@/session';
 import { useDebounced } from '@/useDebounced';
 import { invalidate, useFetch } from '@/useFetch';
+import { NO_ART, useOfflineKids } from '@/useOfflineKids';
 
 /** Wait this long after the last key before searching. */
 export const KIDS_SEARCH_DEBOUNCE_MS = 300;
@@ -37,7 +38,27 @@ export function useKidsSearch(text: string) {
   const loading = term !== undefined && !loaded && (titles.loading || episodes.loading || allowed.loading);
   const failure = titles.error ?? episodes.error ?? allowed.error;
   const offline = useHeldOffline(!loaded && isConnectionError(failure), loading);
+  const fromDownloads = useOfflineKids();
 
+  // Out of reach: searches the downloads by name (an episode by its own name or its show's).
+  if (fromDownloads) {
+    const needle = term?.toLocaleLowerCase();
+    const has = (name: string | undefined) => !!needle && (name ?? '').toLocaleLowerCase().includes(needle);
+    const titlesFound = needle ? fromDownloads.titles.filter((t) => has(t.Name)) : [];
+    const episodesFound = needle
+      ? [...fromDownloads.episodes.values()].flat().filter((e) => has(e.Name) || has(e.SeriesName))
+      : [];
+    return {
+      searching: term !== undefined,
+      titles: titlesFound,
+      episodes: episodesFound,
+      loading: false,
+      offline: { offline: false, busy: false },
+      error: undefined,
+      empty: term !== undefined && titlesFound.length === 0 && episodesFound.length === 0,
+      art: fromDownloads.art,
+    };
+  }
   return {
     /** Something typed (debounced): results are for it. */
     searching: term !== undefined,
@@ -47,5 +68,6 @@ export function useKidsSearch(text: string) {
     offline,
     error: !loaded && !offline.offline ? failure : undefined,
     empty: loaded && (titles.data?.Items.length ?? 0) === 0 && keptEpisodes.length === 0,
+    art: NO_ART,
   };
 }

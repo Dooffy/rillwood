@@ -226,6 +226,8 @@ export const kids = {
     episode: { fontSize: 18, fontWeight: '700' },
     gateQuestion: { fontSize: 22, fontWeight: '700' },
     search: { fontSize: 22, fontWeight: '700' },
+    /** Offline, nothing downloaded: the big moon. */
+    offlineMoon: { fontSize: 72 },
     gateDigit: { fontSize: 28, fontWeight: '700' },
   },
 } as const;

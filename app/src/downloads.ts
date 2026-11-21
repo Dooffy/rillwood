@@ -805,6 +805,12 @@ export type DownloadSummary = {
   done: number;
   /** Bytes of the whole group once downloaded (each download's total). */
   size: number;
+  /** Transferring right now (not queued, not held by the network rule). */
+  running: number;
+  /** Ended with an error (paused state). */
+  failed: number;
+  /** Something held by the network rule (Wi-Fi only / no connection). */
+  waitingForNetwork: boolean;
 };
 
 export function summarize(downloads: readonly Download[]): DownloadSummary | null {
@@ -825,6 +831,9 @@ export function summarize(downloads: readonly Download[]): DownloadSummary | nul
     itemIds: [...new Set(downloads.map((d) => d.itemId))],
     done,
     size: total,
+    running: downloads.filter((d) => d.status === 'downloading' && d.reason !== 'network').length,
+    failed: downloads.filter((d) => d.status === 'error').length,
+    waitingForNetwork: downloads.some((d) => d.reason === 'network' && d.status !== 'done' && d.status !== 'error'),
   };
 }
 
@@ -838,6 +847,9 @@ const sameSummary = (a: DownloadSummary | null, b: DownloadSummary | null) =>
     a.progress === b.progress &&
     a.done === b.done &&
     a.size === b.size &&
+    a.running === b.running &&
+    a.failed === b.failed &&
+    a.waitingForNetwork === b.waitingForNetwork &&
     a.ids.join() === b.ids.join());
 
 /** A group's downloads (`downloadGroup`), with live progress; null when there are none or no group. */

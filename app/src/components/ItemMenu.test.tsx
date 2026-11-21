@@ -87,6 +87,9 @@ describe('downloadActions', () => {
     itemIds: ['i'],
     done,
     size: 0,
+    running: state === 'downloading' ? 1 : 0,
+    failed: 0,
+    waitingForNetwork: false,
   });
   const labels = (over: Partial<DownloadControl>) => downloadActions(control(over)).map((a) => a.label);
 

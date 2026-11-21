@@ -10,7 +10,7 @@ import { ActivityIndicator, Alert, SectionList, StyleSheet, View } from 'react-n
 import { request, type BaseItemDto, type ItemsResult, type UserDto } from '@/api';
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
 import { Artwork } from '@/components/Artwork';
-import { DownloadButton } from '@/components/DownloadButton';
+import { DownloadButton, isWaiting } from '@/components/DownloadButton';
 import { DownloadRing } from '@/components/DownloadRing';
 import { IconButton } from '@/components/IconButton';
 import { Empty, LoadError, Message, Offline } from '@/components/Message';
@@ -34,7 +34,7 @@ import { keptEpisodes } from '@/kidsKeep';
 import { kidsDownloadSections, NEXT_COUNT, playableEpisodes, showFiles } from '@/kidsDownloads';
 import { isKept, keepShow, stopKeeping, useKids } from '@/kidsSettings';
 import { useSession } from '@/session';
-import { getDownloadNetwork, useDownloadLimit } from '@/settings';
+import { getDownloadNetwork, useDownloadLimit, useDownloadNetwork, type DownloadNetwork } from '@/settings';
 import { minTouch, radii, scrollList, spacing, useColors } from '@/theme';
 import { confirmDeleteDownloads, useStartDownload } from '@/useDownloadControl';
 import { useFetch } from '@/useFetch';
@@ -102,6 +102,14 @@ export function KidsDownloads() {
       {home.offline.offline && <Offline busy={home.offline.busy} retry={refreshKids} />}
       {home.error && <LoadError error={home.error} retry={refreshKids} />}
       {home.loading && home.titles.length === 0 && <ActivityIndicator color={c.text} />}
+      {!blocked && home.empty && home.downloaded && (
+        <Empty
+          icon={{ ios: 'arrow.down.circle', android: 'download' }}
+          title="Nothing Downloaded"
+          text="Shows and movies you download here play without the internet. Connect to download some."
+        />
+      )}
+      {!blocked && home.empty && !home.downloaded && <Message text="Nothing to watch yet." />}
       {!blocked && term && home.titles.length > 0 && sections.length === 0 && <Message text="Nothing called that." />}
     </View>
   );
@@ -123,13 +131,13 @@ export function KidsDownloads() {
           {section.title.toUpperCase()}
         </Text>
       )}
-      renderItem={({ item }) => <TitleRow item={item} />}
+      renderItem={({ item }) => <TitleRow item={item} art={home.art.get(item.Id)} />}
     />
   );
 }
 
 /** One show or movie: poster, name, what's on the phone, its download button. */
-const TitleRow = memo(function TitleRow({ item }: { item: BaseItemDto }) {
+const TitleRow = memo(function TitleRow({ item, art }: { item: BaseItemDto; art?: string }) {
   const c = useColors();
   const image = useImage();
   const accountId = useSession().active?.id;
@@ -139,12 +147,13 @@ const TitleRow = memo(function TitleRow({ item }: { item: BaseItemDto }) {
   // A movie not on the phone yet: its file size (the detail request, cached; only rows on screen ask).
   const detail = useFetch<BaseItemDto>(!show && !summary ? itemDetail(item.Id).path : null);
   const kept = isKept(useKids(accountId), show ? item.Id : undefined);
-  const status = statusLine(summary, show, item.RecursiveItemCount, detail.data?.MediaSources?.[0]?.Size);
+  const network = useDownloadNetwork();
+  const status = statusLine(summary, show, item.RecursiveItemCount, detail.data?.MediaSources?.[0]?.Size, network);
   const line = kept ? [`Keeping ${NEXT_COUNT}`, status].filter(Boolean).join(' · ') : status;
   return (
     <View style={[styles.row, { backgroundColor: c.surface }]}>
       <View style={styles.poster}>
-        <Artwork image={image(posterImage(item), POSTER_WIDTH)} aspectRatio={2 / 3} />
+        <Artwork image={art ?? image(posterImage(item), POSTER_WIDTH)} aspectRatio={2 / 3} />
       </View>
       <View style={styles.text}>
         <Text numberOfLines={2}>{item.Name}</Text>
@@ -160,9 +169,10 @@ const TitleRow = memo(function TitleRow({ item }: { item: BaseItemDto }) {
 });
 
 /**
- * What of it is on the phone. A show: "5/32 episodes · 1.4 GB" (on the phone / in the show, when the server says how
- * many), "0/32 episodes" before any; while it downloads "Downloading 2 of 5". A movie: its size ("1.9 GB"), then
- * "On this phone · 1.9 GB".
+ * What of it is on the phone, in the Downloads tab's words. A show: "5/32 episodes · 1.4 GB" (on the phone / in the
+ * show, when the server says how many), "0/32 episodes" before any; while it runs "Downloading 12% · 2 of 5", else
+ * "Waiting for Wi-Fi · 2 of 5" / "Waiting · 2 of 5" / "Failed · 2 of 5" / "Paused · 2 of 5". A movie: its size
+ * ("1.9 GB"), the same words while it's on the way, then "On this phone · 1.9 GB".
  */
 export function statusLine(
   summary: DownloadSummary | null,
@@ -170,18 +180,25 @@ export function statusLine(
   episodes: number | undefined,
   /** A movie's file size before it's downloaded. */
   fileSize?: number,
+  network: DownloadNetwork = 'wifi',
 ): string | undefined {
-  const size = summary ? ` · ${formatBytes(summary.size)}` : '';
-  if (!show) {
-    if (!summary) return fileSize ? formatBytes(fileSize) : undefined;
-    if (summary.state === 'downloading') return 'Downloading';
-    if (summary.state === 'paused') return 'Paused';
-    return `On this phone${size}`;
-  }
   if (summary && summary.state !== 'done') {
-    const word = summary.state === 'downloading' ? 'Downloading' : 'Paused';
-    return `${word} ${summary.done} of ${summary.ids.length}`;
+    const state =
+      summary.running > 0
+        ? `Downloading ${Math.floor(summary.progress * 100)}%`
+        : summary.waitingForNetwork
+          ? network === 'any'
+            ? 'Waiting for network'
+            : 'Waiting for Wi-Fi'
+          : summary.failed > 0
+            ? 'Failed'
+            : summary.state === 'paused'
+              ? 'Paused'
+              : 'Waiting';
+    return show ? `${state} · ${summary.done} of ${summary.ids.length}` : state;
   }
+  const size = summary ? ` · ${formatBytes(summary.size)}` : '';
+  if (!show) return summary ? `On this phone${size}` : fileSize ? formatBytes(fileSize) : undefined;
   const here = summary?.itemIds.length ?? 0;
   if (episodes) return `${here}/${episodes} episodes${size}`;
   return summary ? `${here} ${here === 1 ? 'episode' : 'episodes'}${size}` : undefined;
@@ -284,7 +301,12 @@ function ShowDownload({ show, summary }: { show: BaseItemDto; summary: DownloadS
           onPress={open}
         />
       ) : (
-        <DownloadRing progress={summary.progress} paused={summary.state === 'paused'} onPress={open} />
+        <DownloadRing
+          progress={summary.progress}
+          paused={summary.state === 'paused'}
+          spinning={isWaiting(summary)}
+          onPress={open}
+        />
       )}
       <ActionSheet visible={menu} title={`Download ${show.Name}`} actions={actions} onClose={() => setMenu(false)} />
     </View>

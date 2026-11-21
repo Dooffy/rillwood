@@ -30,7 +30,7 @@ State per account: `src/kidsSettings.ts` (persisted key `settings.kids`, one ent
 - No detail pages, menus, filters, sort, long-press, download buttons.
 - Fast double taps open one screen (`once`, 800 ms, `src/components/kids/KidsCards.tsx`).
 
-Built (tasks 3, 5, 6, 8): `app/kids.tsx` → `KidsHome`, `app/kids-show/[id].tsx` → `KidsShow`, `app/kids-search.tsx` → `KidsSearch` (`src/screens/kids/`), data `useKidsHome` / `useKidsShow`, cards `src/components/kids/`, sizes `kids` in `src/theme.ts`. Start screen per account: `homeHref` (`src/navigation.ts`) - launch, sign-in, account switch and the account removal hand-over land on `/kids` while kids mode is on; Apple TV never. Until later tasks: no new-episode dot on show posters yet; offline shows the Offline card (downloads, task 10).
+Built (tasks 3, 5, 6, 8): `app/kids.tsx` → `KidsHome`, `app/kids-show/[id].tsx` → `KidsShow`, `app/kids-search.tsx` → `KidsSearch`, offline from downloads (`useOfflineKids`) (`src/screens/kids/`), data `useKidsHome` / `useKidsShow`, cards `src/components/kids/`, sizes `kids` in `src/theme.ts`. Start screen per account: `homeHref` (`src/navigation.ts`) - launch, sign-in, account switch and the account removal hand-over land on `/kids` while kids mode is on; Apple TV never. Until later tasks: no new-episode dot on show posters yet.
 
 ## Grown-up gate
 
@@ -95,6 +95,8 @@ Kids account: no app filter. A blocked show's episodes come back 404 on 12.1, `2
 ## Offline
 
 - The feed and faces come from the account's downloads, same filter. Kids can't tell anything is missing; a small "Downloaded" chip is for grown-ups.
+- Built (task 10): while the offline flag is up (`useOffline`, `src/connection.ts` checks), `useOfflineKids` → `offlineKids` (`src/kidsOffline.ts`): the account's finished downloads that pass `allowedOffline` (the saved score; a kids account every one), their saved items (watched here and not synced - `watchedAt` - counts as watched). Home: shows with a downloaded episode + movies, last watched first then A-Z, a full-width **✈︎ Offline · showing what's downloaded** bar under the top bar (not tappable), no Offline card; nothing → 🌙 "Nothing to watch offline". Show page: its downloaded episodes in order, next = the first not watched. Search: the downloads by name (an episode by its show's name too). Pictures from the art saved with each download (`art` prop on the kids cards: a show / movie its poster, an episode its still). Kids Downloads (gate) lists the downloaded titles too; nothing downloaded → "Nothing Downloaded" (connect to download some). A show page with none of its episodes left on the phone says so. The library pick doesn't apply offline (a download doesn't know its library). Back online: everything from the server again, the bar goes.
+- Device test plan: `docs/test-plans/kids.md` (all of kids mode, offline rows K21-K27).
 
 ## Open
 
