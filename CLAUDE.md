@@ -158,9 +158,10 @@ src/useHome.ts           Home data for both views: top rows' fetches, layout (`h
 src/useItemDetail.ts     movie / episode detail for both views: `detailView`, play / play from start, watched / favourite, the episode's series
 src/useSeriesDetail.ts   series detail for both views: seasons, Next Up, the season shown, what Play plays (`useSeriesPlayTarget`, `episodePlay`), show watched / favourite
 src/useLibrary.ts        Library data for both views: search, type, sort, filters, All rows, paged list, offline state, card handlers
-src/kids.ts              kids mode rating rules (pure): kids account detection (`/Users/Me` limit), age step → `maxOfficialRating` (+ `hasParentalRating`), allowed shows, `keepAllowed` (episodes by their show), kids requests (`kidsTitles`, `kidsEpisodes`, `kidsSearch`; the library pick as `parentId`), `episodeRows` (show page rows: season dividers, columns)
+src/kids.ts              kids mode rating rules (pure): kids account detection (`/Users/Me` limit), age step → `maxOfficialRating` (+ `hasParentalRating`), allowed shows, `keepAllowed` (episodes by their show), kids requests (`kidsTitles`, `kidsEpisodes`, `kidsSearch`; the library pick as `parentId`), `allowedOffline` (a download's saved score vs the age), `episodeRows` (show page rows: season dividers, columns)
 src/kidsSettings.ts      kids mode state per account (persisted): kids account mark, shared phone mode + age / unrated / libraries, kept shows (`keepShow`, `stopKeeping`); `kidsMode`, `kidsFilter`, `useKids`; dropped with the account
 src/kidsGate.ts          kids grown-up gate (pure): the sum (6-9 x 6-9 in words, never the same twice), answer check
+src/ratings.ts           rating scores for downloads: the server's table (once per server) → each item's score, an episode its show's (kids offline filter)
 src/kidsKeep.ts          kids kept shows: after each sync run's auto-remove, start each kept show's next 5 (`topUpKept`)
 src/kidsDownloads.ts     kids downloads (pure): a show's files, Next 5 from Next Up (`episodesToKeep`), the page's list (on the phone first, A-Z, search)
 src/connection.ts        offline mode: `/System/Info/Public` check at launch, foreground, account switch + backoff while offline; back online → failed screens reload

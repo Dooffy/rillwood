@@ -4,6 +4,7 @@ import { describe, expect, it } from '@jest/globals';
 import type { BaseItemDto, UserDto } from './api';
 import {
   AGE_STEPS,
+  allowedOffline,
   allowedShows,
   episodeRows,
   isKidsAccount,
@@ -83,6 +84,26 @@ describe('keepAllowed', () => {
   it('keeps the order', () => {
     const items = [item('m', 'Movie'), item('e', 'Episode', 'ok'), item('m2', 'Movie')];
     expect(keepAllowed(items, shows).map((i) => i.Id)).toEqual(['m', 'e', 'm2']);
+  });
+});
+
+describe('allowedOffline', () => {
+  it('a kids account (no filter): every download', () => {
+    expect(allowedOffline(17, undefined)).toBe(true);
+    expect(allowedOffline(undefined, undefined)).toBe(true);
+  });
+
+  it('a shared phone: the saved score up to the age (TV-G 0, TV-Y7 7, PG 10, PG-13 13)', () => {
+    expect(allowedOffline(0, { age: 3, unrated: false })).toBe(true);
+    expect(allowedOffline(7, { age: 3, unrated: false })).toBe(false);
+    expect(allowedOffline(7, { age: 7, unrated: false })).toBe(true);
+    expect(allowedOffline(10, { age: 10, unrated: false })).toBe(true);
+    expect(allowedOffline(14, { age: 13, unrated: true })).toBe(false);
+  });
+
+  it('unrated (no score): only when unrated videos show', () => {
+    expect(allowedOffline(undefined, { age: 13, unrated: false })).toBe(false);
+    expect(allowedOffline(undefined, { age: 3, unrated: true })).toBe(true);
   });
 });
 

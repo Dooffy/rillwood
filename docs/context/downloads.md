@@ -77,6 +77,8 @@ Contract (types, calls, events): [`app/modules/downloads/index.ts`](../../app/mo
 - Orphan sweep (`sweepOrphans`, at the end of a reconcile, at most once a week - `dlSweep` in kv-store; a stamp in the future runs it): deletes under `downloads/` what no download in the index owns - a folder no download's path runs through, a file that isn't a version's own (`versionFile`) or its item's shared `item.json` / `poster.jpg` / `backdrop.jpg` / `still.jpg` (`sharedFiles`). Skipped when native didn't answer or the index is unreadable or was never saved (a lost kv-store would take every file) (reconcile doesn't cancel then either). Silent - no toast. Device test OS1-OS4 pending
 - Device test plan (M5): `docs/test-plans/downloads.md` (scaffold rows done) - force-quit, OS kill, reboot, airplane mode, 20GB + 60GB file, file replaced mid-download, token revoked, low disk, Android Task Manager stop + dataSync timeout + standby buckets, notification permission denied, iOS `Authorization` header on a background task.
 
+- `rating` (score, kids mode's offline filter): looked up just after a start (`ratingScores`, `src/ratings.ts`) and saved with `rate`; unset = unrated. Never delays the start. Details: `docs/context/kids.md`, Downloads.
+
 ## Offload (`src/offload.ts`)
 
 - Kids mode kept shows (`kidsSettings` `kept`): their episodes also go 24 h after watching (`KEPT_WATCHED_HOURS`) with Remove watched off (a shorter setting wins); after each cleanup `topUpKept` (`src/kidsKeep.ts`) starts the shows' next episodes. Details: `docs/context/kids.md`, Downloads.

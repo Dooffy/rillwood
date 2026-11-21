@@ -16,6 +16,18 @@ export type KidsFilter = { age: AgeStep; unrated: boolean; library?: string };
  */
 const MAX_RATING: Record<AgeStep, string> = { 3: 'TV-G', 7: 'TV-Y7', 10: 'PG', 13: 'PG-13' };
 
+/** The same limits as scores (the server's table: TV-G 0, TV-Y7 7, PG 10, PG-13 13) - for downloads, offline. */
+const MAX_SCORE: Record<AgeStep, number> = { 3: 0, 7: 7, 10: 10, 13: 13 };
+
+/**
+ * A download in kids mode offline (shared phone filter; a kids account has none - the server filtered it): its saved
+ * score up to the age, or - unrated (no score) - only when unrated videos show.
+ */
+export function allowedOffline(rating: number | undefined, filter: KidsFilter | undefined): boolean {
+  if (!filter) return true;
+  return rating === undefined ? filter.unrated : rating <= MAX_SCORE[filter.age];
+}
+
 /** A user with a rating limit on the server (`/Users/Me`): detected as a kids account. */
 export function isKidsAccount(user: UserDto | undefined): boolean {
   return typeof user?.Policy?.MaxParentalRating === 'number';

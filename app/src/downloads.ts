@@ -22,6 +22,7 @@ import {
   type Snapshot,
 } from '@/downloadSnapshot';
 import { itemDetail } from '@/items';
+import { ratingScores } from '@/ratings';
 import { connectionFor, getSession, subscribeSession, type Account } from '@/session';
 import { getDownloadLimit, getDownloadNetwork, limitBytes, subscribeSettings } from '@/settings';
 
@@ -56,6 +57,11 @@ export type Download = {
   watchedAt?: number;
   /** Item JSON, poster, backdrop, subtitles saved next to the file; missing → retried at reconcile. */
   snapshot?: Snapshot;
+  /**
+   * The server's rating score when it started (an episode: its show's) - kids mode's offline filter (`allowedOffline`).
+   * Unset = unrated (no rating, or no answer at the time).
+   */
+  rating?: number;
 };
 
 export type DownloadRequest = { item: BaseItemDto; source: MediaSourceDto };
@@ -192,6 +198,22 @@ function put(downloads: Download[]) {
   dirty = true;
   save();
   downloads.forEach(notify);
+}
+
+/**
+ * Saves the rating scores that came in for the account's downloads still here (one write). Its own only: another
+ * account may be on another server, where the same item id is something else.
+ */
+function rate(accountId: string, scores: ReadonlyMap<string, number>) {
+  const items = store();
+  for (const [itemId, rating] of scores) {
+    for (const d of items.values()) {
+      if (d.accountId !== accountId || d.itemId !== itemId || d.rating === rating) continue;
+      items.set(d.id, { ...d, rating });
+      dirty = true;
+    }
+  }
+  save();
 }
 
 function remove(id: string) {
@@ -434,6 +456,13 @@ export async function startDownloads(requests: DownloadRequest[]): Promise<Start
     put(downloads);
     send(downloads);
     downloads.forEach((d, i) => void snapshot(d, account.server.url, from[i]));
+    // The rating scores come after (never hold a start up): one cached list per server, an episode asks for its show.
+    const conn = connectionFor(account);
+    if (conn)
+      void ratingScores(
+        conn,
+        from.map((r) => r.item),
+      ).then((scores) => rate(account.id, scores));
   }
   return { ok: true, started: downloads.length, skipped: requests.length - downloads.length };
 }
