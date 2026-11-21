@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Kids Home (docs/context/kids.md, screen draft 01 + 08): one screen, no tabs. The brand lockup, then every show and
-// movie once as a poster - two across on phones, more on tablets. A show opens its page, a movie plays. Phones and
-// tablets only (no TV view).
+// movie once as a poster - two across on phones, more on tablets. A show opens its page, a movie plays. The gear beside
+// the lockup opens the grown-up gate (`KidsGate`). Phones and tablets only.
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,9 +11,14 @@ import type { BaseItemDto } from '@/api';
 import { CardPlaceholder } from '@/components/Card';
 import { KidsBrand } from '@/components/kids/KidsBrand';
 import { KidsPoster } from '@/components/kids/KidsCards';
+import { KidsGate } from '@/components/kids/KidsGate';
+import type { SheetAction } from '@/components/ActionSheet';
+import { IconButton } from '@/components/IconButton';
 import { LoadError, Message, Offline } from '@/components/Message';
-import { playItem } from '@/navigation';
-import { kids, scrollList, useColors, useWide } from '@/theme';
+import { kidsMode, setKids, useKids, type KidsMode } from '@/kidsSettings';
+import { playItem, resetTo } from '@/navigation';
+import { useSession } from '@/session';
+import { kids, scrollList, spacing, useColors, useWide } from '@/theme';
 import { refreshKids, useKidsHome } from '@/useKidsHome';
 import { usePullToRefresh } from '@/usePullToRefresh';
 
@@ -30,8 +36,32 @@ export function openKidsTitle(item: BaseItemDto) {
   else playItem(item);
 }
 
+/**
+ * Behind the gate. Both kinds: Settings. A kids account: Switch Account (it always opens in kids mode - switching is the
+ * way out). A shared phone: Leave Kids Mode (back to this account's normal app).
+ */
+export function gateActions(mode: KidsMode, accountId: string | undefined): SheetAction[] {
+  const settings = { label: 'Settings', onPress: () => router.push('/settings') };
+  if (mode === 'shared' && accountId) {
+    return [
+      settings,
+      {
+        label: 'Leave Kids Mode',
+        onPress: () => {
+          setKids(accountId, { shared: false });
+          resetTo('/home');
+        },
+      },
+    ];
+  }
+  return [settings, { label: 'Switch Account', onPress: () => router.push('/accounts') }];
+}
+
 export function KidsHome() {
   const home = useKidsHome();
+  const { active } = useSession();
+  const mode = kidsMode(useKids(active?.id));
+  const [gate, setGate] = useState(false);
   const c = useColors();
   const insets = useSafeAreaInsets();
   const wide = useWide();
@@ -43,6 +73,12 @@ export function KidsHome() {
     <View style={styles.header}>
       <View style={styles.bar}>
         <KidsBrand />
+        <IconButton
+          icon={{ ios: 'gearshape.fill', android: 'settings' }}
+          label="Grown-ups"
+          variant="plain"
+          onPress={() => setGate(true)}
+        />
       </View>
       {home.offline.offline && <Offline busy={home.offline.busy} retry={refreshKids} />}
       {home.error && <LoadError error={home.error} retry={refreshKids} />}
@@ -78,6 +114,7 @@ export function KidsHome() {
         renderItem={({ item }) => <KidsPoster item={item} width={tileWidth} onOpen={openKidsTitle} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.text} />}
       />
+      <KidsGate visible={gate} actions={gateActions(mode, active?.id)} onClose={() => setGate(false)} />
     </View>
   );
 }
@@ -86,6 +123,12 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { paddingHorizontal: kids.gutter },
   header: { gap: kids.gap },
-  bar: { flexDirection: 'row', alignItems: 'center', paddingTop: kids.gutter / 2, paddingHorizontal: kids.gutter / 4 },
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingTop: kids.gutter / 2,
+    paddingHorizontal: kids.gutter / 4,
+  },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
 });

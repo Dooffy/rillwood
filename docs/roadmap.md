@@ -258,7 +258,7 @@ Phones + tablets. Rules: `docs/context/kids.md`, screens: `docs/research/kids-sc
 - [x] 1. Rating code: `/Users/Me` limit read (kids account detection), age step → `maxOfficialRating`, allowed-shows episode check - pure, tested
 - [x] 2. Kids state per account (`kids: off | account | { age, libraries, unrated }`), persisted, survives relaunch
 - [x] 3. Kids Home + routing: `launchHref`, sign-in, account switch, signed-out redirect → kids; one poster per show / movie, tablet grid, empty / loading (01, 08)
-- [ ] 4. Grown-up gate: hold the mark, math sheet, Downloads / Settings / Switch Account or Leave; first-time coach mark (05)
+- [x] 4. Grown-up gate: gear beside the lockup, math sheet, Settings / Switch Account or Leave (Downloads with task 9) (05)
 - [x] 5. Show page: episodes in one list, next one marked (03)
 - [ ] 6. Search by name (02)
 - [ ] 7. Settings: Kids Mode row, Kids tag on account rows, Account page Kids account On / Off, back to Kids Mode (06)

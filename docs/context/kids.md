@@ -30,14 +30,13 @@ State per account: `src/kidsSettings.ts` (persisted key `settings.kids`, one ent
 - No detail pages, menus, filters, sort, long-press, download buttons.
 - Fast double taps open one screen (`once`, 800 ms, `src/components/kids/KidsCards.tsx`).
 
-Built (tasks 3 + 5): `app/kids.tsx` → `KidsHome`, `app/kids-show/[id].tsx` → `KidsShow` (`src/screens/kids/`), data `useKidsHome` / `useKidsShow`, cards `src/components/kids/`, sizes `kids` in `src/theme.ts`. Start screen per account: `homeHref` (`src/navigation.ts`) - launch, sign-in, account switch and the account removal hand-over land on `/kids` while kids mode is on; Apple TV never. Until later tasks: no way in (Settings row, task 7; setup, task 8) and no way out (gate, task 4); no search button (task 6); the libraries pick isn't applied yet (task 8); no new-episode dot on show posters yet; offline shows the Offline card (downloads, task 10).
+Built (tasks 3 + 5): `app/kids.tsx` → `KidsHome`, `app/kids-show/[id].tsx` → `KidsShow` (`src/screens/kids/`), data `useKidsHome` / `useKidsShow`, cards `src/components/kids/`, sizes `kids` in `src/theme.ts`. Start screen per account: `homeHref` (`src/navigation.ts`) - launch, sign-in, account switch and the account removal hand-over land on `/kids` while kids mode is on; Apple TV never. Until later tasks: no way in (Settings row, task 7; setup, task 8); no search button (task 6); the libraries pick isn't applied yet (task 8); no new-episode dot on show posters yet; offline shows the Offline card (downloads, task 10).
 
 ## Grown-up gate
 
-- Hold the brand mark 2 s - a ring fills around it. A tap does nothing; the "Grown-ups: keep holding" hint shows on press and stays 3 s after letting go, then fades.
-- Then a sheet with a math question (a × b, 6-9, in words), typed on a keypad. Wrong → shake + a new question. Nothing to remember (no PIN).
-- Behind it: **Downloads**, **Settings**, **Switch Account** (kids account) / **Leave Kids Mode** (shared phone).
-- First time in: a coach mark shows the grown-up the way out.
+- A small gear right after the brand lockup (`KidsHome`; the lockup itself is a plain logo). One tap opens the sheet - no hold, no hint; a kid can tap it too, the sum is the gate.
+- The sheet (`KidsGate`, on `ActionSheet`): "Grown-ups only", a multiplication in words (both numbers 6-9, so two digits - `src/kidsGate.ts`), two answer boxes and a round keypad (Delete takes a digit back). Two digits typed → checked: wrong shakes and asks a new question (never the same one); right turns the boxes green and pops a checkmark in over the keypad (`SOLVED_MS`, 1.7 s), then the actions take its place. Cancel closes; the next opening asks again. Nothing to remember (no PIN).
+- Behind it: **Settings** (the app's own, pushed over kids Home - back returns), then **Switch Account** on a kids account (it always opens in kids mode, so switching is the way out) or **Leave Kids Mode** on a shared phone (shared off, the normal Home). **Downloads** joins with task 9.
 
 ## Entry points
 

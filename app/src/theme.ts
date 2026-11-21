@@ -210,12 +210,16 @@ export const kids = {
     titleInset: 24,
   },
   mark: 34,
+  /** The grown-up gate's sheet: keypad keys (round), answer boxes, the checkmark for a right answer. */
+  gate: { key: 64, keyGap: 14, box: 52, icon: 22, check: 64 },
   tag: { paddingHorizontal: 9, paddingVertical: 2 },
   type: {
     brand: { fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
     tag: { fontSize: 13, fontWeight: '800' },
     show: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
     episode: { fontSize: 18, fontWeight: '700' },
+    gateQuestion: { fontSize: 22, fontWeight: '700' },
+    gateDigit: { fontSize: 28, fontWeight: '700' },
   },
 } as const;
 
