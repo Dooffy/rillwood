@@ -84,9 +84,11 @@ export function kidsMode(settings: KidsSettings): KidsMode {
   return settings.account ? 'account' : settings.shared ? 'shared' : 'off';
 }
 
-/** The filter the app applies - shared phone only. */
+/** The filter the app applies - shared phone only. The library pick is one library (stored as a list), or all. */
 export function kidsFilter(settings: KidsSettings): KidsFilter | undefined {
-  return kidsMode(settings) === 'shared' ? { age: settings.age, unrated: settings.unrated } : undefined;
+  if (kidsMode(settings) !== 'shared') return undefined;
+  const library = settings.libraries?.[0];
+  return { age: settings.age, unrated: settings.unrated, ...(library && { library }) };
 }
 
 export function subscribeKids(listener: () => void) {

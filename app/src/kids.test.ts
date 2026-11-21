@@ -121,6 +121,17 @@ describe('kids requests', () => {
     });
   });
 
+  it('narrows to the picked library (one parentId); a show page needs none', () => {
+    const filter = { age: 7 as const, unrated: true, library: 'lib1' };
+    expect(kidsTitles(filter).query).toMatchObject({ parentId: 'lib1' });
+    expect(allowedShows(filter).query).toMatchObject({ parentId: 'lib1' });
+    const search = kidsSearch('din', filter);
+    expect(search.titles.query).toMatchObject({ parentId: 'lib1' });
+    expect(search.episodes.query).toMatchObject({ parentId: 'lib1' });
+    expect(kidsEpisodes('s', filter).query).not.toHaveProperty('parentId');
+    expect(kidsTitles({ age: 7, unrated: true }).query).not.toHaveProperty('parentId');
+  });
+
   it("asks for a show's episodes with the filter as a backstop", () => {
     expect(kidsEpisodes('a/b', { age: 3, unrated: true })).toEqual({
       path: '/Shows/a%2Fb/Episodes',

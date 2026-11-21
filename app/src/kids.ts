@@ -7,8 +7,8 @@ import { hasFile } from './items';
 export type AgeStep = 3 | 7 | 10 | 13;
 export const AGE_STEPS: readonly AgeStep[] = [3, 7, 10, 13];
 
-/** Shared phone filter: the age step and whether unrated videos show (hidden by default). */
-export type KidsFilter = { age: AgeStep; unrated: boolean };
+/** Shared phone filter: the age step, whether unrated videos show (hidden by default), one library (none = all). */
+export type KidsFilter = { age: AgeStep; unrated: boolean; library?: string };
 
 /**
  * The highest rating each step lets in, by name - the server compares by its score (`/Localization/ParentalRatings`),
@@ -31,11 +31,22 @@ export function ratingQuery(filter: KidsFilter | undefined): Query {
   return { maxOfficialRating: MAX_RATING[filter.age], hasParentalRating: filter.unrated ? undefined : true };
 }
 
+/** The library pick as a query (`/Items` takes one `parentId`); none = every library. */
+function libraryQuery(filter: KidsFilter | undefined): Query {
+  return filter?.library ? { parentId: filter.library } : {};
+}
+
 /** The shows the filter lets in - the faces row, and the list `keepAllowed` checks episodes against. */
 export function allowedShows(filter: KidsFilter): Endpoint {
   return {
     path: '/Items',
-    query: { includeItemTypes: 'Series', recursive: true, sortBy: 'SortName', ...ratingQuery(filter) },
+    query: {
+      includeItemTypes: 'Series',
+      recursive: true,
+      sortBy: 'SortName',
+      ...ratingQuery(filter),
+      ...libraryQuery(filter),
+    },
   };
 }
 
@@ -52,6 +63,7 @@ export function kidsTitles(filter: KidsFilter | undefined): Endpoint {
       sortOrder: 'Descending,Ascending',
       limit: TITLES_LIMIT,
       ...ratingQuery(filter),
+      ...libraryQuery(filter),
     },
   };
 }
@@ -64,7 +76,7 @@ const SEARCH_EPISODES_LIMIT = 30;
  * as stills under the posters). Same filter as Home; episodes still go through `keepAllowed` (unrated shows).
  */
 export function kidsSearch(term: string, filter: KidsFilter | undefined): { titles: Endpoint; episodes: Endpoint } {
-  const base = { searchTerm: term, recursive: true, ...ratingQuery(filter) };
+  const base = { searchTerm: term, recursive: true, ...ratingQuery(filter), ...libraryQuery(filter) };
   return {
     titles: { path: '/Items', query: { ...base, includeItemTypes: 'Movie,Series', limit: SEARCH_TITLES_LIMIT } },
     episodes: { path: '/Items', query: { ...base, includeItemTypes: 'Episode', limit: SEARCH_EPISODES_LIMIT } },

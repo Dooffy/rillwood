@@ -46,10 +46,10 @@ export function Chevron({ down = false }: { down?: boolean }) {
   );
 }
 
-/** Checkmark on the picked option (option lists, action sheets). */
-export function Checkmark() {
+/** Checkmark on the picked option (option lists, action sheets); `color` on a filled circle (Who's it for). */
+export function Checkmark({ color }: { color?: string }) {
   const c = useColors();
-  return <SymbolView name={{ ios: 'checkmark', android: 'check' }} tintColor={c.text} size={16} />;
+  return <SymbolView name={{ ios: 'checkmark', android: 'check' }} tintColor={color ?? c.text} size={16} />;
 }
 
 /** Colour dot for a colour preset. */

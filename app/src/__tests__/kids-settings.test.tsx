@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { Storage } from 'expo-sqlite/kv-store';
 
+import * as api from '@/api';
 import Account from '@/app/(auth)/account';
 import KidsAccount from '@/app/kids-account';
+import KidsLibrary from '@/app/kids-library';
 import KidsMode from '@/app/kids-mode';
+import KidsSetup from '@/app/kids-setup';
 import Settings from '@/app/settings';
 import { ToastProvider } from '@/components/Toast';
 import { forgetKids, getKids, setKids } from '@/kidsSettings';
-import { useSession, type Account as SavedAccount } from '@/session';
+import { connectionFor, getSession, useSession, type Account as SavedAccount } from '@/session';
+import { finishSignIn } from '@/useSignIn';
 import { resetDevice, setDevice, TABLET_LANDSCAPE } from '@/testDevice';
 
 jest.mock('expo-router', () => ({
@@ -22,7 +26,7 @@ jest.mock('expo-router', () => ({
   },
   useLocalSearchParams: jest.fn(() => ({})),
 }));
-jest.mock('@/session', () => ({ useSession: jest.fn() }));
+jest.mock('@/session', () => ({ useSession: jest.fn(), getSession: jest.fn(), connectionFor: jest.fn() }));
 
 const { router, useLocalSearchParams } = jest.requireMock<{
   router: { push: jest.Mock; replace: jest.Mock };
@@ -36,13 +40,36 @@ const mia: SavedAccount = { ...anna, id: 'srv.m', userId: 'm', userName: 'mia' }
 const withToast = (ui: React.ReactElement) => render(<ToastProvider>{ui}</ToastProvider>);
 
 function signedIn(active: SavedAccount, others: SavedAccount[] = []) {
-  jest.mocked(useSession).mockReturnValue({ accounts: [active, ...others], active });
+  const state = { accounts: [active, ...others], active };
+  jest.mocked(useSession).mockReturnValue(state);
+  jest.mocked(getSession).mockReturnValue(state);
 }
+
+const views = {
+  Items: [
+    { Id: 'lib-kids', Name: 'Kids', Type: 'CollectionFolder', CollectionType: 'movies' },
+    { Id: 'lib-shows', Name: 'Shows', Type: 'CollectionFolder', CollectionType: 'tvshows' },
+    { Id: 'lib-music', Name: 'Music', Type: 'CollectionFolder', CollectionType: 'music' },
+  ],
+  TotalRecordCount: 3,
+};
+/** What `/Users/Me` says about the user signing in. */
+let me: api.UserDto = { Id: 'a', Name: 'anna' };
 
 beforeEach(() => {
   jest.clearAllMocks();
   Storage.clearSync();
   signedIn(anna, [mia]);
+  me = { Id: 'a', Name: 'anna' };
+  jest.mocked(connectionFor).mockImplementation((a) => ({
+    baseUrl: a.server.url,
+    deviceId: a.deviceId,
+    token: 'tok',
+    accountId: a.id,
+  }));
+  jest
+    .spyOn(api, 'request')
+    .mockImplementation((_conn, path) => Promise.resolve((path === '/Users/Me' ? me : views) as never));
 });
 
 afterEach(() => {
@@ -153,5 +180,69 @@ describe('Kids account', () => {
     await fireEvent.press(screen.getByRole('radio', { name: 'On' }));
     expect(getKids(anna.id).account).toBe(true);
     expect(router.replace).toHaveBeenCalledWith('/kids');
+  });
+});
+
+describe('Kids Mode - Library', () => {
+  it('the card shows the pick (All libraries) and opens the list', async () => {
+    await render(<KidsMode />);
+    const row = await screen.findByRole('button', { name: 'Library' });
+    expect(row).toHaveAccessibilityValue({ text: 'All libraries' });
+    await fireEvent.press(row);
+    expect(router.push).toHaveBeenCalledWith('/kids-library');
+  });
+
+  it('lists movie and show libraries; one tap picks one, All clears it', async () => {
+    await render(<KidsLibrary />);
+    await fireEvent.press(await screen.findByRole('radio', { name: 'Kids' }));
+    expect(getKids(anna.id).libraries).toEqual(['lib-kids']);
+    expect(screen.queryByRole('radio', { name: 'Music' })).toBeNull();
+    await fireEvent.press(screen.getByRole('radio', { name: 'All libraries' }));
+    expect(getKids(anna.id).libraries).toBeUndefined();
+  });
+
+  it('the card names the picked library', async () => {
+    setKids(anna.id, { libraries: ['lib-shows'] });
+    await render(<KidsMode />);
+    expect(await screen.findByRole('button', { name: 'Library' })).toHaveAccessibilityValue({ text: 'Shows' });
+  });
+});
+
+describe("Who's it for - after sign-in", () => {
+  it('a user the server limits: asks', async () => {
+    me = { Id: 'a', Name: 'anna', Policy: { MaxParentalRating: 10 } };
+    await act(() => finishSignIn());
+    expect(router.replace).toHaveBeenCalledWith('/kids-setup');
+  });
+
+  it('no limit, or already a kids account: straight to the start screen', async () => {
+    await act(() => finishSignIn());
+    expect(router.replace).toHaveBeenLastCalledWith('/home');
+    me = { Id: 'a', Name: 'anna', Policy: { MaxParentalRating: 10 } };
+    setKids(anna.id, { account: true });
+    await act(() => finishSignIn());
+    expect(router.replace).toHaveBeenLastCalledWith('/kids');
+  });
+
+  it("the server can't be asked: no step", async () => {
+    jest.mocked(api.request).mockRejectedValue(new api.ApiError('network'));
+    await act(() => finishSignIn());
+    expect(router.replace).toHaveBeenLastCalledWith('/home');
+  });
+
+  it('"A kid" is picked: Continue marks the kids account and opens kids Home', async () => {
+    await render(<KidsSetup />);
+    expect(screen.getByRole('radio', { name: 'A kid' })).toBeChecked();
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+    expect(getKids(anna.id).account).toBe(true);
+    expect(router.replace).toHaveBeenCalledWith('/kids');
+  });
+
+  it('A grown-up: not marked, the normal Home', async () => {
+    await render(<KidsSetup />);
+    await fireEvent.press(screen.getByRole('radio', { name: 'A grown-up' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+    expect(getKids(anna.id).account).toBe(false);
+    expect(router.replace).toHaveBeenCalledWith('/home');
   });
 });

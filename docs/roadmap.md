@@ -263,7 +263,7 @@ Phones + tablets. Rules: `docs/context/kids.md`, screens: `docs/research/kids-sc
 - [x] 6. Search by name (02)
 - [x] 7. Settings: Kids Mode row, Kids tag on account rows, Account page Kids account On / Off, back to Kids Mode (06)
 - [ ] 7b. Pick the animals: Kids Mode icon (🦊) and a kids account's avatar (🐱) - a choice per account
-- [ ] 8. Setup: "Who's it for?" after sign-in when detected, Kids Mode page (07)
+- [x] 8. Setup: "Who's it for?" after sign-in when detected, Kids Mode page (07)
 - [ ] 9. Downloads: standard view + Add for the trip, keep the next 5 episodes per show, rating score saved with each download (10)
 - [ ] 10. Offline: feed + faces from downloads, same filter; test plan `docs/test-plans/kids.md` (09)
 

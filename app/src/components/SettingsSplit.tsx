@@ -11,7 +11,7 @@ import { useSession } from '@/session';
 import { scrollList, spacing, useColors } from '@/theme';
 
 import { AccountDetails } from './AccountDetails';
-import { KidsAccountSettings, KidsModeCard } from './KidsSettingsPages';
+import { KidsAccountSettings, KidsLibrarySettings, KidsModeCard } from './KidsSettingsPages';
 import { IconButton } from './IconButton';
 import { pageColumn, pageContent } from './Page';
 import { linkKey, SETTINGS_TITLES, SettingsPaneContext, type SettingsLink } from './SettingsLink';
@@ -34,6 +34,7 @@ function PaneContent({ link }: { link: SettingsLink }) {
   if (link.page === 'account') return <AccountDetails id={link.id} onBack={() => {}} />;
   if (link.page === 'kids-account') return <KidsAccountSettings id={link.id} />;
   if (link.page === 'kids-mode') return <KidsModeCard />;
+  if (link.page === 'kids-library') return <KidsLibrarySettings />;
   if (link.page === 'subtitles') return <SubtitlesSettings />;
   if (link.page === 'option') return <OptionSettings option={link.key} />;
   if (link.page === 'licence') return <LicenceSettings id={link.id} />;

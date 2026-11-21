@@ -118,6 +118,10 @@ export default function RootLayout() {
                 options={Platform.isTV ? { title: 'Settings', headerShown: false } : pageOf('Settings')}
               />
               <Stack.Screen name="kids-mode" options={pageOf(SETTINGS_TITLES['kids-mode'])} />
+              {/* An option's checkmark list: a plain title. */}
+              <Stack.Screen name="kids-library" options={plainPage(SETTINGS_TITLES['kids-library'], c)} />
+              {/* After sign-in: the stack was reset, no way back. */}
+              <Stack.Screen name="kids-setup" options={{ ...pageOf("Who's it for?"), gestureEnabled: false }} />
               {/* A checkmark list: a plain title, as the option lists. */}
               <Stack.Screen name="kids-account" options={plainPage(SETTINGS_TITLES['kids-account'], c)} />
               <Stack.Screen name="subtitles" options={pageOf(SETTINGS_TITLES.subtitles)} />
