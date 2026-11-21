@@ -139,6 +139,17 @@ jest.mock('./session', () => ({
   },
 }));
 
+// Rating scores (src/ratings.ts, own tests): none unless a test sets some.
+const mockScores = new Map<string, number>();
+/** Set to hold the lookup open (a slow server); call it to answer. */
+const mockRating: { held: ((scores: Map<string, number>) => void) | null; hold: boolean } = { held: null, hold: false };
+jest.mock('./ratings', () => ({
+  ratingScores: () =>
+    mockRating.hold
+      ? new Promise<Map<string, number>>((resolve) => (mockRating.held = resolve))
+      : Promise.resolve(new Map(mockScores)),
+}));
+
 // The store's kv-store instance (re-required after every jest.resetModules); `clearSync` is the mock's.
 let Storage: typeof import('expo-sqlite/kv-store').Storage & { clearSync: () => void };
 let dl: typeof Store;
@@ -182,11 +193,88 @@ beforeEach(() => {
   mockSession.accounts = [account('a1')];
   mockSession.active = mockSession.accounts[0];
   mockSessionListeners.clear();
+  mockScores.clear();
+  mockRating.hold = false;
+  mockRating.held = null;
   emit = (event, payload) =>
     (native.addListener.mock.calls.find(([e]) => e === event)?.[1] as (p: object) => void)(payload);
 });
 
 describe('startDownloads', () => {
+  it("saves each download's rating score after it starts, when the server has one (none = unrated)", async () => {
+    mockScores.set('m1', 7);
+    await dl.startDownloads([movie('m1', GB), movie('m2', GB)]);
+    // Saved after the start (the lookup never holds it up).
+    await act(async () => {});
+    const items = saved().items;
+    expect(items.find((d) => d.itemId === 'm1')?.rating).toBe(7);
+    expect(items.find((d) => d.itemId === 'm2')).not.toHaveProperty('rating');
+  });
+
+  it('never waits for the rating lookup: the download starts while the server is slow', async () => {
+    mockRating.hold = true;
+    const result = await dl.startDownloads([movie('m1', GB)]);
+    expect(result).toEqual({ ok: true, started: 1, skipped: 0 });
+    expect(native.enqueue).toHaveBeenCalled();
+    expect(saved().items[0]).not.toHaveProperty('rating');
+    // The answer comes later and is saved then.
+    await act(async () => mockRating.held?.(new Map([['m1', 10]])));
+    expect(saved().items[0].rating).toBe(10);
+  });
+
+  it("the scores go on the starting account's downloads only (another server's same item id stays unrated)", async () => {
+    mockScores.set('m1', 7);
+    mockSession.accounts = [account('a1'), account('a2')];
+    mockSession.active = mockSession.accounts[1];
+    mockRating.hold = true;
+    await dl.startDownloads([movie('m1', GB)]);
+    const fromA2 = mockRating.held;
+    mockSession.active = mockSession.accounts[0];
+    mockRating.hold = false;
+    await dl.startDownloads([movie('m1', GB)]);
+    await act(async () => {});
+    // a1's answer: only a1's download.
+    expect(saved().items.map((d) => [d.accountId, d.rating])).toEqual([
+      ['a2', undefined],
+      ['a1', 7],
+    ]);
+    await act(async () => fromA2?.(new Map([['m1', 17]])));
+    expect(saved().items.map((d) => [d.accountId, d.rating])).toEqual([
+      ['a2', 17],
+      ['a1', 7],
+    ]);
+  });
+
+  it('a download deleted before the scores come stays deleted', async () => {
+    mockRating.hold = true;
+    await dl.startDownloads([movie('m1', GB), movie('m2', GB)]);
+    dl.deleteDownloads(['a1:m1:m1']);
+    await act(async () =>
+      mockRating.held?.(
+        new Map([
+          ['m1', 7],
+          ['m2', 10],
+        ]),
+      ),
+    );
+    expect(saved().items.map((d) => [d.itemId, d.rating])).toEqual([['m2', 10]]);
+  });
+
+  it("every version of the item gets its score; it's still there after a relaunch", async () => {
+    mockScores.set('m1', 7);
+    await dl.startDownloads([
+      movie('m1', GB),
+      { item: movie('m1').item, source: { Id: 'm1-4k', Container: 'mkv', Size: 4 * GB } as MediaSourceDto },
+    ]);
+    await act(async () => {});
+    expect(saved().items.map((d) => d.rating)).toEqual([7, 7]);
+    // Relaunch: a fresh store reads the saved index.
+    const raw = Storage.getItemSync('dl');
+    fresh();
+    Storage.setItemSync('dl', raw ?? '');
+    expect(dl.getDownloads().map((d) => d.rating)).toEqual([7, 7]);
+  });
+
   it('saves the downloads and hands them to native in one batch with the credential', async () => {
     const result = await dl.startDownloads([movie('m1', 4 * GB), movie('m2', GB, 'mov,mp4')]);
 
