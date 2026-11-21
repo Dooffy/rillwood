@@ -9,6 +9,7 @@ import {
   isKidsAccount,
   keepAllowed,
   kidsEpisodes,
+  kidsSearch,
   kidsTitles,
   ratingQuery,
 } from './kids';
@@ -104,6 +105,20 @@ describe('kids requests', () => {
       },
     });
     expect(kidsTitles(undefined).query).not.toHaveProperty('maxOfficialRating');
+  });
+
+  it('searches by name: shows + movies in one request, episodes in another, both filtered', () => {
+    const { titles, episodes } = kidsSearch('din', { age: 7, unrated: false });
+    const base = { searchTerm: 'din', recursive: true, maxOfficialRating: 'TV-Y7', hasParentalRating: true };
+    expect(titles).toEqual({ path: '/Items', query: { ...base, includeItemTypes: 'Movie,Series', limit: 24 } });
+    expect(episodes).toEqual({ path: '/Items', query: { ...base, includeItemTypes: 'Episode', limit: 30 } });
+    // A kids account: the server filters.
+    expect(kidsSearch('din', undefined).titles.query).toEqual({
+      searchTerm: 'din',
+      recursive: true,
+      includeItemTypes: 'Movie,Series',
+      limit: 24,
+    });
   });
 
   it("asks for a show's episodes with the filter as a backstop", () => {

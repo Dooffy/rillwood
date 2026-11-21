@@ -260,7 +260,7 @@ Phones + tablets. Rules: `docs/context/kids.md`, screens: `docs/research/kids-sc
 - [x] 3. Kids Home + routing: `launchHref`, sign-in, account switch, signed-out redirect → kids; one poster per show / movie, tablet grid, empty / loading (01, 08)
 - [x] 4. Grown-up gate: gear beside the lockup, math sheet, Settings / Switch Account or Leave (Downloads with task 9) (05)
 - [x] 5. Show page: episodes in one list, next one marked (03)
-- [ ] 6. Search by name (02)
+- [x] 6. Search by name (02)
 - [x] 7. Settings: Kids Mode row, Kids tag on account rows, Account page Kids account On / Off, back to Kids Mode (06)
 - [ ] 7b. Pick the animals: Kids Mode icon (🦊) and a kids account's avatar (🐱) - a choice per account
 - [ ] 8. Setup: "Who's it for?" after sign-in when detected, Kids Mode page (07)

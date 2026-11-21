@@ -56,6 +56,21 @@ export function kidsTitles(filter: KidsFilter | undefined): Endpoint {
   };
 }
 
+const SEARCH_TITLES_LIMIT = 24;
+const SEARCH_EPISODES_LIMIT = 30;
+
+/**
+ * Kids search (docs/context/kids.md, Search): by name, shows and movies in one request, episodes in another (they show
+ * as stills under the posters). Same filter as Home; episodes still go through `keepAllowed` (unrated shows).
+ */
+export function kidsSearch(term: string, filter: KidsFilter | undefined): { titles: Endpoint; episodes: Endpoint } {
+  const base = { searchTerm: term, recursive: true, ...ratingQuery(filter) };
+  return {
+    titles: { path: '/Items', query: { ...base, includeItemTypes: 'Movie,Series', limit: SEARCH_TITLES_LIMIT } },
+    episodes: { path: '/Items', query: { ...base, includeItemTypes: 'Episode', limit: SEARCH_EPISODES_LIMIT } },
+  };
+}
+
 /**
  * A show's episodes for the kids show page, every season in order. The filter is a backstop: the page only opens from
  * an allowed show, and an episode takes its show's rating.
