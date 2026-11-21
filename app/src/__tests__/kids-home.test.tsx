@@ -78,10 +78,12 @@ describe('Kids Home', () => {
     const labels = screen
       .getAllByRole('button')
       .map((b) => b.props.accessibilityLabel as string)
-      .filter((l) => l !== 'Grown-ups');
+      .filter((l) => l !== 'Grown-ups' && l !== 'Search');
     expect(labels).toEqual(['Rabbits', expect.stringMatching(/^Started, \d+% watched/), 'Trains', 'Pond']);
     expect(screen.getByLabelText('Rillwood kids')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Grown-ups' })).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Search' }));
+    expect(router.push).toHaveBeenCalledWith('/kids-search');
     // No words on the posters.
     expect(screen.queryByText('Pond')).toBeNull();
   });

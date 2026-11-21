@@ -3,8 +3,9 @@
 // movie once as a poster - two across on phones, more on tablets. A show opens its page, a movie plays. The gear beside
 // the lockup opens the grown-up gate (`KidsGate`). Phones and tablets only.
 import { router } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { BaseItemDto } from '@/api';
@@ -18,7 +19,7 @@ import { LoadError, Message, Offline } from '@/components/Message';
 import { kidsMode, setKids, useKids, type KidsMode } from '@/kidsSettings';
 import { playItem, resetTo } from '@/navigation';
 import { useSession } from '@/session';
-import { kids, scrollList, spacing, useColors, useWide } from '@/theme';
+import { kids, pressedOpacity, scrollList, spacing, useColors, useWide } from '@/theme';
 import { refreshKids, useKidsHome } from '@/useKidsHome';
 import { usePullToRefresh } from '@/usePullToRefresh';
 
@@ -79,6 +80,20 @@ export function KidsHome() {
           variant="plain"
           onPress={() => setGate(true)}
         />
+        <View style={styles.spacer} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Search"
+          onPress={() => router.push('/kids-search')}
+          style={({ pressed }) => [styles.search, { backgroundColor: c.elevated }, pressed && styles.pressed]}
+        >
+          <SymbolView
+            name={{ ios: 'magnifyingglass', android: 'search' }}
+            tintColor={c.text}
+            size={kids.search.icon}
+            weight="bold"
+          />
+        </Pressable>
       </View>
       {home.offline.offline && <Offline busy={home.offline.busy} retry={refreshKids} />}
       {home.error && <LoadError error={home.error} retry={refreshKids} />}
@@ -131,4 +146,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: kids.gutter / 4,
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  spacer: { flex: 1 },
+  search: {
+    width: kids.search.button,
+    height: kids.search.button,
+    borderRadius: kids.search.button / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pressed: { opacity: pressedOpacity },
 });

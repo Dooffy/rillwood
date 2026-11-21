@@ -129,6 +129,7 @@ src/app/                 expo-router
   show-downloads/[id].tsx  a show's downloaded episodes by season (from its Downloads row)
   kids.tsx               kids Home (`KidsHome`): where kids mode starts (`homeHref`), phones + tablets only, no back swipe
   kids-show/[id].tsx     kids show page (`KidsShow`): a show's episodes as big pictures, the next one marked ▶
+  kids-search.tsx        kids search (`KidsSearch`): big field, shows + movies as posters, episodes as stills
   kids-mode.tsx          Settings → Kids Mode: the Kids Mode card (age, unrated, Start Kids Mode)
   kids-account.tsx       Account → Kids account: On / Off
   option/[key].tsx       one option's checkmark list (appearance, subtitle options, playback defaults, download network), preview on top for subtitles
@@ -137,7 +138,7 @@ src/app/                 expo-router
   licences.tsx, licence/[id].tsx  Settings → About → Licences: the list, one entry (source, packages, full texts)
 src/theme.ts             design tokens (+ `kids`: kids mode sizes)
 src/device.ts            phone / tablet vs Apple TV: `screenFor` (a route's two views), `features` (downloads, rotation, touch, lasting files)
-src/screens/             a route's views when TV differs, per device: phone/ (phone + tablet: PhoneWelcome, PhoneSignIn, PhoneHome, PhoneAccounts, PhoneLibrary, PhoneItemDetail, PhoneSeriesDetail + SavedSeries), tv/ (TvWelcome, TvSignIn, TvHome, TvAccounts = Who's Watching, TvLibrary, TvItemDetail, TvSeriesDetail, TvSearch); kids/ (KidsHome, KidsShow - kids mode, phones + tablets only)
+src/screens/             a route's views when TV differs, per device: phone/ (phone + tablet: PhoneWelcome, PhoneSignIn, PhoneHome, PhoneAccounts, PhoneLibrary, PhoneItemDetail, PhoneSeriesDetail + SavedSeries), tv/ (TvWelcome, TvSignIn, TvHome, TvAccounts = Who's Watching, TvLibrary, TvItemDetail, TvSeriesDetail, TvSearch); kids/ (KidsHome, KidsShow, KidsSearch - kids mode, phones + tablets only)
 src/qr.ts                QR code encoder (pure, own: byte mode, level M, versions 1-10) - Apple TV About links
 src/format.ts            display formatting (time left, clock, subtitle timing, file size)
 src/api.ts               fetch client + endpoints + DTO types
@@ -149,11 +150,12 @@ src/useServerConnect.ts  Add server form: address, probe, errors, then Sign in (
 src/useSignIn.ts         sign-in state: password form, Quick Connect on/off, Quick Connect code (Sign in, Quick Connect, TV Sign in)
 src/useKidsHome.ts       kids Home data: every show + movie once (`kidsTitles`, last watched first), kids filter applied, offline / error / empty
 src/useKidsShow.ts       kids show page data: the show, its episodes (`kidsEpisodes`), the next one (Next Up for the show)
+src/useKidsSearch.ts     kids search data: debounced term, shows + movies and episodes (`kidsSearch`), episodes kept to allowed shows (shared phone)
 src/useHome.ts           Home data for both views: top rows' fetches, layout (`homeLayout`), offline state, Recently Added counts
 src/useItemDetail.ts     movie / episode detail for both views: `detailView`, play / play from start, watched / favourite, the episode's series
 src/useSeriesDetail.ts   series detail for both views: seasons, Next Up, the season shown, what Play plays (`useSeriesPlayTarget`, `episodePlay`), show watched / favourite
 src/useLibrary.ts        Library data for both views: search, type, sort, filters, All rows, paged list, offline state, card handlers
-src/kids.ts              kids mode rating rules (pure): kids account detection (`/Users/Me` limit), age step → `maxOfficialRating` (+ `hasParentalRating`), allowed shows, `keepAllowed` (episodes by their show), kids requests (`kidsTitles`, `kidsEpisodes`), `episodeRows` (show page rows: season dividers, columns)
+src/kids.ts              kids mode rating rules (pure): kids account detection (`/Users/Me` limit), age step → `maxOfficialRating` (+ `hasParentalRating`), allowed shows, `keepAllowed` (episodes by their show), kids requests (`kidsTitles`, `kidsEpisodes`, `kidsSearch`), `episodeRows` (show page rows: season dividers, columns)
 src/kidsSettings.ts      kids mode state per account (persisted): kids account mark, shared phone mode + age / unrated / libraries; `kidsMode`, `kidsFilter`, `useKids`; dropped with the account
 src/kidsGate.ts          kids grown-up gate (pure): the sum (6-9 x 6-9 in words, never the same twice), answer check
 src/connection.ts        offline mode: `/System/Info/Public` check at launch, foreground, account switch + backoff while offline; back online → failed screens reload

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { SymbolView } from 'expo-symbols';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { forwardRef } from 'react';
+import { Pressable, StyleSheet, TextInput, View, type TextInputInstance } from 'react-native';
 
-import { minTouch, radii, spacing, type, useColors } from '@/theme';
+import { kids, minTouch, radii, spacing, type, useColors } from '@/theme';
 
 export type SearchFieldProps = {
   value: string;
@@ -12,22 +13,22 @@ export type SearchFieldProps = {
   placeholder?: string;
   onFocus?: () => void;
   onBlur?: () => void;
+  /** Kids search: taller, bigger type. */
+  large?: boolean;
 };
 
-/** Rounded search bar: magnifier, text, clear ✕ while there is text. */
-export function SearchField({
-  value,
-  onChangeText,
-  onSubmit,
-  placeholder = 'Search',
-  onFocus,
-  onBlur,
-}: SearchFieldProps) {
+/** Rounded search bar: magnifier, text, clear ✕ while there is text. The ref is the text input (focus it). */
+export const SearchField = forwardRef<TextInputInstance, SearchFieldProps>(function SearchField(
+  { value, onChangeText, onSubmit, placeholder = 'Search', onFocus, onBlur, large = false },
+  ref,
+) {
   const c = useColors();
+  const icon = large ? kids.search.icon : 18;
   return (
-    <View style={[styles.field, { backgroundColor: c.surface }]}>
-      <SymbolView name={{ ios: 'magnifyingglass', android: 'search' }} tintColor={c.iconInactive} size={18} />
+    <View style={[styles.field, large && styles.large, { backgroundColor: large ? c.elevated : c.surface }]}>
+      <SymbolView name={{ ios: 'magnifyingglass', android: 'search' }} tintColor={c.iconInactive} size={icon} />
       <TextInput
+        ref={ref}
         accessibilityLabel={placeholder}
         value={value}
         onChangeText={onChangeText}
@@ -40,7 +41,7 @@ export function SearchField({
         autoCorrect={false}
         autoCapitalize="none"
         clearButtonMode="never"
-        style={[styles.input, { color: c.text }]}
+        style={[styles.input, large && kids.type.search, { color: c.text }]}
       />
       {value !== '' && (
         <Pressable
@@ -49,12 +50,12 @@ export function SearchField({
           onPress={() => onChangeText('')}
           style={styles.clear}
         >
-          <SymbolView name={{ ios: 'xmark.circle.fill', android: 'cancel' }} tintColor={c.iconInactive} size={18} />
+          <SymbolView name={{ ios: 'xmark.circle.fill', android: 'cancel' }} tintColor={c.iconInactive} size={icon} />
         </Pressable>
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   field: {
@@ -65,6 +66,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingLeft: spacing.md,
   },
+  large: { minHeight: kids.search.field, paddingLeft: spacing.md + spacing.xs },
   input: { flex: 1, fontSize: type.body.fontSize, paddingVertical: spacing.sm },
   clear: { width: minTouch, height: minTouch, alignItems: 'center', justifyContent: 'center' },
 });

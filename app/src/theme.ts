@@ -212,6 +212,8 @@ export const kids = {
   mark: 34,
   /** Animal marks in the grown-up settings (round): a kids account's avatar, the Kids Mode row and card. */
   emoji: { account: '🐱', mode: '🦊', tile: 30, header: 56 },
+  /** Kids search: the big field, its icons, the round search / close buttons. */
+  search: { field: 56, icon: 22, button: 52 },
   /** The grown-up gate's sheet: keypad keys (round), answer boxes, the checkmark for a right answer. */
   gate: { key: 64, keyGap: 14, box: 52, icon: 22, check: 64 },
   tag: { paddingHorizontal: 9, paddingVertical: 2 },
@@ -221,6 +223,7 @@ export const kids = {
     show: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
     episode: { fontSize: 18, fontWeight: '700' },
     gateQuestion: { fontSize: 22, fontWeight: '700' },
+    search: { fontSize: 22, fontWeight: '700' },
     gateDigit: { fontSize: 28, fontWeight: '700' },
   },
 } as const;
