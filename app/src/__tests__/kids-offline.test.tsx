@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
 import * as api from '@/api';
 import type { BaseItemDto } from '@/api';
@@ -8,10 +9,11 @@ import Kids from '@/app/kids';
 import KidsDownloadsRoute from '@/app/kids-downloads';
 import KidsSearchRoute from '@/app/kids-search';
 import KidsShowRoute from '@/app/kids-show/[id]';
+import { ToastProvider } from '@/components/Toast';
 import * as snapshots from '@/downloadSnapshot';
 import * as downloads from '@/downloads';
 import type { Download } from '@/downloads';
-import { forgetKids, setKids } from '@/kidsSettings';
+import { forgetKids, getKids, setKids } from '@/kidsSettings';
 import * as session from '@/session';
 import { KIDS_SEARCH_DEBOUNCE_MS } from '@/useKidsSearch';
 
@@ -19,7 +21,12 @@ jest.mock('expo-router', () => ({
   router: { push: jest.fn(), back: jest.fn() },
   useLocalSearchParams: () => ({ id: 'trains' }),
   useNavigation: () => ({ addListener: () => () => {} }),
+  Stack: { Screen: jest.fn(() => null) },
 }));
+const { Stack } = jest.requireMock<{ Stack: { Screen: jest.Mock } }>('expo-router');
+/** The page's header button (rendered by the native header, so drawn here on its own). */
+const headerRight = () =>
+  (Stack.Screen.mock.lastCall?.[0] as { options: { headerRight: () => React.ReactElement } }).options.headerRight();
 const { router } = jest.requireMock<{ router: { push: jest.Mock } }>('expo-router');
 
 const server = { id: 'srv', url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' };
@@ -155,5 +162,69 @@ describe('Kids mode offline', () => {
     await act(() => jest.advanceTimersByTime(KIDS_SEARCH_DEBOUNCE_MS));
     expect(screen.getByText('Nothing called that.')).toBeOnTheScreen();
     jest.useRealTimers();
+  });
+
+  describe('removing downloads (task 11)', () => {
+    const done = (ids: string[]): downloads.DownloadSummary => ({
+      state: 'done',
+      progress: 1,
+      ids,
+      itemIds: ids,
+      done: ids.length,
+      size: ids.length,
+      running: 0,
+      failed: 0,
+      waitingForNetwork: false,
+    });
+
+    beforeEach(() => {
+      jest
+        .spyOn(downloads, 'useDownloadSummary')
+        .mockImplementation((group) => (group?.includes('trains') ? done(['d1', 'd2']) : group ? done(['m1']) : null));
+    });
+
+    it("offline, a show's menu offers only what works without the server", async () => {
+      setKids(active.id, { account: true, kept: ['trains'] });
+      await render(
+        <ToastProvider>
+          <KidsDownloadsRoute />
+        </ToastProvider>,
+      );
+      await fireEvent.press(screen.getAllByRole('button', { name: 'Downloaded, more' })[0]);
+      const labels = screen.getAllByRole('menuitem').map((m) => m.props.accessibilityLabel);
+      expect(labels).toEqual(['Stop Keeping, The episodes here stay', 'Delete Downloads']);
+    });
+
+    it('Delete All (the header trash) asks first (count + size), then deletes every download and stops keeping', async () => {
+      const alert = jest.spyOn(Alert, 'alert');
+      const deleted = jest.spyOn(downloads, 'deleteDownloads').mockImplementation(() => {});
+      setKids(active.id, { account: true, kept: ['trains'] });
+      await render(
+        <ToastProvider>
+          <KidsDownloadsRoute />
+        </ToastProvider>,
+      );
+      await render(headerRight());
+      await fireEvent.press(screen.getByRole('button', { name: 'Delete All Downloads' }));
+      const [title, text, buttons] = alert.mock.calls[0];
+      expect(title).toBe("Delete all of mia's downloads?");
+      expect(text).toMatch(/^4 downloads \(.+\) are removed from this phone\. Kept shows stop topping up\./);
+      expect(deleted).not.toHaveBeenCalled();
+      await act(async () => buttons?.find((b) => b.text === 'Delete All')?.onPress?.());
+      expect(deleted).toHaveBeenCalledWith(list.map((d) => d.id));
+      expect(getKids(active.id).kept).toBeUndefined();
+      alert.mockRestore();
+    });
+
+    it('nothing downloaded: Delete All is there but off', async () => {
+      list = [];
+      await render(
+        <ToastProvider>
+          <KidsDownloadsRoute />
+        </ToastProvider>,
+      );
+      await render(headerRight());
+      expect(screen.getByRole('button', { name: 'Delete All Downloads' })).toBeDisabled();
+    });
   });
 });

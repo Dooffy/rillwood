@@ -44,6 +44,7 @@ Setup on the server: an adult user, a kids user with a parental rating limit (e.
 | K17 | Another show → Keep Next 5 Episodes                                                 | Asks first (text says a day after watching, Wi-Fi); 5 from where the kid is; row "Keeping 5 · …"      |
 | K18 | Set Remove watched to 6 hours; watch a kept episode to the end; come back after 6 h | The watched one is gone, the next one downloads                                                        |
 | K19 | Stop Keeping, then Delete Downloads                                                 | Stop: files stay, "Keeping" gone; Delete asks, then all gone                                           |
+| K19b | Offline: a show's menu; then the header trash (Delete All)                                    | Menu: only Stop Keeping / Pause / Resume / Delete; Delete All asks (count + size), all gone, kept shows stopped |
 | K20 | Downloads turned off for the user on the server                                     | "Downloads Turned Off", no list                                                                        |
 
 ## Offline (task 10)
