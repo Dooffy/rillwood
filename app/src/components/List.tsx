@@ -3,7 +3,7 @@ import { SymbolView } from 'expo-symbols';
 import { Children, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { minTouch, radii, spacing, useColors } from '@/theme';
+import { kids, minTouch, radii, spacing, useColors } from '@/theme';
 
 import { Text } from './Text';
 
@@ -68,14 +68,39 @@ export type ListRowProps = {
   selected?: boolean;
   /** Opens a web page outside the app: an arrow instead of the chevron. */
   external?: boolean;
+  /** An emoji in a small round tile before the label (iOS Settings icons). */
+  emoji?: string;
+  /** A second line under the label. */
+  detail?: string;
 };
 
 /** Tappable rows get a chevron; rows without `onPress` show a read-only value. */
-export function ListRow({ label, value, swatch, onPress, selected, external = false }: ListRowProps) {
+export function ListRow({ label, value, swatch, onPress, selected, external = false, emoji, detail }: ListRowProps) {
   const c = useColors();
+  const labelStyle = [styles.label, value !== undefined && styles.labelBesideValue];
   const content = (
     <>
-      <Text style={[styles.label, value !== undefined && styles.labelBesideValue]}>{label}</Text>
+      {emoji !== undefined && (
+        <View
+          style={[styles.emojiTile, { backgroundColor: c.elevated2 }]}
+          importantForAccessibility="no-hide-descendants"
+          accessibilityElementsHidden
+        >
+          <Text maxFontSizeMultiplier={1} style={styles.emoji}>
+            {emoji}
+          </Text>
+        </View>
+      )}
+      {detail === undefined ? (
+        <Text style={labelStyle}>{label}</Text>
+      ) : (
+        <View style={labelStyle}>
+          <Text>{label}</Text>
+          <Text variant="caption" secondary>
+            {detail}
+          </Text>
+        </View>
+      )}
       {value !== undefined && (
         <View style={styles.value}>
           {swatch && <Swatch color={swatch} />}
@@ -98,6 +123,7 @@ export function ListRow({ label, value, swatch, onPress, selected, external = fa
     <Pressable
       accessibilityRole={external ? 'link' : 'button'}
       accessibilityLabel={label}
+      accessibilityHint={detail}
       accessibilityValue={value === undefined ? undefined : { text: value }}
       accessibilityState={selected === undefined ? undefined : { selected }}
       onPress={onPress}
@@ -156,6 +182,14 @@ const styles = StyleSheet.create({
   value: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.xs + 2, flex: 1 },
   valueText: { flexShrink: 1 },
   swatch: { width: 16, height: 16, borderRadius: radii.pill, borderWidth: StyleSheet.hairlineWidth },
+  emojiTile: {
+    width: kids.emoji.tile,
+    height: kids.emoji.tile,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emoji: { fontSize: kids.emoji.tile * 0.6 },
 });
 
 /** A list row's box (min height, padding), for rows built on their own (`MediaRow`). */

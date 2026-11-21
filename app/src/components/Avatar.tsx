@@ -22,10 +22,20 @@ export function initials(name: string): string {
 }
 
 /**
- * Round avatar: `image` (cast photo) when given and loading, else initials on a grey circle, person icon without a
- * name.
+ * Round avatar: `image` (cast photo) when given and loading, else `emoji` (a kids account), else initials on a grey
+ * circle, person icon without a name.
  */
-export function Avatar({ name, image, size = 60 }: { name?: string; image?: string; size?: number }) {
+export function Avatar({
+  name,
+  image,
+  emoji,
+  size = 60,
+}: {
+  name?: string;
+  image?: string;
+  emoji?: string;
+  size?: number;
+}) {
   const c = useColors();
   const [failed, setFailed] = useState<string>();
   const letters = name ? initials(name) : '';
@@ -46,6 +56,10 @@ export function Avatar({ name, image, size = 60 }: { name?: string; image?: stri
           style={StyleSheet.absoluteFill}
           onError={() => setFailed(image)}
         />
+      ) : emoji ? (
+        <Text maxFontSizeMultiplier={1} style={{ fontSize: size * 0.55 }}>
+          {emoji}
+        </Text>
       ) : letters ? (
         // Sized to the circle, not the text setting (the name is spoken by the avatar's button).
         <Text maxFontSizeMultiplier={1} style={{ fontWeight: type.button.fontWeight, fontSize: size * 0.4 }}>

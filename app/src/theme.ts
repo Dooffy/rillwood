@@ -210,6 +210,8 @@ export const kids = {
     titleInset: 24,
   },
   mark: 34,
+  /** Animal marks in the grown-up settings (round): a kids account's avatar, the Kids Mode row and card. */
+  emoji: { account: '🐱', mode: '🦊', tile: 30, header: 56 },
   /** The grown-up gate's sheet: keypad keys (round), answer boxes, the checkmark for a right answer. */
   gate: { key: 64, keyGap: 14, box: 52, icon: 22, check: 64 },
   tag: { paddingHorizontal: 9, paddingVertical: 2 },

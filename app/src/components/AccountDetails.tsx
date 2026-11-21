@@ -3,13 +3,15 @@ import { Alert, Platform, StyleSheet, View } from 'react-native';
 
 import { accountDownloads, deleteAccountDownloads } from '@/downloads';
 import { formatBytes } from '@/format';
+import { useKids } from '@/kidsSettings';
 import { removeAccount, signOut, useSession, type Account as SavedAccount } from '@/session';
 import { homeHref, resetTo } from '@/navigation';
-import { radii, spacing, useColors } from '@/theme';
+import { kids as kidsTheme, radii, spacing, useColors } from '@/theme';
 
 import { accountStatus, signInAgain, useSwitchAccount, type AccountStatus } from './AccountList';
 import { Avatar } from './Avatar';
 import { ListAction, ListRow, ListSection } from './List';
+import { useSettingsLink } from './SettingsLink';
 import { Text } from './Text';
 import { useToast } from './Toast';
 
@@ -30,7 +32,9 @@ export function AccountDetails({ id, onBack }: { id?: string; onBack: () => void
   const switchTo = useSwitchAccount();
   const toast = useToast();
   const c = useColors();
+  const link = useSettingsLink();
   const account = id ? accounts.find((a) => a.id === id) : active;
+  const kids = useKids(account?.id);
   // Removed (this screen is closing) or signed out (the root layout's redirect is already moving away).
   if (!account) return null;
   const status = accountStatus(account, active?.id);
@@ -98,7 +102,7 @@ export function AccountDetails({ id, onBack }: { id?: string; onBack: () => void
   return (
     <>
       <View style={styles.profile}>
-        <Avatar name={account.userName} size={80} />
+        <Avatar name={account.userName} emoji={kids.account ? kidsTheme.emoji.account : undefined} size={80} />
         <Text variant="sectionHeader" accessibilityRole="header">
           {account.userName}
         </Text>
@@ -117,6 +121,17 @@ export function AccountDetails({ id, onBack }: { id?: string; onBack: () => void
         <ListRow label="Address" value={account.server.url} />
         <ListRow label="Version" value={account.server.version} />
       </ListSection>
+      {/* Kids mode is phones and tablets only. */}
+      {!Platform.isTV && (
+        <ListSection title="Kids">
+          <ListRow
+            label="Kids account"
+            value={kids.account ? 'On' : 'Off'}
+            selected={link.selected({ page: 'kids-account', id: account.id })}
+            onPress={() => link.open({ page: 'kids-account', id: account.id })}
+          />
+        </ListSection>
+      )}
       <ListSection
         footer={
           account.signedOut

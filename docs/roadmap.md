@@ -261,12 +261,15 @@ Phones + tablets. Rules: `docs/context/kids.md`, screens: `docs/research/kids-sc
 - [x] 4. Grown-up gate: gear beside the lockup, math sheet, Settings / Switch Account or Leave (Downloads with task 9) (05)
 - [x] 5. Show page: episodes in one list, next one marked (03)
 - [ ] 6. Search by name (02)
-- [ ] 7. Settings: Kids Mode row, Kids tag on account rows, Account page Kids account On / Off, back to Kids Mode (06)
+- [x] 7. Settings: Kids Mode row, Kids tag on account rows, Account page Kids account On / Off, back to Kids Mode (06)
+- [ ] 7b. Pick the animals: Kids Mode icon (🦊) and a kids account's avatar (🐱) - a choice per account
 - [ ] 8. Setup: "Who's it for?" after sign-in when detected, Kids Mode page (07)
 - [ ] 9. Downloads: standard view + Add for the trip, keep the next 5 episodes per show, rating score saved with each download (10)
 - [ ] 10. Offline: feed + faces from downloads, same filter; test plan `docs/test-plans/kids.md` (09)
 
 ## Ideas
+
+- [ ] Kids mode: own playback settings while it's on (e.g. autoplay off only for the kid) - today playback settings are device-wide, so Settings from kids mode shows only the Kids Mode card
 
 - [ ] Research Google TV / Android TV: same RN TV fork as Apple TV (`docs/research/apple-tv.md`), player + focus on Android TV, Play TV requirements
 - [ ] Download space limit setting: the user picks the most space downloads may use (e.g. 5 / 10 / 25 / 50 GB / no limit), used bytes shown against it; the pre-flight refuses past the limit as well as on free space

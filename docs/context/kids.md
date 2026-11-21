@@ -30,7 +30,7 @@ State per account: `src/kidsSettings.ts` (persisted key `settings.kids`, one ent
 - No detail pages, menus, filters, sort, long-press, download buttons.
 - Fast double taps open one screen (`once`, 800 ms, `src/components/kids/KidsCards.tsx`).
 
-Built (tasks 3 + 5): `app/kids.tsx` → `KidsHome`, `app/kids-show/[id].tsx` → `KidsShow` (`src/screens/kids/`), data `useKidsHome` / `useKidsShow`, cards `src/components/kids/`, sizes `kids` in `src/theme.ts`. Start screen per account: `homeHref` (`src/navigation.ts`) - launch, sign-in, account switch and the account removal hand-over land on `/kids` while kids mode is on; Apple TV never. Until later tasks: no way in (Settings row, task 7; setup, task 8); no search button (task 6); the libraries pick isn't applied yet (task 8); no new-episode dot on show posters yet; offline shows the Offline card (downloads, task 10).
+Built (tasks 3 + 5): `app/kids.tsx` → `KidsHome`, `app/kids-show/[id].tsx` → `KidsShow` (`src/screens/kids/`), data `useKidsHome` / `useKidsShow`, cards `src/components/kids/`, sizes `kids` in `src/theme.ts`. Start screen per account: `homeHref` (`src/navigation.ts`) - launch, sign-in, account switch and the account removal hand-over land on `/kids` while kids mode is on; Apple TV never. Until later tasks: no "Who's it for?" step after sign-in (task 8); no search button (task 6); the libraries pick isn't applied yet (task 8); no new-episode dot on show posters yet; offline shows the Offline card (downloads, task 10).
 
 ## Grown-up gate
 
@@ -40,9 +40,10 @@ Built (tasks 3 + 5): `app/kids.tsx` → `KidsHome`, `app/kids-show/[id].tsx` →
 
 ## Entry points
 
-- Settings: a **Kids Mode** row under the accounts (current age as its value), hidden on a kids account. Kids accounts carry a **Kids** tag on their account row; tapping it = entering kids mode.
-- Account page: **Kids account: On / Off** (checkmark list, like every setting).
-- Settings opened from kids mode: same page, back says "‹ Kids Mode".
+- Settings: a 🦊 **Kids Mode** row under the accounts ("Hand your phone to a kid", the age as its value) → the Kids Mode screen (`/kids-mode`) with the **Kids Mode card** (`KidsModeCard`): Age pills (3+ / 7+ / 10+ / 13+), a Show unrated videos toggle (off) - a tap saves - then **Start Kids Mode** (shared on, stack cleared to kids Home). Libraries join with task 8. Kids accounts carry a 🐱 avatar and a **Kids** tag on their account row; tapping it = entering kids mode. Picking the animals: later.
+- Account page: **Kids account** row → On / Off list (`/kids-account`, `KidsAccountSettings`). On for the active account starts kids mode at once.
+- Settings opened from kids mode (gate → Settings, `PhoneSettings`): the card first - shared phone: "Kids Mode is on", the same picks (apply at once), **Switch to Adult Mode** (shared off, normal Home - the gate's Leave Kids Mode without the sum again); kids account: "<name> is a kids account", no picks (the server filters), **Switch Account**. One action on the card: back to kids mode is the header's back button. Nothing else there: Playback, Downloads and Display are device-wide (changing them would change the grown-ups' too), so they wait in the full app; kids downloads come with task 9. Back says "‹ Kids Mode" (the kids screen's title). Tablet landscape: the pane starts empty, never the account page.
+- Phones and tablets only: no Kids rows on Apple TV.
 
 ## Shared filter
 
