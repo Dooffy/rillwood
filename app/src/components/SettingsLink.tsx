@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The pages Settings opens (an account, its Kids account list, Kids Mode, Subtitles, an option's list, Storage limit, About,
+// The pages Settings opens (an account, its Kids account list, Kids Mode and its Library list, Subtitles, an option's list, Storage limit, About,
 // Licences). Phones push their
 // screen; the tablet split view (`SettingsSplit`) shows them beside the list instead, through this context.
 import { router } from 'expo-router';
@@ -11,6 +11,7 @@ export type SettingsLink =
   | { page: 'account'; id: string }
   | { page: 'kids-account'; id: string }
   | { page: 'kids-mode' }
+  | { page: 'kids-library' }
   | { page: 'subtitles' }
   | { page: 'option'; key: PickerKey }
   | { page: 'storage' }
@@ -22,6 +23,7 @@ export type SettingsLink =
 export const SETTINGS_TITLES = {
   'kids-account': 'Kids account',
   'kids-mode': 'Kids Mode',
+  'kids-library': 'Library',
   subtitles: 'Subtitles',
   storage: 'Storage limit',
   about: 'About',
@@ -48,6 +50,7 @@ function push(link: SettingsLink) {
       (
         {
           'kids-mode': '/kids-mode',
+          'kids-library': '/kids-library',
           subtitles: '/subtitles',
           storage: '/download-storage',
           about: '/about',

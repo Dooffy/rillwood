@@ -107,6 +107,7 @@ describe('kidsMode / kidsFilter', () => {
     const s = { ...DEFAULT_KIDS, shared: true, age: 10 as const, unrated: true };
     expect(kidsMode(s)).toBe('shared');
     expect(kidsFilter(s)).toEqual({ age: 10, unrated: true });
+    expect(kidsFilter({ ...s, libraries: ['lib1'] })).toEqual({ age: 10, unrated: true, library: 'lib1' });
   });
 
   it('lets a kids account win - the server filters, the app adds nothing', () => {

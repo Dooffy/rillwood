@@ -4,10 +4,38 @@
 import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
-import { ApiError } from '@/api';
+import { ApiError, request, type UserDto } from '@/api';
 import { authErrorMessage, quickConnect, quickConnectEnabled, signIn } from '@/auth';
+import { currentUser } from '@/items';
+import { isKidsAccount } from '@/kids';
+import { getKids } from '@/kidsSettings';
 import { homeHref, resetTo } from '@/navigation';
-import { getSession, type Server } from '@/session';
+import { connectionFor, getSession, type Account, type Server } from '@/session';
+
+/**
+ * The server limits this user's ratings (`/Users/Me`) and the account isn't marked a kids account yet: ask who it's
+ * for. Out of reach or no answer: don't ask (it can be marked by hand on the Account page).
+ */
+async function detectedKid(account: Account): Promise<boolean> {
+  if (getKids(account.id).account) return false;
+  const conn = connectionFor(account);
+  if (!conn) return false;
+  try {
+    return isKidsAccount(await request<UserDto>(conn, currentUser.path));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * After a sign-in (password or Quick Connect): "Who's it for?" when the server says it's a kid (phones and tablets -
+ * kids mode isn't on Apple TV), else the account's start screen.
+ */
+export async function finishSignIn() {
+  const active = getSession().active;
+  if (!Platform.isTV && active && (await detectedKid(active))) resetTo('/kids-setup');
+  else resetTo(homeHref(active?.id, Platform.isTV));
+}
 
 /** Whether the server has Quick Connect on; undefined until it answers (false if it can't). */
 export function useQuickConnectEnabled(server: Server | null): boolean | undefined {
@@ -52,7 +80,7 @@ export function usePasswordSignIn(server: Server | null, initialUserName = '') {
     setLoading(true);
     try {
       await signIn(server, name, password);
-      resetTo(homeHref(getSession().active?.id, Platform.isTV));
+      await finishSignIn();
     } catch (e) {
       busy.current = false;
       setError(authErrorMessage(e, 'signIn'));
@@ -87,7 +115,7 @@ export function useQuickConnectCode(server: Server | null, { active = true, rene
     // Aborted on unmount / retry: stops polling and a cancelled sign-in never adds the account.
     const controller = new AbortController();
     quickConnect(server, { signal: controller.signal, onCode: setCode })
-      .then(() => resetTo(homeHref(getSession().active?.id, Platform.isTV)))
+      .then(finishSignIn)
       .catch((e: unknown) => {
         if (controller.signal.aborted) return;
         if (renewExpired && e instanceof ApiError && e.status === 404) setAttempt((a) => a + 1);

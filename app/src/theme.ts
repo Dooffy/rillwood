@@ -214,6 +214,8 @@ export const kids = {
   emoji: { account: '🐱', mode: '🦊', tile: 30, header: 56 },
   /** Kids search: the big field, its icons, the round search / close buttons. */
   search: { field: 56, icon: 22, button: 52 },
+  /** Who's it for (after sign-in): the round tick on each card. */
+  who: { tick: 26 },
   /** The grown-up gate's sheet: keypad keys (round), answer boxes, the checkmark for a right answer. */
   gate: { key: 64, keyGap: 14, box: 52, icon: 22, check: 64 },
   tag: { paddingHorizontal: 9, paddingVertical: 2 },
