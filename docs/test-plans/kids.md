@@ -55,6 +55,7 @@ Setup on the server: an adult user, a kids user with a parental rating limit (e.
 | K22 | Open a downloaded show                                                                    | Only its downloaded episodes, the first not watched marked ▶; tap plays the file                         |
 | K23 | Search offline                                                                            | Finds downloads only (an episode by its show's name too)                                                  |
 | K24 | Shared phone 7+: the adult downloaded an R movie; go offline                              | The R movie isn't in kids Home or search                                                                  |
+| K24b | Shared phone 7+: downloads made before 9c (no score); go online once (a sync run), then offline | The kid's downloads show in kids Home; kids Downloads lists them, a line counts the R movie ("1 download not for Kids Mode …") |
 | K25 | Offline with nothing downloaded                                                           | 🌙 "Nothing to watch offline", nothing to press                                                           |
 | K26 | Watch an episode offline, land (airplane mode off), come back to the app                  | Kids Home back to the full list, bar gone, the watch synced (next one moves on)                         |
 | K27 | Weak Wi-Fi that doesn't answer                                                            | Loading placeholders until the check gives up, then the downloads - never a half-filled screen           |

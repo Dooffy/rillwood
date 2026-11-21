@@ -45,6 +45,7 @@ jest.mock('./downloads', () => ({
   setWatched: jest.fn((times: Map<string, number | undefined>) => {
     mockStore.list = mockStore.list.map((d) => (times.has(d.id) ? { ...d, watchedAt: times.get(d.id) } : d));
   }),
+  scoreUnrated: jest.fn(async () => {}),
 }));
 jest.mock('./downloadSnapshot', () => ({
   readSnapshotItem: jest.fn((path: string) => mockStore.items.get(path.split('/')[2]) ?? null),
@@ -310,6 +311,8 @@ it('initOffload: a cleanup after every sync run (the toast); a setting change re
   mockStore.list = [dl('m', { downloadedAt: NOW - 100 * DAY })];
   mockSynced.forEach((l) => l());
   expect(told).toHaveBeenCalledWith({ count: 1, bytes: GB });
+  // Then downloads without a rating score get one (kids offline filter).
+  expect(jest.requireMock<{ scoreUnrated: jest.Mock }>('./downloads').scoreUnrated).toHaveBeenCalled();
   off();
 
   // 180 days → 30 days with old downloads: nothing goes at once, every timer starts again.

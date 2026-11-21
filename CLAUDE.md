@@ -161,11 +161,11 @@ src/useLibrary.ts        Library data for both views: search, type, sort, filter
 src/kids.ts              kids mode rating rules (pure): kids account detection (`/Users/Me` limit), age step → `maxOfficialRating` (+ `hasParentalRating`), allowed shows, `keepAllowed` (episodes by their show), kids requests (`kidsTitles`, `kidsEpisodes`, `kidsSearch`; the library pick as `parentId`), `allowedOffline` (a download's saved score vs the age), `episodeRows` (show page rows: season dividers, columns)
 src/kidsSettings.ts      kids mode state per account (persisted): kids account mark, shared phone mode + age / unrated / libraries, kept shows (`keepShow`, `stopKeeping`); `kidsMode`, `kidsFilter`, `useKids`; dropped with the account
 src/kidsGate.ts          kids grown-up gate (pure): the sum (10-20 + 2-20 as a formula, never the same twice), answer check
-src/ratings.ts           rating scores for downloads: the server's table (once per server) → each item's score, an episode its show's (kids offline filter)
+src/ratings.ts           rating scores for downloads: the server's table (once per server) → each item's score, an episode its show's (kids offline filter); old downloads scored after each sync run (`scoreUnrated`, downloads.ts)
 src/kidsOffline.ts       kids mode offline (pure-ish): the account's finished downloads that pass the filter → titles, a show's episodes, saved art; next = first not watched
 src/useOfflineKids.ts    kids mode's list from downloads while the offline flag is up (null online) - kids Home, show page, search
 src/kidsKeep.ts          kids kept shows: after each sync run's auto-remove, start each kept show's next 5 (`topUpKept`)
-src/kidsDownloads.ts     kids downloads (pure): a show's files, Next 5 from Next Up (`episodesToKeep`), the page's list (on the phone first, A-Z, search)
+src/kidsDownloads.ts     kids downloads (pure): a show's files, Next 5 from Next Up (`episodesToKeep`), the page's list (on the phone first, A-Z, search), what offline hides (`hiddenDownloads`)
 src/connection.ts        offline mode: `/System/Info/Public` check at launch, foreground, account switch + backoff while offline; back online → failed screens reload
 src/navigation.ts        resetTo (clear stack), signed-out redirect (`signedOutHref`: TV → Who's Watching / Sign in), openItem, openPlayer, openDownloads, openLibrary, tabs list, header options (page, plainPage, readablePage)
 src/orientation.ts       rotation lock: phones upright (player excepted), tablets free; never loaded on Apple TV

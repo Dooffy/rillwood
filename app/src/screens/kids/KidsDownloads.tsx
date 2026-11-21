@@ -32,8 +32,8 @@ import {
 import { formatBytes } from '@/format';
 import { currentUser, itemDetail, posterImage, searchTerm, seasonFiles, seasons } from '@/items';
 import { keptEpisodes } from '@/kidsKeep';
-import { kidsDownloadSections, NEXT_COUNT, playableEpisodes, showFiles } from '@/kidsDownloads';
-import { isKept, keepShow, setKids, stopKeeping, useKids } from '@/kidsSettings';
+import { hiddenDownloads, kidsDownloadSections, NEXT_COUNT, playableEpisodes, showFiles } from '@/kidsDownloads';
+import { isKept, keepShow, kidsFilter, setKids, stopKeeping, useKids } from '@/kidsSettings';
 import { useSession } from '@/session';
 import { getDownloadNetwork, useDownloadLimit, useDownloadNetwork, type DownloadNetwork } from '@/settings';
 import { minTouch, radii, scrollList, spacing, useColors } from '@/theme';
@@ -50,6 +50,7 @@ const networkRule = () => (getDownloadNetwork() === 'wifi' ? 'on Wi-Fi' : 'on an
 export function KidsDownloads() {
   const home = useKidsHome();
   const { active, accounts } = useSession();
+  const kids = useKids(active?.id);
   const all = useDownloadList();
   const [text, setText] = useState('');
   const term = searchTerm(text);
@@ -71,6 +72,12 @@ export function KidsDownloads() {
   const free = useFreeSpace(list.storageKey);
   const limit = useDownloadLimit();
   const allSize = useMemo(() => downloadsSize(all), [all]);
+  // Offline the list is the downloads that pass the filter; the rest (an adult's on a shared phone) only counted.
+  const hidden = useMemo(
+    () => (home.downloaded ? hiddenDownloads(all, active?.id, kidsFilter(kids)) : null),
+    [home.downloaded, kids, all, active?.id],
+  );
+  const hiddenLine = hidden && hidden.count > 0 ? hiddenText(hidden.count, hidden.bytes) : undefined;
   // The server's "Allow downloads" for this user (unknown or offline: the page as usual).
   const user = useFetch<UserDto>(active ? currentUser.path : null);
   const blocked = user.data?.Policy?.EnableContentDownloading === false;
@@ -103,7 +110,7 @@ export function KidsDownloads() {
       {home.offline.offline && <Offline busy={home.offline.busy} retry={refreshKids} />}
       {home.error && <LoadError error={home.error} retry={refreshKids} />}
       {home.loading && home.titles.length === 0 && <ActivityIndicator color={c.text} />}
-      {!blocked && home.empty && home.downloaded && (
+      {!blocked && home.empty && home.downloaded && !hiddenLine && (
         <Empty
           icon={{ ios: 'arrow.down.circle', android: 'download' }}
           title="Nothing Downloaded"
@@ -145,6 +152,13 @@ export function KidsDownloads() {
         sections={blocked ? [] : sections}
         keyExtractor={(item) => item.Id}
         ListHeaderComponent={header}
+        ListFooterComponent={
+          hiddenLine && !blocked ? (
+            <Text variant="caption" secondary style={styles.hidden}>
+              {hiddenLine}
+            </Text>
+          ) : undefined
+        }
         stickySectionHeadersEnabled={false}
         contentContainerStyle={[pageContent, pageColumn, styles.content]}
         renderSectionHeader={({ section }) => (
@@ -156,6 +170,12 @@ export function KidsDownloads() {
       />
     </>
   );
+}
+
+/** The line under the list offline for the downloads the filter keeps out. */
+export function hiddenText(count: number, bytes: number) {
+  const one = count === 1;
+  return `${one ? '1 download' : `${count} downloads`} not for Kids Mode (${formatBytes(bytes)}) ${one ? "isn't" : "aren't"} shown here. Delete All removes ${one ? 'it' : 'them'} too.`;
 }
 
 /**
@@ -371,6 +391,7 @@ const styles = StyleSheet.create({
   content: { gap: spacing.sm },
   header: { gap: spacing.md, marginBottom: spacing.sm },
   sectionTitle: { paddingHorizontal: spacing.md, paddingTop: spacing.sm },
+  hidden: { textAlign: 'center', paddingHorizontal: spacing.md, paddingTop: spacing.md },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

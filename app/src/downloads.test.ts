@@ -143,9 +143,11 @@ jest.mock('./session', () => ({
 const mockScores = new Map<string, number>();
 /** Set to hold the lookup open (a slow server); call it to answer. */
 const mockRating: { held: ((scores: Map<string, number>) => void) | null; hold: boolean } = { held: null, hold: false };
+/** The item ids of each lookup. */
+const mockRatingAsked: string[][] = [];
 jest.mock('./ratings', () => ({
-  ratingScores: () =>
-    mockRating.hold
+  ratingScores: (_conn: unknown, items: { Id: string }[]) =>
+    mockRatingAsked.push(items.map((i) => i.Id)) && mockRating.hold
       ? new Promise<Map<string, number>>((resolve) => (mockRating.held = resolve))
       : Promise.resolve(new Map(mockScores)),
 }));
@@ -196,8 +198,59 @@ beforeEach(() => {
   mockScores.clear();
   mockRating.hold = false;
   mockRating.held = null;
+  mockRatingAsked.length = 0;
   emit = (event, payload) =>
     (native.addListener.mock.calls.find(([e]) => e === event)?.[1] as (p: object) => void)(payload);
+});
+
+describe('scoreUnrated (after a sync run)', () => {
+  it("scores the active account's downloads without one (made before scores were saved); others stay", async () => {
+    await dl.startDownloads([movie('m1', GB), movie('m2', GB)]);
+    await act(async () => {});
+    mockSession.accounts = [account('a1'), account('a2')];
+    mockSession.active = mockSession.accounts[1];
+    await dl.startDownloads([movie('m1', GB)]);
+    await act(async () => {});
+    mockSession.active = mockSession.accounts[0];
+    mockScores.set('m1', 0).set('m2', 17);
+    mockRatingAsked.length = 0;
+    await dl.scoreUnrated();
+    expect(mockRatingAsked).toEqual([['m1', 'm2']]);
+    expect(saved().items.map((d) => [d.accountId, d.itemId, d.rating])).toEqual([
+      ['a1', 'm1', 0],
+      ['a1', 'm2', 17],
+      ['a2', 'm1', undefined],
+    ]);
+    // Scored: not asked again.
+    await dl.scoreUnrated();
+    expect(mockRatingAsked).toHaveLength(1);
+  });
+
+  it('asks once per launch for what the server has no score for; nothing back at all (out of reach): again next run', async () => {
+    await dl.startDownloads([movie('m1', GB), movie('m2', GB)]);
+    await act(async () => {});
+    mockRatingAsked.length = 0;
+    // Out of reach: nothing comes back - asked again on the next run.
+    await dl.scoreUnrated();
+    await dl.scoreUnrated();
+    expect(mockRatingAsked).toEqual([
+      ['m1', 'm2'],
+      ['m1', 'm2'],
+    ]);
+    // m2 has no score on the server: stays unrated, not asked about again.
+    mockScores.set('m1', 7);
+    await dl.scoreUnrated();
+    await dl.scoreUnrated();
+    expect(mockRatingAsked).toHaveLength(3);
+    expect(saved().items.map((d) => d.rating)).toEqual([7, undefined]);
+  });
+
+  it('nothing to score, or no connection: no lookup', async () => {
+    await dl.scoreUnrated();
+    mockSession.active = null;
+    await dl.scoreUnrated();
+    expect(mockRatingAsked).toEqual([]);
+  });
 });
 
 describe('startDownloads', () => {

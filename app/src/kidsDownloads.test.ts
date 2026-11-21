@@ -2,7 +2,8 @@
 import { describe, expect, it } from '@jest/globals';
 
 import type { BaseItemDto } from './api';
-import { kidsDownloadSections, episodesToKeep, playableEpisodes, showFiles } from './kidsDownloads';
+import type { Download } from './downloads';
+import { kidsDownloadSections, episodesToKeep, hiddenDownloads, playableEpisodes, showFiles } from './kidsDownloads';
 
 const ep = (Id: string, season: number, played = false, extra: Partial<BaseItemDto> = {}): BaseItemDto => ({
   Id,
@@ -65,5 +66,24 @@ describe('kids downloads', () => {
     const found = kidsDownloadSections(titles, new Set(), 'KIT');
     expect(ids(found.shows)).toEqual(['Cloud Kittens']);
     expect(ids(found.movies)).toEqual(['Kites']);
+  });
+});
+
+describe('hiddenDownloads', () => {
+  const dl = (itemId: string, total: number, fields: Partial<Download> = {}) =>
+    ({ id: itemId, accountId: 'a', itemId, total, ...fields }) as Download;
+
+  it("counts the account's downloads the filter keeps out offline, with their size", () => {
+    const downloads = [
+      dl('e1', 1, { seriesId: 'trains', rating: 0 }),
+      dl('e9', 2, { seriesId: 'grownup', rating: 14 }),
+      dl('pond', 3, { rating: 7 }),
+      dl('home-video', 4),
+      dl('other', 5, { accountId: 'b', rating: 17 }),
+    ];
+    expect(hiddenDownloads(downloads, 'a', { age: 7, unrated: false })).toEqual({ count: 2, bytes: 6 });
+    expect(hiddenDownloads(downloads, 'a', { age: 7, unrated: true })).toEqual({ count: 1, bytes: 2 });
+    // A kids account (no filter): none.
+    expect(hiddenDownloads(downloads, 'a', undefined)).toEqual({ count: 0, bytes: 0 });
   });
 });

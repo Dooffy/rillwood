@@ -47,6 +47,12 @@ describe('rating scores', () => {
     expect(scoreOf(undefined, t)).toBeUndefined();
   });
 
+  it('a server that leaves Value out: the score from RatingScore', () => {
+    const t = scoreTable([{ Name: 'TV-Y7', Value: null, RatingScore: { score: 7 } }, { Name: 'Unrated' }]);
+    expect(scoreOf('TV-Y7', t)).toBe(7);
+    expect(scoreOf('Unrated', t)).toBeUndefined();
+  });
+
   it("a movie its own rating, an episode its show's (each show asked once); none = unrated", async () => {
     const scores = await ratingScores(conn, [
       movie('pg', 'PG'),

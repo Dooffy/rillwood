@@ -7,12 +7,16 @@
 import { request, type BaseItemDto, type Connection } from './api';
 import { itemDetail } from './items';
 
-type RatingDto = { Name?: string; Value?: number | null };
+type RatingDto = { Name?: string; Value?: number | null; RatingScore?: { score?: number | null } | null };
 
 /** Rating name (any case) → score; built from the server's list (unrated entries have no value). */
 export function scoreTable(list: readonly RatingDto[]): Map<string, number> {
   const table = new Map<string, number>();
-  for (const r of list) if (r.Name && typeof r.Value === 'number') table.set(r.Name.toLowerCase(), r.Value);
+  for (const r of list) {
+    // `Value` on every version so far; `RatingScore.score` (10.11+) in case a server leaves `Value` out.
+    const score = r.Value ?? r.RatingScore?.score;
+    if (r.Name && typeof score === 'number') table.set(r.Name.toLowerCase(), score);
+  }
   return table;
 }
 
