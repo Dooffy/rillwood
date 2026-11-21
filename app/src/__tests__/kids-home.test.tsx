@@ -75,9 +75,13 @@ describe('Kids Home', () => {
   it('shows every show and movie once, in the order the server sends (last watched first)', async () => {
     await render(<Kids />);
     await poster('Pond');
-    const labels = screen.getAllByRole('button').map((b) => b.props.accessibilityLabel as string);
+    const labels = screen
+      .getAllByRole('button')
+      .map((b) => b.props.accessibilityLabel as string)
+      .filter((l) => l !== 'Grown-ups');
     expect(labels).toEqual(['Rabbits', expect.stringMatching(/^Started, \d+% watched/), 'Trains', 'Pond']);
     expect(screen.getByLabelText('Rillwood kids')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Grown-ups' })).toBeOnTheScreen();
     // No words on the posters.
     expect(screen.queryByText('Pond')).toBeNull();
   });

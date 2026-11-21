@@ -294,16 +294,13 @@
   .nomatch .bye { font-size: 64px; line-height: 1; }
   .nomatch b { display: block; font-size: 20px; margin-top: 10px; }
 
-  /* Brand lockup = the grown-up hold: a ring fills around the mark while pressed */
-  .brand { position: relative; display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
-  .mring { --p: 0; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(#fff calc(var(--p) * 1%), transparent 0); transition: transform .15s; }
-  .mring .mark { box-shadow: 0 0 0 4px var(--bg); }
-  .brand.held .mring { transform: scale(1.12); }
+  /* Brand lockup: a logo, not a button. The grown-up way out is the small gear beside it (tap = the sheet) */
+  .brand { position: relative; display: flex; align-items: center; gap: 10px; user-select: none; -webkit-user-select: none; }
+  .mring { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; }
   .word { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; display: flex; align-items: center; gap: 6px; }
   .word span { padding: 2px 9px; border-radius: 999px; background: var(--surface-2); font-size: 13px; font-weight: 800; letter-spacing: .02em; color: var(--text-2); }
-  .gup { position: absolute; left: 0; top: 52px; padding: 6px 12px; border-radius: 999px; background: var(--surface-2); font-size: 13px; font-weight: 600; white-space: nowrap; opacity: 0; transform: translateY(-4px); transition: opacity .15s, transform .15s; pointer-events: none; z-index: 8; }
-  .brand.held .gup, .brand.hint .gup { opacity: 1; transform: none; }
-  .brand .gup { transition: opacity .4s, transform .4s; }
+  .gearbtn { width: 44px; height: 44px; margin-left: -4px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; }
+  .gearbtn svg { width: 20px; height: 20px; fill: #fff; }
   /* Grown-up sheet over Home */
   .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 9; }
   .sheet { position: absolute; left: 0; right: 0; bottom: 0; height: 640px; border-radius: 32px 32px 0 0; background: var(--surface); padding: 34px 28px 40px; display: flex; flex-direction: column; align-items: center; text-align: center; transform: translateY(100%); transition: transform .3s cubic-bezier(.2,.8,.2,1); z-index: 10; }
@@ -316,6 +313,11 @@
   .gatephone.open .sheet { transform: none; }
 
   /* Math gate */
+  .ans.right i { box-shadow: inset 0 0 0 2px #30d158; color: #30d158; }
+  .okcheck { display: none; width: 64px; height: 64px; margin: 18px auto 0; border-radius: 50%; background: #30d158; color: #000; font-size: 36px; font-weight: 800; place-items: center; }
+  .ask.right .keys { display: none; }
+  .ask.right .okcheck { display: grid; animation: pop .35s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes pop { from { transform: scale(0); } to { transform: none; } }
   .ask, .behind { display: flex; flex-direction: column; align-items: center; width: 100%; }
   .behind { display: none; padding-top: 30px; }
   .sheet.solved .ask { display: none; }
@@ -362,14 +364,6 @@
   .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--success); }
   .ktag { font-style: normal; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: var(--surface-3); color: var(--text-2); margin-left: 4px; vertical-align: 2px; }
   .kic { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(160deg, #ffb347, #e8590c); display: grid; place-items: center; font-size: 17px; }
-  .coach { position: absolute; inset: 0; z-index: 10; }
-  .coach .spot { position: absolute; left: 14px; top: 48px; width: 56px; height: 56px; border-radius: 50%; background: var(--bg); display: grid; place-items: center; }
-  .pulse { --p: 100; animation: pulse 1.6s ease-in-out infinite; }
-  @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,.5); } 50% { box-shadow: 0 0 0 12px rgba(255,255,255,0); } }
-  .coachcard { position: absolute; left: 16px; right: 16px; top: 124px; padding: 20px; border-radius: 22px; background: var(--surface); }
-  .coachcard::before { content: ''; position: absolute; left: 30px; top: -9px; width: 18px; height: 18px; background: var(--surface); transform: rotate(45deg); border-radius: 3px; }
-  .coachcard b { display: block; font-size: 20px; font-weight: 800; margin-bottom: 6px; }
-  .coachcard p { margin: 0; color: var(--text-2); font-size: 16px; }
   .grow.hl { min-height: 60px; }
 
   /* Kids downloads page */
@@ -428,7 +422,7 @@
         <div class="status"><span>9:41</span><span>100%</span></div>
         <div class="scroll">
           <div class="kbar">
-            <div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div>
+            <div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gearbtn" role="button" aria-label="Grown-ups"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></div></div>
             <div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div>
           </div>
           <div class="pgrid">
@@ -468,7 +462,7 @@
         <div class="status"><span>9:41</span><span>100%</span></div>
         <div class="scroll">
           <div class="kbar">
-            <div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div>
+            <div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gearbtn" role="button" aria-label="Grown-ups"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></div></div>
             <div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div>
           </div>
           <div class="pgrid"><div class="art c1 has-prog"><div class="glyph">🐰</div><div class="prog"><b style="width:40%"></b></div><span class="newdot"></span></div><div class="art c2 has-prog"><div class="glyph">🦕</div><div class="prog"><b style="width:62%"></b></div></div><div class="art c3"><div class="glyph">🚂</div></div><div class="art c6"><div class="glyph">🌋</div><span class="movie">Movie</span></div><div class="art c4"><div class="glyph">🐱</div></div><div class="art c7"><div class="glyph">🐙</div><span class="newdot"></span></div><div class="art c5"><div class="glyph">🦉</div></div><div class="art c8"><div class="glyph">🐸</div><span class="movie">Movie</span></div></div>
@@ -483,7 +477,7 @@
         <div class="status"><span>9:41</span><span>100%</span></div>
         <div class="scroll">
           <div class="kbar">
-            <div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div>
+            <div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gearbtn" role="button" aria-label="Grown-ups"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></div></div>
             <div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div>
           </div>
           <div class="faces">
@@ -504,7 +498,7 @@
         <div class="status"><span>9:41</span><span>100%</span></div>
         <div class="scroll">
           <div class="kbar">
-            <div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div>
+            <div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gearbtn" role="button" aria-label="Grown-ups"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></div></div>
             <div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div>
           </div>
           <div class="shelf"><div class="shelf-head"><span class="art c1"><span class="glyph">🐰</span></span>Rocket Rabbits</div><div class="shelf-row"><div class="art c1 has-prog next"><div class="glyph">🚀</div><div class="prog"><b style="width:40%"></b></div></div><div class="art c1"><div class="glyph">🥕</div></div><div class="art c1"><div class="glyph">🌙</div></div></div></div><div class="shelf"><div class="shelf-head"><span class="art c2"><span class="glyph">🦕</span></span>Dino Bakery</div><div class="shelf-row"><div class="art c2 next"><div class="glyph">🧁</div></div><div class="art c2"><div class="glyph">🍩</div></div><div class="art c2"><div class="glyph">🎂</div></div></div></div><div class="shelf"><div class="shelf-head"><span class="art c3"><span class="glyph">🚂</span></span>Tiny Trains</div><div class="shelf-row"><div class="art c3 next"><div class="glyph">🌨️</div></div><div class="art c3"><div class="glyph">🌉</div></div><div class="art c3"><div class="glyph">⛰️</div></div></div></div><div class="shelf"><div class="shelf-head"><span class="art c6"><span class="glyph">🎬</span></span>Movies</div><div class="shelf-row"><div class="art c6"><div class="glyph">🌋</div></div><div class="art c8"><div class="glyph">🐸</div></div><div class="art c5"><div class="glyph">🦉</div></div></div></div>
@@ -647,14 +641,14 @@
   <!-- 05 Grown-up gate -->
   <section class="screen" id="s-gate">
     <h2><span>05</span>Grown-up gate</h2>
-    <p>Happens right on Home: hold the Rillwood mark 2 s - a ring fills around it - then a sheet slides up with a math question. Try it: press and hold the mark in any frame (this one opens the question - answer it on the pad).</p>
+    <p>Happens right on Home: tap the small gear beside the Rillwood lockup and a sheet slides up with a math question. Try it: tap the gear in this frame and answer on the pad.</p>
     <div class="pair">
       <div class="phone gatephone" id="gate">
         <div class="island"></div>
         <div class="status"><span>9:41</span><span>100%</span></div>
         <div class="scroll">
           <div class="kbar">
-            <div class="brand" id="ring"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div>
+            <div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gearbtn" id="gear" role="button" aria-label="Grown-ups"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></div></div>
             <div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div>
           </div>
           <div class="faces">
@@ -672,6 +666,7 @@
             <p>Answer to leave Kids mode</p>
             <div class="q" id="q">What is seven times eight?</div>
             <div class="ans" id="ans"><i></i><i></i></div>
+            <div class="okcheck">✓</div>
             <div class="keys" id="keys">
               <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span class="blank"></span><span>0</span><span class="del">⌫</span>
             </div>
@@ -687,9 +682,10 @@
         </div>
       </div>
       <ul class="notes">
-        <li><b>Step 1, hold:</b> the mark is the top-left brand lockup ("Rillwood" + a small "kids" tag) - it reads as a logo, not a button. Pressed, it grows a little and a white ring fills around it over 2 s, with a small "Grown-ups: keep holding" tag under it. Letting go drains the ring; the tag stays 3 s after a tap or an early let-go, so it can be read, then fades. A quick tap opens nothing.</li>
-        <li><b>Step 2, math:</b> a sheet over Home (Cancel, a tap outside or a swipe down closes). One multiplication, both numbers 6-9 (36-81), written in words ("seven times eight") so digits alone don't give it away; type the answer on the pad - no answer choices to guess from. It checks once both digits are in: wrong = a shake and a new question, right = what's behind it.</li>
+        <li><b>Step 1, gear:</b> a small white gear right after the lockup ("Rillwood" + a small "kids" tag - a logo, not a button). One tap opens the sheet; no hold, no hint. A kid can tap it too - the sum is the gate.</li>
+        <li><b>Step 2, math:</b> a sheet over Home (Cancel, a tap outside or a swipe down closes). One multiplication, both numbers 6-9 (36-81), written in words ("seven times eight") so digits alone don't give it away; type the answer on the pad - no answer choices to guess from. It checks once both digits are in: wrong = a shake and a new question, right = the boxes go green and a checkmark pops in over the pad, then what's behind it.</li>
         <li><b>Why no PIN:</b> nothing to set up or forget, and nothing a kid can watch over a shoulder. Trade-off: a kid who knows the times tables gets out - fine for the "don't wander out by accident" goal; Screen Time is the real lock.</li>
+        <li><b>Built (task 4):</b> no first-time coach card - the gear is plain to see. Downloads joins the actions with task 9.</li>
         <li><b>Behind it, kids account</b> (shown): <b>Downloads</b> - the kids download page (10), without leaving kids mode; <b>Settings</b> - grown-up settings for kids mode (07c); <b>Switch Account</b> - the account list. <b>Shared phone:</b> <b>Downloads</b>, <b>Settings</b> and <b>Leave Kids Mode</b> - back to your normal app. No "full app" on a kids account: everything a grown-up needs there is Downloads + Settings.</li>
         <li><b>Store:</b> this also serves as the App Store "parental gate" (Guideline 1.3) if links out ever show up in kids mode - today there are none.</li>
         <li><b>Relaunch:</b> kids mode survives app kill and restart - the app opens straight into it until a grown-up leaves (shared phone); a kids account always opens in it.</li>
@@ -747,7 +743,7 @@
         <div class="island"></div>
         <div class="status"><span>9:41</span><span>100%</span></div>
         <div class="scroll">
-          <div class="kbar"><div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div><div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div></div>
+          <div class="kbar"><div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gearbtn" role="button" aria-label="Grown-ups"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></div></div><div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div></div>
           <div class="faces">
             <div class="face"><div class="art c1"><div class="glyph">🐰</div></div>Rabbits</div>
             <div class="face"><div class="art c2"><div class="glyph">🦕</div></div>Dino Bakery</div>
@@ -759,22 +755,12 @@
             <div class="tile"><div class="art c2"><div class="glyph">🦕</div></div><div class="t"><span>The Giant Muffin<small>Dino Bakery</small></span></div></div>
           </div>
         </div>
-        <div class="scrim" style="opacity:1"></div>
-        <div class="coach">
-          <div class="spot"><div class="mring pulse"><div class="mark"><i></i></div></div></div>
-          <div class="coachcard">
-            <b>You're in Kids mode</b>
-            <p>To get out, hold the Rillwood mark for 2 seconds, then answer a quick sum.</p>
-            <div class="primary" style="margin:16px 0 0">Got It</div>
-          </div>
-        </div>
       </div>
       <ul class="notes">
         <li><b>Shared phone - the row:</b> <b>Kids Mode</b> in Settings, its own group right under the accounts (it's "who's using the phone", like the accounts). Value = the age once set up, else "Set up". Tap → the Kids Mode page (07b) → <b>Start Kids Mode</b>. From Home: avatar → Kids Mode → Start = 3 taps.</li>
         <li><b>Kids account - no button at all:</b> switching to Mia (tap her row) <i>is</i> entering kids mode. Her row carries a small <b>Kids</b> tag so it's clear what the tap does.</li>
         <li><b>Account page:</b> a <b>Kids account</b> row (On / Off checkmark list, like every setting). How an undetected kids user gets marked, or a mark gets undone.</li>
         <li><b>Way in = a short fade</b> to kids Home (no slide - it replaces the whole app, the stack is cleared like an account switch).</li>
-        <li><b>First time only</b> (per device): a coach mark over kids Home - the Rillwood mark lit up with a pulsing ring, "hold it 2 s, then answer a quick sum", <b>Got It</b>. The way out is hidden on purpose, so the grown-up has to be told once.</li>
         <li><b>Not now:</b> an iOS / Android home-screen quick action "Kids Mode" (long-press the app icon) - nice for shared phones, but a new dep (<code>expo-quick-actions</code>, approval). Later.</li>
         <li><b>Apple TV:</b> Who's Watching shows a kids account with the same tag; picking it opens kids mode. Shared-phone mode is phone / tablet only.</li>
       </ul>
@@ -878,7 +864,7 @@
     <div class="tablet-wrap" id="tabletWrap">
       <div class="tablet">
         <div class="kbar">
-          <div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div>
+          <div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gearbtn" role="button" aria-label="Grown-ups"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></div></div>
           <div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div>
         </div>
         <div class="pgrid"><div class="st"><i class="k2"></i><i class="k1"></i><div class="art c1 has-prog"><div class="glyph">🐰</div><div class="prog"><b style="width:40%"></b></div></div></div><div class="st"><i class="k2"></i><i class="k1"></i><div class="art c2"><div class="glyph">🦕</div></div></div><div class="art c6 has-prog"><div class="glyph">🌋</div><div class="prog"><b style="width:25%"></b></div></div><div class="st"><i class="k2"></i><i class="k1"></i><div class="art c3"><div class="glyph">🚂</div></div></div><div class="st"><i class="k2"></i><i class="k1"></i><div class="art c4"><div class="glyph">🐱</div></div></div><div class="st"><i class="k2"></i><i class="k1"></i><div class="art c7"><div class="glyph">🐙</div></div></div><div class="st"><i class="k2"></i><i class="k1"></i><div class="art c5"><div class="glyph">🦉</div></div></div><div class="art c8"><div class="glyph">🐸</div></div><div class="st"><i class="k2"></i><i class="k1"></i><div class="art c2"><div class="glyph">🐢</div></div></div><div class="art c3"><div class="glyph">🛸</div></div></div>
@@ -900,7 +886,7 @@
         <div class="island"></div>
         <div class="status"><span>9:41</span><span>100%</span></div>
         <div class="scroll">
-          <div class="kbar"><div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div><div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div></div>
+          <div class="kbar"><div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gearbtn" role="button" aria-label="Grown-ups"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></div></div><div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div></div>
           <div class="shead" style="padding-top:18px">Online · 20 shows</div>
           <div class="faces" style="padding-top:0">
             <div class="face"><div class="art c1"><div class="glyph">🐰</div></div>Rabbits</div><div class="face"><div class="art c2"><div class="glyph">🦕</div></div>Dino Bakery</div><div class="face"><div class="art c3"><div class="glyph">🚂</div></div>Tiny Trains</div><div class="face"><div class="art c4"><div class="glyph">🐱</div></div>Cloud Kittens</div><div class="face"><div class="art c7"><div class="glyph">🐙</div></div>Deep Blue</div><div class="face"><div class="art c5"><div class="glyph">🦉</div></div>Night Owls</div><div class="face"><div class="art c8"><div class="glyph">🐸</div></div>Pond Pals</div>
@@ -914,7 +900,7 @@
         <div class="island"></div>
         <div class="status"><span>9:41</span><span>✈︎</span></div>
         <div class="scroll">
-          <div class="kbar"><div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gup">Grown-ups: keep holding</div></div><div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div></div>
+          <div class="kbar"><div class="brand"><div class="mring"><div class="mark"><i></i></div></div><div class="word">Rillwood<span>kids</span></div><div class="gearbtn" role="button" aria-label="Grown-ups"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></div></div><div class="sbtn"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div></div>
           <div style="padding:0 16px 14px"><span class="offchip">✈︎ Downloaded</span></div>
           <div class="shead" style="padding-top:18px">Offline · 10 shows</div>
           <div class="faces" style="padding-top:0">
@@ -1008,39 +994,21 @@
   const fit = () => wrap.style.setProperty('--s', wrap.clientWidth / 1180);
   fit(); addEventListener('resize', fit);
 
-  // Grown-up hold: any brand lockup fills its ring over 2 s; the one in the gate frame opens the math sheet
+  // Grown-up gear: a tap opens the math sheet
   const gate = document.getElementById('gate');
-  document.querySelectorAll('.brand').forEach(brand => {
-    const ring = brand.querySelector('.mring');
-    let start = 0, raf = 0;
-    let linger = 0;
-    // Let go early (or just a tap): the hint stays 3 s so it can be read, then fades. Done: it goes at once.
-    const reset = (done) => {
-      cancelAnimationFrame(raf);
-      if (done === true) { clearTimeout(linger); brand.classList.remove('hint'); }
-      else if (start) { clearTimeout(linger); brand.classList.add('hint'); linger = setTimeout(() => brand.classList.remove('hint'), 3000); }
-      start = 0; brand.classList.remove('held'); ring.style.setProperty('--p', 0);
-    };
-    const tick = () => {
-      const p = Math.min(100, (performance.now() - start) / 20);
-      ring.style.setProperty('--p', p);
-      if (p >= 100) { reset(true); if (brand.id === 'ring') gate.classList.add('open'); return; }
-      raf = requestAnimationFrame(tick);
-    };
-    brand.addEventListener('pointerdown', e => { e.preventDefault(); clearTimeout(linger); brand.classList.remove('hint'); start = performance.now(); brand.classList.add('held'); raf = requestAnimationFrame(tick); });
-    ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => brand.addEventListener(t, reset));
-  });
+  document.getElementById('gear').addEventListener('click', () => gate.classList.add('open'));
   // Math gate: a × b (6-9) in words, typed on the pad, checked once both digits are in
   const words = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
   const sheet = gate.querySelector('.sheet'), q = document.getElementById('q'), ans = document.getElementById('ans');
   let answer = 0, typed = '';
   const ask = () => {
     const a = 6 + Math.floor(Math.random() * 4), b = 6 + Math.floor(Math.random() * 4);
-    answer = a * b; typed = '';
+    answer = a * b; typed = ''; ans.classList.remove('right'); askEl.classList.remove('right');
     q.textContent = `What is ${words[a]} times ${words[b]}?`;
     draw();
   };
   const draw = () => ans.querySelectorAll('i').forEach((cell, i) => (cell.textContent = typed[i] ?? ''));
+  const askEl = document.getElementById('ask');
   document.getElementById('keys').addEventListener('click', e => {
     const key = e.target.closest('span');
     if (!key || key.classList.contains('blank')) return;
@@ -1049,7 +1017,7 @@
     else if (typed.length < 2) typed += key.textContent;
     draw();
     if (typed.length < 2) return;
-    if (Number(typed) === answer) sheet.classList.add('solved');
+    if (Number(typed) === answer) { ans.classList.add('right'); askEl.classList.add('right'); setTimeout(() => sheet.classList.add('solved'), 1700); }
     else { ans.classList.add('wrong'); setTimeout(ask, 450); }
   });
   ask();
