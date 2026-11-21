@@ -95,6 +95,8 @@ export default function RootLayout() {
               {/* Titled "Kids Mode": Settings opened from it shows "‹ Kids Mode". */}
               <Stack.Screen name="kids" options={{ title: 'Kids Mode', gestureEnabled: false }} />
               <Stack.Screen name="kids-show/[id]" options={{ title: 'Show' }} />
+              {/* Kids mode's Downloads (gate): a grown-up page, back to kids Home. */}
+              <Stack.Screen name="kids-downloads" options={pageOf('Downloads')} />
               {/* Kids search draws its own field and ✕. */}
               <Stack.Screen name="kids-search" options={{ title: 'Search' }} />
               <Stack.Screen name="(auth)/server" options={pageOf('Add server')} />

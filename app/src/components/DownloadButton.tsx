@@ -15,7 +15,16 @@ import { IconButton } from './IconButton';
  * rest), a ring while downloading or paused (tap: Pause / Resume + Cancel Download), ✓ once downloaded (tap asks to
  * delete). Shown by `DetailHeader` only when `useCanDownload`.
  */
-export function DownloadButton({ item, label = 'Download' }: { item: BaseItemDto; label?: string }) {
+export function DownloadButton({
+  item,
+  label = 'Download',
+  round = false,
+}: {
+  item: BaseItemDto;
+  label?: string;
+  /** ↓ and ✓ in a filled circle (kids Downloads rows), not bare (a detail header). */
+  round?: boolean;
+}) {
   const c = useColors();
   const control = useDownloadControl(item);
   const { summary, partial, starting, start, remove } = control;
@@ -29,14 +38,21 @@ export function DownloadButton({ item, label = 'Download' }: { item: BaseItemDto
   // A partial season not downloading: ↓ gets the rest (and resumes what's paused).
   if (!summary || (partial && summary.state !== 'downloading')) {
     return (
-      <IconButton variant="plain" icon={{ ios: 'arrow.down', android: 'download' }} label={label} onPress={start} />
+      <IconButton
+        variant={round ? 'secondary' : 'plain'}
+        icon={{ ios: 'arrow.down', android: 'download' }}
+        label={label}
+        onPress={start}
+      />
     );
   }
   if (summary.state === 'done') {
     return (
       <IconButton
-        variant="plain"
-        icon={{ ios: 'checkmark.circle', android: 'download_done' }}
+        variant={round ? 'secondary' : 'plain'}
+        icon={
+          round ? { ios: 'checkmark', android: 'download_done' } : { ios: 'checkmark.circle', android: 'download_done' }
+        }
         label="Downloaded, delete download"
         onPress={remove}
       />

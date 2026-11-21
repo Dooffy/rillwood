@@ -102,18 +102,13 @@ async function withFiles(conn: Connection, item: BaseItemDto): Promise<BaseItemD
   return [await request<BaseItemDto>(conn, itemDetail(item.Id).path)];
 }
 
-export function useDownloadControl(item: BaseItemDto | undefined): DownloadControl {
+/**
+ * Start downloads from a button or menu: `load` looks the items up with their files (a season, a show's next
+ * episodes...), then they start for the active account - nothing without a file and a size, the storage limit and
+ * free space checked, a toast on any problem. `starting` while it looks up; one start at a time.
+ */
+export function useStartDownload() {
   const toast = useToast();
-  const available = useCanDownload(item);
-  const summary = useDownloadSummary(useDownloadGroup(item));
-  // A season with downloads: are episodes with a file (and a size - else they can't be downloaded) still missing?
-  // Asked for only once something of it is here. Unknown (loading, offline) counts as complete.
-  const season = item?.Type === 'Season' && item.SeriesId ? seasonFiles(item.SeriesId, item.Id) : undefined;
-  const files = useFetch<ItemsResult>(season && summary ? season.path : null, { query: season?.query }).data;
-  const partial =
-    !!summary &&
-    !!files &&
-    downloadSources(files.Items).some((r) => r.source.Size && !summary.itemIds.includes(r.item.Id));
   const [starting, setStarting] = useState(false);
   const busy = useRef(false);
   const mounted = useRef(true);
@@ -124,37 +119,59 @@ export function useDownloadControl(item: BaseItemDto | undefined): DownloadContr
     };
   }, []);
 
-  const start = useCallback(() => {
-    const account = getSession().active;
-    const conn = account && connectionFor(account);
-    if (!item || !account || !conn || busy.current) return;
-    busy.current = true;
-    setStarting(true);
-    void withFiles(conn, item)
-      .then((items) => {
-        // Switched account meanwhile: not theirs to download.
-        if (getSession().active?.id !== account.id) return;
-        const requests = downloadSources(items).filter((r) => r.source.Size);
-        if (requests.length === 0) {
-          toast(DOWNLOAD_NOTHING);
-          return;
-        }
-        return startDownloads(requests).then((result) => {
-          if (!result.ok) return toast(startProblem(result));
-          // Download on a partial season also resumes its paused / failed episodes.
-          resumeDownloads(requests.map((r) => downloadId(account.id, r.item.Id, r.source.Id)));
-          void askNotificationsOnce();
+  const start = useCallback(
+    (load: (conn: Connection) => Promise<BaseItemDto[]>) => {
+      const account = getSession().active;
+      const conn = account && connectionFor(account);
+      if (!account || !conn || busy.current) return;
+      busy.current = true;
+      setStarting(true);
+      void load(conn)
+        .then((items) => {
+          // Switched account meanwhile: not theirs to download.
+          if (getSession().active?.id !== account.id) return;
+          const requests = downloadSources(items).filter((r) => r.source.Size);
+          if (requests.length === 0) {
+            toast(DOWNLOAD_NOTHING);
+            return;
+          }
+          return startDownloads(requests).then((result) => {
+            if (!result.ok) return toast(startProblem(result));
+            // Download on a partial season also resumes its paused / failed episodes.
+            resumeDownloads(requests.map((r) => downloadId(account.id, r.item.Id, r.source.Id)));
+            void askNotificationsOnce();
+          });
+        })
+        .catch((e: unknown) => {
+          if (e instanceof ApiError && e.kind === 'aborted') return;
+          toast(e instanceof ApiError && e.status === 403 ? DOWNLOAD_NOT_ALLOWED : DOWNLOAD_FAILED);
+        })
+        .finally(() => {
+          busy.current = false;
+          if (mounted.current) setStarting(false);
         });
-      })
-      .catch((e: unknown) => {
-        if (e instanceof ApiError && e.kind === 'aborted') return;
-        toast(e instanceof ApiError && e.status === 403 ? DOWNLOAD_NOT_ALLOWED : DOWNLOAD_FAILED);
-      })
-      .finally(() => {
-        busy.current = false;
-        if (mounted.current) setStarting(false);
-      });
-  }, [item, toast]);
+    },
+    [toast],
+  );
+  return { start, starting };
+}
+
+export function useDownloadControl(item: BaseItemDto | undefined): DownloadControl {
+  const available = useCanDownload(item);
+  const summary = useDownloadSummary(useDownloadGroup(item));
+  // A season with downloads: are episodes with a file (and a size - else they can't be downloaded) still missing?
+  // Asked for only once something of it is here. Unknown (loading, offline) counts as complete.
+  const season = item?.Type === 'Season' && item.SeriesId ? seasonFiles(item.SeriesId, item.Id) : undefined;
+  const files = useFetch<ItemsResult>(season && summary ? season.path : null, { query: season?.query }).data;
+  const partial =
+    !!summary &&
+    !!files &&
+    downloadSources(files.Items).some((r) => r.source.Size && !summary.itemIds.includes(r.item.Id));
+  const { start: startWith, starting } = useStartDownload();
+  // Stable per item (the download menus memoise on it).
+  const start = useCallback(() => {
+    if (item) startWith((conn) => withFiles(conn, item));
+  }, [item, startWith]);
 
   const ids = summary?.ids;
   const pause = useCallback(() => ids && pauseDownloads(ids), [ids]);

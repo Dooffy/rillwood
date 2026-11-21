@@ -100,6 +100,7 @@ describe('kids requests', () => {
         sortBy: 'DatePlayed,SortName',
         sortOrder: 'Descending,Ascending',
         limit: 300,
+        fields: 'RecursiveItemCount',
         maxOfficialRating: 'PG',
         hasParentalRating: true,
       },

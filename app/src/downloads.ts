@@ -774,6 +774,8 @@ export type DownloadSummary = {
   itemIds: string[];
   /** How many of `ids` are downloaded. */
   done: number;
+  /** Bytes of the whole group once downloaded (each download's total). */
+  size: number;
 };
 
 export function summarize(downloads: readonly Download[]): DownloadSummary | null {
@@ -793,6 +795,7 @@ export function summarize(downloads: readonly Download[]): DownloadSummary | nul
     ids: downloads.map((d) => d.id),
     itemIds: [...new Set(downloads.map((d) => d.itemId))],
     done,
+    size: total,
   };
 }
 
@@ -805,6 +808,7 @@ const sameSummary = (a: DownloadSummary | null, b: DownloadSummary | null) =>
     a.state === b.state &&
     a.progress === b.progress &&
     a.done === b.done &&
+    a.size === b.size &&
     a.ids.join() === b.ids.join());
 
 /** A group's downloads (`downloadGroup`), with live progress; null when there are none or no group. */

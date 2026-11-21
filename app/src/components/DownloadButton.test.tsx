@@ -16,6 +16,7 @@ const summary = (s: 'downloading' | 'paused' | 'done') => ({
   ids: ['x'],
   itemIds: ['m'],
   done: s === 'done' ? 1 : 0,
+  size: 0,
 });
 
 beforeEach(() => {

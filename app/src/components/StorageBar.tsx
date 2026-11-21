@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { getFreeDiskStorageAsync } from 'expo-file-system/legacy';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { formatBytes } from '@/format';
@@ -67,6 +69,29 @@ export function StorageBar({ onPress, ...storage }: Storage & { onPress: () => v
       </Text>
     </Pressable>
   );
+}
+
+/**
+ * Free space as the store's pre-flight reads it (purgeable included - `Paths.availableDiskSpace` leaves it out),
+ * re-read when `key` changes. Unknown (the call failed) → undefined.
+ */
+export function useFreeSpace(key: string): number | undefined {
+  const [free, setFree] = useState<number>();
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      try {
+        const bytes = await getFreeDiskStorageAsync();
+        if (live) setFree(bytes);
+      } catch {
+        if (live) setFree(undefined);
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [key]);
+  return free;
 }
 
 const styles = StyleSheet.create({

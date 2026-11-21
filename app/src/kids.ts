@@ -62,6 +62,8 @@ export function kidsTitles(filter: KidsFilter | undefined): Endpoint {
       sortBy: 'DatePlayed,SortName',
       sortOrder: 'Descending,Ascending',
       limit: TITLES_LIMIT,
+      // A show's episode count (kids Downloads: "5/32 episodes").
+      fields: 'RecursiveItemCount',
       ...ratingQuery(filter),
       ...libraryQuery(filter),
     },

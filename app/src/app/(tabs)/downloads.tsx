@@ -5,8 +5,7 @@
 // A FlatList (100+ shows stay smooth); it re-renders on structure only, each row reads its own progress. Tablets: two
 // columns, search and chips on one line.
 import { router } from 'expo-router';
-import { getFreeDiskStorageAsync } from 'expo-file-system/legacy';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, StyleSheet, View, type ListRenderItem } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -19,7 +18,7 @@ import { IconButton } from '@/components/IconButton';
 import { Empty, Message } from '@/components/Message';
 import { Screen } from '@/components/Screen';
 import { SearchField } from '@/components/SearchField';
-import { StorageBar } from '@/components/StorageBar';
+import { StorageBar, useFreeSpace } from '@/components/StorageBar';
 import { useTabContentWidth } from '@/components/TabsSidebar';
 import {
   DOWNLOAD_SCOPES,
@@ -39,29 +38,6 @@ import { useDownloadLimit, useOffloadDays, useOffloadWatched } from '@/settings'
 import { spacing, tabList, useWide } from '@/theme';
 import { confirmDeleteDownloads } from '@/useDownloadControl';
 import { useFetch } from '@/useFetch';
-
-/**
- * Free space as the store's pre-flight reads it (purgeable included - `Paths.availableDiskSpace` leaves it out),
- * re-read when `key` changes. Unknown (the call failed) → undefined.
- */
-function useFreeSpace(key: string): number | undefined {
-  const [free, setFree] = useState<number>();
-  useEffect(() => {
-    let live = true;
-    void (async () => {
-      try {
-        const bytes = await getFreeDiskStorageAsync();
-        if (live) setFree(bytes);
-      } catch {
-        if (live) setFree(undefined);
-      }
-    })();
-    return () => {
-      live = false;
-    };
-  }, [key]);
-  return free;
-}
 
 type Show = ShowDownloadRowProps['show'];
 

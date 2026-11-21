@@ -264,7 +264,10 @@ Phones + tablets. Rules: `docs/context/kids.md`, screens: `docs/research/kids-sc
 - [x] 7. Settings: Kids Mode row, Kids tag on account rows, Account page Kids account On / Off, back to Kids Mode (06)
 - [ ] 7b. Pick the animals: Kids Mode icon (🦊) and a kids account's avatar (🐱) - a choice per account
 - [x] 8. Setup: "Who's it for?" after sign-in when detected, Kids Mode page (07)
-- [ ] 9. Downloads: standard view + Add for the trip, keep the next 5 episodes per show, rating score saved with each download (10)
+- [ ] 9. Downloads (10)
+  - [x] 9a. Gate → Downloads page: the kid's titles (on the phone first, A-Z, search), movie ↓, show menu (Next 5 / Whole Show / a season), one-time downloads
+  - [ ] 9b. Keep: a Next 5 show tops itself up (watched episode goes, the next one downloads on the next sync run)
+  - [ ] 9c. Rating score saved with each download (an episode: its show's) for the offline filter
 - [ ] 10. Offline: feed + faces from downloads, same filter; test plan `docs/test-plans/kids.md` (09)
 
 ## Ideas
