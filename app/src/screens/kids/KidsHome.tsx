@@ -38,13 +38,15 @@ export function openKidsTitle(item: BaseItemDto) {
 }
 
 /**
- * Behind the gate. Both kinds: Settings. A kids account: Switch Account (it always opens in kids mode - switching is the
+ * Behind the gate. Both kinds: Downloads (kids mode's own page) and Settings. A kids account: Switch Account (it always opens in kids mode - switching is the
  * way out). A shared phone: Leave Kids Mode (back to this account's normal app).
  */
 export function gateActions(mode: KidsMode, accountId: string | undefined): SheetAction[] {
+  const downloads = { label: 'Downloads', onPress: () => router.push('/kids-downloads') };
   const settings = { label: 'Settings', onPress: () => router.push('/settings') };
   if (mode === 'shared' && accountId) {
     return [
+      downloads,
       settings,
       {
         label: 'Leave Kids Mode',
@@ -55,7 +57,7 @@ export function gateActions(mode: KidsMode, accountId: string | undefined): Shee
       },
     ];
   }
-  return [settings, { label: 'Switch Account', onPress: () => router.push('/accounts') }];
+  return [downloads, settings, { label: 'Switch Account', onPress: () => router.push('/accounts') }];
 }
 
 export function KidsHome() {

@@ -522,6 +522,7 @@ describe('groups', () => {
       state: 'paused',
       progress: 6 / 8,
       itemIds: ['done', 'error'],
+      size: 8,
     });
     expect(sum(at('done', 4))).toMatchObject({ state: 'done', progress: 1 });
   });

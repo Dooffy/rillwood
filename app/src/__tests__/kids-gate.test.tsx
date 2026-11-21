@@ -81,7 +81,7 @@ describe('grown-up gate - the sum', () => {
     const second = question();
     await type(second.answer[0], 'Delete', ...second.answer);
     await act(() => jest.advanceTimersByTime(SOLVED_MS));
-    expect(screen.getAllByRole('menuitem')).toHaveLength(2);
+    expect(screen.getAllByRole('menuitem')).toHaveLength(3);
   });
 
   it('the right answer shows a checkmark, then the actions - a kids account: Settings, Switch Account', async () => {
@@ -95,11 +95,20 @@ describe('grown-up gate - the sum', () => {
     await act(() => jest.advanceTimersByTime(SOLVED_MS));
     expect(screen.queryByTestId('kids-sum')).toBeNull();
     expect(screen.getAllByRole('menuitem').map((m) => m.props.accessibilityLabel)).toEqual([
+      'Downloads',
       'Settings',
       'Switch Account',
     ]);
     await fireEvent.press(screen.getByRole('menuitem', { name: 'Switch Account' }));
     expect(router.push).toHaveBeenCalledWith('/accounts');
+  });
+
+  it('opens kids Downloads from behind the gate', async () => {
+    await render(<Kids />);
+    await openGate();
+    await solve();
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Downloads' }));
+    expect(router.push).toHaveBeenCalledWith('/kids-downloads');
   });
 
   it('opens Settings from behind the gate', async () => {
@@ -116,6 +125,7 @@ describe('grown-up gate - the sum', () => {
     await openGate();
     await solve();
     expect(screen.getAllByRole('menuitem').map((m) => m.props.accessibilityLabel)).toEqual([
+      'Downloads',
       'Settings',
       'Leave Kids Mode',
     ]);

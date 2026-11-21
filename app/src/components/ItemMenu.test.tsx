@@ -86,6 +86,7 @@ describe('downloadActions', () => {
     ids: ['x', 'y'],
     itemIds: ['i'],
     done,
+    size: 0,
   });
   const labels = (over: Partial<DownloadControl>) => downloadActions(control(over)).map((a) => a.label);
 

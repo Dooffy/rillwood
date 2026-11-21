@@ -83,8 +83,10 @@ Kids account: no app filter. A blocked show's episodes come back 404 on 12.1, `2
 
 ## Downloads
 
-- Grown-ups only: gate → Downloads. Kids never see a download button. Needs "Allow downloads" on the server.
-- The standard Downloads view: **On This Phone** (the usual rows) + **Add for the trip** (the filtered shows and movies, ↓ each). A show keeps its next 5 episodes and tops up as they're watched. Done → back to kids mode.
+- Grown-ups only: gate → **Downloads** (`/kids-downloads`, `KidsDownloads`; draft 10 option A, decided 2026-11-21). Kids never see a download button. Needs "Allow downloads" on the server (off → "Downloads Turned Off", no list). ‹ back to kids Home.
+- One list: every show and movie the kid can see (kids Home's list - same filter and library), the ones with something on the phone first, then A-Z (`kidsDownloadSections`, `src/kidsDownloads.ts`), a **Find a show or movie** field filtering by name in the app. The Downloads tab's storage bar on top (tap → Storage limit).
+- A movie: the app's download button (↓, ring, ✓). A show: ↓ / ring / ✓ open a menu - **Next 5 Episodes** (from the show's Next Up, else the first unwatched, else the last 5; across seasons, specials left out - `episodesToKeep`), **Whole Show** (every episode with a file, no specials), each **Season** (its episode count), then Pause / Resume and Delete Downloads for what's there. The menu scrolls past the safe area (seasons); Next 5 and Whole Show stay on top. Episodes already here are skipped by the store; starting reuses `useStartDownload` (limit, space, toasts). The row says what's in it: a show "0/32 episodes", then "5/32 episodes · 1.4 GB" (on the phone / the show's `RecursiveItemCount`, asked on kids Home's list; size = what's on the phone), "Downloading 2 of 5" while it runs; a movie its file size (its detail request, cached - only rows on screen ask), then "On this phone · 1.9 GB". ↓ and ✓ sit in a filled circle (`DownloadButton round`).
+- Built: 9a (the page, one-time downloads). Next: 9b - a Next 5 show tops itself up (a watched episode goes, the next one downloads on the next sync run); 9c - the rating score saved with each download.
 - Downloads stay per account. On a shared phone the adult's own downloads show in kids mode only if they pass the filter; in the normal app all show.
 - Offline filter: a download saves its **rating score** (an episode: its series' score) when it's made. Downloads without one count as unrated (decided 2026-11-19).
 

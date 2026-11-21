@@ -306,6 +306,8 @@ export type BaseItemDto = {
   EndDate?: string;
   /** Series: number of seasons; season: number of episodes. */
   ChildCount?: number;
+  /** A show's episodes (`fields=RecursiveItemCount`; kids downloads: "5/32 episodes"). */
+  RecursiveItemCount?: number;
   SeriesPrimaryImageTag?: string;
   ImageTags?: Partial<Record<ImageType, string>>;
   BackdropImageTags?: string[];
