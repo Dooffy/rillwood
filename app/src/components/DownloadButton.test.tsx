@@ -17,6 +17,9 @@ const summary = (s: 'downloading' | 'paused' | 'done') => ({
   itemIds: ['m'],
   done: s === 'done' ? 1 : 0,
   size: 0,
+  running: s === 'downloading' ? 1 : 0,
+  failed: 0,
+  waitingForNetwork: false,
 });
 
 beforeEach(() => {
@@ -89,6 +92,22 @@ describe('DownloadButton', () => {
     state = { ...state, summary: summary('downloading') };
     await rerender(<DownloadButton item={item} label="Download Season 1" />);
     expect(screen.getByRole('button', { name: 'Downloading' })).toBeOnTheScreen();
+  });
+
+  it('the ring spins while nothing moves yet (waiting, 0%), and fills once bytes come in', async () => {
+    state.summary = { ...summary('downloading'), running: 0 };
+    const view = await render(<DownloadButton item={item} />);
+    expect(screen.getByTestId('ring-spinning', { includeHiddenElements: true })).toBeOnTheScreen();
+    state = { ...state, summary: { ...summary('downloading'), running: 1, progress: 0 } };
+    await view.rerender(<DownloadButton item={item} />);
+    expect(screen.getByTestId('ring-spinning', { includeHiddenElements: true })).toBeOnTheScreen();
+    state = { ...state, summary: { ...summary('downloading'), running: 1, progress: 0.4 } };
+    await view.rerender(<DownloadButton item={item} />);
+    expect(screen.queryByTestId('ring-spinning', { includeHiddenElements: true })).toBeNull();
+    // Paused: the arrow, no spin.
+    state = { ...state, summary: summary('paused') };
+    await view.rerender(<DownloadButton item={item} />);
+    expect(screen.queryByTestId('ring-spinning', { includeHiddenElements: true })).toBeNull();
   });
 
   it('✓ once downloaded asks to delete', async () => {

@@ -57,7 +57,7 @@ export function KidsShow({ id }: { id: string }) {
       <View style={[styles.head, { height: kids.show.header + insets.top, backgroundColor: c.surface }]}>
         {show.show && (
           <Image
-            source={image(backdropImage(show.show), width)}
+            source={image(backdropImage(show.show), width) ?? show.art.get(id)}
             cachePolicy="memory-disk"
             contentFit="cover"
             transition={150}
@@ -73,7 +73,7 @@ export function KidsShow({ id }: { id: string }) {
       {show.offline.offline && <Offline busy={show.offline.busy} retry={() => refreshKidsShow(id)} />}
       {show.error && <LoadError error={show.error} retry={() => refreshKidsShow(id)} />}
       {(show.empty || (!show.loading && show.episodes.length > 0 && rows.length === 0)) && (
-        <Message text="No episodes yet." />
+        <Message text={show.downloaded ? 'None of its episodes are on this phone.' : 'No episodes yet.'} />
       )}
     </View>
   );
@@ -122,6 +122,7 @@ export function KidsShow({ id }: { id: string }) {
                   next={episode.Id === show.nextId}
                   withSeason={withSeason}
                   onPlay={playItem}
+                  art={show.art.get(episode.Id)}
                 />
               ))}
             </View>

@@ -37,14 +37,20 @@ export function episodeName(item: BaseItemDto, withSeason: boolean): string {
 const STACK_X = kids.stack.step;
 const STACK_Y = kids.stack.step * 1.5;
 
-type PosterProps = { item: BaseItemDto; width: number; onOpen: (item: BaseItemDto) => void };
+type PosterProps = {
+  item: BaseItemDto;
+  width: number;
+  onOpen: (item: BaseItemDto) => void;
+  /** Its saved art on the phone (offline, from a download); else the server's image. */
+  art?: string;
+};
 
 /**
  * Home: a show or movie poster. A show sits on a stack of two cards peeking out at its bottom right - there's more
  * inside - and opens its page; a movie plays (the handler decides). The whole stack fills the tile a movie poster
  * fills: the show's poster shrinks to make room, and the cards step 1.5x as far down as right so the stack keeps 2:3.
  */
-export const KidsPoster = memo(function KidsPoster({ item, width, onOpen }: PosterProps) {
+export const KidsPoster = memo(function KidsPoster({ item, width, onOpen, art }: PosterProps) {
   const c = useColors();
   const image = useImage();
   const series = item.Type === 'Series';
@@ -64,7 +70,7 @@ export const KidsPoster = memo(function KidsPoster({ item, width, onOpen }: Post
       )}
       <View style={styles.clip}>
         <Artwork
-          image={image(posterImage(item), series ? width - STACK_X * 2 : width)}
+          image={art ?? image(posterImage(item), series ? width - STACK_X * 2 : width)}
           aspectRatio={2 / 3}
           {...status}
         />
@@ -80,13 +86,15 @@ type EpisodeProps = {
   next: boolean;
   withSeason: boolean;
   onPlay: (item: BaseItemDto) => void;
+  /** Its saved still on the phone (offline); else the server's image. */
+  art?: string;
 };
 
 /**
  * The show page: an episode's own 16:9 still with its name on it (white over a fade, like the app's status line), a ✓
  * when watched, the progress bar under the name when started. Tap plays (resumes a started one).
  */
-export const KidsEpisode = memo(function KidsEpisode({ item, width, next, withSeason, onPlay }: EpisodeProps) {
+export const KidsEpisode = memo(function KidsEpisode({ item, width, next, withSeason, onPlay, art }: EpisodeProps) {
   const c = useColors();
   const image = useImage();
   const status = playback(item);
@@ -99,7 +107,7 @@ export const KidsEpisode = memo(function KidsEpisode({ item, width, next, withSe
       style={({ pressed }) => [{ width }, pressed && styles.pressed]}
     >
       <View testID={next ? 'kids-next' : undefined} style={styles.clip}>
-        <Artwork image={image(landscapeImage(item), width)} aspectRatio={16 / 9} />
+        <Artwork image={art ?? image(landscapeImage(item), width)} aspectRatio={16 / 9} />
         <View style={styles.fade} />
         <View style={styles.status}>
           <View style={styles.nameRow}>

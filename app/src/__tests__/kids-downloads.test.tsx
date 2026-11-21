@@ -6,6 +6,7 @@ import { Alert } from 'react-native';
 import * as api from '@/api';
 import type { BaseItemDto, RequestOptions } from '@/api';
 import KidsDownloadsRoute from '@/app/kids-downloads';
+import type { DownloadSummary } from '@/downloads';
 import { statusLine } from '@/screens/kids/KidsDownloads';
 import { ToastProvider } from '@/components/Toast';
 import * as downloads from '@/downloads';
@@ -172,29 +173,50 @@ describe('Kids downloads', () => {
 });
 
 describe('statusLine', () => {
-  const sum = (state: 'downloading' | 'paused' | 'done', done: number, ids: number, size = 1.4e9) => ({
+  const sum = (
+    state: 'downloading' | 'paused' | 'done',
+    done: number,
+    ids: number,
+    more: Partial<DownloadSummary> = {},
+  ): DownloadSummary => ({
     state,
-    progress: 0.5,
+    progress: 0.12,
     ids: Array.from({ length: ids }, (_, i) => `d${i}`),
     itemIds: Array.from({ length: ids }, (_, i) => `e${i}`),
     done,
-    size,
+    size: 1.4e9,
+    running: 0,
+    failed: 0,
+    waitingForNetwork: false,
+    ...more,
   });
 
-  it('a show: on the phone / in the show + size; while downloading, the progress', () => {
+  it('a show: on the phone / in the show + size before and after', () => {
     expect(statusLine(null, true, 32)).toBe('0/32 episodes');
     expect(statusLine(sum('done', 5, 5), true, 32)).toBe('5/32 episodes · 1.4 GB');
-    expect(statusLine(sum('downloading', 2, 5), true, 32)).toBe('Downloading 2 of 5');
-    expect(statusLine(sum('paused', 2, 5), true, 32)).toBe('Paused 2 of 5');
     // The server didn't say how many.
     expect(statusLine(null, true, undefined)).toBeUndefined();
     expect(statusLine(sum('done', 1, 1), true, undefined)).toBe('1 episode · 1.4 GB');
   });
 
-  it('a movie: its size, then on this phone', () => {
+  it('on the way: what it is doing, like the Downloads tab - a percent while it transfers', () => {
+    expect(statusLine(sum('downloading', 2, 5, { running: 2 }), true, 32)).toBe('Downloading 12% · 2 of 5');
+    expect(statusLine(sum('downloading', 0, 44), true, 155)).toBe('Waiting · 0 of 44');
+    expect(statusLine(sum('downloading', 0, 44, { waitingForNetwork: true }), true, 155)).toBe(
+      'Waiting for Wi-Fi · 0 of 44',
+    );
+    expect(statusLine(sum('downloading', 0, 2, { waitingForNetwork: true }), true, 9, undefined, 'any')).toBe(
+      'Waiting for network · 0 of 2',
+    );
+    expect(statusLine(sum('paused', 2, 5), true, 32)).toBe('Paused · 2 of 5');
+    expect(statusLine(sum('paused', 2, 5, { failed: 1 }), true, 32)).toBe('Failed · 2 of 5');
+  });
+
+  it('a movie: its size, what it is doing, then on this phone', () => {
     expect(statusLine(null, false, undefined, 1.9e9)).toBe('1.9 GB');
     expect(statusLine(null, false, undefined)).toBeUndefined();
-    expect(statusLine(sum('done', 1, 1, 1.9e9), false, undefined)).toBe('On this phone · 1.9 GB');
-    expect(statusLine(sum('downloading', 0, 1), false, undefined)).toBe('Downloading');
+    expect(statusLine(sum('downloading', 0, 1, { running: 1 }), false, undefined)).toBe('Downloading 12%');
+    expect(statusLine(sum('downloading', 0, 1), false, undefined)).toBe('Waiting');
+    expect(statusLine(sum('done', 1, 1, { size: 1.9e9 }), false, undefined)).toBe('On this phone · 1.9 GB');
   });
 });

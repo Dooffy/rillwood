@@ -90,7 +90,13 @@ export function KidsSearch() {
             </Text>
             <View style={[styles.grid, { gap: posters.gap }]}>
               {search.titles.map((item) => (
-                <KidsPoster key={item.Id} item={item} width={posters.tileWidth} onOpen={openKidsTitle} />
+                <KidsPoster
+                  key={item.Id}
+                  item={item}
+                  width={posters.tileWidth}
+                  onOpen={openKidsTitle}
+                  art={search.art.get(item.Id)}
+                />
               ))}
             </View>
           </View>
@@ -109,6 +115,7 @@ export function KidsSearch() {
                   next={false}
                   withSeason={false}
                   onPlay={playItem}
+                  art={search.art.get(item.Id)}
                 />
               ))}
             </View>

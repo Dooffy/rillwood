@@ -16,10 +16,11 @@ import { KidsGate } from '@/components/kids/KidsGate';
 import type { SheetAction } from '@/components/ActionSheet';
 import { IconButton } from '@/components/IconButton';
 import { LoadError, Message, Offline } from '@/components/Message';
+import { Text } from '@/components/Text';
 import { kidsMode, setKids, useKids, type KidsMode } from '@/kidsSettings';
 import { playItem, resetTo } from '@/navigation';
 import { useSession } from '@/session';
-import { kids, pressedOpacity, scrollList, spacing, useColors, useWide } from '@/theme';
+import { kids, pressedOpacity, radii, scrollList, spacing, useColors, useWide } from '@/theme';
 import { refreshKids, useKidsHome } from '@/useKidsHome';
 import { usePullToRefresh } from '@/usePullToRefresh';
 
@@ -97,9 +98,29 @@ export function KidsHome() {
           />
         </Pressable>
       </View>
+      {/* Offline: a full-width bar - for grown-ups, why things are missing (not tappable). */}
+      {home.downloaded && (
+        <View testID="kids-downloaded" style={[styles.offlineBar, { backgroundColor: c.elevated }]}>
+          <Text variant="label" secondary>
+            ✈︎ Offline · showing what&apos;s downloaded
+          </Text>
+        </View>
+      )}
       {home.offline.offline && <Offline busy={home.offline.busy} retry={refreshKids} />}
       {home.error && <LoadError error={home.error} retry={refreshKids} />}
-      {home.empty && <Message text="Nothing to watch yet." />}
+      {home.empty && home.downloaded && (
+        <View style={styles.moon}>
+          <Text
+            style={kids.type.offlineMoon}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
+            🌙
+          </Text>
+          <Text variant="sectionHeader">Nothing to watch offline</Text>
+        </View>
+      )}
+      {home.empty && !home.downloaded && <Message text="Nothing to watch yet." />}
     </View>
   );
 
@@ -128,7 +149,9 @@ export function KidsHome() {
         columnWrapperStyle={{ gap }}
         // Rows as far apart as columns: posters only, no titles under them.
         contentContainerStyle={[styles.content, { gap, paddingBottom: insets.bottom + kids.gap }]}
-        renderItem={({ item }) => <KidsPoster item={item} width={tileWidth} onOpen={openKidsTitle} />}
+        renderItem={({ item }) => (
+          <KidsPoster item={item} width={tileWidth} onOpen={openKidsTitle} art={home.art.get(item.Id)} />
+        )}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.text} />}
       />
       <KidsGate visible={gate} actions={gateActions(mode, active?.id)} onClose={() => setGate(false)} />
@@ -149,6 +172,14 @@ const styles = StyleSheet.create({
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   spacer: { flex: 1 },
+  offlineBar: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    paddingVertical: spacing.sm + spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.card,
+  },
+  moon: { alignItems: 'center', gap: spacing.md, paddingTop: kids.gap * 2 },
   search: {
     width: kids.search.button,
     height: kids.search.button,

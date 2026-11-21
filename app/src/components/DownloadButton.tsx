@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import type { BaseItemDto } from '@/api';
+import type { DownloadSummary } from '@/downloads';
 import { minTouch, useColors } from '@/theme';
 import { downloadActions, useDownloadControl, type DownloadControl } from '@/useDownloadControl';
 
@@ -61,6 +62,10 @@ export function DownloadButton({
   return <RingWithMenu name={item.Name} control={control} />;
 }
 
+/** On its way but nothing moving yet (queued, waiting for Wi-Fi, 0%): the ring spins instead of filling. */
+export const isWaiting = (summary: DownloadSummary) =>
+  summary.state === 'downloading' && (summary.running === 0 || summary.progress === 0);
+
 /** The ring and its menu: the menu goes with the ring (done, deleted), so it never pops up again by itself. */
 function RingWithMenu({ name, control }: { name: string; control: DownloadControl }) {
   const [menu, setMenu] = useState(false);
@@ -68,7 +73,12 @@ function RingWithMenu({ name, control }: { name: string; control: DownloadContro
   if (!summary) return null;
   return (
     <View style={styles.box}>
-      <DownloadRing progress={summary.progress} paused={summary.state === 'paused'} onPress={() => setMenu(true)} />
+      <DownloadRing
+        progress={summary.progress}
+        paused={summary.state === 'paused'}
+        spinning={isWaiting(summary)}
+        onPress={() => setMenu(true)}
+      />
       <ActionSheet visible={menu} title={name} actions={downloadActions(control)} onClose={() => setMenu(false)} />
     </View>
   );
