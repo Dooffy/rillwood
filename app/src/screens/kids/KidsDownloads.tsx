@@ -5,14 +5,15 @@
 // Episodes, Whole Show or a season. The storage bar on top is the Downloads tab's.
 import { router, Stack } from 'expo-router';
 import { memo, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, SectionList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, SectionList, StyleSheet, View } from 'react-native';
 
 import { request, useOffline, type BaseItemDto, type ItemsResult, type UserDto } from '@/api';
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
 import { Artwork } from '@/components/Artwork';
 import { DownloadButton, isWaiting } from '@/components/DownloadButton';
 import { DownloadRing } from '@/components/DownloadRing';
-import { IconButton } from '@/components/IconButton';
+import { headerIconButton, IconButton } from '@/components/IconButton';
+import { Chevron } from '@/components/List';
 import { Empty, LoadError, Message, Offline } from '@/components/Message';
 import { pageColumn, pageContent } from '@/components/Page';
 import { SearchField } from '@/components/SearchField';
@@ -36,7 +37,7 @@ import { hiddenDownloads, kidsDownloadSections, NEXT_COUNT, playableEpisodes, sh
 import { isKept, keepShow, kidsFilter, setKids, stopKeeping, useKids } from '@/kidsSettings';
 import { useSession } from '@/session';
 import { getDownloadNetwork, useDownloadLimit, useDownloadNetwork, type DownloadNetwork } from '@/settings';
-import { minTouch, radii, scrollList, spacing, useColors } from '@/theme';
+import { minTouch, pressedOpacity, radii, scrollList, spacing, useColors } from '@/theme';
 import { confirmDeleteDownloads, useStartDownload } from '@/useDownloadControl';
 import { useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
@@ -126,17 +127,13 @@ export function KidsDownloads() {
   const ids = list.ids;
   const used = list.used;
   const headerOptions = useMemo(
-    () => ({
-      headerRight: () => (
-        <IconButton
-          variant="plain"
-          icon={{ ios: 'trash', android: 'delete' }}
-          label="Delete All Downloads"
-          disabled={!active || ids.length === 0}
-          onPress={() => active && confirmDeleteAll(active.id, active.userName, ids, used)}
-        />
-      ),
-    }),
+    () =>
+      headerIconButton({
+        icon: { ios: 'trash', android: 'delete' },
+        label: 'Delete All Downloads',
+        disabled: !active || ids.length === 0,
+        onPress: () => active && confirmDeleteAll(active.id, active.userName, ids, used),
+      }),
     [active, ids, used],
   );
 
@@ -215,8 +212,8 @@ const TitleRow = memo(function TitleRow({ item, art }: { item: BaseItemDto; art?
   const network = useDownloadNetwork();
   const status = statusLine(summary, show, item.RecursiveItemCount, detail.data?.MediaSources?.[0]?.Size, network);
   const line = kept ? [`Keeping ${NEXT_COUNT}`, status].filter(Boolean).join(' · ') : status;
-  return (
-    <View style={[styles.row, { backgroundColor: c.surface }]}>
+  const body = (
+    <>
       <View style={styles.poster}>
         <Artwork image={art ?? image(posterImage(item), POSTER_WIDTH)} aspectRatio={2 / 3} />
       </View>
@@ -228,7 +225,40 @@ const TitleRow = memo(function TitleRow({ item, art }: { item: BaseItemDto; art?
           </Text>
         )}
       </View>
-      {show ? <ShowDownload show={item} summary={summary} /> : <DownloadButton item={item} round />}
+    </>
+  );
+  const row = [styles.row, { backgroundColor: c.surface }];
+  if (!show)
+    return (
+      <View style={row}>
+        {body}
+        <DownloadButton item={item} round />
+      </View>
+    );
+  // A show: poster + name and the › at the end open its episodes, one by one (online and off); its button keeps its
+  // menu. Two pressables, not one around the button (VoiceOver would hide the button inside).
+  const openEpisodes = () => router.push({ pathname: '/kids-show-downloads/[id]', params: { id: item.Id } });
+  const pressed = ({ pressed: on }: { pressed: boolean }) => on && { opacity: pressedOpacity };
+  return (
+    <View style={row}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${item.Name}, episodes`}
+        onPress={openEpisodes}
+        style={(state) => [styles.open, pressed(state)]}
+      >
+        {body}
+      </Pressable>
+      <ShowDownload show={item} summary={summary} />
+      <Pressable
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        onPress={openEpisodes}
+        hitSlop={spacing.sm}
+        style={pressed}
+      >
+        <Chevron />
+      </Pressable>
     </View>
   );
 });
@@ -270,12 +300,11 @@ export function statusLine(
 }
 
 /**
- * A show's button: ↓, the ring while downloading, ✓ once there - each opens the menu: Keep Next 5 Episodes (asks
- * first; kept shows top up after each sync run - `src/kidsKeep.ts`) or Stop Keeping, Whole Show, each season (episodes
- * already here are skipped by the store), then Pause / Resume and Delete (which also stops keeping).
+ * A show's download menu (its row's button, the show's episodes page ⋯): Keep Next 5 Episodes (asks first; kept shows
+ * top up after each sync run - `src/kidsKeep.ts`) or Stop Keeping, Whole Show, each season (episodes already here are
+ * skipped by the store), then Pause / Resume and Delete (which also stops keeping).
  */
-function ShowDownload({ show, summary }: { show: BaseItemDto; summary: DownloadSummary | null }) {
-  const c = useColors();
+export function useShowMenu(show: BaseItemDto, summary: DownloadSummary | null) {
   const [menu, setMenu] = useState(false);
   const { start, starting } = useStartDownload();
   // The seasons, asked once the menu opens (cached after).
@@ -355,7 +384,16 @@ function ShowDownload({ show, summary }: { show: BaseItemDto; summary: DownloadS
       : []),
   ];
 
-  const open = () => setMenu(true);
+  const sheet = (
+    <ActionSheet visible={menu} title={`Download ${show.Name}`} actions={actions} onClose={() => setMenu(false)} />
+  );
+  return { open: () => setMenu(true), starting, sheet };
+}
+
+/** A show's button: ↓, the ring while downloading, ✓ once there - each opens its menu (`useShowMenu`). */
+function ShowDownload({ show, summary }: { show: BaseItemDto; summary: DownloadSummary | null }) {
+  const c = useColors();
+  const { open, starting, sheet } = useShowMenu(show, summary);
   return (
     <View style={styles.button}>
       {starting ? (
@@ -382,7 +420,7 @@ function ShowDownload({ show, summary }: { show: BaseItemDto; summary: DownloadS
           onPress={open}
         />
       )}
-      <ActionSheet visible={menu} title={`Download ${show.Name}`} actions={actions} onClose={() => setMenu(false)} />
+      {sheet}
     </View>
   );
 }
@@ -402,5 +440,6 @@ const styles = StyleSheet.create({
   },
   poster: { width: POSTER_WIDTH },
   text: { flex: 1, gap: 2 },
+  open: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm + spacing.xs },
   button: { width: minTouch, height: minTouch, alignItems: 'center', justifyContent: 'center' },
 });

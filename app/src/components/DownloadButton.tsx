@@ -20,14 +20,22 @@ export function DownloadButton({
   item,
   label = 'Download',
   round = false,
+  onDelete,
 }: {
   item: BaseItemDto;
   label?: string;
   /** ↓ and ✓ in a filled circle (kids Downloads rows), not bare (a detail header). */
   round?: boolean;
+  /**
+   * Its own question for ✓ and Cancel Download, in place of the usual ones (a kids kept show's episode: stop keeping
+   * first). Gets the download ids.
+   */
+  onDelete?: (ids: readonly string[]) => void;
 }) {
   const c = useColors();
-  const control = useDownloadControl(item);
+  const base = useDownloadControl(item);
+  const ids = base.summary?.ids;
+  const control = onDelete && ids ? { ...base, remove: () => onDelete(ids), cancel: () => onDelete(ids) } : base;
   const { summary, partial, starting, start, remove } = control;
   if (starting) {
     return (

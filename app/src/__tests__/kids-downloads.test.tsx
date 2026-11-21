@@ -169,6 +169,14 @@ describe('Kids downloads', () => {
     expect(startedIds()).toEqual(['e4', 'e5', 'e6', 'e7']);
   });
 
+  it("a show's poster + name open its episodes; a movie's row doesn't", async () => {
+    const { router } = jest.requireMock<{ router: { push: jest.Mock } }>('expo-router');
+    await renderPage();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Kittens, episodes' }));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/kids-show-downloads/[id]', params: { id: 'Kittens' } });
+    expect(screen.queryByRole('button', { name: 'Pond Jumpers, episodes' })).toBeNull();
+  });
+
   it('says so when the server turned downloads off for the user', async () => {
     me = { Id: 'u', Name: 'mia', Policy: { EnableContentDownloading: false } };
     await renderPage();

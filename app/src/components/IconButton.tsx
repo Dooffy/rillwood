@@ -73,3 +73,24 @@ const styles = StyleSheet.create({
   pressed: { opacity: pressedOpacity },
   disabled: { opacity: disabledOpacity },
 });
+
+/**
+ * Header options for one icon button on the right. iOS: a native bar button (iOS 26 draws its own round glass - our own
+ * view there sits in a stretched pill); elsewhere a plain `IconButton`.
+ */
+export function headerIconButton({
+  icon,
+  label,
+  onPress,
+  disabled,
+}: Pick<IconButtonProps, 'icon' | 'label' | 'onPress' | 'disabled'>) {
+  const ios = typeof icon === 'string' ? icon : icon.ios;
+  return {
+    headerRight: () => <IconButton variant="plain" icon={icon} label={label} onPress={onPress} disabled={disabled} />,
+    ...(ios && {
+      unstable_headerRightItems: () => [
+        { type: 'button' as const, label, icon: { type: 'sfSymbol' as const, name: ios }, onPress, disabled },
+      ],
+    }),
+  };
+}
