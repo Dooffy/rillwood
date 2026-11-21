@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
 import * as api from '@/api';
 import type { BaseItemDto, RequestOptions } from '@/api';
@@ -8,7 +9,7 @@ import KidsDownloadsRoute from '@/app/kids-downloads';
 import { statusLine } from '@/screens/kids/KidsDownloads';
 import { ToastProvider } from '@/components/Toast';
 import * as downloads from '@/downloads';
-import { forgetKids, setKids } from '@/kidsSettings';
+import { forgetKids, getKids, setKids } from '@/kidsSettings';
 import * as notifications from '@/notificationPermission';
 import * as session from '@/session';
 
@@ -121,16 +122,33 @@ describe('Kids downloads', () => {
   it("a show's button offers Next 5, Whole Show and each season", async () => {
     await openShowMenu();
     expect(await screen.findByRole('menuitem', { name: 'Season 2, 4 episodes' })).toBeOnTheScreen();
-    expect(screen.getByRole('menuitem', { name: 'Next 5 Episodes, From where the kid is' })).toBeOnTheScreen();
+    expect(
+      screen.getByRole('menuitem', { name: 'Keep Next 5 Episodes, Swaps watched ones for new ones' }),
+    ).toBeOnTheScreen();
     expect(screen.getByRole('menuitem', { name: 'Whole Show' })).toBeOnTheScreen();
     expect(screen.getByRole('menuitem', { name: 'Season 1, 3 episodes' })).toBeOnTheScreen();
   });
 
-  it('Next 5 downloads from Next Up on, across seasons', async () => {
+  it('Keep Next 5 asks first, then keeps the show and downloads from Next Up on, across seasons', async () => {
+    const alert = jest.spyOn(Alert, 'alert');
     await openShowMenu();
-    await fireEvent.press(await screen.findByRole('menuitem', { name: /^Next 5 Episodes/ }));
+    await fireEvent.press(await screen.findByRole('menuitem', { name: /^Keep Next 5 Episodes/ }));
+    const [title, text, buttons] = alert.mock.calls[0];
+    expect(title).toBe('Keep 5 episodes of Kittens?');
+    expect(text).toBe(
+      "Rillwood keeps the next 5 episodes on this phone. An episode is removed a day after it's watched, and the next one downloads (on Wi-Fi).",
+    );
+    expect(started).not.toHaveBeenCalled();
+    await act(async () => buttons?.find((b) => b.text === 'Keep')?.onPress?.());
+    expect(getKids(active.id).kept).toEqual(['Kittens']);
     await waitFor(() => expect(started).toHaveBeenCalled());
     expect(startedIds()).toEqual(['e3', 'e4', 'e5', 'e6', 'e7']);
+    // The row says so; the menu offers Stop Keeping instead.
+    expect(await screen.findByText(/^Keeping 5/)).toBeOnTheScreen();
+    await fireEvent.press(screen.getAllByRole('button', { name: 'Download' })[0]);
+    await fireEvent.press(await screen.findByRole('menuitem', { name: 'Stop Keeping, The episodes here stay' }));
+    expect(getKids(active.id).kept).toBeUndefined();
+    alert.mockRestore();
   });
 
   it('Whole Show downloads every episode; a season only its own', async () => {

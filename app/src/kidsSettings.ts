@@ -19,6 +19,8 @@ export type KidsSettings = {
   unrated: boolean;
   /** Library ids shown; undefined = all. */
   libraries?: string[];
+  /** Shows kept topped up on the phone (kids Downloads → Keep Next 5): a watched episode goes, the next one comes. */
+  kept?: string[];
 };
 
 export type KidsMode = 'off' | 'account' | 'shared';
@@ -31,13 +33,17 @@ const listeners = new Set<() => void>();
 /** A stored entry, fixed up field by field: anything unreadable falls back to the default. */
 function clean(value: unknown): KidsSettings {
   const v = (typeof value === 'object' && value !== null ? value : {}) as Partial<Record<keyof KidsSettings, unknown>>;
-  const libraries = Array.isArray(v.libraries) ? v.libraries.filter((id) => typeof id === 'string') : undefined;
+  const ids = (list: unknown) =>
+    Array.isArray(list) ? list.filter((id): id is string => typeof id === 'string') : undefined;
+  const libraries = ids(v.libraries);
+  const kept = ids(v.kept);
   return {
     account: v.account === true,
     shared: v.shared === true,
     age: AGE_STEPS.find((step) => step === v.age) ?? DEFAULT_KIDS.age,
     unrated: v.unrated === true,
     ...(libraries && { libraries }),
+    ...(kept?.length && { kept }),
   };
 }
 
@@ -78,6 +84,21 @@ export function forgetKids(accountId: string): void {
   const { [accountId]: _removed, ...rest } = all;
   save(rest);
 }
+
+/** Keep a show topped up (kids Downloads → Keep Next 5). */
+export function keepShow(accountId: string, seriesId: string): void {
+  const kept = getKids(accountId).kept ?? [];
+  if (!kept.includes(seriesId)) setKids(accountId, { kept: [...kept, seriesId] });
+}
+
+/** Stop keeping a show (Stop Keeping, Delete Downloads); its files stay or go with the caller. */
+export function stopKeeping(accountId: string, seriesId: string): void {
+  const kept = getKids(accountId).kept;
+  if (kept?.includes(seriesId)) setKids(accountId, { kept: kept.filter((id) => id !== seriesId) });
+}
+
+export const isKept = (settings: KidsSettings, seriesId: string | undefined) =>
+  !!seriesId && !!settings.kept?.includes(seriesId);
 
 /** A kids account wins: the server filters it, so the shared filter never applies on top. */
 export function kidsMode(settings: KidsSettings): KidsMode {

@@ -204,8 +204,8 @@ export function downloadActions(control: DownloadControl): SheetAction[] {
   return [first, { label: 'Cancel Download', destructive: true, onPress: cancel }, ...(summary.done > 0 ? [del] : [])];
 }
 
-/** Asks before deleting downloads (a header button, a menu, the Downloads tab), then deletes them. */
-export function confirmDeleteDownloads(name: string | undefined, ids: readonly string[]) {
+/** Asks before deleting downloads (a header button, a menu, the Downloads tab), then deletes them (then `onDeleted`). */
+export function confirmDeleteDownloads(name: string | undefined, ids: readonly string[], onDeleted?: () => void) {
   const many = ids.length > 1;
   Alert.alert(
     name ? `Delete the ${many ? 'downloads' : 'download'} of ${name}?` : 'Delete this download?',
@@ -214,7 +214,14 @@ export function confirmDeleteDownloads(name: string | undefined, ids: readonly s
       : "It's removed from this device. You can download it again.",
     [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteDownloads(ids) },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          deleteDownloads(ids);
+          onDeleted?.();
+        },
+      },
     ],
   );
 }

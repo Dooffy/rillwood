@@ -17,6 +17,7 @@ import {
   watchedSinceReset,
   watchedTime,
 } from './offload';
+import { forgetKids, setKids } from './kidsSettings';
 import { setOffloadDays, setOffloadWatched } from './settings';
 import type { PendingProgress } from './sync';
 
@@ -216,6 +217,31 @@ describe('cleanup', () => {
     expect(deleteDownloads).toHaveBeenCalledWith(['a:done:done']);
     expect(setWatched).toHaveBeenCalledTimes(1);
     expect(mockStore.list.find((d) => d.itemId === 'cooling')?.watchedAt).toBe(NOW - HOUR);
+  });
+
+  it('a kept show (kids mode): its watched episodes go a day after watching, with Remove watched off', () => {
+    setOffloadDays(0);
+    setKids('a', { kept: ['show'] });
+    mockStore.list = [
+      dl('kept-done', { seriesId: 'show' }),
+      dl('kept-cooling', { seriesId: 'show' }),
+      dl('other', { seriesId: 'other-show' }),
+    ];
+    mockStore.items.set('kept-done', played(NOW - 25 * HOUR));
+    mockStore.items.set('kept-cooling', played(NOW - 2 * HOUR));
+    mockStore.items.set('other', played(NOW - 25 * HOUR));
+    expect(cleanup(NOW)).toEqual({ count: 1, bytes: GB });
+    expect(deleteDownloads).toHaveBeenCalledWith(['a:kept-done:kept-done']);
+    forgetKids('a');
+  });
+
+  it('a kept show with a shorter Remove watched: the setting wins', () => {
+    setOffloadWatched(6);
+    setKids('a', { kept: ['show'] });
+    mockStore.list = [dl('ep', { seriesId: 'show' })];
+    mockStore.items.set('ep', played(NOW - 7 * HOUR));
+    expect(cleanup(NOW)).toEqual({ count: 1, bytes: GB });
+    forgetKids('a');
   });
 
   it('reads the saved item once per item (versions share it); nothing to save when nothing changed', () => {
