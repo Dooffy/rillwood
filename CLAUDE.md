@@ -159,8 +159,9 @@ src/useItemDetail.ts     movie / episode detail for both views: `detailView`, pl
 src/useSeriesDetail.ts   series detail for both views: seasons, Next Up, the season shown, what Play plays (`useSeriesPlayTarget`, `episodePlay`), show watched / favourite
 src/useLibrary.ts        Library data for both views: search, type, sort, filters, All rows, paged list, offline state, card handlers
 src/kids.ts              kids mode rating rules (pure): kids account detection (`/Users/Me` limit), age step → `maxOfficialRating` (+ `hasParentalRating`), allowed shows, `keepAllowed` (episodes by their show), kids requests (`kidsTitles`, `kidsEpisodes`, `kidsSearch`; the library pick as `parentId`), `episodeRows` (show page rows: season dividers, columns)
-src/kidsSettings.ts      kids mode state per account (persisted): kids account mark, shared phone mode + age / unrated / libraries; `kidsMode`, `kidsFilter`, `useKids`; dropped with the account
+src/kidsSettings.ts      kids mode state per account (persisted): kids account mark, shared phone mode + age / unrated / libraries, kept shows (`keepShow`, `stopKeeping`); `kidsMode`, `kidsFilter`, `useKids`; dropped with the account
 src/kidsGate.ts          kids grown-up gate (pure): the sum (6-9 x 6-9 in words, never the same twice), answer check
+src/kidsKeep.ts          kids kept shows: after each sync run's auto-remove, start each kept show's next 5 (`topUpKept`)
 src/kidsDownloads.ts     kids downloads (pure): a show's files, Next 5 from Next Up (`episodesToKeep`), the page's list (on the phone first, A-Z, search)
 src/connection.ts        offline mode: `/System/Info/Public` check at launch, foreground, account switch + backoff while offline; back online → failed screens reload
 src/navigation.ts        resetTo (clear stack), signed-out redirect (`signedOutHref`: TV → Who's Watching / Sign in), openItem, openPlayer, openDownloads, openLibrary, tabs list, header options (page, plainPage, readablePage)
@@ -183,7 +184,7 @@ src/downloadSnapshot.ts  per-download snapshot: item JSON, poster, backdrop, epi
 src/downloadList.ts      Downloads tab (pure): one list per account (a row per movie / show, search + type), a show's seasons, status wording
 src/notificationPermission.ts  Android 13+: notification permission asked once, when the first download starts
 src/sync.ts              offline progress: queue (reports that missed the server), replay for the active account, saved UserData pull
-src/offload.ts           auto-remove: timer per download + watched cooldown, expiry labels, cleanup after every sync run, player hold
+src/offload.ts           auto-remove: timer per download + watched cooldown (a kids kept show's watched episode: a day), expiry labels, cleanup after every sync run, player hold
 src/licences.ts          Settings → Licences data (`src/licences.json`, written on install by `scripts/generate-licences.mjs`; read on first use, never at launch)
 src/persist.ts           accounts + settings storage: kv-store, the Keychain on Apple TV
 src/settings.ts          user settings in kv-store (appearance, subtitle size + style, video zoom, playback defaults: autoplay next, audio language, subtitle mode + language, download network + storage limit, auto-remove days + watched cooldown)

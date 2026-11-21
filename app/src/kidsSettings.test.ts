@@ -3,7 +3,18 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, renderHook } from '@testing-library/react-native';
 import { Storage } from 'expo-sqlite/kv-store';
 
-import { DEFAULT_KIDS, forgetKids, getKids, kidsFilter, kidsMode, setKids, useKids } from './kidsSettings';
+import {
+  DEFAULT_KIDS,
+  forgetKids,
+  getKids,
+  isKept,
+  keepShow,
+  kidsFilter,
+  kidsMode,
+  setKids,
+  stopKeeping,
+  useKids,
+} from './kidsSettings';
 
 type Module = typeof import('./kidsSettings');
 
@@ -114,5 +125,27 @@ describe('kidsMode / kidsFilter', () => {
     const s = { ...DEFAULT_KIDS, account: true, shared: true };
     expect(kidsMode(s)).toBe('account');
     expect(kidsFilter(s)).toBeUndefined();
+  });
+});
+
+describe('kept shows', () => {
+  it('keeps a show once, stops keeping it, per account', () => {
+    keepShow('k1', 'show');
+    keepShow('k1', 'show');
+    keepShow('k1', 'other');
+    expect(getKids('k1').kept).toEqual(['show', 'other']);
+    expect(isKept(getKids('k1'), 'show')).toBe(true);
+    expect(isKept(getKids('k2'), 'show')).toBe(false);
+    expect(isKept(getKids('k1'), undefined)).toBe(false);
+    stopKeeping('k1', 'show');
+    stopKeeping('k1', 'other');
+    // None left: nothing stored for it.
+    expect(getKids('k1').kept).toBeUndefined();
+    forgetKids('k1');
+  });
+
+  it('reads damaged kept lists as the ids it can', () => {
+    Storage.setItemSync('settings.kids', JSON.stringify({ a: { kept: ['s1', 3, null] } }));
+    expect(relaunch().getKids('a').kept).toEqual(['s1']);
   });
 });

@@ -1,16 +1,29 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Auto-remove (docs/context/downloads.md, Offload): each finished download has a timer - Settings → Remove downloads,
 // days from when it finished or its last Reset Timer - and, when Remove watched is on, goes sooner a cooldown after it
-// was watched. Runs after every progress sync (launch, back from the background, reconnect, account switch), so the
-// saved watched state is as fresh as it gets. Unfinished and playing downloads stay.
+// was watched. A kids mode kept show's episode (docs/context/kids.md, Downloads) always goes a day after it was watched
+// - the top-up brings the next one. Runs after every progress sync (launch, back from the background, reconnect,
+// account switch), so the saved watched state is as fresh as it gets. Unfinished and playing downloads stay.
 import type { BaseItemDto } from '@/api';
 import { deleteDownloads, getDownloads, resetTimers, setWatched, type Download } from '@/downloads';
 import { readSnapshotItem } from '@/downloadSnapshot';
+import { topUpKept } from '@/kidsKeep';
+import { getKids, isKept } from '@/kidsSettings';
 import { getOffloadDays, getOffloadWatched, subscribeSettings } from '@/settings';
 import { getPendingProgress, onSynced, pullNextRun, type PendingProgress } from '@/sync';
 
 const HOUR = 60 * 60_000;
 const DAY = 24 * HOUR;
+
+/** A kept show's watched episode goes this long after it was watched (a rewatch the same day still finds it). */
+export const KEPT_WATCHED_HOURS = 24;
+
+/** An episode of a show its account keeps topped up. */
+const inKeptShow = (d: Download) => isKept(getKids(d.accountId), d.seriesId);
+
+/** Remove watched for this download: a kept show's episodes go a day after watching, sooner if the setting says so. */
+const watchedHours = (d: Download, hours: number) =>
+  inKeptShow(d) ? (hours > 0 ? Math.min(hours, KEPT_WATCHED_HOURS) : KEPT_WATCHED_HOURS) : hours;
 
 /**
  * When the item was watched (ms), or undefined while it isn't: progress not synced yet first, else the saved item's
@@ -129,11 +142,12 @@ function refreshWatched(downloads: readonly Download[], now: number) {
 export function cleanup(now = Date.now()): OffloadResult | null {
   const days = getOffloadDays();
   const hours = getOffloadWatched();
-  if (days === 0 && hours === 0) return null;
-  // Only Remove watched needs the saved items read (the timer goes by dates alone).
-  if (hours > 0) refreshWatched(getDownloads(), now);
+  const kept = getDownloads().some(inKeptShow);
+  if (days === 0 && hours === 0 && !kept) return null;
+  // Only Remove watched (or a kept show) needs the saved items read (the timer goes by dates alone).
+  if (hours > 0 || kept) refreshWatched(getDownloads(), now);
   const due = getDownloads().filter((d) => {
-    const at = expiresAt(d, days, hours);
+    const at = expiresAt(d, days, watchedHours(d, hours));
     return at !== undefined && now >= at && !playing.has(`${d.accountId}:${d.itemId}`);
   });
   if (due.length === 0) return null;
@@ -160,6 +174,8 @@ export function onWatched(listener: (result: WatchedResult) => void) {
 function run() {
   const result = cleanup();
   if (result) removedListeners.forEach((l) => l(result));
+  // Then kept shows fill the gaps the cleanup left.
+  void topUpKept();
 }
 
 let started = false;

@@ -171,7 +171,7 @@ export const PICKERS = {
     set: setOffloadWatched,
     section: 'After watching',
     footer:
-      'Removes a download sooner once you watch it to the end. The wait gives you time to keep it if you got to the end by accident. Changing this starts every timer again.',
+      'Removes a download sooner once you watch it to the end. The wait gives you time to keep it if you got to the end by accident. Changing this starts every timer again. Shows kept in Kids Mode remove a watched episode after a day even when this is off.',
   }),
 };
 

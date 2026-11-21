@@ -79,6 +79,8 @@ Contract (types, calls, events): [`app/modules/downloads/index.ts`](../../app/mo
 
 ## Offload (`src/offload.ts`)
 
+- Kids mode kept shows (`kidsSettings` `kept`): their episodes also go 24 h after watching (`KEPT_WATCHED_HOURS`) with Remove watched off (a shorter setting wins); after each cleanup `topUpKept` (`src/kidsKeep.ts`) starts the shows' next episodes. Details: `docs/context/kids.md`, Downloads.
+
 Decided 2026-10-14 (demo with the maintainer): one timer per download + an optional sooner removal once watched, with a cooldown; Reset Timer instead of a Keep pin (nothing kept forever by accident).
 
 - Settings → Downloads → Remove downloads (one row; one page with two lists - `more` on the picker - headed After download / After watching; phone-wide, every account's downloads): **Remove downloads** Never / 30 / 90 (default) / 180 days (`settings.offloadDays`) - after it finished downloading (`downloadedAt`) or its last Reset Timer (`resetAt`), watched or not. **Remove watched** Off (default) / 6 / 24 hours / 3 days (`settings.offloadWatched`) - after it was watched, when that comes first. A watch before the timer start doesn't count (watched long ago and downloaded again to rewatch, or reset after watching).

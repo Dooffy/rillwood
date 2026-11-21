@@ -5,7 +5,7 @@
 // Episodes, Whole Show or a season. The storage bar on top is the Downloads tab's.
 import { router } from 'expo-router';
 import { memo, useMemo, useState } from 'react';
-import { ActivityIndicator, SectionList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, SectionList, StyleSheet, View } from 'react-native';
 
 import { request, type BaseItemDto, type ItemsResult, type UserDto } from '@/api';
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
@@ -29,10 +29,12 @@ import {
   type DownloadSummary,
 } from '@/downloads';
 import { formatBytes } from '@/format';
-import { currentUser, itemDetail, posterImage, searchTerm, seasonFiles, seasons, seriesNextUp } from '@/items';
-import { episodesToKeep, kidsDownloadSections, NEXT_COUNT, playableEpisodes, showFiles } from '@/kidsDownloads';
+import { currentUser, itemDetail, posterImage, searchTerm, seasonFiles, seasons } from '@/items';
+import { keptEpisodes } from '@/kidsKeep';
+import { kidsDownloadSections, NEXT_COUNT, playableEpisodes, showFiles } from '@/kidsDownloads';
+import { isKept, keepShow, stopKeeping, useKids } from '@/kidsSettings';
 import { useSession } from '@/session';
-import { useDownloadLimit } from '@/settings';
+import { getDownloadNetwork, useDownloadLimit } from '@/settings';
 import { minTouch, radii, scrollList, spacing, useColors } from '@/theme';
 import { confirmDeleteDownloads, useStartDownload } from '@/useDownloadControl';
 import { useFetch } from '@/useFetch';
@@ -40,6 +42,9 @@ import { useImage } from '@/useImage';
 import { refreshKids, useKidsHome } from '@/useKidsHome';
 
 const POSTER_WIDTH = 44;
+
+/** The download network rule in words, for the Keep question. */
+const networkRule = () => (getDownloadNetwork() === 'wifi' ? 'on Wi-Fi' : 'on any network');
 
 export function KidsDownloads() {
   const home = useKidsHome();
@@ -133,7 +138,9 @@ const TitleRow = memo(function TitleRow({ item }: { item: BaseItemDto }) {
   const summary = useDownloadSummary(group);
   // A movie not on the phone yet: its file size (the detail request, cached; only rows on screen ask).
   const detail = useFetch<BaseItemDto>(!show && !summary ? itemDetail(item.Id).path : null);
-  const line = statusLine(summary, show, item.RecursiveItemCount, detail.data?.MediaSources?.[0]?.Size);
+  const kept = isKept(useKids(accountId), show ? item.Id : undefined);
+  const status = statusLine(summary, show, item.RecursiveItemCount, detail.data?.MediaSources?.[0]?.Size);
+  const line = kept ? [`Keeping ${NEXT_COUNT}`, status].filter(Boolean).join(' · ') : status;
   return (
     <View style={[styles.row, { backgroundColor: c.surface }]}>
       <View style={styles.poster}>
@@ -181,8 +188,9 @@ export function statusLine(
 }
 
 /**
- * A show's button: ↓, the ring while downloading, ✓ once there - each opens the menu: Next 5 Episodes, Whole Show, each
- * season (episodes already here are skipped by the store), then Pause / Resume and Delete for what's here.
+ * A show's button: ↓, the ring while downloading, ✓ once there - each opens the menu: Keep Next 5 Episodes (asks
+ * first; kept shows top up after each sync run - `src/kidsKeep.ts`) or Stop Keeping, Whole Show, each season (episodes
+ * already here are skipped by the store), then Pause / Resume and Delete (which also stops keeping).
  */
 function ShowDownload({ show, summary }: { show: BaseItemDto; summary: DownloadSummary | null }) {
   const c = useColors();
@@ -191,21 +199,35 @@ function ShowDownload({ show, summary }: { show: BaseItemDto; summary: DownloadS
   // The seasons, asked once the menu opens (cached after).
   const seasonList = useFetch<ItemsResult>(menu ? seasons(show.Id).path : null).data?.Items ?? [];
   const files = showFiles(show.Id);
-  const next = seriesNextUp(show.Id);
+  const accountId = useSession().active?.id;
+  const kept = isKept(useKids(accountId), show.Id);
+
+  // Said plainly before it starts: what stays, what goes, when the next one comes.
+  const keep = () =>
+    Alert.alert(
+      `Keep ${NEXT_COUNT} episodes of ${show.Name}?`,
+      `Rillwood keeps the next ${NEXT_COUNT} episodes on this phone. An episode is removed a day after it's watched, and the next one downloads (${networkRule()}).`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Keep',
+          onPress: () => {
+            if (!accountId) return;
+            keepShow(accountId, show.Id);
+            start((conn) => keptEpisodes(conn, show.Id));
+          },
+        },
+      ],
+    );
 
   const actions: SheetAction[] = [
-    {
-      label: `Next ${NEXT_COUNT} Episodes`,
-      detail: 'From where the kid is',
-      onPress: () =>
-        start(async (conn) => {
-          const [all, up] = await Promise.all([
-            request<ItemsResult>(conn, files.path, { query: files.query }),
-            request<ItemsResult>(conn, next.path, { query: next.query }),
-          ]);
-          return episodesToKeep(all.Items, up.Items[0]?.Id);
-        }),
-    },
+    kept
+      ? {
+          label: 'Stop Keeping',
+          detail: 'The episodes here stay',
+          onPress: () => accountId && stopKeeping(accountId, show.Id),
+        }
+      : { label: `Keep Next ${NEXT_COUNT} Episodes`, detail: 'Swaps watched ones for new ones', onPress: keep },
     {
       label: 'Whole Show',
       onPress: () =>
@@ -234,7 +256,9 @@ function ShowDownload({ show, summary }: { show: BaseItemDto; summary: DownloadS
           {
             label: 'Delete Downloads',
             destructive: true,
-            onPress: () => confirmDeleteDownloads(show.Name, summary.ids),
+            // Deleting them all stops keeping the show too.
+            onPress: () =>
+              confirmDeleteDownloads(show.Name, summary.ids, () => accountId && stopKeeping(accountId, show.Id)),
           },
         ].filter((a): a is SheetAction => a !== null)
       : []),
