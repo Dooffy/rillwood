@@ -3,11 +3,11 @@
 // Every show and movie the kid can see (kids Home's list: same filter and library), the ones on the phone first, then
 // A-Z, narrowed by a search field. A movie's button is the app's download button; a show's opens a menu: Next 5
 // Episodes, Whole Show or a season. The storage bar on top is the Downloads tab's.
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { memo, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, SectionList, StyleSheet, View } from 'react-native';
 
-import { request, type BaseItemDto, type ItemsResult, type UserDto } from '@/api';
+import { request, useOffline, type BaseItemDto, type ItemsResult, type UserDto } from '@/api';
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
 import { Artwork } from '@/components/Artwork';
 import { DownloadButton, isWaiting } from '@/components/DownloadButton';
@@ -20,6 +20,7 @@ import { StorageBar, useFreeSpace } from '@/components/StorageBar';
 import { Text } from '@/components/Text';
 import { downloadList } from '@/downloadList';
 import {
+  deleteDownloads,
   downloadGroup,
   downloadsSize,
   pauseDownloads,
@@ -32,7 +33,7 @@ import { formatBytes } from '@/format';
 import { currentUser, itemDetail, posterImage, searchTerm, seasonFiles, seasons } from '@/items';
 import { keptEpisodes } from '@/kidsKeep';
 import { kidsDownloadSections, NEXT_COUNT, playableEpisodes, showFiles } from '@/kidsDownloads';
-import { isKept, keepShow, stopKeeping, useKids } from '@/kidsSettings';
+import { isKept, keepShow, setKids, stopKeeping, useKids } from '@/kidsSettings';
 import { useSession } from '@/session';
 import { getDownloadNetwork, useDownloadLimit, useDownloadNetwork, type DownloadNetwork } from '@/settings';
 import { minTouch, radii, scrollList, spacing, useColors } from '@/theme';
@@ -114,25 +115,69 @@ export function KidsDownloads() {
     </View>
   );
 
+  // Delete All in the header: always there, dimmed until something of this account is downloaded.
+  const ids = list.ids;
+  const used = list.used;
+  const headerOptions = useMemo(
+    () => ({
+      headerRight: () => (
+        <IconButton
+          variant="plain"
+          icon={{ ios: 'trash', android: 'delete' }}
+          label="Delete All Downloads"
+          disabled={!active || ids.length === 0}
+          onPress={() => active && confirmDeleteAll(active.id, active.userName, ids, used)}
+        />
+      ),
+    }),
+    [active, ids, used],
+  );
+
   return (
-    <SectionList
-      {...scrollList}
-      testID="kids-downloads"
-      contentInsetAdjustmentBehavior="automatic"
-      keyboardDismissMode="on-drag"
-      keyboardShouldPersistTaps="handled"
-      sections={blocked ? [] : sections}
-      keyExtractor={(item) => item.Id}
-      ListHeaderComponent={header}
-      stickySectionHeadersEnabled={false}
-      contentContainerStyle={[pageContent, pageColumn, styles.content]}
-      renderSectionHeader={({ section }) => (
-        <Text variant="caption" secondary accessibilityRole="header" style={styles.sectionTitle}>
-          {section.title.toUpperCase()}
-        </Text>
-      )}
-      renderItem={({ item }) => <TitleRow item={item} art={home.art.get(item.Id)} />}
-    />
+    <>
+      <Stack.Screen options={headerOptions} />
+      <SectionList
+        {...scrollList}
+        testID="kids-downloads"
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        sections={blocked ? [] : sections}
+        keyExtractor={(item) => item.Id}
+        ListHeaderComponent={header}
+        stickySectionHeadersEnabled={false}
+        contentContainerStyle={[pageContent, pageColumn, styles.content]}
+        renderSectionHeader={({ section }) => (
+          <Text variant="caption" secondary accessibilityRole="header" style={styles.sectionTitle}>
+            {section.title.toUpperCase()}
+          </Text>
+        )}
+        renderItem={({ item }) => <TitleRow item={item} art={home.art.get(item.Id)} />}
+      />
+    </>
+  );
+}
+
+/**
+ * Every download of the account goes, after asking (works offline - only the phone changes). Kept shows stop topping
+ * up too, else the next sync would bring them back.
+ */
+export function confirmDeleteAll(accountId: string, userName: string, ids: readonly string[], bytes: number) {
+  const count = ids.length === 1 ? '1 download' : `${ids.length} downloads`;
+  Alert.alert(
+    `Delete all of ${userName}'s downloads?`,
+    `${count} (${formatBytes(bytes)}) are removed from this phone. Kept shows stop topping up. You can download them again.`,
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete All',
+        style: 'destructive',
+        onPress: () => {
+          deleteDownloads(ids);
+          setKids(accountId, { kept: undefined });
+        },
+      },
+    ],
   );
 }
 
@@ -218,6 +263,7 @@ function ShowDownload({ show, summary }: { show: BaseItemDto; summary: DownloadS
   const files = showFiles(show.Id);
   const accountId = useSession().active?.id;
   const kept = isKept(useKids(accountId), show.Id);
+  const offline = useOffline();
 
   // Said plainly before it starts: what stays, what goes, when the next one comes.
   const keep = () =>
@@ -237,32 +283,40 @@ function ShowDownload({ show, summary }: { show: BaseItemDto; summary: DownloadS
       ],
     );
 
+  // Offline: only what works on the phone alone (Stop Keeping, Pause / Resume, Delete) - getting more needs the server.
+  const stop = {
+    label: 'Stop Keeping',
+    detail: 'The episodes here stay',
+    onPress: () => accountId && stopKeeping(accountId, show.Id),
+  };
+  const getMore: SheetAction[] = offline
+    ? []
+    : [
+        ...(kept
+          ? []
+          : [{ label: `Keep Next ${NEXT_COUNT} Episodes`, detail: 'Swaps watched ones for new ones', onPress: keep }]),
+        {
+          label: 'Whole Show',
+          onPress: () =>
+            start(async (conn) =>
+              playableEpisodes((await request<ItemsResult>(conn, files.path, { query: files.query })).Items),
+            ),
+        },
+        ...seasonList
+          .filter((s) => (s.IndexNumber ?? 1) > 0)
+          .map((s) => ({
+            label: s.Name ?? `Season ${s.IndexNumber}`,
+            detail: s.ChildCount ? `${s.ChildCount} ${s.ChildCount === 1 ? 'episode' : 'episodes'}` : undefined,
+            onPress: () =>
+              start(async (conn) => {
+                const { path, query } = seasonFiles(show.Id, s.Id);
+                return (await request<ItemsResult>(conn, path, { query })).Items;
+              }),
+          })),
+      ];
   const actions: SheetAction[] = [
-    kept
-      ? {
-          label: 'Stop Keeping',
-          detail: 'The episodes here stay',
-          onPress: () => accountId && stopKeeping(accountId, show.Id),
-        }
-      : { label: `Keep Next ${NEXT_COUNT} Episodes`, detail: 'Swaps watched ones for new ones', onPress: keep },
-    {
-      label: 'Whole Show',
-      onPress: () =>
-        start(async (conn) =>
-          playableEpisodes((await request<ItemsResult>(conn, files.path, { query: files.query })).Items),
-        ),
-    },
-    ...seasonList
-      .filter((s) => (s.IndexNumber ?? 1) > 0)
-      .map((s) => ({
-        label: s.Name ?? `Season ${s.IndexNumber}`,
-        detail: s.ChildCount ? `${s.ChildCount} ${s.ChildCount === 1 ? 'episode' : 'episodes'}` : undefined,
-        onPress: () =>
-          start(async (conn) => {
-            const { path, query } = seasonFiles(show.Id, s.Id);
-            return (await request<ItemsResult>(conn, path, { query })).Items;
-          }),
-      })),
+    ...(kept ? [stop] : []),
+    ...getMore,
     ...(summary
       ? [
           summary.state === 'downloading'

@@ -174,6 +174,8 @@ export function useTwoColumns(): boolean {
 
 /** Opacity of a pressed button, card or row. */
 export const pressedOpacity = 0.5;
+/** A control with nothing to act on yet (an icon button that's off). */
+export const disabledOpacity = 0.35;
 
 export const spacing = {
   xs: 4,

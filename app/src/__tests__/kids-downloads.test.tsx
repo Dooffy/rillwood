@@ -14,7 +14,10 @@ import { forgetKids, getKids, setKids } from '@/kidsSettings';
 import * as notifications from '@/notificationPermission';
 import * as session from '@/session';
 
-jest.mock('expo-router', () => ({ router: { push: jest.fn(), back: jest.fn() } }));
+jest.mock('expo-router', () => ({
+  router: { push: jest.fn(), back: jest.fn() },
+  Stack: { Screen: () => null },
+}));
 jest.mock('expo-file-system/legacy', () => ({ getFreeDiskStorageAsync: async () => 500e9 }));
 
 const server = { id: 'srv', url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' };
@@ -128,6 +131,8 @@ describe('Kids downloads', () => {
     ).toBeOnTheScreen();
     expect(screen.getByRole('menuitem', { name: 'Whole Show' })).toBeOnTheScreen();
     expect(screen.getByRole('menuitem', { name: 'Season 1, 3 episodes' })).toBeOnTheScreen();
+    // Online, nothing of it here: no Delete, no Stop Keeping.
+    expect(screen.queryByRole('menuitem', { name: 'Delete Downloads' })).toBeNull();
   });
 
   it('Keep Next 5 asks first, then keeps the show and downloads from Next Up on, across seasons', async () => {

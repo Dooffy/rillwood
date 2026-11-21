@@ -3,7 +3,7 @@ import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { Glass } from '@/components/Glass';
-import { minTouch, pressedOpacity, radii, useColors } from '@/theme';
+import { disabledOpacity, minTouch, pressedOpacity, radii, useColors } from '@/theme';
 
 export type IconButtonProps = {
   /** SF Symbol on iOS, Material Symbol on Android. */
@@ -17,10 +17,12 @@ export type IconButtonProps = {
   size?: 'large' | 'xlarge';
   /** Toggle (watched, favourite): on = the filled look, read out as selected. */
   selected?: boolean;
+  /** Nothing to act on yet (kids Downloads' Delete All with nothing downloaded): dimmed, no press, read out as such. */
+  disabled?: boolean;
 };
 
 /** Round icon button (Apple TV style). */
-export function IconButton({ icon, label, onPress, variant = 'secondary', selected, size }: IconButtonProps) {
+export function IconButton({ icon, label, onPress, variant = 'secondary', selected, size, disabled }: IconButtonProps) {
   const c = useColors();
   const primary = variant === 'primary' || selected === true;
   const { box, icon: iconSize } = SIZES[size ?? 'regular'];
@@ -38,13 +40,15 @@ export function IconButton({ icon, label, onPress, variant = 'secondary', select
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={selected === undefined ? undefined : { selected }}
+      accessibilityState={selected === undefined && !disabled ? undefined : { selected, disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
         box,
         variant !== 'plain' && { backgroundColor: primary ? c.accent : c.elevated },
         pressed && styles.pressed,
+        disabled && styles.disabled,
       ]}
     >
       <SymbolView name={icon} tintColor={primary ? c.onAccent : c.text} size={iconSize} />
@@ -67,4 +71,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pressed: { opacity: pressedOpacity },
+  disabled: { opacity: disabledOpacity },
 });

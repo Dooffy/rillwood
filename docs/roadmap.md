@@ -269,6 +269,7 @@ Phones + tablets. Rules: `docs/context/kids.md`, screens: `docs/research/kids-sc
   - [x] 9b. Keep: a Next 5 show tops itself up (watched episode goes, the next one downloads on the next sync run)
   - [x] 9c. Rating score saved with each download (an episode: its show's) for the offline filter
 - [x] 10. Offline: feed + faces from downloads, same filter; test plan `docs/test-plans/kids.md` (09)
+- [x] 11. Removing downloads (gate → Downloads), online and offline: per item (a movie's ✓, a show's Delete Downloads) and Delete All (header trash icon, off until something is downloaded; asks with count + size, stops keeping); offline the show menu offers only Stop Keeping / Pause / Resume / Delete
 
 ## Ideas
 
