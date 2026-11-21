@@ -210,6 +210,9 @@ export const kids = {
     chipIcon: 16,
     chipInset: 12,
     titleInset: 24,
+    /** The show's title logo in the header (fits inside). */
+    logoWidth: 300,
+    logoHeight: 88,
   },
   mark: 34,
   /** Animal marks in the grown-up settings (round): a kids account's avatar, the Kids Mode row and card. */
@@ -226,7 +229,7 @@ export const kids = {
     tag: { fontSize: 13, fontWeight: '800' },
     show: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
     episode: { fontSize: 18, fontWeight: '700' },
-    gateQuestion: { fontSize: 22, fontWeight: '700' },
+    gateQuestion: { fontSize: 34, fontWeight: '700', fontVariant: ['tabular-nums'] },
     search: { fontSize: 22, fontWeight: '700' },
     /** Offline, nothing downloaded: the big moon. */
     offlineMoon: { fontSize: 72 },

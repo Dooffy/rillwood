@@ -160,7 +160,7 @@ src/useSeriesDetail.ts   series detail for both views: seasons, Next Up, the sea
 src/useLibrary.ts        Library data for both views: search, type, sort, filters, All rows, paged list, offline state, card handlers
 src/kids.ts              kids mode rating rules (pure): kids account detection (`/Users/Me` limit), age step → `maxOfficialRating` (+ `hasParentalRating`), allowed shows, `keepAllowed` (episodes by their show), kids requests (`kidsTitles`, `kidsEpisodes`, `kidsSearch`; the library pick as `parentId`), `allowedOffline` (a download's saved score vs the age), `episodeRows` (show page rows: season dividers, columns)
 src/kidsSettings.ts      kids mode state per account (persisted): kids account mark, shared phone mode + age / unrated / libraries, kept shows (`keepShow`, `stopKeeping`); `kidsMode`, `kidsFilter`, `useKids`; dropped with the account
-src/kidsGate.ts          kids grown-up gate (pure): the sum (6-9 x 6-9 in words, never the same twice), answer check
+src/kidsGate.ts          kids grown-up gate (pure): the sum (10-20 + 2-20 as a formula, never the same twice), answer check
 src/ratings.ts           rating scores for downloads: the server's table (once per server) → each item's score, an episode its show's (kids offline filter)
 src/kidsOffline.ts       kids mode offline (pure-ish): the account's finished downloads that pass the filter → titles, a show's episodes, saved art; next = first not watched
 src/useOfflineKids.ts    kids mode's list from downloads while the offline flag is up (null online) - kids Home, show page, search

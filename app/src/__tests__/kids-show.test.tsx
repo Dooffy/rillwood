@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
-import { Dimensions } from 'react-native';
+import { Dimensions, FlatList } from 'react-native';
 
 import * as api from '@/api';
 import { ApiError, type BaseItemDto, type RequestOptions } from '@/api';
@@ -103,6 +103,31 @@ describe('Kids show page', () => {
     expect(within(knead).getByTestId('kids-watched')).toBeOnTheScreen();
     expect(screen.queryByText('Watched')).toBeNull();
     expect(screen.getAllByTestId('kids-watched')).toHaveLength(1);
+  });
+
+  it("draws the show's title logo when it has one (its name read out), else the name as text", async () => {
+    routes.show = { Id: 'dino', Name: 'Dino Bakery', Type: 'Series', ImageTags: { Logo: 'logo-tag' } };
+    await render(<KidsShowRoute />);
+    const logo = await screen.findByTestId('kids-show-logo');
+    expect(logo.props.accessibilityLabel).toBe('Dino Bakery');
+    expect(JSON.stringify(logo.props.source)).toContain('/Items/dino/Images/Logo');
+    expect(screen.queryByText('Dino Bakery')).toBeNull();
+  });
+
+  it("a logo that doesn't load: the name as text", async () => {
+    routes.show = { Id: 'dino', Name: 'Dino Bakery', Type: 'Series', ImageTags: { Logo: 'logo-tag' } };
+    await render(<KidsShowRoute />);
+    await fireEvent(await screen.findByTestId('kids-show-logo'), 'error', { error: 'gone', nativeEvent: {} });
+    expect(screen.queryByTestId('kids-show-logo')).toBeNull();
+    expect(screen.getByRole('header', { name: 'Dino Bakery' })).toBeOnTheScreen();
+  });
+
+  it('opens at the top - the next episode is marked, not scrolled to', async () => {
+    const scrollTo = jest.spyOn(FlatList.prototype as unknown as { scrollToIndex: () => void }, 'scrollToIndex');
+    await render(<KidsShowRoute />);
+    await screen.findByRole('button', { name: /Donut/ });
+    expect(scrollTo).not.toHaveBeenCalled();
+    scrollTo.mockRestore();
   });
 
   it('marks the next episode and plays it, resuming where it stopped', async () => {

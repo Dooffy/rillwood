@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Kids show page (docs/context/kids.md, screen draft 03): the show's art and name, then every episode as a big 16:9
-// picture - one column on phones, a grid on tablets - the next one marked ▶ and scrolled into view. Tap plays. A big round
-// Back, always on top.
+// Kids show page (docs/context/kids.md, screen draft 03): the show's art and its title logo (else its name), then every
+// episode as a big 16:9 picture - one column on phones, a grid on tablets - the next one marked ▶. Opens at the top. Tap
+// plays. A big round Back, always on top.
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -13,8 +13,8 @@ import { CardPlaceholder } from '@/components/Card';
 import { KidsEpisode } from '@/components/kids/KidsCards';
 import { LoadError, Message, Offline } from '@/components/Message';
 import { Text } from '@/components/Text';
-import { backdropImage } from '@/items';
-import { episodeRows, type EpisodeRow } from '@/kids';
+import { backdropImage, logoImage } from '@/items';
+import { episodeRows } from '@/kids';
 import { playItem } from '@/navigation';
 import { backdrop, kids, onArtwork, pressedOpacity, scrollList, spacing, useColors, useWide } from '@/theme';
 import { useImage } from '@/useImage';
@@ -28,9 +28,6 @@ export function episodeColumns(width: number, wide: boolean): { columns: number;
   return { columns, tileWidth: (room - (columns - 1) * gap) / columns, gap };
 }
 
-/** Where the next episode sits when the page opens: under the header, in the top third. */
-const NEXT_OFFSET = 120;
-
 export function KidsShow({ id }: { id: string }) {
   const show = useKidsShow(id);
   const c = useColors();
@@ -41,16 +38,10 @@ export function KidsShow({ id }: { id: string }) {
   const { columns, tileWidth, gap } = episodeColumns(width, wide);
   const rows = useMemo(() => episodeRows(show.episodes, columns), [show.episodes, columns]);
   const withSeason = rows.some((r) => r.kind === 'season');
-  const list = useRef<FlatList<EpisodeRow>>(null);
-
-  // Open with the next episode in view, once per page (not again after a refetch).
-  const nextRow = rows.findIndex((r) => r.kind === 'episodes' && r.items.some((e) => e.Id === show.nextId));
-  const scrolled = useRef(false);
-  useEffect(() => {
-    if (scrolled.current || nextRow <= 0) return;
-    scrolled.current = true;
-    list.current?.scrollToIndex({ index: nextRow, viewOffset: NEXT_OFFSET, animated: false });
-  }, [nextRow]);
+  // The show's title logo (its own lettering), else its name as text - also when the logo fails to load or offline.
+  const logo = show.show ? image(logoImage(show.show), kids.show.logoWidth) : undefined;
+  const [logoFailed, setLogoFailed] = useState<string>();
+  const showLogo = logo !== undefined && logoFailed !== logo;
 
   const header = (
     <View style={styles.headerWrap}>
@@ -66,9 +57,23 @@ export function KidsShow({ id }: { id: string }) {
           />
         )}
         <View style={styles.fade} />
-        <Text style={[kids.type.show, styles.name]} numberOfLines={2} accessibilityRole="header">
-          {show.show?.Name ?? ''}
-        </Text>
+        {showLogo ? (
+          <Image
+            testID="kids-show-logo"
+            source={logo}
+            cachePolicy="memory-disk"
+            contentFit="contain"
+            style={styles.logo}
+            onError={() => setLogoFailed(logo)}
+            accessible
+            accessibilityRole="header"
+            accessibilityLabel={show.show?.Name ?? ''}
+          />
+        ) : (
+          <Text style={[kids.type.show, styles.name]} numberOfLines={2} accessibilityRole="header">
+            {show.show?.Name ?? ''}
+          </Text>
+        )}
       </View>
       {show.offline.offline && <Offline busy={show.offline.busy} retry={() => refreshKidsShow(id)} />}
       {show.error && <LoadError error={show.error} retry={() => refreshKidsShow(id)} />}
@@ -89,8 +94,8 @@ export function KidsShow({ id }: { id: string }) {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.background }]}>
+      {/* Opens at the top (the header and the first season); the next episode is marked, not scrolled to. */}
       <FlatList
-        ref={list}
         // A new column count regroups the rows.
         key={columns}
         {...scrollList}
@@ -100,11 +105,6 @@ export function KidsShow({ id }: { id: string }) {
         ListHeaderComponent={header}
         ListEmptyComponent={placeholders}
         contentContainerStyle={[styles.content, { gap, paddingBottom: insets.bottom + kids.gap }]}
-        // The next episode not drawn yet (a long show): jump near it, then onto it once those rows are drawn.
-        onScrollToIndexFailed={({ index, averageItemLength }) => {
-          list.current?.scrollToOffset({ offset: index * averageItemLength, animated: false });
-          setTimeout(() => list.current?.scrollToIndex({ index, viewOffset: NEXT_OFFSET, animated: false }), 100);
-        }}
         renderItem={({ item: row }) =>
           row.kind === 'season' ? (
             <View style={styles.divider}>
@@ -158,6 +158,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   fade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '55%', backgroundImage: onArtwork.fade },
+  logo: {
+    alignSelf: 'center',
+    width: kids.show.logoWidth,
+    maxWidth: '80%',
+    height: kids.show.logoHeight,
+    marginBottom: kids.gap,
+  },
   name: {
     color: onArtwork.fill,
     textAlign: 'center',
