@@ -3,10 +3,11 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
+import { useKids } from '@/kidsSettings';
 import { homeHref, resetTo } from '@/navigation';
 import { serverHost } from '@/server';
 import { switchAccount, useSession, type Account, type Server } from '@/session';
-import { spacing, useColors } from '@/theme';
+import { kids as kidsSizes, radii, spacing, useColors } from '@/theme';
 
 import { ActionSheet } from './ActionSheet';
 import { Avatar } from './Avatar';
@@ -120,19 +121,32 @@ function AccountRow({ account, status, selected, onPress, onDetails }: AccountRo
   const c = useColors();
   const { userName, server } = account;
   const value = STATUS_VALUE[status];
+  // A kids account: tapping it enters kids mode, the tag says so.
+  const kidsAccount = useKids(account.id).account;
   return (
     <View style={[styles.row, selected && { backgroundColor: c.elevated }]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${userName}, ${server.name}`}
+        accessibilityLabel={`${userName}${kidsAccount ? ', Kids' : ''}, ${server.name}`}
         accessibilityValue={value ? { text: value } : undefined}
         accessibilityState={selected === undefined ? undefined : { selected }}
         onPress={onPress}
         style={({ pressed }) => [styles.main, pressed && { backgroundColor: selected ? c.elevated2 : c.elevated }]}
       >
-        <Avatar name={userName} size={AVATAR_SIZE} />
+        <Avatar name={userName} emoji={kidsAccount ? kidsSizes.emoji.account : undefined} size={AVATAR_SIZE} />
         <View style={styles.text}>
-          <Text numberOfLines={1}>{userName}</Text>
+          <View style={styles.name}>
+            <Text numberOfLines={1} style={styles.shrink}>
+              {userName}
+            </Text>
+            {kidsAccount && (
+              <View style={[styles.tag, { backgroundColor: c.elevated2 }]}>
+                <Text variant="caption" secondary>
+                  Kids
+                </Text>
+              </View>
+            )}
+          </View>
           <Text variant="caption" secondary numberOfLines={1}>
             {server.name}
           </Text>
@@ -162,4 +176,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   text: { flex: 1, gap: 2 },
+  name: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2 },
+  shrink: { flexShrink: 1 },
+  tag: { ...kidsSizes.tag, borderRadius: radii.pill },
 });

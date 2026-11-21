@@ -11,6 +11,7 @@ import { useSession } from '@/session';
 import { scrollList, spacing, useColors } from '@/theme';
 
 import { AccountDetails } from './AccountDetails';
+import { KidsAccountSettings, KidsModeCard } from './KidsSettingsPages';
 import { IconButton } from './IconButton';
 import { pageColumn, pageContent } from './Page';
 import { linkKey, SETTINGS_TITLES, SettingsPaneContext, type SettingsLink } from './SettingsLink';
@@ -31,6 +32,8 @@ function title(link: SettingsLink): string | undefined {
 
 function PaneContent({ link }: { link: SettingsLink }) {
   if (link.page === 'account') return <AccountDetails id={link.id} onBack={() => {}} />;
+  if (link.page === 'kids-account') return <KidsAccountSettings id={link.id} />;
+  if (link.page === 'kids-mode') return <KidsModeCard />;
   if (link.page === 'subtitles') return <SubtitlesSettings />;
   if (link.page === 'option') return <OptionSettings option={link.key} />;
   if (link.page === 'licence') return <LicenceSettings id={link.id} />;
@@ -38,8 +41,11 @@ function PaneContent({ link }: { link: SettingsLink }) {
   return <StorageSettings />;
 }
 
-/** `children`: the Settings list (its rows open pages through `useSettingsLink`). */
-export function SettingsSplit({ children }: { children: ReactNode }) {
+/**
+ * `children`: the Settings list (its rows open pages through `useSettingsLink`). `start`: the page shown before a row is
+ * picked (default the active account; none = an empty pane).
+ */
+export function SettingsSplit({ children, start }: { children: ReactNode; start?: SettingsLink | null }) {
   const c = useColors();
   const { accounts, active } = useSession();
   // Pages open in the pane, the last one shown; empty = the active account.
@@ -47,7 +53,9 @@ export function SettingsSplit({ children }: { children: ReactNode }) {
   // An account removed while shown: back to the default.
   const first = opened[0];
   const gone = first?.page === 'account' && !accounts.some((a) => a.id === first.id);
-  const fallback: SettingsLink[] = active ? [{ page: 'account', id: active.id }] : [];
+  const startPage: SettingsLink | null | undefined =
+    start === undefined && active ? { page: 'account', id: active.id } : start;
+  const fallback: SettingsLink[] = startPage ? [startPage] : [];
   const stack = opened.length > 0 && !gone ? opened : fallback;
   const shown = stack.at(-1);
   const heading = shown && title(shown);

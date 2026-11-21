@@ -92,7 +92,8 @@ export default function RootLayout() {
               {/* Header hidden, but the title labels the back button on Add server (else iOS shows the route path). */}
               <Stack.Screen name="(auth)/welcome" options={{ title: 'Welcome' }} />
               {/* Kids mode's start screen: no back swipe (it's the root; grown-ups leave through the gate). */}
-              <Stack.Screen name="kids" options={{ title: 'Kids', gestureEnabled: false }} />
+              {/* Titled "Kids Mode": Settings opened from it shows "‹ Kids Mode". */}
+              <Stack.Screen name="kids" options={{ title: 'Kids Mode', gestureEnabled: false }} />
               <Stack.Screen name="kids-show/[id]" options={{ title: 'Show' }} />
               <Stack.Screen name="(auth)/server" options={pageOf('Add server')} />
               {/* TV Sign in draws its own title (screen draft 02). */}
@@ -114,6 +115,9 @@ export default function RootLayout() {
                 name="settings"
                 options={Platform.isTV ? { title: 'Settings', headerShown: false } : pageOf('Settings')}
               />
+              <Stack.Screen name="kids-mode" options={pageOf(SETTINGS_TITLES['kids-mode'])} />
+              {/* A checkmark list: a plain title, as the option lists. */}
+              <Stack.Screen name="kids-account" options={plainPage(SETTINGS_TITLES['kids-account'], c)} />
               <Stack.Screen name="subtitles" options={pageOf(SETTINGS_TITLES.subtitles)} />
               {/* A show's downloaded episodes (Downloads tab): the show's name comes with the link. */}
               <Stack.Screen
