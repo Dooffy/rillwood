@@ -40,13 +40,11 @@ afterEach(() => {
 
 const openGate = () => fireEvent.press(screen.getByRole('button', { name: 'Grown-ups' }));
 
-const WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
-
-/** The question on screen, and its answer worked out from the words. */
+/** The question on screen, and its answer worked out from the formula. */
 function question() {
   const text = String(screen.getByTestId('kids-sum').props.children);
-  const [, a, b] = /^What is (\w+) times (\w+)\?$/.exec(text) ?? [];
-  return { text, answer: String(WORDS.indexOf(a) * WORDS.indexOf(b)) };
+  const [, a, b] = /^(\d+) \+ (\d+) = \?$/.exec(text) ?? [];
+  return { text, answer: String(Number(a) + Number(b)) };
 }
 
 async function type(...keys: string[]) {
@@ -64,7 +62,7 @@ describe('grown-up gate - the gear', () => {
     await render(<Kids />);
     expect(screen.queryByTestId('kids-sum')).toBeNull();
     await openGate();
-    expect(question().text).toMatch(/^What is (six|seven|eight|nine) times (six|seven|eight|nine)\?$/);
+    expect(question().text).toMatch(/^\d\d \+ \d\d? = \?$/);
   });
 });
 
@@ -73,7 +71,7 @@ describe('grown-up gate - the sum', () => {
     await render(<Kids />);
     await openGate();
     const first = question();
-    // A digit taken back, then a wrong answer (11 is never one: answers are 36-81).
+    // A digit taken back, then a wrong answer (11 is never one: answers are 12-40).
     await type(first.answer[0], 'Delete', '1', '1');
     expect(question().text).not.toBe(first.text);
     expect(screen.queryByRole('menuitem')).toBeNull();

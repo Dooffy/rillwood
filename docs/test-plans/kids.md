@@ -21,7 +21,7 @@ Setup on the server: an adult user, a kids user with a parental rating limit (e.
 | #   | Test                                                              | Pass when                                                                                   |
 | --- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | K6  | Kids Home                                                          | Posters only, two across, shows on a card stack; a show opens its page, a movie plays       |
-| K7  | Show page                                                          | Every episode as a big still, next one ▶ and in view; tap plays; big Back                   |
+| K7  | Show page                                                          | Title logo (or the name), opens at the top, every episode as a big still, next one ▶; tap plays; big Back                   |
 | K8  | 🔍 → type a word letter by letter (and dictate one)                | Keyboard up on open; every letter goes in; posters + episode stills; ✕ back, term forgotten |
 | K9  | Search for something above the age                                 | Not found ("Nothing called that.")                                                          |
 | K10 | Double-tap a poster fast                                           | One screen opens                                                                            |
@@ -30,7 +30,7 @@ Setup on the server: an adult user, a kids user with a parental rating limit (e.
 
 | #   | Test                                                                          | Pass when                                                                    |
 | --- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| K11 | Tap the gear, answer wrong, then right                                         | Shake + new question; right: green check ~1.7 s, then the actions           |
+| K11 | Tap the gear (a sum like 15 + 2 = ?), answer wrong, then right                                         | Shake + new question; right: green check ~1.7 s, then the actions           |
 | K12 | Gate → Settings (shared phone)                                                 | Only the Kids Mode card; age / unrated change kids Home on ‹ Kids Mode      |
 | K13 | Card → Switch to Adult Mode                                                    | Normal Home; relaunch stays in the normal app                                |
 | K14 | Kids account: gate → Settings, then Switch Account                             | Card without picks; Switch Account opens the accounts                        |

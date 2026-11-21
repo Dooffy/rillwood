@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Kids mode grown-up gate (docs/context/kids.md, Grown-up gate): a bottom sheet with a multiplication in words and a
+// Kids mode grown-up gate (docs/context/kids.md, Grown-up gate): a bottom sheet with a two-digit addition and a
 // keypad. Two digits typed → checked: wrong shakes and asks a new one; right goes green, a checkmark pops in, then the
 // grown-up actions take its place. No PIN, nothing to remember. Built on `ActionSheet` (an action runs once the sheet
 // is gone - iOS can't present over a closing modal; its Cancel closes).
@@ -9,7 +9,7 @@ import { Animated, Pressable, StyleSheet, View } from 'react-native';
 
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
 import { Text } from '@/components/Text';
-import { ANSWER_DIGITS, isAnswer, newSum, sumQuestion, type Sum } from '@/kidsGate';
+import { ANSWER_DIGITS, isAnswer, newSum, sumLabel, sumQuestion, type Sum } from '@/kidsGate';
 import { kids, pressedOpacity, radii, spacing, useColors } from '@/theme';
 
 /** How long the checkmark shows before the actions take its place. */
@@ -81,7 +81,7 @@ function Question({ onSolved }: { onSolved: () => void }) {
       <Text variant="sectionHeader" style={styles.center}>
         Grown-ups only
       </Text>
-      <Text testID="kids-sum" style={[styles.center, kids.type.gateQuestion]}>
+      <Text testID="kids-sum" accessibilityLabel={sumLabel(sum)} style={[styles.center, kids.type.gateQuestion]}>
         {sumQuestion(sum)}
       </Text>
       <Animated.View style={[styles.boxes, { transform: [{ translateX: shake }] }]}>

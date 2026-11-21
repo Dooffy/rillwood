@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from '@jest/globals';
 
-import { ANSWER_DIGITS, isAnswer, newSum, sumQuestion } from './kidsGate';
+import { ANSWER_DIGITS, isAnswer, newSum, sumLabel, sumQuestion } from './kidsGate';
 
 /** A `random` that returns these values in turn. */
 const seq = (...values: number[]) => {
@@ -10,30 +10,32 @@ const seq = (...values: number[]) => {
 };
 
 describe('newSum', () => {
-  it('picks both numbers from 6 to 9', () => {
-    expect(newSum(seq(0, 0.999))).toEqual({ a: 6, b: 9 });
-    for (let i = 0; i < 200; i++) {
+  it('numbers up to 20 (the first 10-20, the second 2-20), so the answer always has two digits', () => {
+    expect(newSum(seq(0, 0))).toEqual({ a: 10, b: 2 });
+    expect(newSum(seq(0.999, 0.999))).toEqual({ a: 20, b: 20 });
+    for (let i = 0; i < 300; i++) {
       const { a, b } = newSum();
-      expect([a, b].every((n) => n >= 6 && n <= 9)).toBe(true);
-      expect(String(a * b)).toHaveLength(ANSWER_DIGITS);
+      expect(a >= 10 && a <= 20 && b >= 2 && b <= 20).toBe(true);
+      expect(String(a + b)).toHaveLength(ANSWER_DIGITS);
     }
   });
 
   it('never repeats the question just shown', () => {
-    // 7 x 8 again first, then 9 x 6.
-    expect(newSum(seq(0.25, 0.5, 0.75, 0), { a: 7, b: 8 })).toEqual({ a: 9, b: 6 });
+    // 10 + 2 again first, then 15 + 2.
+    expect(newSum(seq(0, 0, 0.5, 0), { a: 10, b: 2 })).toEqual({ a: 15, b: 2 });
   });
 });
 
-describe('sumQuestion / isAnswer', () => {
-  it('asks in words', () => {
-    expect(sumQuestion({ a: 7, b: 8 })).toBe('What is seven times eight?');
+describe('sumQuestion / sumLabel / isAnswer', () => {
+  it('shows a formula, speaks it in words', () => {
+    expect(sumQuestion({ a: 15, b: 2 })).toBe('15 + 2 = ?');
+    expect(sumLabel({ a: 20, b: 11 })).toBe('What is 20 plus 11?');
   });
 
-  it('takes the product, two digits only', () => {
-    expect(isAnswer({ a: 7, b: 8 }, '56')).toBe(true);
-    expect(isAnswer({ a: 7, b: 8 }, '54')).toBe(false);
-    expect(isAnswer({ a: 7, b: 8 }, '5')).toBe(false);
-    expect(isAnswer({ a: 7, b: 8 }, '056')).toBe(false);
+  it('takes the sum, two digits only', () => {
+    expect(isAnswer({ a: 15, b: 2 }, '17')).toBe(true);
+    expect(isAnswer({ a: 15, b: 2 }, '18')).toBe(false);
+    expect(isAnswer({ a: 15, b: 2 }, '1')).toBe(false);
+    expect(isAnswer({ a: 15, b: 2 }, '017')).toBe(false);
   });
 });
