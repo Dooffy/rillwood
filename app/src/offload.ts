@@ -5,7 +5,7 @@
 // - the top-up brings the next one. Runs after every progress sync (launch, back from the background, reconnect,
 // account switch), so the saved watched state is as fresh as it gets. Unfinished and playing downloads stay.
 import type { BaseItemDto } from '@/api';
-import { deleteDownloads, getDownloads, resetTimers, setWatched, type Download } from '@/downloads';
+import { deleteDownloads, getDownloads, resetTimers, scoreUnrated, setWatched, type Download } from '@/downloads';
 import { readSnapshotItem } from '@/downloadSnapshot';
 import { topUpKept } from '@/kidsKeep';
 import { getKids, isKept } from '@/kidsSettings';
@@ -174,8 +174,9 @@ export function onWatched(listener: (result: WatchedResult) => void) {
 function run() {
   const result = cleanup();
   if (result) removedListeners.forEach((l) => l(result));
-  // Then kept shows fill the gaps the cleanup left.
+  // Then kept shows fill the gaps the cleanup left, and downloads without a rating score get one (kids offline filter).
   void topUpKept();
+  void scoreUnrated();
 }
 
 let started = false;

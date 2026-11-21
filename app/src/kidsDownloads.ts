@@ -2,7 +2,9 @@
 // Kids downloads (docs/context/kids.md, Downloads; pure): what a show's "Next 5" picks, a show's files, and the grown-up
 // Downloads page's list (the kid's titles, the ones on the phone first, then A-Z; narrowed by a search).
 import type { BaseItemDto, Endpoint } from './api';
+import type { Download } from './downloads';
 import { hasFile } from './items';
+import { allowedOffline, type KidsFilter } from './kids';
 
 /** Next N: a car trip's worth. */
 export const NEXT_COUNT = 5;
@@ -54,4 +56,23 @@ export function kidsDownloadSections(
     shows: order(kept.filter((t) => t.Type === 'Series')),
     movies: order(kept.filter((t) => t.Type !== 'Series')),
   };
+}
+
+/**
+ * The account's downloads the kids filter keeps out offline (over the age or unrated - an adult's on a shared phone):
+ * how many and their size, so the storage bar adds up. Same rule as the offline list (`allowedOffline`).
+ */
+export function hiddenDownloads(
+  downloads: readonly Download[],
+  accountId: string | undefined,
+  filter: KidsFilter | undefined,
+): { count: number; bytes: number } {
+  let count = 0;
+  let bytes = 0;
+  for (const d of downloads) {
+    if (d.accountId !== accountId || allowedOffline(d.rating, filter)) continue;
+    count += 1;
+    bytes += d.total;
+  }
+  return { count, bytes };
 }

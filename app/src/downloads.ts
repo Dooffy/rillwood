@@ -216,6 +216,40 @@ function rate(accountId: string, scores: ReadonlyMap<string, number>) {
   save();
 }
 
+// Downloads already asked about this launch: one the server has no score for isn't asked again every sync run.
+const scoreAsked = new Set<string>();
+
+/**
+ * Scores the active account's downloads that have none yet - made before scores were saved (roadmap 9c), or the
+ * lookup failed at the start. After every sync run (online), from the item saved with each (an episode its show's).
+ * Without it a shared phone's offline kids mode counts them unrated and hides them.
+ */
+export async function scoreUnrated(): Promise<void> {
+  const account = getSession().active;
+  const conn = account && connectionFor(account);
+  if (!account || !conn) return;
+  const asked: string[] = [];
+  const items: BaseItemDto[] = [];
+  for (const d of store().values()) {
+    if (d.accountId !== account.id || d.rating !== undefined || scoreAsked.has(d.id)) continue;
+    asked.push(d.id);
+    items.push(
+      readSnapshotItem(d.path) ?? {
+        Id: d.itemId,
+        Name: d.title,
+        Type: d.seriesId ? 'Episode' : 'Movie',
+        SeriesId: d.seriesId,
+      },
+    );
+  }
+  if (items.length === 0) return;
+  asked.forEach((id) => scoreAsked.add(id));
+  const scores = await ratingScores(conn, items);
+  // Nothing came back (the server out of reach, or nothing rated): ask again next run.
+  if (scores.size === 0) asked.forEach((id) => scoreAsked.delete(id));
+  else rate(account.id, scores);
+}
+
 function remove(id: string) {
   const old = store().get(id);
   if (!old) return;

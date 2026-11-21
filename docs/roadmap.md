@@ -271,6 +271,9 @@ Phones + tablets. Rules: `docs/context/kids.md`, screens: `docs/research/kids-sc
 - [x] 10. Offline: feed + faces from downloads, same filter; test plan `docs/test-plans/kids.md` (09)
 - [x] 11. Removing downloads (gate → Downloads), online and offline: per item (a movie's ✓, a show's Delete Downloads) and Delete All (header trash icon, off until something is downloaded; asks with count + size, stops keeping); offline the show menu offers only Stop Keeping / Pause / Resume / Delete
 - [x] 12. Polish: the gate's sum as an addition formula with numbers up to 20 ("15 + 2 = ?"); the show page's title logo instead of its name (text when there's none); the show page opens at the top
+- [x] 13. Offline on a shared phone: downloads without a rating score (made before 9c) scored after each sync run, so they show; kids Downloads offline counts what the filter keeps out
+- [ ] 14. Kids account: full Settings from kids mode (card + app settings, no accounts), Make an Adult Account (asks), Account page Kids Account switch with the server limit
+- [ ] 15. Kids Downloads one by one: a show's episodes page (by season, each its own download button, offline delete only); deleting one of a kept show's next 5 asks to stop keeping
 
 ## Ideas
 

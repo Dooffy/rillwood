@@ -126,6 +126,33 @@ describe('Kids mode offline', () => {
     expect(screen.queryByRole('button', { name: /^Scary Night/ })).toBeNull();
   });
 
+  it('kids Downloads on a shared phone: what the age keeps out is counted under the list, not listed', async () => {
+    setKids(active.id, { account: false, shared: true, age: 7 });
+    await render(
+      <ToastProvider>
+        <KidsDownloadsRoute />
+      </ToastProvider>,
+    );
+    expect(screen.getByText('Pond Jumpers')).toBeOnTheScreen();
+    expect(screen.queryByText('Scary Night')).toBeNull();
+    expect(
+      screen.getByText(/^1 download not for Kids Mode \(.+\) isn't shown here\. Delete All removes it too\.$/),
+    ).toBeOnTheScreen();
+  });
+
+  it('regression: downloads made before scores were saved show once scored (not counted unrated)', async () => {
+    setKids(active.id, { account: false, shared: true, age: 7, unrated: false });
+    list = list.map(({ rating: _, ...d }) => d);
+    await render(<Kids />);
+    expect(screen.getByText('Nothing to watch offline')).toBeOnTheScreen();
+    // The next sync run scores them (`scoreUnrated`, downloads.test.ts).
+    list = list.map((d) => ({ ...d, rating: d.itemId === 'Scary Night' ? 17 : 0 }));
+    await render(<Kids />);
+    expect(screen.getByRole('button', { name: /^Pond Jumpers/ })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: /^Tiny Trains/ })).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: /^Scary Night/ })).toBeNull();
+  });
+
   it('nothing downloaded: the moon, nothing to press', async () => {
     list = [];
     await render(<Kids />);
