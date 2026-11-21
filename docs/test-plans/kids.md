@@ -46,6 +46,10 @@ Setup on the server: an adult user, a kids user with a parental rating limit (e.
 | K18 | Set Remove watched to 6 hours; watch a kept episode to the end; come back after 6 h | The watched one is gone, the next one downloads                                                        |
 | K19 | Stop Keeping, then Delete Downloads                                                 | Stop: files stay, "Keeping" gone; Delete asks, then all gone                                           |
 | K19b | Offline: a show's menu; then the header trash (Delete All)                                    | Menu: only Stop Keeping / Pause / Resume / Delete; Delete All asks (count + size), all gone, kept shows stopped |
+| K19c | A show's poster (and its ›) → its episodes; switch season pills; ↓ one episode; ✓ another (not kept) | Row: poster, name, ↓, › last; opens on the next episode's season, Specials its own pill last; only that one downloads; Delete asks, only it goes |
+| K19f | Card on top of a show's episodes: nothing downloaded, some, while downloading, offline | Poster + "N episodes" + seasons; "None downloaded yet" / "12 downloaded · 1.4 GB" / "Downloading …" with the bar; offline no bar |
+| K19e | Header buttons: Downloads trash, a show's ⋯ (iOS 26) | Round glass, same size as the back button; trash dimmed with nothing downloaded |
+| K19d | A kept show's episodes → ✓ on one marked Next 5; then offline, the same page | Card line "… · Keeping next 5"; asks Stop keeping <show>?, Stop Keeping and Delete: it goes, the rest stay, "Keeping" gone. Offline: only the ones on the phone, no ↓ |
 | K20 | Downloads turned off for the user on the server                                     | "Downloads Turned Off", no list                                                                        |
 
 ## Offline (task 10)

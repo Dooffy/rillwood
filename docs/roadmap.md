@@ -273,7 +273,7 @@ Phones + tablets. Rules: `docs/context/kids.md`, screens: `docs/research/kids-sc
 - [x] 12. Polish: the gate's sum as an addition formula with numbers up to 20 ("15 + 2 = ?"); the show page's title logo instead of its name (text when there's none); the show page opens at the top
 - [x] 13. Offline on a shared phone: downloads without a rating score (made before 9c) scored after each sync run, so they show; kids Downloads offline counts what the filter keeps out
 - [x] 14. Kids account: full Settings from kids mode (card + app settings, no accounts; a shared phone keeps only the card), Make an Adult Account (asks); back to kids = Account → Kids account (as before)
-- [ ] 15. Kids Downloads one by one: a show's episodes page (by season, each its own download button, offline delete only); deleting one of a kept show's next 5 asks to stop keeping
+- [x] 15. Kids Downloads one by one: a show's episodes page (`kids-show-downloads/[id]`: by season, each its own download button, header ⋯ = the row's menu, offline delete only); deleting one of a kept show's next 5 asks to stop keeping (Stop Keeping and Delete)
 
 ## Ideas
 

@@ -97,6 +97,8 @@ export default function RootLayout() {
               <Stack.Screen name="kids-show/[id]" options={{ title: 'Show' }} />
               {/* Kids mode's Downloads (gate): a grown-up page, back to kids Home. */}
               <Stack.Screen name="kids-downloads" options={pageOf('Downloads')} />
+              {/* A show's episodes from its kids Downloads row; the page sets the show's name. */}
+              <Stack.Screen name="kids-show-downloads/[id]" options={pageOf('Show')} />
               {/* Kids search draws its own field and ✕. */}
               <Stack.Screen name="kids-search" options={{ title: 'Search' }} />
               <Stack.Screen name="(auth)/server" options={pageOf('Add server')} />
