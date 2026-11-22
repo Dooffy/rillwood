@@ -423,6 +423,29 @@ describe('Player on Apple TV', () => {
       expect(lastPlayer().paused).toBe(true);
     });
 
+    // Regression: a seek to the end (to scroll back for a scene after the credits) played the next episode at once.
+    it('a swipe into the last 30 s: "UP NEXT", no countdown, the end pauses', async () => {
+      await playAt(1300);
+      await press('pan', { state: 'Began', x: 0 });
+      // 1300 s + 400 pt × 0.2 s.
+      await press('pan', { state: 'Ended', x: 400 });
+      expect(mockSeek).toHaveBeenLastCalledWith(1380);
+      expect(within(screen.getByTestId('tv-up-next')).getByText('UP NEXT')).toBeOnTheScreen();
+      await act(() => lastPlayer().onEnd?.());
+      expect(router.setParams).not.toHaveBeenCalled();
+      expect(lastPlayer().paused).toBe(true);
+    });
+
+    it('a held Right into the last 30 s: no countdown, the end pauses', async () => {
+      await playAt(1360);
+      await act(() => mockRemote!({ eventType: 'longRight', eventKeyAction: 0 }));
+      expect(mockSeek).toHaveBeenLastCalledWith(1370);
+      await act(() => mockRemote!({ eventType: 'longRight', eventKeyAction: 1 }));
+      expect(within(screen.getByTestId('tv-up-next')).getByText('UP NEXT')).toBeOnTheScreen();
+      await act(() => lastPlayer().onEnd?.());
+      expect(router.setParams).not.toHaveBeenCalled();
+    });
+
     it('autoplay off: "UP NEXT", no countdown', async () => {
       settings.setAutoplayNext('off');
       try {

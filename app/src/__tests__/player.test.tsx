@@ -1055,6 +1055,46 @@ describe('Up Next', () => {
     expect(router.setParams).toHaveBeenCalledWith(expect.objectContaining({ id: EP2 }));
   });
 
+  // Drag the scrubber (300 pt wide) and let go at x: 1400 s × x / 300.
+  async function scrubTo(x: number) {
+    const scrubber = screen.getByTestId('scrubber');
+    await fireEvent(scrubber, 'layout', { nativeEvent: { layout: { width: 300 } } });
+    await fireEvent(scrubber, 'responderGrant', { nativeEvent: { locationX: x } });
+    await fireEvent(scrubber, 'responderRelease', { nativeEvent: { locationX: x } });
+  }
+
+  // Regression: a seek to the end (to scroll back for a scene after the credits) played the next episode at once.
+  it('a seek into the last 30 s: no countdown, the end pauses, a tap plays the next episode', async () => {
+    await playAt(1300);
+    await scrubTo(298);
+    expect(mockSeek).toHaveBeenLastCalledWith(expect.closeTo(1390.67, 1));
+    expect(screen.getByText('Up Next')).toBeOnTheScreen();
+    expect(screen.queryByText(/Up Next · /)).toBeNull();
+    await act(() => lastPlayer().onProgress?.({ position: 1400, duration: 1400 }));
+    await act(() => lastPlayer().onEnd?.());
+    expect(router.setParams).not.toHaveBeenCalled();
+    expect(lastPlayer().paused).toBe(true);
+    await fireEvent.press(screen.getByRole('button', { name: 'Play next episode, S1, E2 · Second' }));
+    expect(router.setParams).toHaveBeenCalledWith(expect.objectContaining({ id: EP2 }));
+  });
+
+  it('a seek back before the last 30 s: playing into them again counts down and plays on', async () => {
+    await playAt(1350);
+    await fireEvent.press(screen.getByRole('button', { name: 'Forward 10 seconds' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Forward 10 seconds' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Forward 10 seconds' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Forward 10 seconds' }));
+    // 1390: in the window - autoplay off for this pass.
+    expect(screen.getByText('Up Next')).toBeOnTheScreen();
+    await scrubTo(150);
+    expect(screen.queryByText('S1, E2 · Second')).toBeNull();
+    await act(() => lastPlayer().onProgress?.({ position: 1388.2, duration: 1400 }));
+    expect(screen.getByText('Up Next · 12s')).toBeOnTheScreen();
+    await act(() => lastPlayer().onProgress?.({ position: 1400, duration: 1400 }));
+    await act(() => lastPlayer().onEnd?.());
+    expect(router.setParams).toHaveBeenCalledWith(expect.objectContaining({ id: EP2 }));
+  });
+
   it('Hide: the card goes, the end pauses as without a next episode', async () => {
     await playAt(1380);
     await fireEvent.press(screen.getByRole('button', { name: 'Hide Up Next' }));
