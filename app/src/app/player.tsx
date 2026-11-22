@@ -62,6 +62,7 @@ import {
   shouldClose,
   STALL_SPINNER_MS,
   subtitleScaleFor,
+  upNextCountdown,
   videoFrame,
   zoomAfterPinch,
 } from '@/player/controls';
@@ -180,8 +181,11 @@ export default function PlayerScreen() {
   const nextRequest = item ? nextEpisodes(item) : undefined;
   const nextList = useFetch<ItemsResult>(nextRequest?.path ?? null, { query: nextRequest?.query }).data;
   const [hiddenOn, setHiddenOn] = useState<string>();
-  // Off: Up Next waits for a tap (Settings → Autoplay next episode).
-  const autoplay = useAutoplayNext() === 'on';
+  // A seek that landed in the last 30 s (or at the end) - id of the episode: no autoplay this pass (room to scroll back
+  // for a scene after the credits); a seek before the window clears it.
+  const [endSeekOn, setEndSeekOn] = useState<string>();
+  // Off: Up Next waits for a tap (Settings → Autoplay next episode), also after a seek into the end.
+  const autoplay = useAutoplayNext() === 'on' && endSeekOn !== id;
   const next = id && hiddenOn !== id ? nextEpisode(nextList?.Items, id) : undefined;
   // Apple TV: while the Up Next card is up (`TvUpNext`) it has focus - the controls and the remote's player keys step
   // aside (a click is Play Now, not play / pause); Back hides it.
@@ -352,6 +356,7 @@ export default function PlayerScreen() {
     const to = seekTarget(seconds, progress.get().duration);
     player.current?.seek(to);
     progress.set({ position: to });
+    setEndSeekOn(upNextCountdown(to, progress.get().duration) ? id : undefined);
     if (report) seeked();
   };
   const seekBy = (delta: number, report = true) => seek(progress.get().position + delta, report);
@@ -552,9 +557,9 @@ export default function PlayerScreen() {
                     }}
                     onTracks={(e) => setEngineTracks({ key, ...e })}
                     onProgress={progress.set}
-                    // The next episode, if any and autoplay is on; else the engine holds the last frame paused: show it
-                    // as paused (the pause reports the end - played), controls up; Play replays from the start, Up Next
-                    // (autoplay off) plays the next one.
+                    // The next episode, if any and autoplay is on (no seek into the end); else the engine holds the last
+                    // frame paused: show it as paused (the pause reports the end - played), controls up; Play replays
+                    // from the start, Up Next (autoplay off) plays the next one.
                     onEnd={() => {
                       if (next && autoplay) return playNext(next);
                       setPaused(true);

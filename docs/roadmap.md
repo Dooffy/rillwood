@@ -238,6 +238,7 @@ Screens:
   - [x] Player: press and hold Left / Right should keep seeking, faster the longer it's held (tvOS player style); now each 10 s needs its own click - every 300 ms, 10 s → 30 s after 2 s → 60 s after 5 s, reported once at the end (`holdStep`, `useTvRemote`)
   - Player tracks menu: look and focus handling (see `docs/open-items.md`)
   - Search: People results (phone + TV together)
+  - [x] Up Next: a seek into the last 30 s (or the end) played the next episode at once - now no autoplay for that pass ("UP NEXT", the end pauses), a seek back out resets it (phones too)
   - Up Next: start at the credits when the server marks them (Jellyfin media segments, 10.10+), else at 30 s left; there a bigger takeover could work
   - Movie / series page: opened while the previous screen was scrolled a little, it loads at the wrong spot (not at the top) - should always open at the hero
   - Home: check and update the play flow to match phones (decided 2026-11-17) - the hero, Continue Watching and Next Up cards play on a click (resume; a watched one from the start, `playItem`), the page from Details in the hold menu; now TV still opens the page (`HomeRows` without `playOnTap`); hero Play / Play from Start stay
