@@ -9,6 +9,7 @@ import { detailView } from '@/detail';
 import {
   defaultSeasonId,
   episodes,
+  hasFile,
   playback,
   realSeasons,
   seasons,
@@ -65,8 +66,16 @@ export function useSeriesDetail(series: BaseItemDto) {
   const nextSettled = next.data !== undefined || next.error !== undefined || !next.loading;
   const seasonId = picked ?? (list && nextSettled ? defaultSeasonId(list, nextEpisode) : undefined);
   const season = list?.find((s) => s.Id === seasonId);
+  // The season's episodes (the same request as its cards and Play): no Download for one with nothing to download (an
+  // empty folder on the server, or only missing episodes). Offered while they load.
+  const episodeRequest = seasonId ? episodes(series.Id, seasonId) : undefined;
+  const seasonEpisodes = useFetch<ItemsResult>(episodeRequest?.path ?? null, { query: episodeRequest?.query }).data;
+  const empty = seasonEpisodes !== undefined && !seasonEpisodes.Items.some(hasFile);
   // Its episodes are looked up by series + season: the screen's series id when the season lacks one.
-  const download = useMemo(() => season && { ...season, SeriesId: season.SeriesId ?? series.Id }, [season, series.Id]);
+  const download = useMemo(
+    () => (season && !empty ? { ...season, SeriesId: season.SeriesId ?? series.Id } : undefined),
+    [season, empty, series.Id],
+  );
   const view = detailView(series, new Date(), list ? realSeasons(list).length : undefined);
   const target = useSeriesPlayTarget(series.Id, seasonId, nextEpisode, nextSettled);
 
