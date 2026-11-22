@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { memo } from 'react';
+import { memo, type ComponentRef, type Ref } from 'react';
 
 import type { BaseItemDto } from '@/api';
 import { Pressable, StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
@@ -26,6 +26,8 @@ export type CardProps = {
   onPress?: () => void;
   /** Long press (VoiceOver: the "More" action): the item's menu. */
   onLongPress?: () => void;
+  /** The card's focusable (Apple TV: a shelf's first card, where a swipe in lands). */
+  ref?: Ref<ComponentRef<typeof Pressable>>;
 } & ItemHandlers;
 
 /**
@@ -85,12 +87,14 @@ export function longPressProps(onLongPress: (() => void) | undefined) {
 const MediaCard = memo(function MediaCard({
   aspectRatio,
   width,
+  ref,
   ...props
 }: CardProps & { aspectRatio: number; width: number }) {
   const { title, subtitle, image, progress, remainingSeconds, played } = props;
   const { press, longPress } = itemPress(props);
   return (
     <Pressable
+      ref={ref}
       // Apple TV: the card a menu opens from gets focus back when it closes.
       onFocus={rememberFocus}
       accessibilityRole="button"

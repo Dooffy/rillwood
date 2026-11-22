@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Apple TV shelf: title over a horizontal row of cards, at the screen's safe margins. The row leaves room above and
 // below so a focused card can grow and lift without being cut off. The row is one focus target across the screen: a
-// swipe from any card above or below (even one far along its own shelf) lands on this shelf's last-focused card, the
-// first one on the first visit.
-import type { ReactNode } from 'react';
+// swipe from any card above or below (even one far along its own shelf) lands on this shelf's last-focused card while
+// it's still there, else the first one (or `start`).
+import { Children, cloneElement, isValidElement, useState, type ReactNode, type Ref } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { tv } from '@/theme';
@@ -20,7 +20,7 @@ export type TvShelfProps = {
   list?: ReactNode;
   /** Side inset for the title and cards: the screen's safe margin by default, less in a column (Search results). */
   margin?: number;
-  /** Where the first swipe into the shelf lands (`TvFocusRow` `start`). */
+  /** Where the first swipe into the shelf lands (`TvFocusRow` `start`); the first card by default (needs a `ref`). */
   start?: object | null;
 };
 
@@ -31,6 +31,11 @@ export const tvShelfListContent = {
 };
 
 export function TvShelf({ title, children, list, start, margin = tv.margin }: TvShelfProps) {
+  // The first card (state: the row gets it once it mounts); it takes the ref, so cards pass `ref` to their focusable.
+  const [first, setFirst] = useState<object | null>(null);
+  const cards = Children.toArray(children);
+  const head = cards[0];
+  if (isValidElement<{ ref?: Ref<object> }>(head)) cards[0] = cloneElement(head, { ref: setFirst });
   return (
     <View>
       {title !== undefined && (
@@ -38,14 +43,14 @@ export function TvShelf({ title, children, list, start, margin = tv.margin }: Tv
           {title}
         </Text>
       )}
-      <TvFocusRow start={start}>
+      <TvFocusRow start={start ?? first}>
         {list ?? (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={[styles.list, { paddingHorizontal: margin }]}
           >
-            {children}
+            {cards}
           </ScrollView>
         )}
       </TvFocusRow>

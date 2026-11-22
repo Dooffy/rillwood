@@ -4,7 +4,7 @@
 // opened it (tvOS would otherwise pick something on its own) - and Back: who takes the remote's Menu key now
 // (`holdBack`), caught on pushed screens by their `TvBackView` (`useTvBack`).
 import * as Router from 'expo-router';
-import { useSyncExternalStore, type ComponentProps, type ReactNode } from 'react';
+import { useState, useSyncExternalStore, type ComponentProps, type ReactNode } from 'react';
 import {
   BackHandler,
   Platform,
@@ -29,28 +29,43 @@ export const focusStyles = StyleSheet.create({
 type TvFocusRowProps = {
   children: ReactNode;
   /**
-   * Where the first swipe into the row lands, instead of its first item (a season's next episode). Later visits go back
-   * to the last-focused item as usual.
+   * Set (even null while it mounts): the row keeps its own memory - a swipe in lands on the item focused last in it
+   * while that's still on screen, else on `start` (a shelf's first card, a season's next episode). Unset: tvOS's own
+   * memory (buttons, pills).
    */
   start?: object | null;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 };
 
+type Destination = NonNullable<ComponentProps<typeof TVFocusGuideView>['destinations']>[number];
+
+/**
+ * Where a swipe into a row with its own memory goes: the last-focused item, else `start` (once each). tvOS skips a
+ * target that's gone. Ours, not tvOS's memory: its first visit picks by its own rules (a shelf's last card), later ones
+ * a native view kept from before - stale once the row's cards change (a refetch after playback).
+ */
+export function rowTargets(last: Destination | null, start: Destination | null): Destination[] {
+  return [last, start].filter((t, i, all): t is NonNullable<Destination> => t != null && all.indexOf(t) === i);
+}
+
 /**
  * A row of focusables (buttons, pills, a shelf's cards) as one focus target across the whole screen: a swipe up or
- * down from anywhere lands on the row's last-focused item, its first one on the first visit - not only on what sits
- * straight above or below. Rows are full width; their content keeps its own layout.
+ * down from anywhere lands on the row's last-focused item (its first one, or `start`, on the first visit) - not only on
+ * what sits straight above or below. Rows are full width; their content keeps its own layout.
  */
 export function TvFocusRow({ children, style, testID, start }: TvFocusRowProps) {
+  // The descendant focused last (the focus event's target), for rows with their own memory.
+  const [last, setLast] = useState<Destination | null>(null);
+  const own = start !== undefined;
   return (
     <TVFocusGuideView
       autoFocus
       testID={testID}
       style={style}
-      destinations={
-        start ? [start as NonNullable<ComponentProps<typeof TVFocusGuideView>['destinations']>[number]] : undefined
-      }
+      // A new list each render: the guide looks its targets up again, so a card gone since is skipped.
+      destinations={own ? rowTargets(last, start as Destination) : undefined}
+      onFocusCapture={own ? (e) => setLast(e.target as Destination) : undefined}
     >
       {children}
     </TVFocusGuideView>
