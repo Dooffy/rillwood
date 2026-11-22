@@ -421,9 +421,12 @@ export function updateUserData(
   return request<UserItemDataDto>(conn, `/UserItems/${encodeURIComponent(itemId)}/UserData`, { method: 'POST', body });
 }
 
-/** These items with their UserData, no images; unknown ids are left out. */
-export function getItemsById(conn: Connection, ids: readonly string[]) {
-  return request<ItemsResult>(conn, '/Items', { query: { ids: ids.join(','), enableImages: false } });
+/** Ids per `getItemsById` request (URL length). */
+export const ITEMS_BY_ID_CHUNK = 100;
+
+/** These items with their UserData, no images; unknown ids are left out. `query` adds filters / drops fields. */
+export function getItemsById(conn: Connection, ids: readonly string[], query: Query = {}) {
+  return request<ItemsResult>(conn, '/Items', { query: { ids: ids.join(','), enableImages: false, ...query } });
 }
 
 /** Add to (`POST`) or remove from (`DELETE`) favourites. */

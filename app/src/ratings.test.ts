@@ -2,91 +2,95 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
 import * as api from './api';
-import type { BaseItemDto, Connection } from './api';
-import { forgetRatingTables, ratingScores, scoreOf, scoreTable } from './ratings';
+import type { BaseItemDto, Connection, Query } from './api';
+import { ratingScores } from './ratings';
 
 const conn: Connection = { baseUrl: 'https://jf.example.com', deviceId: 'dev', token: 'tok', accountId: 'a' };
-const table = [
-  { Name: 'TV-Y7', Value: 7 },
-  { Name: 'PG', Value: 10 },
-  { Name: 'TV-PG', Value: 10 },
-  { Name: 'R', Value: 17 },
-  { Name: 'Unrated', Value: null },
-];
-const movie = (Id: string, OfficialRating?: string): BaseItemDto => ({ Id, Name: Id, Type: 'Movie', OfficialRating });
+// The server's own scores for the titles (its maths, any country): G 0 (IE-G too), TV-Y7 7, PG 10, R 17; none = no
+// score (unrated, or a rating it can't read).
+const titleScores: Record<string, number | undefined> = { pets: 0, trains: 7, pg: 10, grownup: 17, bare: undefined };
+const movie = (Id: string): BaseItemDto => ({ Id, Name: Id, Type: 'Movie' });
 const episode = (Id: string, SeriesId: string): BaseItemDto => ({ Id, Name: Id, Type: 'Episode', SeriesId });
-const shows: Record<string, string | undefined> = { trains: 'TV-Y7', grownup: 'R', bare: undefined };
-/** A show the server can't answer for. */
-const broken = 'broken';
 
-const request = jest.spyOn(api, 'request');
-let tableFails = false;
+const getItemsById = jest.spyOn(api, 'getItemsById');
+let fails = false;
 
 beforeEach(() => {
   jest.clearAllMocks();
-  forgetRatingTables();
-  tableFails = false;
-  request.mockImplementation((_conn, path: string) => {
-    if (path === '/Localization/ParentalRatings')
-      return tableFails ? Promise.reject(new api.ApiError('network')) : Promise.resolve(table as never);
-    const id = decodeURIComponent(path.split('/').pop() ?? '');
-    if (id === broken) return Promise.reject(new api.ApiError('http', 500));
-    return Promise.resolve({ Id: id, Name: id, Type: 'Series', OfficialRating: shows[id] } as never);
+  fails = false;
+  // `/Items?ids=` as 12.1 and 10.11 answer it (docs/research/jellyfin-api.md): a title with no score passes every min
+  // and max; `hasParentalRating` doesn't drop it.
+  getItemsById.mockImplementation((_conn, ids, q: Query = {}) => {
+    if (fails) return Promise.reject(new api.ApiError('network'));
+    const min = q.minOfficialRating === undefined ? undefined : Number(q.minOfficialRating);
+    const max = q.maxOfficialRating === undefined ? undefined : Number(q.maxOfficialRating);
+    const Items = ids
+      .filter((id) => id in titleScores)
+      .filter((id) => {
+        const score = titleScores[id];
+        if (score === undefined) return true;
+        return (min === undefined || score >= min) && (max === undefined || score <= max);
+      })
+      .map((Id): BaseItemDto => ({ Id, Name: Id, Type: 'Movie' }));
+    return Promise.resolve({ Items, TotalRecordCount: Items.length });
   });
 });
 
 const asObject = (m: Map<string, number>) => Object.fromEntries(m);
 
 describe('rating scores', () => {
-  it("reads the server's table by name, any case; unrated entries have no score", () => {
-    const t = scoreTable(table);
-    expect(scoreOf('pg', t)).toBe(10);
-    expect(scoreOf('TV-PG', t)).toBe(10);
-    expect(scoreOf('Unrated', t)).toBeUndefined();
-    expect(scoreOf('FSK-6', t)).toBeUndefined();
-    expect(scoreOf(undefined, t)).toBeUndefined();
-  });
-
-  it('a server that leaves Value out: the score from RatingScore', () => {
-    const t = scoreTable([{ Name: 'TV-Y7', Value: null, RatingScore: { score: 7 } }, { Name: 'Unrated' }]);
-    expect(scoreOf('TV-Y7', t)).toBe(7);
-    expect(scoreOf('Unrated', t)).toBeUndefined();
-  });
-
-  it("a movie its own rating, an episode its show's (each show asked once); none = unrated", async () => {
+  it("the lowest age step the server lets through; an episode its show's; unrated and unknown: none", async () => {
     const scores = await ratingScores(conn, [
-      movie('pg', 'PG'),
-      movie('none'),
+      movie('pets'),
+      movie('pg'),
+      movie('bare'),
+      movie('gone'),
       episode('t1', 'trains'),
       episode('t2', 'trains'),
       episode('g1', 'grownup'),
-      episode('b1', 'bare'),
     ]);
-    expect(asObject(scores)).toEqual({ pg: 10, t1: 7, t2: 7, g1: 17 });
-    const showCalls = request.mock.calls.filter(([, path]) => String(path).startsWith('/Items/'));
-    expect(showCalls.map(([, path]) => path)).toEqual(['/Items/trains', '/Items/grownup', '/Items/bare']);
+    // R is over every step: 14 (above 13+).
+    expect(asObject(scores)).toEqual({ pets: 0, pg: 10, t1: 7, t2: 7, g1: 14 });
   });
 
-  it("a show that can't be looked up: its episodes unrated, the rest still scored", async () => {
-    const scores = await ratingScores(conn, [episode('x1', broken), episode('t1', 'trains'), movie('r', 'R')]);
-    expect(asObject(scores)).toEqual({ t1: 7, r: 17 });
+  it('a title the server has no score for stays unrated, not 0, though it passes every step - regression', async () => {
+    expect(asObject(await ratingScores(conn, [movie('bare'), episode('b1', 'bare')]))).toEqual({});
   });
 
-  it('an episode without a show id uses its own rating', async () => {
-    const lone: BaseItemDto = { Id: 'lone', Name: 'lone', Type: 'Episode', OfficialRating: 'TV-PG' };
-    expect(asObject(await ratingScores(conn, [lone]))).toEqual({ lone: 10 });
+  it('asks which titles exist, which have no score, then the scored ones by age (numbers), stopping when placed', async () => {
+    await ratingScores(conn, [episode('t1', 'trains'), episode('t2', 'trains'), movie('pets'), movie('bare')]);
+    // Only the ids are read: no user data or count.
+    const lean = { recursive: true, enableUserData: false, enableTotalRecordCount: false };
+    expect(getItemsById.mock.calls.map(([, ids, query]) => [ids, query])).toEqual([
+      [['trains', 'pets', 'bare'], lean],
+      [['trains', 'pets', 'bare'], { ...lean, minOfficialRating: '100000' }],
+      [['trains', 'pets'], { ...lean, maxOfficialRating: '0' }],
+      [['trains'], { ...lean, maxOfficialRating: '7' }],
+    ]);
   });
 
-  it('reads the table once per server', async () => {
-    await ratingScores(conn, [movie('a', 'PG')]);
-    await ratingScores(conn, [movie('b', 'R')]);
-    expect(request.mock.calls.filter(([, path]) => path === '/Localization/ParentalRatings')).toHaveLength(1);
+  it('many titles: ids in chunks of 100', async () => {
+    const many = Array.from({ length: 220 }, (_, i) => movie(`m${i}`));
+    await ratingScores(conn, many);
+    const first = getItemsById.mock.calls.filter(([, , q]) => q && Object.keys(q).length === 3);
+    expect(first.map(([, ids]) => ids.length)).toEqual([100, 100, 20]);
   });
 
-  it('no table: no scores (unrated), asked again next time', async () => {
-    tableFails = true;
-    expect((await ratingScores(conn, [movie('a', 'PG')])).size).toBe(0);
-    tableFails = false;
-    expect(asObject(await ratingScores(conn, [movie('a', 'PG')]))).toEqual({ a: 10 });
+  it('nothing found on the server: no further requests, no scores', async () => {
+    expect((await ratingScores(conn, [movie('gone')])).size).toBe(0);
+    expect(getItemsById).toHaveBeenCalledTimes(1);
+  });
+
+  it('an episode without a show id: asked by its own id', async () => {
+    const lone: BaseItemDto = { Id: 'pg', Name: 'lone', Type: 'Episode' };
+    expect(asObject(await ratingScores(conn, [lone]))).toEqual({ pg: 10 });
+  });
+
+  it('the server out of reach: no scores (asked again later); nothing to ask: no request', async () => {
+    fails = true;
+    expect((await ratingScores(conn, [movie('pets')])).size).toBe(0);
+    getItemsById.mockClear();
+    expect((await ratingScores(conn, [])).size).toBe(0);
+    expect(getItemsById).not.toHaveBeenCalled();
   });
 });

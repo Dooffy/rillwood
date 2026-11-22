@@ -282,12 +282,13 @@ Tested 2026-11-19 on 12.1.0 and 10.11.11 (same answers unless noted), showcase l
 
 | Check | Result |
 |---|---|
-| `/Localization/ParentalRatings` | 56 ratings, all countries. `{Name, Value, RatingScore: {score, subScore}}`; `Unrated` has no value. US: G / TV-G / TV-Y 0, TV-Y7 7, PG / TV-PG 10, PG-13 13, TV-14 14, R / NC-17 / TV-MA 17 |
+| `/Localization/ParentalRatings` | 56 ratings: the server's metadata country + a few extras (`Approved`, `10`, `13`, `14`, `21`, `XXX`, `Banned`) - not every country, so the app doesn't match names against it (kids offline scores ask `/Items` per step instead). `{Name, Value, RatingScore: {score, subScore}}`; `Unrated` has no value. US: G / TV-G / TV-Y 0, TV-Y7 7, PG / TV-PG 10, PG-13 13, TV-14 14, R / NC-17 / TV-MA 17 |
 | `/Users/Me` (non-admin) | `Policy.MaxParentalRating` readable (number, absent when no limit); `BlockUnratedItems` = item types, `[]` by default |
 | Episode `OfficialRating` | absent - episodes take the series rating in every server filter |
 | **Limited user** (server policy) | Filters everything: `/Items` (incl. search, episodes), `/UserItems/Resume`, `/Shows/NextUp`, `/Items/Latest`, `/Items/{id}/Similar`. A blocked item's `/Items/{id}` + `PlaybackInfo` → 404; blocked show's `/Shows/{id}/Episodes`: 404 on 12.1, `200` empty on 10.11. Unrated items stay visible unless `BlockUnratedItems` lists the type (`Movie`, `Series` - their episodes go too). `/Genres` not filtered (names only) |
 | **`maxOfficialRating=<name>`** on `/Items` (adult user) | Works: compares by score (`PG` = `TV-PG`), episodes by their series, `searchTerm` too, `/Shows/{id}/Episodes` too. **Keeps unrated items** |
 | `hasParentalRating=true` | Drops unrated movies / series. **Not usable on episodes** (counts every episode as rated) |
+| Rating filters with `ids=` (2026-11-22, 12.1 + 10.11, `demo` + `test`) | `/Items?ids=` applies `maxOfficialRating` / `minOfficialRating` as without ids. Numbers work as names (`7` = `TV-Y7`'s results, `13` = `PG-13`'s). **A title the server has no score for passes every min and max** (`test` library, no `OfficialRating`: all 16 back for `minOfficialRating=XXX` and `maxOfficialRating=0`), and **`hasParentalRating=true` kept them too** (both `true` and `false` returned all 16; on `demo`, all rated, `false` → 0). So `minOfficialRating=100000` returns exactly the unscored titles. Kids offline scores use that (`ratingScores`) |
 | `maxOfficialRating` on `/UserItems/Resume`, `/Shows/NextUp`, `/Items/Latest` | **Ignored** - all rows come back |
 | Continue Watching via `/Items?filters=IsResumable&sortBy=DatePlayed` + `maxOfficialRating` | Works (one request, filtered) |
 | Next Up | No filtered form - filter its answer in the app (episode → allowed series id) |
