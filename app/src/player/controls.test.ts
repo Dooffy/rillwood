@@ -108,6 +108,11 @@ describe('videoFrame', () => {
   it('fill: edge to edge', () => {
     expect(videoFrame(landscape, true, 'fill')).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
   });
+
+  it('Apple TV (no cutout): edge to edge, though its safe area (overscan) is wide - regression: bars on both sides', () => {
+    const tv = { top: 60, bottom: 60, left: 80, right: 80 };
+    expect(videoFrame(tv, true, 'fit', false)).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
+  });
 });
 
 describe('clampDelay', () => {

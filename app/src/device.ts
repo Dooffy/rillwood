@@ -41,6 +41,13 @@ export const features = {
   get remote() {
     return Platform.isTV;
   },
+  /**
+   * A screen that cuts into the picture (notch, Dynamic Island, nav bar): the player fits the video inside the safe
+   * area. tvOS's safe area is the overscan margin for text and buttons - the video fills the screen.
+   */
+  get cutout() {
+    return !Platform.isTV;
+  },
   /** The app's files last; tvOS keeps them in Caches, which it may purge (`src/persist.ts` uses the Keychain then). */
   get lastingFiles() {
     return !Platform.isTV;

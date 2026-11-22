@@ -141,7 +141,7 @@ src/app/                 expo-router
   about.tsx              Settings → About: mark, overview, Source code / Privacy policy / Report a problem (browser, fixed links from `app.json` `extra.sourceUrl` / `privacyUrl` / `supportUrl`), Licences, Stand with Ukraine line (UNITED24)
   licences.tsx, licence/[id].tsx  Settings → About → Licences: the list, one entry (source, packages, full texts)
 src/theme.ts             design tokens (+ `kids`: kids mode sizes)
-src/device.ts            phone / tablet vs Apple TV: `screenFor` (a route's two views), `features` (downloads, rotation, touch, lasting files)
+src/device.ts            phone / tablet vs Apple TV: `screenFor` (a route's two views), `features` (downloads, rotation, touch, cutout, lasting files)
 src/screens/             a route's views when TV differs, per device: phone/ (phone + tablet: PhoneWelcome, PhoneSignIn, PhoneHome, PhoneAccounts, PhoneLibrary, PhoneItemDetail, PhoneSeriesDetail + SavedSeries), tv/ (TvWelcome, TvSignIn, TvHome, TvAccounts = Who's Watching, TvLibrary, TvItemDetail, TvSeriesDetail, TvSearch); kids/ (KidsHome, KidsShow, KidsSearch, KidsDownloads, KidsShowDownloads - kids mode, phones + tablets only)
 src/qr.ts                QR code encoder (pure, own: byte mode, level M, versions 1-10) - Apple TV About links
 src/format.ts            display formatting (time left, clock, subtitle timing, file size)

@@ -14,6 +14,7 @@ import type { PlayerProps } from '@/player/Player';
 import type { RemoteEvent } from '@/player/tvRemote';
 import * as session from '@/session';
 import * as settings from '@/settings';
+import { resetDevice, setDevice } from '@/testDevice';
 import { tv } from '@/theme';
 
 jest.mock('expo-router', () => ({
@@ -129,6 +130,18 @@ describe('Player on Apple TV', () => {
     expect(screen.getByRole('button', { name: 'Speed, 1×' })).toHaveTextContent('1×');
     expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Back 10 seconds' })).toBeNull();
+  });
+
+  it('the video always fits, even with fill saved (no zoom button on a TV) - regression', async () => {
+    await setDevice(1920, 1080);
+    settings.setVideoZoom('fill');
+    try {
+      await renderPlaying();
+      expect((Player.mock.calls.at(-1)?.[0] as { zoom: string }).zoom).toBe('fit');
+    } finally {
+      settings.setVideoZoom('fit');
+      resetDevice();
+    }
   });
 
   it('Play-Pause and a click on the scrubber play / pause', async () => {

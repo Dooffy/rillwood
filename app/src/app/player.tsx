@@ -148,7 +148,8 @@ export default function PlayerScreen() {
   // Fit or fill, remembered on the phone; only landscape zooms (a filled portrait screen would crop most of the picture).
   const zoomSetting = useVideoZoom();
   const landscape = width > height;
-  const zoom: VideoZoom = landscape ? zoomSetting : 'fit';
+  // A TV has no zoom button: always fit, whatever the saved setting.
+  const zoom: VideoZoom = landscape && features.touch ? zoomSetting : 'fit';
   const picked: Partial<TracksValue> = choice.id === id ? choice : {};
   // Bumped on ±10 s: restarts the auto-hide timer (pause and scrubbing are timer deps already).
   const [touched, setTouched] = useState(0);
@@ -520,8 +521,9 @@ export default function PlayerScreen() {
               onAccessibilityEscape={close}
             >
               {state.status === 'ready' && (
-                // Fit keeps the picture clear of the notch / Dynamic Island; fill covers the screen.
-                <View style={[StyleSheet.absoluteFill, videoFrame(insets, landscape, zoom)]}>
+                // Fit keeps the picture clear of the notch / Dynamic Island; fill covers the screen; a TV uses the whole screen
+                // (no inset, still fit).
+                <View style={[StyleSheet.absoluteFill, videoFrame(insets, landscape, zoom, features.cutout)]}>
                   <Player
                     ref={player}
                     source={state.play.source}
