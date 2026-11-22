@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Apple TV Back: the latest holder takes the press; a pushed screen's catcher only for its own holders and menus.
+// Apple TV Back: the latest holder takes the press; a pushed screen's catcher only for its own holders and menus. Row
+// targets: where a swipe into a row with its own memory lands.
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, renderHook } from '@testing-library/react-native';
 import { BackHandler, Platform } from 'react-native';
 
-import { holdBack, useTvBack } from './focus';
+import { holdBack, rowTargets, useTvBack } from './focus';
 
 // The screen a hook runs in: its navigation object.
 let mockScreen: object = {};
@@ -90,5 +91,17 @@ describe('useTvBack (a pushed screen)', () => {
     const { result } = await renderHook(() => useTvBack());
     expect(result.current.enabled).toBe(false);
     release();
+  });
+});
+
+describe('rowTargets', () => {
+  const card = {};
+  const first = {};
+  it('the last-focused item, then start; each once, none missing', () => {
+    expect(rowTargets(null, null)).toEqual([]);
+    expect(rowTargets(null, first)).toEqual([first]);
+    expect(rowTargets(card, first)).toEqual([card, first]);
+    expect(rowTargets(first, first)).toEqual([first]);
+    expect(rowTargets(card, null)).toEqual([card]);
   });
 });
