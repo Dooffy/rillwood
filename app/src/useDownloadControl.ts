@@ -22,7 +22,7 @@ import {
 } from '@/downloads';
 import { features } from '@/device';
 import { formatBytes } from '@/format';
-import { currentUser, downloadSources, itemDetail, seasonFiles } from '@/items';
+import { currentUser, downloadSources, hasFile, itemDetail, seasonFiles } from '@/items';
 import { askNotificationsOnce } from '@/notificationPermission';
 import { connectionFor, getSession, useSession } from '@/session';
 import { useFetch } from '@/useFetch';
@@ -81,14 +81,21 @@ export function useDownloadGroup(item: BaseItemDto | undefined): string | null {
 }
 
 /**
- * Offer Download: a downloadable item the user may download (`/Users/Me` policy), or something of it is already here
- * (to delete it). Re-renders only when that changes, not on progress (the detail header).
+ * Nothing to download: a movie / episode with no file on the server (missing, or an empty folder - no media sources).
+ * A card's item comes without `MediaSources`: not known, so not empty. A season: its episodes decide (the screen).
+ */
+export const noFile = (item: BaseItemDto) =>
+  item.Type !== 'Season' && (!hasFile(item) || item.MediaSources?.length === 0);
+
+/**
+ * Offer Download: a downloadable item with a file that the user may download (`/Users/Me` policy), or something of it
+ * is already here (to delete it). Re-renders only when that changes, not on progress (the detail header).
  */
 export function useCanDownload(item: BaseItemDto | undefined): boolean {
   const group = useDownloadGroup(item);
   const has = useHasDownloads(group);
   const user = useFetch<UserDto>(group ? currentUser.path : null);
-  return !!group && (has || user.data?.Policy?.EnableContentDownloading === true);
+  return !!group && (has || (user.data?.Policy?.EnableContentDownloading === true && !noFile(item!)));
 }
 
 /** The items to download with their files: a season's episodes; a card's item comes without `MediaSources`. */

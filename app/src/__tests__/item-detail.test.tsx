@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { act, fireEvent, render as rtlRender, screen, within } from '@testing-library/react-native';
+import { act, fireEvent, render as rtlRender, screen, waitFor, within } from '@testing-library/react-native';
 import { Paths } from 'expo-file-system';
 import type { ReactElement } from 'react';
 import { Alert, type AlertButton } from 'react-native';
@@ -221,6 +221,14 @@ describe('ItemDetail', () => {
     reply = () => Promise.resolve({ ...sintel, MediaSources: [{ ...source, MediaStreams: streams }] });
     await render(<ItemDetail />);
     expect(await screen.findByLabelText(/, 5\.1, Dolby Atmos, SDH$/)).toBeOnTheScreen();
+  });
+
+  it('a movie with no file (an empty folder on the server: no media sources): no Download - regression', async () => {
+    reply = () => Promise.resolve({ ...sintel, MediaSources: [] });
+    await render(<ItemDetail />);
+    expect(await screen.findByRole('header', { name: sintel.Name })).toBeOnTheScreen();
+    await waitFor(() => expect(request).toHaveBeenCalledWith(expect.anything(), '/Users/Me', expect.anything()));
+    expect(screen.queryByRole('button', { name: 'Download' })).toBeNull();
   });
 
   it('downloads from the header: ring while downloading, pause / resume, ✓ when done, delete after asking', async () => {

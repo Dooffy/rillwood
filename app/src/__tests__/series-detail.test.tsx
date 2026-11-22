@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { act, fireEvent, render as rtlRender, screen } from '@testing-library/react-native';
+import { act, fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react-native';
 import { Paths } from 'expo-file-system';
 import type { ReactElement } from 'react';
 import { Alert, type AlertButton } from 'react-native';
@@ -157,6 +157,20 @@ describe('SeriesDetail', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Play Season 2, Episode 2' }));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/player', params: { id: 'ep-2-2', start: '0' } });
     expect(screen.queryByRole('button', { name: 'Play from Start' })).toBeNull();
+  });
+
+  it('a season with nothing to download (an empty folder, only missing episodes): no Download - regression', async () => {
+    const missing = { LocationType: 'Virtual' };
+    routes['episodes:season-2'] = items(episode(2, 1, missing), episode(2, 2, missing));
+    routes['episodes:season-1'] = items();
+    await render(<SeriesDetail />);
+    expect(await screen.findByRole('button', { name: 'Season 2', selected: true })).toBeOnTheScreen();
+    await waitFor(() => expect(calls('episodes:season-2')).toBe(1));
+    expect(screen.queryByRole('button', { name: 'Download Season 2' })).toBeNull();
+    // A season with no episodes at all: the same.
+    await fireEvent.press(screen.getByRole('button', { name: 'Season 1' }));
+    await waitFor(() => expect(calls('episodes:season-1')).toBe(1));
+    expect(screen.queryByRole('button', { name: 'Download Season 1' })).toBeNull();
   });
 
   it('downloads the shown season from the header as one batch, then shows its ring', async () => {
