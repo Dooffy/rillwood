@@ -12,13 +12,13 @@ import { loadErrorMessage, Message, Offline } from '@/components/Message';
 import { TvEmptyState } from '@/components/tv/TvEmptyState';
 import { PagedList } from '@/components/PagedList';
 import { useShelfCards } from '@/components/shelfCards';
-import { PosterRowsPlaceholder } from '@/components/Skeleton';
 import { Text } from '@/components/Text';
 import { TvFocusRow } from '@/components/tv/focus';
 import { TvButton } from '@/components/tv/TvButton';
 import { TvFilterPanel } from '@/components/tv/TvFilterPanel';
 import { TvPill } from '@/components/tv/TvPill';
 import { TvShelf } from '@/components/tv/TvShelf';
+import { TvShelvesPlaceholder } from '@/components/tv/TvSkeleton';
 import { activeFilters, cardTitles, LIBRARY_SORTS, playback, posterImage, SEARCH_SCOPES, type Filters } from '@/items';
 import { tabList, tv, useColors } from '@/theme';
 import { useImage } from '@/useImage';
@@ -71,9 +71,10 @@ export function TvLibrary() {
       />
     );
   } else if (offline.offline) {
-    // Out of reach with nothing loaded: the offline card alone, nothing to scroll.
+    // Out of reach with nothing loaded: the offline card alone, nothing to scroll - centred in the whole area (its
+    // `fill` needs a parent with a height, else it collapses under the tab bar and its text and buttons overlap).
     body = (
-      <View style={styles.padded}>
+      <View testID="library-offline" style={[styles.padded, styles.fill]}>
         <Offline fill busy={offline.busy} retry={lib.retryAll} />
       </View>
     );
@@ -83,7 +84,10 @@ export function TvLibrary() {
         <Message text={loadErrorMessage(lib.failed)} retry={lib.retryAll} />
       </View>
     ) : (
-      <PosterRowsPlaceholder rows={2} />
+      // In the shelves' own scroll view and spacing, so they land where these were.
+      <ScrollView {...tabList} scrollEnabled={false} contentContainerStyle={styles.rows}>
+        <TvShelvesPlaceholder rows={POSTER_ROWS.length} gap={tv.gap.lg} />
+      </ScrollView>
     );
   } else if (groups.movies.length + groups.shows.length === 0) {
     body = <TvEmptyState icon="film.stack" title={emptyText(query)} />;

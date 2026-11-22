@@ -23,7 +23,7 @@ import { useItemMenu } from '../ItemMenu';
 import { loadErrorMessage, Message } from '../Message';
 import { useShelfCards } from '../shelfCards';
 import { Bone } from '../Skeleton';
-import { Text } from '../Text';
+import { Text, TextBone } from '../Text';
 import { focusStyles, rememberFocus, TvFocusRow } from './focus';
 import { TvPill } from './TvPill';
 import { TvShelf, tvShelfListContent } from './TvShelf';
@@ -92,8 +92,15 @@ function EpisodeShelf({ seriesId, seasonId, startAt }: { seriesId: string; seaso
     ) : (
       <View testID="tv-episodes-placeholder" style={[styles.placeholder, tvShelfListContent]}>
         {Array.from({ length: landscape.count }, (_, i) => (
-          <View key={i} style={{ width: landscape.width }}>
+          // A card's still, title, runtime and two summary lines (`TvEpisodeCard`).
+          <View key={i} style={[styles.card, { width: landscape.width }]}>
             <Bone aspectRatio={16 / 9} />
+            <TextBone style={tv.type.cardTitle} width="70%" />
+            <TextBone style={tv.type.small} width="25%" />
+            <View>
+              <TextBone style={tv.type.small} />
+              <TextBone style={tv.type.small} width="60%" />
+            </View>
           </View>
         ))}
       </View>

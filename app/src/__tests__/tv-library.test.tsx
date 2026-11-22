@@ -96,6 +96,16 @@ describe('Library on Apple TV', () => {
     expect(screen.queryByLabelText('Movies, shows, episodes')).toBeNull();
   });
 
+  it('loading All: TV shelf placeholders with the loaded poster width, not the phone rows', async () => {
+    request.mockImplementation(() => new Promise<never>(() => {}));
+    await renderTv();
+    const placeholder = screen.getByTestId('tv-shelves-placeholder');
+    expect(screen.queryByTestId('poster-rows-placeholder')).toBeNull();
+    const card = within(placeholder).getAllByTestId('card-placeholder', { includeHiddenElements: true })[0];
+    // 1920 less the safe margins (2 × 90), 6 posters with 40 pt gaps - as the loaded shelves.
+    expect(StyleSheet.flatten(card.props.style).width).toBe(256);
+  });
+
   it('a type pill opens its grid: TV-sized posters, 6 across, and the count', async () => {
     await renderTv();
     await fireEvent.press(screen.getByRole('button', { name: 'Movies' }));
@@ -128,6 +138,13 @@ describe('Library on Apple TV', () => {
       sortBy: 'DateCreated,SortName',
     });
     expect(screen.queryByTestId('tv-menu')).toBeNull();
+  });
+
+  it('server out of reach: the offline state fills the area under the pills - regression: it collapsed and overlapped', async () => {
+    request.mockImplementation(() => Promise.reject(new api.ApiError('network')));
+    await renderTv();
+    expect(await screen.findByText(/^Can't reach/)).toBeOnTheScreen();
+    expect(screen.getByTestId('library-offline')).toHaveStyle({ flex: 1 });
   });
 
   it('an empty server: the TV empty state, no pull to refresh', async () => {

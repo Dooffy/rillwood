@@ -305,8 +305,9 @@ export const tv = {
   /** Movie / episode detail (`TvItemDetail`): the credits column (bottom right), the outlined badges on the art. */
   detail: {
     creditsWidth: 520,
-    /** The play button's stand-in while the item loads. */
+    /** Stand-ins while the item loads: the play button, the summary's More. */
     placeholderPlayWidth: 300,
+    placeholderMoreWidth: 80,
     /** Scrolled this far down (a share of the screen's height): the art dims behind the shelves. */
     belowAt: 0.3,
     dim: 'rgba(0, 0, 0, 0.7)',
@@ -361,8 +362,11 @@ export const tv = {
       fallback: { dark: 'rgba(28, 28, 30, 0.94)', light: 'rgba(242, 242, 247, 0.94)' },
     },
   },
-  /** Card shelves: about this wide (whole cards across, `fitCards`), the gap, room above / below for a focused card. */
-  shelf: { posterWidth: 250, landscapeWidth: 400, gap: 40, focusRoom: 40 },
+  /**
+   * Card shelves: about this wide (whole cards across, `fitCards`), the gap, room above / below for a focused card, the
+   * title's stand-in while a shelf loads.
+   */
+  shelf: { posterWidth: 250, landscapeWidth: 400, gap: 40, focusRoom: 40, placeholderTitleWidth: 300 },
   /** Active-server dot (Sign in). */
   statusDot: 12,
   /** Unfocused button / pill fill over any background (the dark palette; over video always). */
