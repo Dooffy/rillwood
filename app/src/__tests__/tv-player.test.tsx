@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Apple TV player controls (screen draft 10): the title on top, the scrubber + track buttons at the bottom, and the
-// remote - click / Play-Pause, Left / Right 10 s, a swipe scrubs with a preview, Back hides the controls then closes.
+// remote - click / Play-Pause, Left / Right 10 s (held: repeats, faster the longer), a swipe scrubs with a preview, Back hides the controls then closes.
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
-import { AccessibilityInfo, BackHandler, Platform, StyleSheet } from 'react-native';
+import { AccessibilityInfo, AppState, BackHandler, Platform, StyleSheet } from 'react-native';
 
 import * as api from '@/api';
 import type { BaseItemDto, MediaSourceDto } from '@/api';
@@ -162,6 +162,84 @@ describe('Player on Apple TV', () => {
     await fireEvent(screen.getByTestId('tv-scrubber'), 'focus', { currentTarget: {} });
     await press('left');
     expect(mockSeek).toHaveBeenLastCalledWith(100);
+  });
+
+  describe('Left / Right held', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+    const hold = (eventType: 'longLeft' | 'longRight', eventKeyAction: 0 | 1) =>
+      act(() => mockRemote!({ eventType, eventKeyAction }));
+    const advance = (ms: number) => act(() => jest.advanceTimersByTime(ms));
+    const seekReports = () =>
+      jest
+        .mocked(api.reportPlaybackProgress)
+        .mock.calls.filter(([, report]) => (report as { EventName?: string }).EventName === 'TimeUpdate').length;
+
+    it('keeps seeking every 300 ms, 10 s then 30 s after 2 s; reported once, at the end; no extra click', async () => {
+      await renderPlaying();
+      jest.useFakeTimers();
+      await hold('longRight', 0);
+      expect(mockSeek).toHaveBeenLastCalledWith(110);
+      await advance(300);
+      expect(mockSeek).toHaveBeenLastCalledWith(120);
+      // 600 - 1800 ms: five more 10 s steps; 2100 ms: 30 s.
+      await advance(1800);
+      expect(mockSeek).toHaveBeenLastCalledWith(200);
+      expect(seekReports()).toBe(0);
+      await hold('longRight', 1);
+      expect(seekReports()).toBe(1);
+      // The release's own click (if one comes): no extra 10 s.
+      await press('right');
+      await advance(1000);
+      expect(mockSeek).toHaveBeenCalledTimes(8);
+      await press('left');
+      expect(mockSeek).toHaveBeenLastCalledWith(190);
+    });
+
+    it('shows the controls; on a track button it moves focus instead - no seek', async () => {
+      await renderPlaying();
+      await act(() => {
+        mockRemote!({ eventType: 'down', eventKeyAction: 1 });
+      });
+      await fireEvent(screen.getByRole('button', { name: 'Audio' }), 'focus', { currentTarget: {} });
+      jest.useFakeTimers();
+      await hold('longLeft', 0);
+      await advance(900);
+      expect(mockSeek).not.toHaveBeenCalled();
+    });
+
+    it('with the controls down, a hold brings them up', async () => {
+      await renderPlaying();
+      await act(() => back.at(-1)!());
+      expect(screen.queryByTestId('tv-player-bar')).toBeNull();
+      jest.useFakeTimers();
+      await hold('longLeft', 0);
+      expect(mockSeek).toHaveBeenLastCalledWith(90);
+      expect(screen.getByTestId('tv-player-bar')).toBeOnTheScreen();
+    });
+
+    it('stops when the app is left (no release comes) or a menu opens', async () => {
+      const listeners: ((state: string) => void)[] = [];
+      jest.spyOn(AppState, 'addEventListener').mockImplementation((_, listener) => {
+        listeners.push(listener as (state: string) => void);
+        return { remove: jest.fn() } as never;
+      });
+      await renderPlaying();
+      jest.useFakeTimers();
+      await hold('longRight', 0);
+      await act(() => listeners.forEach((l) => l('background')));
+      await advance(900);
+      expect(mockSeek).toHaveBeenCalledTimes(1);
+      expect(seekReports()).toBe(1);
+
+      await act(() => listeners.forEach((l) => l('active')));
+      await hold('longRight', 0);
+      expect(mockSeek).toHaveBeenCalledTimes(2);
+      await fireEvent.press(screen.getByRole('button', { name: 'Speed, 1×' }));
+      await advance(900);
+      expect(mockSeek).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('a swipe scrubs: the bar shows where it lands, the seek happens on release', async () => {

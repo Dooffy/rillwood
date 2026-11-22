@@ -235,7 +235,7 @@ Screens:
   - Done: loading placeholders laid out like what loads, so nothing jumps (real Apple TV) - Home / Library shelves and grid at the TV card gap (40) and card text lines, Library All as `TvShelf`-shaped shelves (`TvShelvesPlaceholder`), detail text spaced like `TvDetailScreen` (line-high bones, summary + More, badges, credits), season episode cards with their text lines
   - Library: Down from the type pills doesn't reach a lone poster at the left (Shows with one result) - focus needs a way into the grid's first card
   - Player: auto-hide 3 s vs the draft's 4 s; swipe scrub speed (0.2 s per point) on a real Siri Remote
-  - Player: press and hold Left / Right should keep seeking, faster the longer it's held (tvOS player style); now each 10 s needs its own click
+  - [x] Player: press and hold Left / Right should keep seeking, faster the longer it's held (tvOS player style); now each 10 s needs its own click - every 300 ms, 10 s → 30 s after 2 s → 60 s after 5 s, reported once at the end (`holdStep`, `useTvRemote`)
   - Player tracks menu: look and focus handling (see `docs/open-items.md`)
   - Search: People results (phone + TV together)
   - Up Next: start at the credits when the server marks them (Jellyfin media segments, 10.10+), else at 30 s left; there a bigger takeover could work

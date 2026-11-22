@@ -347,13 +347,14 @@ export default function PlayerScreen() {
     });
   };
   const touch = () => setTouched((n) => n + 1);
-  const seek = (seconds: number) => {
+  // `report` false: a held Left / Right on Apple TV, reported once at the hold's end.
+  const seek = (seconds: number, report = true) => {
     const to = seekTarget(seconds, progress.get().duration);
     player.current?.seek(to);
     progress.set({ position: to });
-    seeked();
+    if (report) seeked();
   };
-  const seekBy = (delta: number) => seek(progress.get().position + delta);
+  const seekBy = (delta: number, report = true) => seek(progress.get().position + delta, report);
   // ±10 s from the controls: also restarts their auto-hide.
   const skip = (delta: number) => {
     touch();
@@ -362,8 +363,9 @@ export default function PlayerScreen() {
   // Apple TV Back: the native stack would take it first, so the screen catches it itself (`TvBackView`) while Up Next, a
   // menu or the controls take it.
   const back = useTvBack();
-  // Apple TV remote (`useTvRemote`, no-op elsewhere): click / Play-Pause, Left / Right 10 s, a swipe scrubs (the bar
-  // shows where it lands, the seek happens on release), Back hides the controls before it closes.
+  // Apple TV remote (`useTvRemote`, no-op elsewhere): click / Play-Pause, Left / Right 10 s (held: repeats, faster the
+  // longer), a swipe scrubs (the bar shows where it lands, the seek happens on release), Back hides the controls before
+  // it closes.
   useTvRemote({
     shown: playing && shown,
     onScrubber,
@@ -375,10 +377,16 @@ export default function PlayerScreen() {
       touch();
     },
     // A menu over the video takes the remote's Left / Right and swipes (moving through its list).
-    seekBy: (seconds) => {
-      if (!playing || menuOpen || upNextUp) return;
+    seekBy: (seconds, quiet) => {
+      if (!playing || menuOpen || upNextUp) return false;
       setShown(true);
-      skip(seconds);
+      touch();
+      seekBy(seconds, !quiet);
+      return true;
+    },
+    held: () => {
+      seeked();
+      touch();
     },
     show: () => {
       if (upNextUp) return;
