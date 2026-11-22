@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from '@jest/globals';
 
-import { remoteAction, scrubTarget, SCRUB_SECONDS_PER_POINT } from './tvRemote';
+import { holdStep, remoteAction, scrubTarget, SCRUB_SECONDS_PER_POINT } from './tvRemote';
 
 const hidden = { shown: false, onScrubber: false };
 const onScrubber = { shown: true, onScrubber: true };
@@ -24,6 +24,24 @@ describe('remoteAction', () => {
     expect(remoteAction({ eventType: 'left' }, hidden)).toEqual({ type: 'seekBy', seconds: -10 });
     expect(remoteAction({ eventType: 'right' }, onScrubber)).toEqual({ type: 'seekBy', seconds: 10 });
     expect(remoteAction({ eventType: 'right' }, onButtons)).toBeUndefined();
+  });
+
+  it('Left / Right held: start on the press (0), end on the release (1); moves in between do nothing', () => {
+    expect(remoteAction({ eventType: 'longLeft', eventKeyAction: 0 }, hidden)).toEqual({
+      type: 'holdStart',
+      direction: -1,
+    });
+    expect(remoteAction({ eventType: 'longRight', eventKeyAction: '0' }, onScrubber)).toEqual({
+      type: 'holdStart',
+      direction: 1,
+    });
+    expect(remoteAction({ eventType: 'longRight' }, onScrubber)).toBeUndefined();
+    expect(remoteAction({ eventType: 'longRight', eventKeyAction: 1 }, onScrubber)).toEqual({ type: 'holdEnd' });
+  });
+
+  it('a hold on the track buttons moves focus, no seek; its end still ends', () => {
+    expect(remoteAction({ eventType: 'longLeft', eventKeyAction: 0 }, onButtons)).toBeUndefined();
+    expect(remoteAction({ eventType: 'longLeft', eventKeyAction: 1 }, onButtons)).toEqual({ type: 'holdEnd' });
   });
 
   it('a swipe scrubs: start, move by the travel, end', () => {
@@ -49,6 +67,17 @@ describe('remoteAction', () => {
     expect(remoteAction({ eventType: 'swipeUp' }, hidden)).toEqual({ type: 'show' });
     expect(remoteAction({ eventType: 'up' }, onScrubber)).toBeUndefined();
     expect(remoteAction({ eventType: 'focus' }, hidden)).toBeUndefined();
+  });
+});
+
+describe('holdStep', () => {
+  it('10 s, after 2 s held 30 s, after 5 s 60 s', () => {
+    expect(holdStep(0)).toBe(10);
+    expect(holdStep(1999)).toBe(10);
+    expect(holdStep(2000)).toBe(30);
+    expect(holdStep(4999)).toBe(30);
+    expect(holdStep(5000)).toBe(60);
+    expect(holdStep(60_000)).toBe(60);
   });
 });
 

@@ -85,6 +85,10 @@ export function TvPlayerBar({
   const left = Math.max(duration - at, 0);
   const endsAt = formatEndsAt(left / (speed || 1));
   const free = menu === null;
+  // Up again, focus starts on the scrubber (preferred focus): Left / Right seek from the first press or hold.
+  useEffect(() => {
+    onScrubberFocus(true);
+  }, [onScrubberFocus]);
   // The button the open menu came from (Subtitle Timing is a Subtitles page); focus goes back to it once the menu closes
   // and the bar is focusable again - the menu's own hand-back runs before that.
   const refs = useRef<Partial<Record<TracksPage, TvButtonHandle | null>>>({});
