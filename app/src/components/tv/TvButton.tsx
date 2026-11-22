@@ -6,7 +6,7 @@ import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import type { ComponentRef, Ref } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
-import { pressedOpacity, radii, tv, useColors } from '@/theme';
+import { pressedOpacity, radii, tv, useColors, useScheme } from '@/theme';
 
 import { clamp01 } from '../ProgressBar';
 import { Text } from '../Text';
@@ -23,6 +23,11 @@ export type TvButtonProps = {
   icon?: SymbolViewProps['name'];
   /** Fills its column (a form's main button). */
   wide?: boolean;
+  /**
+   * A checklist row (menus): content from the leading edge, the icon's room kept when there's none (labels line up
+   * under a ✓), `trailing` at the far end.
+   */
+  iconSlot?: boolean;
   /**
    * A circle: its icon, `title` read by VoiceOver - or, with no icon, a short `title` in it ("1×"; pass the full name as
    * `accessibilityLabel`).
@@ -50,6 +55,8 @@ export type TvButtonProps = {
   rememberFocus?: boolean;
   /** false: focus skips it (the player's buttons while its menu is open). */
   focusable?: boolean;
+  /** The picked row of a checklist (its ✓ is `icon`): VoiceOver says "selected", without `selected`'s filled look. */
+  checked?: boolean;
 };
 
 export function TvButton({
@@ -58,6 +65,7 @@ export function TvButton({
   variant = 'default',
   icon,
   wide = false,
+  iconSlot = false,
   round = false,
   selected,
   progress,
@@ -71,13 +79,15 @@ export function TvButton({
   ref,
   rememberFocus = true,
   focusable,
+  checked,
 }: TvButtonProps) {
   const c = useColors();
+  const idle = useScheme() === 'light' ? tv.unfocusedLight : tv.unfocused;
   const inactive = disabled || loading;
   const quiet = variant === 'quiet';
   // On (`selected`) looks like the primary button; focus still grows and lifts it.
   const filled = variant === 'primary' || selected === true;
-  const fill = filled ? c.accent : quiet ? 'transparent' : tv.unfocused;
+  const fill = filled ? c.accent : quiet ? 'transparent' : idle;
   const ink = (focused: boolean) =>
     focused ? c.background : filled ? c.onAccent : destructive ? c.danger : quiet ? c.textSecondary : c.text;
   return (
@@ -85,7 +95,7 @@ export function TvButton({
       ref={ref}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? title}
-      accessibilityState={{ disabled: inactive, busy: loading, selected }}
+      accessibilityState={{ disabled: inactive, busy: loading, selected: selected ?? checked }}
       onPress={inactive ? undefined : onPress}
       hasTVPreferredFocus={preferredFocus}
       focusable={focusable}
@@ -97,6 +107,7 @@ export function TvButton({
         quiet ? styles.quiet : styles.base,
         round && styles.round,
         wide && styles.wide,
+        iconSlot && styles.leading,
         { backgroundColor: focused ? c.text : fill },
         focused && focusStyles.lift,
         disabled && !focused && styles.dimmed,
@@ -107,9 +118,16 @@ export function TvButton({
           <ActivityIndicator color={ink(focused)} />
         ) : (
           <>
-            {icon && <SymbolView name={icon} tintColor={ink(focused)} size={round ? tv.icon.round : tv.icon.button} />}
+            {icon ? (
+              <SymbolView name={icon} tintColor={ink(focused)} size={round ? tv.icon.round : tv.icon.button} />
+            ) : (
+              iconSlot && <View testID="tv-button-icon-slot" style={styles.iconSlot} />
+            )}
             {(!round || !icon) && (
-              <Text numberOfLines={1} style={[quiet ? tv.type.quiet : tv.type.button, { color: ink(focused) }]}>
+              <Text
+                numberOfLines={1}
+                style={[quiet ? tv.type.quiet : tv.type.button, iconSlot && styles.shrink, { color: ink(focused) }]}
+              >
                 {title}
               </Text>
             )}
@@ -120,7 +138,10 @@ export function TvButton({
               </View>
             )}
             {trailing !== undefined && (
-              <Text numberOfLines={1} style={[tv.type.caption, styles.trailing, { color: ink(focused) }]}>
+              <Text
+                numberOfLines={1}
+                style={[tv.type.caption, styles.trailing, iconSlot && styles.atEnd, { color: ink(focused) }]}
+              >
                 {trailing}
               </Text>
             )}
@@ -152,6 +173,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   wide: { alignSelf: 'stretch' },
+  leading: { justifyContent: 'flex-start' },
+  iconSlot: { width: tv.icon.button, height: tv.icon.button },
+  shrink: { flexShrink: 1 },
+  atEnd: { marginLeft: 'auto', paddingLeft: tv.gap.sm },
   round: { width: tv.button.height, paddingHorizontal: 0 },
   // The unwatched part: the text colour at low strength; the watched part at full strength.
   track: { width: 140, height: 8, borderRadius: radii.pill, overflow: 'hidden', marginHorizontal: tv.gap.sm / 2 },
