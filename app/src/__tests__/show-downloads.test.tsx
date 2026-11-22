@@ -16,9 +16,20 @@ import NativeDownloads from '../../modules/downloads';
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), back: jest.fn() },
   useLocalSearchParams: () => ({ id: 'show', name: 'Test Show' }),
+  Stack: { Screen: jest.fn(() => null) },
 }));
 jest.mock('expo-file-system/legacy', () => ({ getFreeDiskStorageAsync: async () => 500e9 }));
-const { router } = jest.requireMock<{ router: { push: jest.Mock; back: jest.Mock } }>('expo-router');
+const { router, Stack } = jest.requireMock<{
+  router: { push: jest.Mock; back: jest.Mock };
+  Stack: { Screen: jest.Mock };
+}>('expo-router');
+/** The header ⋯ (iOS: a native bar button). */
+const headerButton = () =>
+  (
+    Stack.Screen.mock.lastCall?.[0] as {
+      options: { unstable_headerRightItems: () => { label: string; onPress: () => void }[] };
+    }
+  ).options.unstable_headerRightItems()[0];
 
 const GB = 1024 ** 3;
 const native = jest.mocked(NativeDownloads);
@@ -68,18 +79,53 @@ beforeEach(() => {
 });
 
 describe("A show's downloads", () => {
-  it('lists its episodes by season in episode order, not other shows', async () => {
+  it('the show header, then one season at a time (pills) in episode order, not other shows', async () => {
     await download(episode(2, 1), episode(1, 2), episode(1, 1), episode(1, 1, 'other'));
     await render(<ShowDownloads />);
 
+    expect(screen.getByRole('header', { name: 'Test Show' })).toBeOnTheScreen();
     expect(screen.getByText('3 episodes · 3.2 GB')).toBeOnTheScreen();
-    expect(screen.getAllByRole('header').map((h) => h.props.children)).toEqual(['Season 1', 'Season 2']);
-    const rows = screen.getAllByLabelText(/^\d\. Episode/).map((r) => r.props.accessibilityLabel);
-    expect(rows).toEqual([
-      '1. Episode 1, Waiting · 0 MB of 1.1 GB',
-      '2. Episode 2, Waiting · 0 MB of 1.1 GB',
-      '1. Episode 1, Waiting · 0 MB of 1.1 GB',
-    ]);
+    // Running: what it's doing and a bar.
+    expect(screen.getByText('Waiting · 0 of 3')).toBeOnTheScreen();
+    expect(screen.getByRole('progressbar', { name: '0% downloaded' })).toBeOnTheScreen();
+    const pills = ['Season 1', 'Season 2'].map((name) => screen.getByRole('button', { name }));
+    expect(pills.map((p) => p.props.accessibilityState?.selected)).toEqual([true, false]);
+    const rows = () => screen.getAllByLabelText(/^\d\. Episode/).map((r) => r.props.accessibilityLabel);
+    expect(rows()).toEqual(['1. Episode 1, Waiting · 0 MB of 1.1 GB', '2. Episode 2, Waiting · 0 MB of 1.1 GB']);
+    await fireEvent.press(pills[1]);
+    expect(rows()).toEqual(['1. Episode 1, Waiting · 0 MB of 1.1 GB']);
+  });
+
+  it('one season: no pills; done: the next timer, no bar', async () => {
+    setOffloadDays(30);
+    const e1 = episode(1, 1);
+    await download(e1);
+    await act(() => emit('done', { id: idOf(e1) }));
+    await render(<ShowDownloads />);
+
+    expect(screen.queryByRole('button', { name: 'Season 1' })).toBeNull();
+    expect(screen.getByText(/^Next expires in (29|30) days$/)).toBeOnTheScreen();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
+  it("the header ⋯: the show row's menu - Reset Timers (with a timer), Delete Downloads", async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const e1 = episode(1, 1);
+    await download(e1, episode(1, 2));
+    await render(<ShowDownloads />);
+
+    // Nothing finished: no timers yet.
+    await act(async () => headerButton().onPress());
+    expect(screen.queryByRole('menuitem', { name: 'Reset Timers' })).toBeNull();
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Delete Downloads' }));
+    expect(alert.mock.calls[0][0]).toBe('Delete the downloads of Test Show?');
+
+    setOffloadDays(30);
+    await act(() => emit('done', { id: idOf(e1) }));
+    await act(async () => headerButton().onPress());
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Reset Timers' }));
+    expect(alert.mock.calls[1][0]).toBe('Reset the timers of Test Show?');
+    alert.mockRestore();
   });
 
   it('pauses an episode from its ring and plays a ready one', async () => {
@@ -99,7 +145,7 @@ describe("A show's downloads", () => {
     });
   });
 
-  it("shows each episode's own still, not the show's poster", async () => {
+  it("the header shows the show's poster, each episode its own still", async () => {
     // The snapshot's fetches land on disk.
     const spies = [
       jest.spyOn(File, 'downloadFileAsync').mockResolvedValue(new File(Paths.document, 'x')),
@@ -112,9 +158,9 @@ describe("A show's downloads", () => {
     spies.forEach((s) => s.mockRestore());
     await render(<ShowDownloads />);
 
-    expect(screen.getByTestId('artwork-image').props.source).toEqual([
-      { uri: expect.stringMatching(/\/show-s1e1\/still\.jpg$/) },
-    ]);
+    const [header, row] = screen.getAllByTestId('artwork-image').map((i) => i.props.source);
+    expect(header).toEqual([{ uri: expect.stringMatching(/\/show-s1e1\/poster\.jpg$/) }]);
+    expect(row).toEqual([{ uri: expect.stringMatching(/\/show-s1e1\/still\.jpg$/) }]);
   });
 
   it('goes back once the last episode is deleted', async () => {

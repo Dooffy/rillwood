@@ -5,7 +5,15 @@
 // - the top-up brings the next one. Runs after every progress sync (launch, back from the background, reconnect,
 // account switch), so the saved watched state is as fresh as it gets. Unfinished and playing downloads stay.
 import type { BaseItemDto } from '@/api';
-import { deleteDownloads, getDownloads, resetTimers, scoreUnrated, setWatched, type Download } from '@/downloads';
+import {
+  deleteDownloads,
+  getDownload,
+  getDownloads,
+  resetTimers,
+  scoreUnrated,
+  setWatched,
+  type Download,
+} from '@/downloads';
 import { readSnapshotItem } from '@/downloadSnapshot';
 import { topUpKept } from '@/kidsKeep';
 import { getKids, isKept } from '@/kidsSettings';
@@ -69,6 +77,19 @@ export function expiresAt(d: Timed, days: number, hours: number): number | undef
   if (byDate === undefined) return byWatch;
   return byWatch === undefined ? byDate : Math.min(byDate, byWatch);
 }
+
+/** When the first of these goes (a show's episodes), or undefined when none has a timer. */
+export function soonestExpiry(downloads: readonly Timed[], days: number, hours: number): number | undefined {
+  const times = downloads.map((d) => expiresAt(d, days, hours)).filter((t): t is number => t !== undefined);
+  return times.length > 0 ? Math.min(...times) : undefined;
+}
+
+/** The ids of these downloads auto-remove will take some day (what Reset Timers resets). */
+export const withTimer = (ids: readonly string[], days: number, hours: number) =>
+  ids.filter((id) => {
+    const d = getDownload(id);
+    return !!d && expiresAt(d, days, hours) !== undefined;
+  });
 
 /** Over 72 h: whole days ("5 days"); then whole hours ("45h"); under an hour: minutes, up ("12m"). Undefined once due. */
 export function timeLeft(expires: number, now: number): string | undefined {

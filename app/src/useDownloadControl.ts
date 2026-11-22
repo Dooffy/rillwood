@@ -12,6 +12,7 @@ import {
   deleteDownloads,
   downloadId,
   pauseDownloads,
+  resetTimers,
   resumeDownloads,
   startDownloads,
   downloadGroup,
@@ -24,6 +25,7 @@ import { features } from '@/device';
 import { formatBytes } from '@/format';
 import { currentUser, downloadSources, hasFile, itemDetail, seasonFiles } from '@/items';
 import { askNotificationsOnce } from '@/notificationPermission';
+import { withTimer } from '@/offload';
 import { connectionFor, getSession, useSession } from '@/session';
 import { useFetch } from '@/useFetch';
 
@@ -232,3 +234,42 @@ export function confirmDeleteDownloads(name: string | undefined, ids: readonly s
     ],
   );
 }
+
+/** Asks, then starts the timers of these downloads again (auto-remove). `name`: a show's; none = every download. */
+export function confirmResetTimers(name: string | undefined, ids: readonly string[], days: number) {
+  const n = ids.length;
+  Alert.alert(
+    name ? `Reset the timers of ${name}?` : 'Reset all timers?',
+    `${n} ${n === 1 ? 'download starts its' : 'downloads start their'} timer again now${days > 0 ? ` and ${n === 1 ? 'is' : 'are'} kept for ${days} more days` : ''}.`,
+    [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Reset', onPress: () => resetTimers(ids) },
+    ],
+  );
+}
+
+/**
+ * A menu's Reset Timers (a show's) / Reset All Timers (`name` none: a page's ⋯), for those of `ids` auto-remove will
+ * take - nothing when none has a timer. The Downloads tab and kids Downloads both.
+ */
+export function resetTimersAction(
+  name: string | undefined,
+  ids: readonly string[],
+  days: number,
+  hours: number,
+): SheetAction[] {
+  const timed = withTimer(ids, days, hours);
+  if (timed.length === 0) return [];
+  return [{ label: name ? 'Reset Timers' : 'Reset All Timers', onPress: () => confirmResetTimers(name, timed, days) }];
+}
+
+/** A show's downloads menu on the Downloads tab (its row's long press, its page's ⋯): Reset Timers, Delete Downloads. */
+export const showDownloadActions = (
+  name: string,
+  ids: readonly string[],
+  days: number,
+  hours: number,
+): SheetAction[] => [
+  ...resetTimersAction(name, ids, days, hours),
+  { label: 'Delete Downloads', destructive: true, onPress: () => confirmDeleteDownloads(name, ids) },
+];

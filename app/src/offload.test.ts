@@ -13,6 +13,7 @@ import {
   initOffload,
   onOffload,
   onWatched,
+  soonestExpiry,
   timeLeft,
   watchedSinceReset,
   watchedTime,
@@ -136,6 +137,15 @@ describe('watchedTime', () => {
     expect(watchedTime(played(NOW - DAY), pending({ positionTicks: 9 }), 1, NOW)).toBeUndefined();
     expect(watchedTime(null, pending({ watched: true, positionTicks: 9 }), 1, NOW)).toBeUndefined();
     expect(watchedTime(played(NOW - DAY), pending({}), undefined, NOW)).toBe(NOW - DAY);
+  });
+});
+
+describe('soonestExpiry', () => {
+  it("the first of a show's episodes to go; none with a timer: undefined", () => {
+    const later = dl('b', { downloadedAt: NOW - 10 * DAY });
+    expect(soonestExpiry([later, dl('a')], 90, 0)).toBe(NOW + 60 * DAY);
+    expect(soonestExpiry([dl('a', { status: 'downloading' })], 90, 0)).toBeUndefined();
+    expect(soonestExpiry([], 90, 0)).toBeUndefined();
   });
 });
 

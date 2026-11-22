@@ -53,7 +53,7 @@ Until the store + Downloads screen land, drive the module from a temporary snipp
 | #   | Test                                                                                      | Pass when                                                                                      |
 | --- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | L1  | Download a movie, then two episodes of one show                                           | One list, newest first: the show is one row ("2 episodes · size", ring while running), posters |
-| L2  | Tap the show row                                                                          | Its episodes by season, "1. Title", rings live; back returns to the list                       |
+| L2  | Tap the show row; switch season pills; its ⋯                                              | Show header (poster, name, totals, bar while running), one season per pill, "1. Title", rings live; ⋯ = Reset Timers / Delete Downloads; back returns |
 | L3  | Swipe a movie row left, tap Delete, confirm; same on a show row                           | Asks first; the show's swipe deletes every episode; row closes again on Cancel                 |
 | L4  | On a show's screen, delete its last episode                                               | Goes back to the tab, the show row is gone                                                     |
 | L5  | Scroll the list with a finger, then swipe a row (VoiceOver: long press)                   | Vertical scroll never opens a row; VoiceOver reaches Delete through the long-press menu        |

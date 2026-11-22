@@ -209,7 +209,7 @@ describe('Downloads', () => {
     expect(router.push).toHaveBeenCalledWith('/download-storage');
     expect(screen.queryByRole('header', { name: 'Downloading' })).toBeNull();
     const rows = screen.getAllByLabelText(/^(Sintel|Test Show), /).map((r) => r.props.accessibilityLabel);
-    expect(rows).toEqual(['Sintel, Waiting · 0 MB of 2.1 GB', 'Test Show, 2 episodes · 4.3 GB, Downloading']);
+    expect(rows).toEqual(['Sintel, Waiting · 0 MB of 2.1 GB', 'Test Show, 2 episodes · 4.3 GB, Waiting · 1 of 2']);
     // Episodes live on the show's own screen.
     expect(screen.queryByText('Episode 1')).toBeNull();
   });
@@ -221,13 +221,13 @@ describe('Downloads', () => {
     const rows = () => screen.queryAllByLabelText(/^(Sintel|Test Show), /).map((r) => r.props.accessibilityLabel);
 
     await fireEvent.press(screen.getByRole('button', { name: 'Shows' }));
-    expect(rows()).toEqual(['Test Show, 2 episodes · 4.3 GB, Downloading']);
+    expect(rows()).toEqual(['Test Show, 2 episodes · 4.3 GB, Waiting · 0 of 2']);
     await fireEvent.press(screen.getByRole('button', { name: 'Movies' }));
     expect(rows()).toEqual(['Sintel, Waiting · 0 MB of 2.1 GB']);
 
     await fireEvent.press(screen.getByRole('button', { name: 'All' }));
     await fireEvent.changeText(screen.getByLabelText('Search downloads'), 'episode 2');
-    expect(rows()).toEqual(['Test Show, 2 episodes · 4.3 GB, Downloading']);
+    expect(rows()).toEqual(['Test Show, 2 episodes · 4.3 GB, Waiting · 0 of 2']);
     await fireEvent.changeText(screen.getByLabelText('Search downloads'), 'zzz');
     expect(rows()).toEqual([]);
     expect(screen.getByText('No downloads match "zzz".')).toBeOnTheScreen();
@@ -299,7 +299,7 @@ describe('Downloads', () => {
     await render(<Downloads />);
 
     await act(() => emit('progress', { id, bytes: GB }));
-    expect(screen.getByLabelText('Sintel, Downloading · 1.1 GB of 2.1 GB')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Sintel, Downloading 50% · 1.1 of 2.1 GB')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Downloading', value: { text: '50%' } }));
     await fireEvent.press(screen.getByRole('menuitem', { name: 'Pause Download' }));
     expect(native.pause).toHaveBeenCalledWith(id);

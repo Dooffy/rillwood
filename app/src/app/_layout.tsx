@@ -13,7 +13,7 @@ import { OffloadToast } from '@/components/OffloadToast';
 import { ToastProvider } from '@/components/Toast';
 import { initConnection } from '@/connection';
 import { initDownloads } from '@/downloads';
-import { page, plainPage, readablePage, SignedOutRedirect, tabsTitle } from '@/navigation';
+import { plainPage, readablePage, SignedOutRedirect, tabsTitle } from '@/navigation';
 import { licenceById } from '@/licences';
 import { initOffload } from '@/offload';
 import { lockAppOrientation } from '@/orientation';
@@ -97,8 +97,8 @@ export default function RootLayout() {
               <Stack.Screen name="kids-show/[id]" options={{ title: 'Show' }} />
               {/* Kids mode's Downloads (gate): a grown-up page, back to kids Home. */}
               <Stack.Screen name="kids-downloads" options={pageOf('Downloads')} />
-              {/* A show's episodes from its kids Downloads row; the page sets the show's name. */}
-              <Stack.Screen name="kids-show-downloads/[id]" options={pageOf('Show')} />
+              {/* A show's episodes from its kids Downloads row: no title, the page's show header names it. */}
+              <Stack.Screen name="kids-show-downloads/[id]" options={plainPage('', c)} />
               {/* Kids search draws its own field and ✕. */}
               <Stack.Screen name="kids-search" options={{ title: 'Search' }} />
               <Stack.Screen name="(auth)/server" options={pageOf('Add server')} />
@@ -129,11 +129,8 @@ export default function RootLayout() {
               {/* A checkmark list: a plain title, as the option lists. */}
               <Stack.Screen name="kids-account" options={plainPage(SETTINGS_TITLES['kids-account'], c)} />
               <Stack.Screen name="subtitles" options={pageOf(SETTINGS_TITLES.subtitles)} />
-              {/* A show's downloaded episodes (Downloads tab): the show's name comes with the link. */}
-              <Stack.Screen
-                name="show-downloads/[id]"
-                options={({ route }) => page((route.params as { name?: string } | undefined)?.name ?? 'Downloads')}
-              />
+              {/* A show's downloaded episodes (Downloads tab): no title, the page's show header names it. */}
+              <Stack.Screen name="show-downloads/[id]" options={plainPage('', c)} />
               <Stack.Screen name="download-storage" options={pageOf(SETTINGS_TITLES.storage)} />
               {/* An option's checkmark list: a plain title, as iOS Settings subscreens. */}
               <Stack.Screen name="option/[key]" options={({ route }) => plainPage(pickerTitle(route.params), c)} />

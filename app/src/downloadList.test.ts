@@ -1,8 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from '@jest/globals';
 
-import { downloadList, downloadStatus, filterDownloads, episodeCount, episodeTitle, showSeasons } from './downloadList';
-import type { Download } from './downloads';
+import {
+  bytesOf,
+  downloadList,
+  downloadStatus,
+  episodeCount,
+  episodeTitle,
+  filterDownloads,
+  groupStatus,
+  showSeasons,
+} from './downloadList';
+import type { Download, DownloadSummary } from './downloads';
 
 const d = (id: string, fields: Partial<Download> = {}): Download => ({
   id,
@@ -167,5 +176,43 @@ describe('downloadStatus', () => {
     expect(downloadStatus({ status: 'downloading', reason: 'network' }, 'any')).toBe('Waiting for network');
     expect(downloadStatus({ status: 'paused', reason: 'network' }, 'wifi')).toBe('Waiting for Wi-Fi');
     expect(downloadStatus({ status: 'error', reason: 'network' }, 'any')).toBe('Failed - network');
+  });
+
+  it('says how far a transfer is when it knows the size', () => {
+    expect(downloadStatus({ status: 'downloading', bytes: 1.1e9, total: 2.6e9 }, 'wifi')).toBe('Downloading 42%');
+    expect(downloadStatus({ status: 'downloading', bytes: 0, total: 1e9 }, 'wifi')).toBe('Downloading 0%');
+  });
+});
+
+describe('groupStatus', () => {
+  const sum = (over: Partial<DownloadSummary>): DownloadSummary => ({
+    state: 'downloading',
+    progress: 0.123,
+    ids: ['a', 'b'],
+    itemIds: ['a', 'b'],
+    done: 0,
+    size: 2e9,
+    running: 0,
+    failed: 0,
+    waitingForNetwork: false,
+    ...over,
+  });
+
+  it('the same words as one download, for a group', () => {
+    expect(groupStatus(sum({ running: 1 }), 'wifi')).toBe('Downloading 12%');
+    expect(groupStatus(sum({ waitingForNetwork: true }), 'wifi')).toBe('Waiting for Wi-Fi');
+    expect(groupStatus(sum({ waitingForNetwork: true }), 'any')).toBe('Waiting for network');
+    expect(groupStatus(sum({ state: 'paused', failed: 1 }), 'wifi')).toBe('Failed');
+    expect(groupStatus(sum({ state: 'paused' }), 'wifi')).toBe('Paused');
+    expect(groupStatus(sum({}), 'wifi')).toBe('Waiting');
+  });
+});
+
+describe('bytesOf', () => {
+  it('names the unit once when both share it', () => {
+    expect(bytesOf(1.1e9, 2.6e9)).toBe('1.1 of 2.6 GB');
+    expect(bytesOf(95e6, 290e6)).toBe('95 of 290 MB');
+    expect(bytesOf(0, 1.1e9)).toBe('0 MB of 1.1 GB');
+    expect(bytesOf(3e9, 2e9)).toBe('2 GB of 2 GB');
   });
 });

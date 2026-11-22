@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Downloads tab (docs/context/downloads.md, Downloads screen): the list, a show's seasons and status wording (pure).
-import type { Download } from '@/downloads';
+import type { Download, DownloadSummary } from '@/downloads';
+import { formatBytes } from '@/format';
 import { seasonEpisodeCode } from '@/items';
 import type { DownloadNetwork } from '@/settings';
 
@@ -155,19 +156,18 @@ export const episodeCount = (n: number) => `${n} ${n === 1 ? 'episode' : 'episod
 export const episodeTitle = (d: Pick<Download, 'title' | 'episodeNumber'>) =>
   d.episodeNumber === undefined ? d.title : `${d.episodeNumber}. ${d.title}`;
 
-/** What a download is doing, in words: "Paused", "Waiting for Wi-Fi", "Failed - not enough space". */
+/** What a download is doing, in words: "Downloading 41%", "Paused", "Waiting for Wi-Fi", "Failed - not enough space". */
 export function downloadStatus(
-  { status, reason }: Pick<Download, 'status' | 'reason'>,
+  { status, reason, bytes, total }: Pick<Download, 'status' | 'reason'> & Partial<Pick<Download, 'bytes' | 'total'>>,
   network: DownloadNetwork,
 ): string {
   // Held by the network rule (Settings → Network): Wi-Fi only waits for Wi-Fi, Any network for any connection.
-  if (reason === 'network' && status !== 'error' && status !== 'done')
-    return network === 'any' ? 'Waiting for network' : 'Waiting for Wi-Fi';
+  if (reason === 'network' && status !== 'error' && status !== 'done') return waitingWords(network);
   switch (status) {
     case 'queued':
       return 'Waiting';
     case 'downloading':
-      return 'Downloading';
+      return total ? `Downloading ${percent(Math.min(bytes ?? 0, total) / total)}` : 'Downloading';
     case 'paused':
       return reason === 'auth' ? 'Paused - sign in again' : 'Paused';
     case 'error':
@@ -177,4 +177,26 @@ export function downloadStatus(
     case 'done':
       return 'Downloaded';
   }
+}
+
+const waitingWords = (network: DownloadNetwork) => (network === 'any' ? 'Waiting for network' : 'Waiting for Wi-Fi');
+
+const percent = (progress: number) => `${Math.floor(progress * 100)}%`;
+
+/**
+ * What a group of downloads (a show, a kids row) on its way is doing, in a row's words: "Downloading 12%" while
+ * something transfers, else "Waiting for Wi-Fi" / "Waiting for network", "Failed", "Paused", "Waiting".
+ */
+export function groupStatus(summary: DownloadSummary, network: DownloadNetwork): string {
+  if (summary.running > 0) return `Downloading ${percent(summary.progress)}`;
+  if (summary.waitingForNetwork) return waitingWords(network);
+  if (summary.failed > 0) return 'Failed';
+  return summary.state === 'paused' ? 'Paused' : 'Waiting';
+}
+
+/** Bytes so far of all: "1.1 of 2.6 GB", "0 MB of 1.1 GB" (the unit once when both share it). */
+export function bytesOf(bytes: number, total: number): string {
+  const [part, all] = [formatBytes(Math.min(bytes, total)), formatBytes(total)];
+  const unit = all.slice(all.lastIndexOf(' '));
+  return part.endsWith(unit) && part !== all ? `${part.slice(0, -unit.length)} of ${all}` : `${part} of ${all}`;
 }
