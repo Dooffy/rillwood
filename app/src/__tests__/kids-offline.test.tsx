@@ -25,8 +25,13 @@ jest.mock('expo-router', () => ({
 }));
 const { Stack } = jest.requireMock<{ Stack: { Screen: jest.Mock } }>('expo-router');
 /** The page's header button (rendered by the native header, so drawn here on its own). */
-const headerRight = () =>
-  (Stack.Screen.mock.lastCall?.[0] as { options: { headerRight: () => React.ReactElement } }).options.headerRight();
+/** The header ⋯ (iOS: a native bar button). */
+const headerButton = () =>
+  (
+    Stack.Screen.mock.lastCall?.[0] as {
+      options: { unstable_headerRightItems: () => { label: string; onPress: () => void; disabled?: boolean }[] };
+    }
+  ).options.unstable_headerRightItems()[0];
 const { router } = jest.requireMock<{ router: { push: jest.Mock } }>('expo-router');
 
 const server = { id: 'srv', url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' };
@@ -222,7 +227,7 @@ describe('Kids mode offline', () => {
       expect(labels).toEqual(['Stop Keeping, The episodes here stay', 'Delete Downloads']);
     });
 
-    it('Delete All (the header trash) asks first (count + size), then deletes every download and stops keeping', async () => {
+    it('Delete All (the header ⋯) asks first (count + size), then deletes every download and stops keeping', async () => {
       const alert = jest.spyOn(Alert, 'alert');
       const deleted = jest.spyOn(downloads, 'deleteDownloads').mockImplementation(() => {});
       setKids(active.id, { account: true, kept: ['trains'] });
@@ -231,8 +236,8 @@ describe('Kids mode offline', () => {
           <KidsDownloadsRoute />
         </ToastProvider>,
       );
-      await render(headerRight());
-      await fireEvent.press(screen.getByRole('button', { name: 'Delete All Downloads' }));
+      await act(async () => headerButton().onPress());
+      await fireEvent.press(screen.getByRole('menuitem', { name: 'Delete All Downloads' }));
       const [title, text, buttons] = alert.mock.calls[0];
       expect(title).toBe("Delete all of mia's downloads?");
       expect(text).toMatch(/^4 downloads \(.+\) are removed from this phone\. Kept shows stop topping up\./);
@@ -243,15 +248,14 @@ describe('Kids mode offline', () => {
       alert.mockRestore();
     });
 
-    it('nothing downloaded: Delete All is there but off', async () => {
+    it('nothing downloaded: the ⋯ is there but off', async () => {
       list = [];
       await render(
         <ToastProvider>
           <KidsDownloadsRoute />
         </ToastProvider>,
       );
-      await render(headerRight());
-      expect(screen.getByRole('button', { name: 'Delete All Downloads' })).toBeDisabled();
+      expect(headerButton()).toMatchObject({ label: 'More', disabled: true });
     });
   });
 });

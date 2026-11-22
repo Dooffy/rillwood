@@ -1,33 +1,39 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// A show's downloaded episodes (from its row on the Downloads tab): by season, in episode order, the same rows as the
-// tab (tap plays a ready one, ring while running, swipe left to delete). Leaves by itself once the last one is gone.
-// A SectionList (a long-running show stays smooth), one section per season.
-import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { SectionList, StyleSheet, type SectionListRenderItem } from 'react-native';
+// A show's downloaded episodes (from its row on the Downloads tab): the shared show header (poster, name, totals, a
+// bar while it downloads, the next timer), season pills, then the season's episodes in order - the same rows as the
+// tab (tap plays a ready one, ring while running, swipe left to delete). Header ⋯ = the row's long press (Reset
+// Timers, Delete Downloads). Leaves by itself once the last one is gone. A FlatList (a long-running show stays smooth).
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, ScrollView, StyleSheet, View, type ListRenderItem } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ActionSheet } from '@/components/ActionSheet';
+import { Chip } from '@/components/Chip';
 import { useDownloadActions } from '@/components/DownloadActions';
-import { DOWNLOAD_ROW_GAP, DownloadRow, DownloadRowGap } from '@/components/DownloadRow';
-import { pageColumn, pageContent } from '@/components/Page';
+import {
+  DownloadRow,
+  DownloadRowGap,
+  DownloadShowHeader,
+  expiryLine,
+  poster,
+  useGroupExpiry,
+} from '@/components/DownloadRow';
+import { headerIconButton } from '@/components/IconButton';
 import { Message } from '@/components/Message';
-import { Text } from '@/components/Text';
-import { episodeCount, episodeTitle, showSeasons, type DownloadSeason } from '@/downloadList';
-import { getDownload, useDownloadList } from '@/downloads';
+import { pageColumn, pageContent } from '@/components/Page';
+import { episodeCount, episodeTitle, groupStatus, showSeasons, UNKNOWN_SHOW } from '@/downloadList';
+import { downloadGroup, getDownload, useDownloadList, useDownloadSummary } from '@/downloads';
 import { formatBytes } from '@/format';
 import { useSession } from '@/session';
-import { scrollList } from '@/theme';
+import { useDownloadNetwork, useOffloadDays, useOffloadWatched } from '@/settings';
+import { scrollList, spacing } from '@/theme';
+import { showDownloadActions } from '@/useDownloadControl';
 
 const idKey = (id: string) => id;
 
-const seasonHeader = ({ section }: { section: DownloadSeason }) => (
-  <Text variant="sectionHeader" accessibilityRole="header" style={styles.season}>
-    {section.title}
-  </Text>
-);
-
 export default function ShowDownloads() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, name: linkName } = useLocalSearchParams<{ id: string; name?: string }>();
   const { active } = useSession();
   const all = useDownloadList();
   const { seasons, ids, total } = useMemo(() => {
@@ -35,8 +41,20 @@ export default function ShowDownloads() {
     const every = by.flatMap((s) => s.data);
     return { seasons: by, ids: every, total: every.reduce((sum, i) => sum + (getDownload(i)?.total ?? 0), 0) };
   }, [all, active?.id, id]);
+  const group = active ? downloadGroup(active.id, { seriesId: id }) : null;
+  const summary = useDownloadSummary(group);
+  const expires = useGroupExpiry(group);
+  const network = useDownloadNetwork();
+  const days = useOffloadDays();
+  const hours = useOffloadWatched();
   const { play, remove, openMenu, sheet } = useDownloadActions();
-  const renderEpisode = useCallback<SectionListRenderItem<string, DownloadSeason>>(
+  const [menu, setMenu] = useState(false);
+  // One season at a time: the picked one (while it has episodes here), else the first.
+  const [picked, setPicked] = useState<string>();
+  const shown = seasons.find((s) => s.title === picked) ?? seasons[0];
+  const first = ids[0] ? getDownload(ids[0]) : null;
+  const name = linkName ?? first?.seriesName ?? UNKNOWN_SHOW;
+  const renderEpisode = useCallback<ListRenderItem<string>>(
     ({ item: i }) => {
       const d = getDownload(i);
       return (
@@ -44,6 +62,15 @@ export default function ShowDownloads() {
       );
     },
     [play, remove, openMenu],
+  );
+  const headerOptions = useMemo(
+    () =>
+      headerIconButton({
+        icon: { ios: 'ellipsis', android: 'more_horiz' },
+        label: 'More',
+        onPress: () => setMenu(true),
+      }),
+    [],
   );
 
   // The last episode deleted here: back to the tab (it's gone from there too).
@@ -54,31 +81,59 @@ export default function ShowDownloads() {
   }, [ids.length]);
 
   if (ids.length === 0) return <Message fill text="Nothing downloaded from this show." />;
+  const running = summary && summary.state !== 'done' ? summary : null;
+  const header = (
+    <View style={styles.header}>
+      <DownloadShowHeader
+        image={poster(first)}
+        name={name}
+        totals={`${episodeCount(ids.length)} · ${formatBytes(total)}`}
+        progress={running?.progress}
+        progressLabel={running ? `${Math.floor(running.progress * 100)}% downloaded` : undefined}
+        lines={[
+          running && { text: `${groupStatus(running, network)} · ${running.done} of ${running.ids.length}` },
+          !running && expiryLine(expires, true),
+        ]}
+      />
+      {seasons.length > 1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pills}>
+          {seasons.map((s) => (
+            <Chip key={s.title} label={s.title} selected={s === shown} onPress={() => setPicked(s.title)} />
+          ))}
+        </ScrollView>
+      )}
+    </View>
+  );
   return (
     <GestureHandlerRootView style={styles.root}>
-      <SectionList
+      <Stack.Screen options={headerOptions} />
+      <FlatList
         {...scrollList}
         contentInsetAdjustmentBehavior="automatic"
-        sections={seasons}
+        data={shown?.data ?? []}
         // A row's title is read at render (numbers can arrive later): redraw rows when the store changes.
         extraData={all}
         keyExtractor={idKey}
         renderItem={renderEpisode}
         ItemSeparatorComponent={DownloadRowGap}
-        renderSectionHeader={seasonHeader}
-        stickySectionHeadersEnabled={false}
-        ListHeaderComponent={<Text secondary>{`${episodeCount(ids.length)} · ${formatBytes(total)}`}</Text>}
+        ListHeaderComponent={header}
         contentContainerStyle={styles.content}
       />
       {sheet}
+      <ActionSheet
+        visible={menu}
+        title={name}
+        actions={menu ? showDownloadActions(name, ids, days, hours) : []}
+        onClose={() => setMenu(false)}
+      />
     </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  // A page's padding; a season header a page's block gap below what's above it, a row gap above its first episode.
-  // Wide screens: a centred, readable column, like a `Page`.
+  // A page's padding (not its gap: rows get the row gap). Wide screens: a centred, readable column, like a `Page`.
   content: { padding: pageContent.padding, ...pageColumn },
-  season: { paddingTop: pageContent.gap, paddingBottom: DOWNLOAD_ROW_GAP },
+  header: { gap: spacing.md, marginBottom: spacing.md },
+  pills: { gap: spacing.sm, alignItems: 'center' },
 });

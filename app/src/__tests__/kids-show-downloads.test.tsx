@@ -126,15 +126,18 @@ describe("Kids Downloads: a show's episodes", () => {
     await renderPage();
     const pills = ['Season 1', 'Season 2', 'Specials'].map((name) => screen.getByRole('button', { name }));
     expect(pills.map((p) => p.props.accessibilityState?.selected)).toEqual([true, false, false]);
-    expect(screen.getByText('Watched · On this phone · 300 MB')).toBeOnTheScreen();
-    expect(screen.getAllByText('22 min')).toHaveLength(1);
+    expect(screen.getByText('Watched · 300 MB')).toBeOnTheScreen();
+    // e2 here, e3 not yet: both their size.
+    expect(screen.getAllByText('300 MB')).toHaveLength(2);
     expect(screen.queryByText('1. e4')).toBeNull();
-    // The card: how big, how much is here, a bar.
-    expect(screen.getByText('6 episodes')).toBeOnTheScreen();
-    expect(screen.getByText('2 seasons + Specials')).toBeOnTheScreen();
-    expect(screen.getByText('2 downloaded · 600 MB')).toBeOnTheScreen();
+    // The show header: its name, how much is here of all, a bar; no title over it.
+    expect(screen.getByRole('header', { name: 'Kittens' })).toBeOnTheScreen();
+    expect(screen.getByText('2 of 6 episodes · 600 MB')).toBeOnTheScreen();
     expect(screen.getByRole('progressbar', { name: '33% downloaded' })).toBeOnTheScreen();
-    await waitFor(() => expect(options().title).toBe('Kittens'));
+    // Next Up (e2) marked on its still.
+    expect(screen.getAllByText('NEXT')).toHaveLength(1);
+    await waitFor(() => expect(options().headerRight).toBeDefined());
+    expect(options().title).toBeUndefined();
     await fireEvent.press(screen.getByRole('button', { name: 'Specials' }));
     expect(screen.getByText('1. mini')).toBeOnTheScreen();
     expect(screen.queryByText('1. e1')).toBeNull();
@@ -160,10 +163,9 @@ describe("Kids Downloads: a show's episodes", () => {
     const alert = jest.spyOn(Alert, 'alert');
     setKids(active.id, { kept: ['Kittens'] });
     await renderPage();
-    expect(screen.getByText('2 downloaded · 600 MB · Keeping next 5')).toBeOnTheScreen();
-    // Next Up is e2: e2-e5 (only 4 left).
-    expect(await screen.findByText('Next 5 · On this phone · 300 MB')).toBeOnTheScreen();
-    expect(screen.getAllByText('Next 5 · 22 min')).toHaveLength(1);
+    expect(screen.getByText('Keeping the next 5')).toBeOnTheScreen();
+    // Next Up is e2: e2-e5 (only 4 left) - e2 and e3 in season 1.
+    expect(await screen.findAllByText('Kept')).toHaveLength(2);
     // e1 (watched, before Next Up) isn't one of them: the usual question.
     await fireEvent.press(screen.getAllByRole('button', { name: 'Downloaded, delete download' })[0]);
     expect(alert.mock.calls[0][0]).toBe('Delete the download of e1?');
@@ -217,18 +219,20 @@ describe("Kids Downloads: a show's episodes", () => {
     expect(screen.queryByText('3. e3')).toBeNull();
     expect(screen.queryByRole('button', { name: /^Download e/ })).toBeNull();
     expect(screen.getAllByRole('button', { name: 'Downloaded, delete download' })).toHaveLength(2);
-    expect(screen.getByText('2 episodes')).toBeOnTheScreen();
-    expect(screen.getByText('2 downloaded · 600 MB')).toBeOnTheScreen();
+    expect(screen.getByText('2 episodes · 600 MB')).toBeOnTheScreen();
     expect(screen.queryByRole('progressbar')).toBeNull();
   });
 });
 
 describe('episode lines and seasons', () => {
-  it('Next 5 and Watched first, then the download, else the length', () => {
+  it('Watched first, then the download (its size), else its size, else the length', () => {
     const e = ep('x', 1, 1, true);
-    expect(episodeLine(e, null, false)).toBe('Watched · 22 min');
-    expect(episodeLine(e, done(['x']), true)).toBe('Next 5 · Watched · On this phone · 300 MB');
-    expect(episodeLine({ ...e, RunTimeTicks: undefined, UserData: undefined }, null, false)).toBe('');
+    expect(episodeLine(e, null)).toBe('Watched · 300 MB');
+    expect(episodeLine(e, done(['x']))).toBe('Watched · 300 MB');
+    const running = { ...done(['x']), state: 'downloading' as const, done: 0, running: 1, progress: 0.33 };
+    expect(episodeLine({ ...e, UserData: undefined }, running)).toBe('Downloading 33% · 99 of 300 MB');
+    expect(episodeLine({ ...e, MediaSources: undefined }, null)).toBe('Watched · 22 min');
+    expect(episodeLine({ ...e, MediaSources: undefined, RunTimeTicks: undefined, UserData: undefined }, null)).toBe('');
   });
 
   it('by season id in season order, Specials (no number) last, missing ones left out', () => {
@@ -244,24 +248,20 @@ describe('episode lines and seasons', () => {
     expect(named([{ Id: 's1', Name: 'Pilot Year', Type: 'Season', IndexNumber: 1 }])[0]).toEqual(['Pilot Year', ['a']]);
   });
 
-  it("the card's words: how big, how much is here (or what it's doing), kept", () => {
+  it("the header's words: how much is here of all (or what it's doing), a bar online", () => {
     const seasons = episodeSeasons([ep('a', 1, 1), ep('b', 1, 2), ep('c', 2, 1), special]);
-    expect(showFacts(seasons, null, false, false)).toEqual({
-      title: '4 episodes',
-      seasons: '2 seasons + Specials',
-      line: 'None downloaded yet',
-      progress: 0,
-    });
-    expect(showFacts(seasons, done(['a']), false, true)).toMatchObject({
-      line: '1 downloaded · 300 MB · Keeping next 5',
+    expect(showFacts(seasons, null, false)).toEqual({ totals: '4 episodes', status: undefined, progress: 0 });
+    expect(showFacts(seasons, done(['a']), false)).toEqual({
+      totals: '1 of 4 episodes · 300 MB',
+      status: undefined,
       progress: 0.25,
     });
     const running = { ...done(['a', 'b']), state: 'downloading' as const, done: 1, running: 1, progress: 0.4 };
-    expect(showFacts(seasons, running, false, false).line).toBe('Downloading 40% · 1 of 2');
-    expect(showFacts(episodeSeasons([ep('a', 1, 1)]), done(['a']), true, false)).toEqual({
-      title: '1 episode',
-      seasons: '1 season',
-      line: '1 downloaded · 300 MB',
+    expect(showFacts(seasons, running, false).status).toBe('Downloading 40% · 1 of 2');
+    // Offline: only what's here, no bar.
+    expect(showFacts(episodeSeasons([ep('a', 1, 1)]), done(['a']), true)).toEqual({
+      totals: '1 episode · 300 MB',
+      status: undefined,
       progress: undefined,
     });
   });

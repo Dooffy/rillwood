@@ -2,24 +2,32 @@
 // Kids downloads (docs/context/kids.md, Downloads; screen draft 10): a grown-up page inside kids mode, from the gate.
 // Every show and movie the kid can see (kids Home's list: same filter and library), the ones on the phone first, then
 // A-Z, narrowed by a search field. A movie's button is the app's download button; a show's opens a menu: Next 5
-// Episodes, Whole Show or a season. The storage bar on top is the Downloads tab's.
+// Episodes, Whole Show or a season. The Downloads tab's look (draft docs/research/downloads-parity.html): its storage
+// bar, row frame, 20/700 section headers, ⋯ (Reset All Timers, Delete All Downloads) - its own flow.
 import { router, Stack } from 'expo-router';
 import { memo, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, SectionList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, SectionList, StyleSheet, View } from 'react-native';
 
 import { request, useOffline, type BaseItemDto, type ItemsResult, type UserDto } from '@/api';
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
-import { Artwork } from '@/components/Artwork';
 import { DownloadButton, isWaiting } from '@/components/DownloadButton';
 import { DownloadRing } from '@/components/DownloadRing';
+import {
+  DOWNLOAD_ROW_GAP,
+  downloadArtWidth,
+  DownloadRowFrame,
+  DownloadRowGap,
+  expiryLine,
+  useGroupExpiry,
+  type RowLine,
+} from '@/components/DownloadRow';
 import { headerIconButton, IconButton } from '@/components/IconButton';
-import { Chevron } from '@/components/List';
 import { Empty, LoadError, Message, Offline } from '@/components/Message';
 import { pageColumn, pageContent } from '@/components/Page';
 import { SearchField } from '@/components/SearchField';
 import { StorageBar, useFreeSpace } from '@/components/StorageBar';
 import { Text } from '@/components/Text';
-import { downloadList } from '@/downloadList';
+import { bytesOf, downloadList, episodeCount, groupStatus } from '@/downloadList';
 import {
   deleteDownloads,
   downloadGroup,
@@ -36,14 +44,22 @@ import { keptEpisodes } from '@/kidsKeep';
 import { hiddenDownloads, kidsDownloadSections, NEXT_COUNT, playableEpisodes, showFiles } from '@/kidsDownloads';
 import { isKept, keepShow, kidsFilter, setKids, stopKeeping, useKids } from '@/kidsSettings';
 import { useSession } from '@/session';
-import { getDownloadNetwork, useDownloadLimit, useDownloadNetwork, type DownloadNetwork } from '@/settings';
-import { minTouch, pressedOpacity, radii, scrollList, spacing, useColors } from '@/theme';
-import { confirmDeleteDownloads, useStartDownload } from '@/useDownloadControl';
+import {
+  getDownloadNetwork,
+  useDownloadLimit,
+  useDownloadNetwork,
+  useOffloadDays,
+  useOffloadWatched,
+  type DownloadNetwork,
+} from '@/settings';
+import { scrollList, spacing, useColors, useWide } from '@/theme';
+import { confirmDeleteDownloads, resetTimersAction, useStartDownload } from '@/useDownloadControl';
 import { useFetch } from '@/useFetch';
 import { useImage } from '@/useImage';
 import { refreshKids, useKidsHome } from '@/useKidsHome';
 
-const POSTER_WIDTH = 44;
+/** A kept show's line on its row and page: green. */
+export const KEPT_LINE: RowLine = { text: `Keeping the next ${NEXT_COUNT}`, tone: 'success' };
 
 /** The download network rule in words, for the Keep question. */
 const networkRule = () => (getDownloadNetwork() === 'wifi' ? 'on Wi-Fi' : 'on any network');
@@ -123,19 +139,34 @@ export function KidsDownloads() {
     </View>
   );
 
-  // Delete All in the header: always there, dimmed until something of this account is downloaded.
+  // The header ⋯: Reset All Timers (with a timer) + Delete All Downloads. Always there, dimmed until something of this
+  // account is downloaded.
   const ids = list.ids;
   const used = list.used;
+  const days = useOffloadDays();
+  const hours = useOffloadWatched();
+  const [menu, setMenu] = useState(false);
   const headerOptions = useMemo(
     () =>
       headerIconButton({
-        icon: { ios: 'trash', android: 'delete' },
-        label: 'Delete All Downloads',
+        icon: { ios: 'ellipsis', android: 'more_horiz' },
+        label: 'More',
         disabled: !active || ids.length === 0,
-        onPress: () => active && confirmDeleteAll(active.id, active.userName, ids, used),
+        onPress: () => setMenu(true),
       }),
-    [active, ids, used],
+    [active, ids.length],
   );
+  const menuActions: SheetAction[] =
+    menu && active
+      ? [
+          ...resetTimersAction(undefined, ids, days, hours),
+          {
+            label: 'Delete All Downloads',
+            destructive: true,
+            onPress: () => confirmDeleteAll(active.id, active.userName, ids, used),
+          },
+        ]
+      : [];
 
   return (
     <>
@@ -157,14 +188,16 @@ export function KidsDownloads() {
           ) : undefined
         }
         stickySectionHeadersEnabled={false}
-        contentContainerStyle={[pageContent, pageColumn, styles.content]}
+        contentContainerStyle={styles.content}
+        ItemSeparatorComponent={DownloadRowGap}
         renderSectionHeader={({ section }) => (
-          <Text variant="caption" secondary accessibilityRole="header" style={styles.sectionTitle}>
-            {section.title.toUpperCase()}
+          <Text variant="sectionHeader" accessibilityRole="header" style={styles.sectionTitle}>
+            {section.title}
           </Text>
         )}
         renderItem={({ item }) => <TitleRow item={item} art={home.art.get(item.Id)} />}
       />
+      <ActionSheet visible={menu} actions={menuActions} onClose={() => setMenu(false)} />
     </>
   );
 }
@@ -198,76 +231,46 @@ export function confirmDeleteAll(accountId: string, userName: string, ids: reado
   );
 }
 
-/** One show or movie: poster, name, what's on the phone, its download button. */
+/**
+ * One show or movie on the shared row frame: poster, name, what's on the phone, its timer, kept (green), its download
+ * button in the slot; a show's poster + name and › open its episodes.
+ */
 const TitleRow = memo(function TitleRow({ item, art }: { item: BaseItemDto; art?: string }) {
-  const c = useColors();
   const image = useImage();
+  const wide = useWide();
   const accountId = useSession().active?.id;
   const show = item.Type === 'Series';
   const group = accountId ? downloadGroup(accountId, show ? { seriesId: item.Id } : { itemId: item.Id }) : null;
   const summary = useDownloadSummary(group);
+  const expires = useGroupExpiry(group);
   // A movie not on the phone yet: its file size (the detail request, cached; only rows on screen ask).
   const detail = useFetch<BaseItemDto>(!show && !summary ? itemDetail(item.Id).path : null);
   const kept = isKept(useKids(accountId), show ? item.Id : undefined);
   const network = useDownloadNetwork();
   const status = statusLine(summary, show, item.RecursiveItemCount, detail.data?.MediaSources?.[0]?.Size, network);
-  const line = kept ? [`Keeping ${NEXT_COUNT}`, status].filter(Boolean).join(' · ') : status;
-  const body = (
-    <>
-      <View style={styles.poster}>
-        <Artwork image={art ?? image(posterImage(item), POSTER_WIDTH)} aspectRatio={2 / 3} />
-      </View>
-      <View style={styles.text}>
-        <Text numberOfLines={2}>{item.Name}</Text>
-        {line && (
-          <Text variant="caption" secondary numberOfLines={1}>
-            {line}
-          </Text>
-        )}
-      </View>
-    </>
-  );
-  const row = [styles.row, { backgroundColor: c.surface }];
+  const name = item.Name ?? '';
+  const lines = [status !== undefined && { text: status }, expiryLine(expires, show), kept && KEPT_LINE];
+  const poster = art ?? image(posterImage(item), downloadArtWidth(false, wide));
   if (!show)
-    return (
-      <View style={row}>
-        {body}
-        <DownloadButton item={item} round />
-      </View>
-    );
-  // A show: poster + name and the › at the end open its episodes, one by one (online and off); its button keeps its
-  // menu. Two pressables, not one around the button (VoiceOver would hide the button inside).
-  const openEpisodes = () => router.push({ pathname: '/kids-show-downloads/[id]', params: { id: item.Id } });
-  const pressed = ({ pressed: on }: { pressed: boolean }) => on && { opacity: pressedOpacity };
+    return <DownloadRowFrame image={poster} title={name} lines={lines} slot={<DownloadButton item={item} round />} />;
   return (
-    <View style={row}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`${item.Name}, episodes`}
-        onPress={openEpisodes}
-        style={(state) => [styles.open, pressed(state)]}
-      >
-        {body}
-      </Pressable>
-      <ShowDownload show={item} summary={summary} />
-      <Pressable
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        onPress={openEpisodes}
-        hitSlop={spacing.sm}
-        style={pressed}
-      >
-        <Chevron />
-      </Pressable>
-    </View>
+    <DownloadRowFrame
+      image={poster}
+      title={name}
+      lines={lines}
+      chevron
+      onPress={() => router.push({ pathname: '/kids-show-downloads/[id]', params: { id: item.Id } })}
+      accessibilityLabel={`${name}, episodes`}
+      slot={<ShowDownload show={item} summary={summary} />}
+    />
   );
 });
 
 /**
- * What of it is on the phone, in the Downloads tab's words. A show: "5/32 episodes · 1.4 GB" (on the phone / in the
- * show, when the server says how many), "0/32 episodes" before any; while it runs "Downloading 12% · 2 of 5", else
- * "Waiting for Wi-Fi · 2 of 5" / "Waiting · 2 of 5" / "Failed · 2 of 5" / "Paused · 2 of 5". A movie: its size
- * ("1.9 GB"), the same words while it's on the way, then "On this phone · 1.9 GB".
+ * What of it is on the phone, in the Downloads tab's words. A show: "5 of 32 episodes · 1.4 GB" (on the phone / in the
+ * show, when the server says how many), "32 episodes" before any; while it runs "Downloading 12% · 2 of 5", else
+ * "Waiting for Wi-Fi · 2 of 5" / "Waiting · 2 of 5" / "Failed · 2 of 5" / "Paused · 2 of 5". A movie (an episode): its
+ * size ("1.9 GB") before and after, "Downloading 12% · 0.2 of 1.9 GB" on the way.
  */
 export function statusLine(
   summary: DownloadSummary | null,
@@ -278,25 +281,16 @@ export function statusLine(
   network: DownloadNetwork = 'wifi',
 ): string | undefined {
   if (summary && summary.state !== 'done') {
-    const state =
-      summary.running > 0
-        ? `Downloading ${Math.floor(summary.progress * 100)}%`
-        : summary.waitingForNetwork
-          ? network === 'any'
-            ? 'Waiting for network'
-            : 'Waiting for Wi-Fi'
-          : summary.failed > 0
-            ? 'Failed'
-            : summary.state === 'paused'
-              ? 'Paused'
-              : 'Waiting';
-    return show ? `${state} · ${summary.done} of ${summary.ids.length}` : state;
+    const state = groupStatus(summary, network);
+    return show
+      ? `${state} · ${summary.done} of ${summary.ids.length}`
+      : `${state} · ${bytesOf(summary.progress * summary.size, summary.size)}`;
   }
-  const size = summary ? ` · ${formatBytes(summary.size)}` : '';
-  if (!show) return summary ? `On this phone${size}` : fileSize ? formatBytes(fileSize) : undefined;
+  if (!show) return summary ? formatBytes(summary.size) : fileSize ? formatBytes(fileSize) : undefined;
   const here = summary?.itemIds.length ?? 0;
-  if (episodes) return `${here}/${episodes} episodes${size}`;
-  return summary ? `${here} ${here === 1 ? 'episode' : 'episodes'}${size}` : undefined;
+  const size = summary ? ` · ${formatBytes(summary.size)}` : '';
+  if (episodes) return summary ? `${here} of ${episodes} episodes${size}` : episodeCount(episodes);
+  return summary ? `${episodeCount(here)}${size}` : undefined;
 }
 
 /**
@@ -395,7 +389,7 @@ function ShowDownload({ show, summary }: { show: BaseItemDto; summary: DownloadS
   const c = useColors();
   const { open, starting, sheet } = useShowMenu(show, summary);
   return (
-    <View style={styles.button}>
+    <>
       {starting ? (
         <ActivityIndicator accessibilityLabel="Starting download" color={c.text} />
       ) : !summary ? (
@@ -421,25 +415,15 @@ function ShowDownload({ show, summary }: { show: BaseItemDto; summary: DownloadS
         />
       )}
       {sheet}
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { gap: spacing.sm },
-  header: { gap: spacing.md, marginBottom: spacing.sm },
-  sectionTitle: { paddingHorizontal: spacing.md, paddingTop: spacing.sm },
+  // A page's padding (not its gap: rows get the row gap, as on the Downloads tab).
+  content: { padding: pageContent.padding, ...pageColumn },
+  header: { gap: spacing.md },
+  // A section header a page's block gap below what's above it, a row gap above its first row.
+  sectionTitle: { paddingTop: pageContent.gap, paddingBottom: DOWNLOAD_ROW_GAP },
   hidden: { textAlign: 'center', paddingHorizontal: spacing.md, paddingTop: spacing.md },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm + spacing.xs,
-    paddingHorizontal: spacing.sm + spacing.xs,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.card,
-  },
-  poster: { width: POSTER_WIDTH },
-  text: { flex: 1, gap: 2 },
-  open: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm + spacing.xs },
-  button: { width: minTouch, height: minTouch, alignItems: 'center', justifyContent: 'center' },
 });

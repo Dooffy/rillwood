@@ -6,7 +6,7 @@ import { Alert } from 'react-native';
 import * as api from '@/api';
 import type { BaseItemDto, RequestOptions } from '@/api';
 import KidsDownloadsRoute from '@/app/kids-downloads';
-import type { DownloadSummary } from '@/downloads';
+import type { Download, DownloadSummary } from '@/downloads';
 import { statusLine } from '@/screens/kids/KidsDownloads';
 import { ToastProvider } from '@/components/Toast';
 import * as downloads from '@/downloads';
@@ -16,8 +16,16 @@ import * as session from '@/session';
 
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), back: jest.fn() },
-  Stack: { Screen: () => null },
+  Stack: { Screen: jest.fn(() => null) },
 }));
+const { Stack } = jest.requireMock<{ Stack: { Screen: jest.Mock } }>('expo-router');
+/** The header ⋯ (iOS: a native bar button). */
+const headerButton = () =>
+  (
+    Stack.Screen.mock.lastCall?.[0] as {
+      options: { unstable_headerRightItems: () => { label: string; onPress: () => void; disabled?: boolean }[] };
+    }
+  ).options.unstable_headerRightItems()[0];
 jest.mock('expo-file-system/legacy', () => ({ getFreeDiskStorageAsync: async () => 500e9 }));
 
 const server = { id: 'srv', url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' };
@@ -105,22 +113,80 @@ async function openShowMenu() {
 describe('Kids downloads', () => {
   it("lists the kid's shows and movies, A-Z, with a search", async () => {
     await renderPage();
-    expect(await screen.findByRole('header', { name: 'SHOWS' })).toBeOnTheScreen();
-    expect(screen.getByRole('header', { name: 'MOVIES' })).toBeOnTheScreen();
+    expect(await screen.findByRole('header', { name: 'Shows' })).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Movies' })).toBeOnTheScreen();
     expect(screen.getByText('Kittens')).toBeOnTheScreen();
     expect(screen.getByText('Pond Jumpers')).toBeOnTheScreen();
     await fireEvent.changeText(screen.getByLabelText('Find a show or movie'), 'tra');
     expect(screen.getByText('Trains')).toBeOnTheScreen();
     expect(screen.queryByText('Kittens')).toBeNull();
-    expect(screen.queryByRole('header', { name: 'MOVIES' })).toBeNull();
+    expect(screen.queryByRole('header', { name: 'Movies' })).toBeNull();
     await fireEvent.changeText(screen.getByLabelText('Find a show or movie'), 'zzq');
     expect(screen.getByText('Nothing called that.')).toBeOnTheScreen();
   });
 
-  it('a row says how much is in it: a show 0/7 episodes, a movie its size', async () => {
+  it('a row says how much is in it: a show 7 episodes, a movie its size', async () => {
     await renderPage();
-    expect(await screen.findByText('0/7 episodes')).toBeOnTheScreen();
+    expect(await screen.findByText('7 episodes')).toBeOnTheScreen();
     expect(await screen.findByText('1.9 GB')).toBeOnTheScreen();
+  });
+
+  it("a row shows auto-remove's timer, as on the Downloads tab (a show: its next one)", async () => {
+    const day = 24 * 60 * 60_000;
+    const expiry = jest
+      .spyOn(downloads, 'useGroupValue')
+      .mockImplementation((group) =>
+        group?.endsWith('|i|Pond Jumpers')
+          ? Date.now() + 41 * day + 60_000
+          : group?.endsWith('|r|Kittens')
+            ? Date.now() + 3 * day + 60_000
+            : undefined,
+      );
+    await renderPage();
+    expect(await screen.findByText('Expires in 41 days')).toBeOnTheScreen();
+    expect(screen.getByText('Next expires in 3 days')).toBeOnTheScreen();
+    expiry.mockRestore();
+  });
+
+  it('header ⋯: Reset All Timers (with a timer) and Delete All Downloads', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const dl: Download = {
+      id: 'dl-pj',
+      accountId: active.id,
+      itemId: 'Pond Jumpers',
+      sourceId: 'pj',
+      title: 'Pond Jumpers',
+      path: 'downloads/x/pj/f.mkv',
+      status: 'done',
+      bytes: 1.9e9,
+      total: 1.9e9,
+      createdAt: Date.now(),
+      downloadedAt: Date.now(),
+      pinned: false,
+    };
+    const spies = [
+      jest.spyOn(downloads, 'useDownloadList').mockReturnValue([dl]),
+      jest.spyOn(downloads, 'getDownload').mockImplementation((id) => (id === dl.id ? dl : null)),
+    ];
+    await renderPage();
+    await screen.findByText('Kittens');
+    const button = headerButton();
+    expect(button.label).toBe('More');
+    expect(button.disabled).toBe(false);
+    await act(async () => button.onPress());
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Reset All Timers' }));
+    expect(alert.mock.calls[0][0]).toBe('Reset all timers?');
+    await act(async () => headerButton().onPress());
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Delete All Downloads' }));
+    expect(alert.mock.calls[1][0]).toBe("Delete all of mia's downloads?");
+    alert.mockRestore();
+    spies.forEach((spy) => spy.mockRestore());
+  });
+
+  it('header ⋯ is dimmed with nothing downloaded', async () => {
+    await renderPage();
+    await screen.findByText('Kittens');
+    expect(headerButton().disabled).toBe(true);
   });
 
   it("a show's button offers Next 5, Whole Show and each season", async () => {
@@ -150,7 +216,7 @@ describe('Kids downloads', () => {
     await waitFor(() => expect(started).toHaveBeenCalled());
     expect(startedIds()).toEqual(['e3', 'e4', 'e5', 'e6', 'e7']);
     // The row says so; the menu offers Stop Keeping instead.
-    expect(await screen.findByText(/^Keeping 5/)).toBeOnTheScreen();
+    expect(await screen.findByText('Keeping the next 5')).toBeOnTheScreen();
     await fireEvent.press(screen.getAllByRole('button', { name: 'Download' })[0]);
     await fireEvent.press(await screen.findByRole('menuitem', { name: 'Stop Keeping, The episodes here stay' }));
     expect(getKids(active.id).kept).toBeUndefined();
@@ -205,8 +271,8 @@ describe('statusLine', () => {
   });
 
   it('a show: on the phone / in the show + size before and after', () => {
-    expect(statusLine(null, true, 32)).toBe('0/32 episodes');
-    expect(statusLine(sum('done', 5, 5), true, 32)).toBe('5/32 episodes · 1.4 GB');
+    expect(statusLine(null, true, 32)).toBe('32 episodes');
+    expect(statusLine(sum('done', 5, 5), true, 32)).toBe('5 of 32 episodes · 1.4 GB');
     // The server didn't say how many.
     expect(statusLine(null, true, undefined)).toBeUndefined();
     expect(statusLine(sum('done', 1, 1), true, undefined)).toBe('1 episode · 1.4 GB');
@@ -225,11 +291,15 @@ describe('statusLine', () => {
     expect(statusLine(sum('paused', 2, 5, { failed: 1 }), true, 32)).toBe('Failed · 2 of 5');
   });
 
-  it('a movie: its size, what it is doing, then on this phone', () => {
+  it('a movie: its size, what it is doing (how far), then its size again', () => {
     expect(statusLine(null, false, undefined, 1.9e9)).toBe('1.9 GB');
     expect(statusLine(null, false, undefined)).toBeUndefined();
-    expect(statusLine(sum('downloading', 0, 1, { running: 1 }), false, undefined)).toBe('Downloading 12%');
-    expect(statusLine(sum('downloading', 0, 1), false, undefined)).toBe('Waiting');
-    expect(statusLine(sum('done', 1, 1, { size: 1.9e9 }), false, undefined)).toBe('On this phone · 1.9 GB');
+    expect(statusLine(sum('downloading', 0, 1, { running: 1 }), false, undefined)).toBe(
+      'Downloading 12% · 168 MB of 1.4 GB',
+    );
+    expect(statusLine(sum('downloading', 0, 1, { progress: 0.5 }), false, undefined)).toBe(
+      'Waiting · 700 MB of 1.4 GB',
+    );
+    expect(statusLine(sum('done', 1, 1, { size: 1.9e9 }), false, undefined)).toBe('1.9 GB');
   });
 });

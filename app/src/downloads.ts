@@ -906,6 +906,18 @@ export function useHasDownloads(group: string | null): boolean {
   return useSyncExternalStore(subscribe, () => !!group && inGroup(group).length > 0);
 }
 
+/**
+ * A value worked out from a group's downloads, read again on every change of one (progress, timers, status). `select`
+ * returns a plain value (a number, a string), so the caller re-renders only when it changes.
+ */
+export function useGroupValue<T extends string | number | boolean | undefined>(
+  group: string | null,
+  select: (downloads: readonly Download[]) => T,
+): T {
+  const subscribe = useCallback((listener: () => void) => subscribeTo(groupListeners, group, listener), [group]);
+  return useSyncExternalStore(subscribe, () => select(group ? inGroup(group) : []));
+}
+
 /** One download, with live progress; null when there is none. */
 export function useDownload(id: string | null): Download | null {
   const subscribe = useCallback((listener: () => void) => subscribeTo(itemListeners, id, listener), [id]);

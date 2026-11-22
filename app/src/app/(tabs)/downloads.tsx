@@ -28,15 +28,14 @@ import {
   type DownloadQuery,
   type DownloadScope,
 } from '@/downloadList';
-import { deleteDownloads, downloadsSize, getDownload, resetTimers, useDownloadList } from '@/downloads';
+import { deleteDownloads, downloadsSize, useDownloadList } from '@/downloads';
 import { formatBytes } from '@/format';
 import { currentUser, searchTerm } from '@/items';
 import { openLibrary } from '@/navigation';
-import { expiresAt } from '@/offload';
 import { useSession } from '@/session';
 import { useDownloadLimit, useOffloadDays, useOffloadWatched } from '@/settings';
 import { spacing, tabList, useWide } from '@/theme';
-import { confirmDeleteDownloads } from '@/useDownloadControl';
+import { confirmDeleteDownloads, resetTimersAction, showDownloadActions } from '@/useDownloadControl';
 import { useFetch } from '@/useFetch';
 
 type Show = ShowDownloadRowProps['show'];
@@ -45,19 +44,6 @@ type Show = ShowDownloadRowProps['show'];
 const COLUMN_GAP = spacing.lg;
 
 const entryKey = (e: DownloadEntry) => (e.kind === 'show' ? `show:${e.seriesId}` : e.id);
-
-/** Asks, then starts the timers of these downloads again (auto-remove). */
-function confirmResetTimers(name: string | undefined, ids: readonly string[], days: number) {
-  const n = ids.length;
-  Alert.alert(
-    name ? `Reset the timers of ${name}?` : 'Reset all timers?',
-    `${n} ${n === 1 ? 'download starts its' : 'downloads start their'} timer again now${days > 0 ? ` and ${n === 1 ? 'is' : 'are'} kept for ${days} more days` : ''}.`,
-    [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Reset', onPress: () => resetTimers(ids) },
-    ],
-  );
-}
 
 /** What an empty list means (only ever narrowed: no downloads at all has its own message). */
 function emptyText({ term, scope }: DownloadQuery): string {
@@ -95,13 +81,6 @@ export default function Downloads() {
   const hours = useOffloadWatched();
   // Header menu (everything) or a show's long press.
   const [menu, setMenu] = useState<{ show?: Show } | null>(null);
-  /** The downloads of these ids auto-remove will take some day (Reset Timer). */
-  const timed = (of: readonly string[]) =>
-    of.filter((id) => {
-      const d = getDownload(id);
-      return !!d && expiresAt(d, days, hours) !== undefined;
-    });
-
   const openShow = useCallback(
     (show: Show) => router.push({ pathname: '/show-downloads/[id]', params: { id: show.seriesId, name: show.name } }),
     [],
@@ -138,24 +117,15 @@ export default function Downloads() {
       ],
     );
 
-  // A show's episodes, or (header) every download of the account.
-  const menuIds = menu?.show ? menu.show.ids : ids;
-  const resettable = menu ? timed(menuIds) : [];
-  const menuActions: SheetAction[] = menu
-    ? [
-        ...(resettable.length > 0
-          ? [
-              {
-                label: menu.show ? 'Reset Timers' : 'Reset All Timers',
-                onPress: () => confirmResetTimers(menu.show?.name, resettable, days),
-              },
-            ]
-          : []),
-        menu.show
-          ? { label: 'Delete Downloads', destructive: true, onPress: () => removeShow(menu.show!) }
-          : { label: 'Delete All Downloads', destructive: true, onPress: removeAll },
-      ]
-    : [];
+  // A show's episodes (its row's long press), or (header) every download of the account.
+  const menuActions: SheetAction[] = !menu
+    ? []
+    : menu.show
+      ? showDownloadActions(menu.show.name, menu.show.ids, days, hours)
+      : [
+          ...resetTimersAction(undefined, ids, days, hours),
+          { label: 'Delete All Downloads', destructive: true, onPress: removeAll },
+        ];
 
   return (
     <GestureHandlerRootView style={styles.root}>
