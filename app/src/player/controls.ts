@@ -36,10 +36,11 @@ export function zoomAfterPinch(scale: number, current: VideoZoom): VideoZoom {
  * Where the video sits. Fill covers the whole screen. Fit keeps the picture clear of the notch / Dynamic Island: inset by
  * the safe area on the long sides (landscape: left / right, portrait: top / bottom), the same on both so the picture
  * stays centred. Landscape keeps the full height (the home indicator may sit over the picture's bottom edge, as in
- * other players); a one-sided inset (Android nav bar) narrows both sides.
+ * other players); a one-sided inset (Android nav bar) narrows both sides. `cutout` false (a TV, `features.cutout`): no
+ * inset at all - its safe area is the overscan margin, the picture still fits.
  */
-export function videoFrame(insets: EdgeInsets, landscape: boolean, zoom: VideoZoom): EdgeInsets {
-  if (zoom === 'fill') return { top: 0, bottom: 0, left: 0, right: 0 };
+export function videoFrame(insets: EdgeInsets, landscape: boolean, zoom: VideoZoom, cutout = true): EdgeInsets {
+  if (zoom === 'fill' || !cutout) return { top: 0, bottom: 0, left: 0, right: 0 };
   if (landscape) {
     const side = Math.max(insets.left, insets.right);
     return { top: 0, bottom: 0, left: side, right: side };
