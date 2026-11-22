@@ -5,7 +5,7 @@ import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { View, type ViewProps } from 'react-native';
 import type { ReactNode } from 'react';
 
-import { glassFallback } from '@/theme';
+import { glassFallback, type Scheme } from '@/theme';
 
 const liquid = isLiquidGlassAvailable();
 
@@ -14,6 +14,8 @@ export function Glass({
   interactive = false,
   tint,
   fallback = glassFallback,
+  colorScheme = 'dark',
+  testID,
   children,
 }: {
   style?: ViewProps['style'];
@@ -23,11 +25,26 @@ export function Glass({
   tint?: string;
   /** The fill without Liquid Glass. */
   fallback?: string;
+  /** Dark over video; a menu over the app follows the palette (TV menus). */
+  colorScheme?: Scheme;
+  testID?: string;
   children?: ReactNode;
 }) {
-  if (!liquid) return <View style={[{ backgroundColor: fallback }, style]}>{children}</View>;
+  if (!liquid)
+    return (
+      <View testID={testID} style={[{ backgroundColor: fallback }, style]}>
+        {children}
+      </View>
+    );
   return (
-    <GlassView glassEffectStyle="regular" colorScheme="dark" isInteractive={interactive} tintColor={tint} style={style}>
+    <GlassView
+      testID={testID}
+      glassEffectStyle="regular"
+      colorScheme={colorScheme}
+      isInteractive={interactive}
+      tintColor={tint}
+      style={style}
+    >
       {children}
     </GlassView>
   );

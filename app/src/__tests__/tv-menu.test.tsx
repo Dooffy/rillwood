@@ -9,6 +9,7 @@ import { ActionSheet } from '@/components/ActionSheet';
 import { TvButton } from '@/components/tv/TvButton';
 import { holdMenuKey } from '@/components/tv/focus';
 import { TvMenuHost } from '@/components/tv/TvMenu';
+import { ColorsContext, palettes, tv } from '@/theme';
 
 const isTV = Object.getOwnPropertyDescriptor(Platform, 'isTV')!;
 beforeEach(() => {
@@ -83,6 +84,71 @@ describe('ActionSheet on Apple TV', () => {
     expect(disable).toHaveBeenCalled();
     enable.mockRestore();
     disable.mockRestore();
+  });
+});
+
+describe('checklists and side panels', () => {
+  const speeds = ['0.5×', '1×', '1.25×', '1.5×', '2×'];
+  function speedMenu(speed: string, side = false) {
+    return (
+      <TvMenuHost>
+        <ActionSheet
+          visible
+          side={side}
+          title="Speed"
+          actions={speeds.map((label) => ({ label, selected: label === speed, onPress: jest.fn() }))}
+          onClose={jest.fn()}
+        />
+      </TvMenuHost>
+    );
+  }
+
+  it('focus starts on the checked row (the list scrolls to it), not the first', async () => {
+    await render(speedMenu('2×'));
+    expect(screen.getByRole('button', { name: '2×' }).props.hasTVPreferredFocus).toBe(true);
+    expect(screen.getByRole('button', { name: '0.5×' }).props.hasTVPreferredFocus).toBeFalsy();
+  });
+
+  it('a checklist keeps the ✓ room on unchecked rows, so the labels line up', async () => {
+    await render(speedMenu('1×'));
+    // Every row but the checked one has the empty slot.
+    expect(screen.getAllByTestId('tv-button-icon-slot')).toHaveLength(speeds.length - 1);
+  });
+
+  it('VoiceOver hears the checked row as selected, without the filled look', async () => {
+    await render(speedMenu('2×'));
+    expect(screen.getByRole('button', { name: '2×' }).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByRole('button', { name: '1×' }).props.accessibilityState.selected).toBeFalsy();
+    expect(screen.getByRole('button', { name: '2×' })).not.toHaveStyle({ backgroundColor: palettes.dark.accent });
+  });
+
+  it('light palette: unfocused rows are dark-tinted, not white (would vanish on light glass)', async () => {
+    await render(<ColorsContext.Provider value={palettes.light}>{speedMenu('1×', true)}</ColorsContext.Provider>);
+    expect(screen.getByRole('button', { name: '2×' })).toHaveStyle({ backgroundColor: tv.unfocusedLight });
+  });
+
+  it('a plain menu (nothing checked) has no slots', async () => {
+    await render(sheet(true));
+    expect(screen.queryByTestId('tv-button-icon-slot')).toBeNull();
+  });
+
+  it('a side panel is glass (the fill without Liquid Glass), in the palette scheme, over the dim', async () => {
+    const view = await render(speedMenu('1×', true));
+    expect(screen.getByTestId('tv-menu-glass')).toHaveStyle({ backgroundColor: tv.menu.appGlass.fallback.dark });
+    expect(screen.getByTestId('tv-menu-card')).not.toHaveStyle({ backgroundColor: palettes.dark.elevated });
+    await view.rerender(
+      <ColorsContext.Provider value={palettes.light}>{speedMenu('1×', true)}</ColorsContext.Provider>,
+    );
+    expect(screen.getByTestId('tv-menu-glass')).toHaveStyle({ backgroundColor: tv.menu.appGlass.fallback.light });
+  });
+
+  it('a centred (long-press) menu is glass too, with round corners', async () => {
+    await render(sheet(true));
+    expect(screen.getByTestId('tv-menu-glass')).toHaveStyle({
+      backgroundColor: tv.menu.appGlass.fallback.dark,
+      borderRadius: tv.panel.radius,
+    });
+    expect(screen.getByTestId('tv-menu-card')).not.toHaveStyle({ backgroundColor: palettes.dark.elevated });
   });
 });
 

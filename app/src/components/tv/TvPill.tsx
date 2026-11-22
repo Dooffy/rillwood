@@ -4,7 +4,7 @@
 // one focus target (`TvFocusRow`): a swipe down from above lands on the last-focused pill.
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
-import { radii, tv, useColors } from '@/theme';
+import { radii, tv, useColors, useScheme } from '@/theme';
 
 import { Text } from '../Text';
 import { focusStyles, rememberFocus, TvFocusRow } from './focus';
@@ -33,6 +33,7 @@ export function TvPill({
   onFocus,
 }: TvPillProps) {
   const c = useColors();
+  const idle = useScheme() === 'light' ? tv.unfocusedLight : tv.unfocused;
   return (
     <Pressable
       onFocus={(e) => {
@@ -47,7 +48,7 @@ export function TvPill({
       onLongPress={onLongPress}
       style={({ focused }) => [
         styles.pill,
-        { backgroundColor: focused ? c.text : selected ? tv.unfocused : 'transparent' },
+        { backgroundColor: focused ? c.text : selected ? idle : 'transparent' },
         focused && focusStyles.pill,
       ]}
     >

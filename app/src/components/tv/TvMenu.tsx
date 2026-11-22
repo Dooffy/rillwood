@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Apple TV menus: drawn in the app's own view, over a dimmed screen (a popover above its button: no dim) - never an RN
 // `Modal`, whose separate window the remote's presses don't reach (roadmap TV task 4b). `TvMenuHost` sits in the root
-// layout; an `ActionSheet` on TV hands it what to show. Focus starts on the first action and stays in the card; Menu
-// (Back) closes it.
+// layout; an `ActionSheet` on TV hands it what to show. Focus starts on the selected action (else the first; the list
+// scrolls to it) and stays in the card; Menu (Back) closes it. Every menu is glass (the popover over the video darker).
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Platform, ScrollView, StyleSheet, TVFocusGuideView, View } from 'react-native';
 
-import { backdrop, scrollList, tv, useColors } from '@/theme';
+import { backdrop, scrollList, tv, useScheme } from '@/theme';
 
 import { Glass } from '../Glass';
 import { Text } from '../Text';
@@ -89,7 +89,13 @@ export function useTvMenu(host: Host | null, visible: boolean, menu: TvMenuProps
 }
 
 function TvMenu({ title, actions, children, closeLabel, side = false, above, onClose }: TvMenuProps) {
-  const c = useColors();
+  const scheme = useScheme();
+  // A checklist (a row checked - `selected` only marks the pick of a pick-one list: sort, tracks, speed, options): rows
+  // from the leading edge, labels lined up under the ✓; first focus on the checked row (a speed far down the list shows
+  // what's picked), else the first.
+  const checked = actions.findIndex((a) => a.selected);
+  const checklist = checked >= 0;
+  const focusAt = Math.max(0, checked);
   // What had focus when the menu opened (its own buttons aren't remembered): it gets focus back when the menu closes,
   // before an action runs - one that opens a screen then takes focus there.
   const [opener] = useState(lastFocused);
@@ -130,7 +136,7 @@ function TvMenu({ title, actions, children, closeLabel, side = false, above, onC
         trapFocusRight
         testID="tv-menu-card"
         accessibilityRole="menu"
-        style={[styles.card, above ? styles.popover : side && styles.side, !above && { backgroundColor: c.elevated }]}
+        style={[styles.card, above ? styles.popover : side && styles.side]}
       >
         {/* Over the video: darkened glass, the picture blurred through it. */}
         {above && (
@@ -138,6 +144,16 @@ function TvMenu({ title, actions, children, closeLabel, side = false, above, onC
             tint={tv.menu.glassTint}
             fallback={tv.menu.glassFallback}
             style={[StyleSheet.absoluteFill, styles.glass]}
+          />
+        )}
+        {/* Over the app (centred, or down the right edge): glass in the palette's scheme, tinted to read over a grid. */}
+        {!above && (
+          <Glass
+            testID="tv-menu-glass"
+            colorScheme={scheme}
+            tint={tv.menu.appGlass.tint[scheme]}
+            fallback={tv.menu.appGlass.fallback[scheme]}
+            style={[StyleSheet.absoluteFill, !side && styles.glass]}
           />
         )}
         {title !== undefined && (
@@ -168,7 +184,9 @@ function TvMenu({ title, actions, children, closeLabel, side = false, above, onC
                 icon={action.selected ? 'checkmark' : undefined}
                 trailing={action.detail}
                 destructive={action.destructive}
-                preferredFocus={i === 0}
+                iconSlot={checklist}
+                checked={action.selected}
+                preferredFocus={i === focusAt}
                 rememberFocus={false}
                 onPress={() => pick(action)}
               />

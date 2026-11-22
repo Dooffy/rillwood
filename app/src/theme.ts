@@ -352,13 +352,23 @@ export const tv = {
     /** The player's popover over video: Liquid Glass darkened for the text, or a translucent dark fill without it. */
     glassTint: 'rgba(0, 0, 0, 0.5)',
     glassFallback: 'rgba(28, 28, 30, 0.85)',
+    /**
+     * A menu's glass over the app (centred long-press menus, side panels: Library Sort / Filter, Media), per scheme:
+     * tinted so its text reads over a bright grid, or a near-solid fill without Liquid Glass.
+     */
+    appGlass: {
+      tint: { dark: 'rgba(0, 0, 0, 0.55)', light: 'rgba(255, 255, 255, 0.55)' },
+      fallback: { dark: 'rgba(28, 28, 30, 0.94)', light: 'rgba(242, 242, 247, 0.94)' },
+    },
   },
   /** Card shelves: about this wide (whole cards across, `fitCards`), the gap, room above / below for a focused card. */
   shelf: { posterWidth: 250, landscapeWidth: 400, gap: 40, focusRoom: 40 },
   /** Active-server dot (Sign in). */
   statusDot: 12,
-  /** Unfocused button fill over any background. */
+  /** Unfocused button / pill fill over any background (the dark palette; over video always). */
   unfocused: 'rgba(255, 255, 255, 0.14)',
+  /** The same in the light palette: white would vanish on a light background or light glass. */
+  unfocusedLight: 'rgba(0, 0, 0, 0.08)',
   focus: {
     buttonScale: 1.08,
     cardScale: 1.1,
