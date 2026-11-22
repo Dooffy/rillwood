@@ -9,7 +9,7 @@ import { deviceSizes, pressedOpacity, radii, spacing, type, useColors } from '@/
 
 import { Artwork } from './Artwork';
 import { isInProgress } from './ProgressBar';
-import { Text } from './Text';
+import { Text, TextBone } from './Text';
 import { focusStyles, rememberFocus } from './tv/focus';
 
 export type CardProps = {
@@ -161,6 +161,8 @@ export function CardPlaceholder({
 }) {
   const c = useColors();
   const poster = shape === 'poster';
+  const titleSize = deviceSizes.cardTitle;
+  const subtitleSize = deviceSizes.cardSubtitle;
   return (
     <View
       testID="card-placeholder"
@@ -174,8 +176,18 @@ export function CardPlaceholder({
           { aspectRatio: aspectRatio ?? (poster ? 2 / 3 : 16 / 9), backgroundColor: c.surface },
         ]}
       />
-      <View style={[styles.placeholderLine, { width: '70%', backgroundColor: c.surface }]} />
-      <View style={[styles.placeholderLine, { width: '40%', backgroundColor: c.surface }]} />
+      {titleSize && subtitleSize ? (
+        // Apple TV: the card's two text lines (`MediaCard`), so the shelf is as tall loading as loaded.
+        <View>
+          <TextBone style={{ ...type.label, ...titleSize }} width="70%" />
+          <TextBone style={{ ...type.caption, ...subtitleSize }} width="40%" />
+        </View>
+      ) : (
+        <>
+          <View style={[styles.placeholderLine, { width: '70%', backgroundColor: c.surface }]} />
+          <View style={[styles.placeholderLine, { width: '40%', backgroundColor: c.surface }]} />
+        </>
+      )}
     </View>
   );
 }

@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View, type DimensionValue, type ViewProps } from 'react-native';
 
-import { minTouch, radii, spacing, useColors } from '@/theme';
+import { deviceSizes, minTouch, radii, spacing, useColors } from '@/theme';
 
 import { CardPlaceholder } from './Card';
 import { useHeroLayout } from './DetailHero';
@@ -60,8 +60,8 @@ export function Loading({
 }
 
 /**
- * A row of grey cards (a shelf loading). No padding: inside a `Row`, or padded by the caller. With a `label` it is the
- * "Loading" element itself; without, part of a bigger placeholder.
+ * A row of grey cards (a shelf loading), spaced like the shelf's cards. No padding: inside a `Row` / `TvShelf`, or
+ * padded by the caller. With a `label` it is the "Loading" element itself; without, part of a bigger placeholder.
  */
 export function CardRowPlaceholder({
   shape,
@@ -77,12 +77,18 @@ export function CardRowPlaceholder({
   testID?: string;
 }) {
   return (
-    <View testID={testID} accessible={!!label} accessibilityLabel={label} style={styles.cardRow}>
+    <View testID={testID} accessible={!!label} accessibilityLabel={label} style={[styles.cardRow, tvGap()]}>
       {Array.from({ length: count }, (_, i) => (
         <CardPlaceholder key={i} shape={shape} width={width} />
       ))}
     </View>
   );
+}
+
+/** Apple TV: the gap between cards in a `TvShelf` and the Library grid (`PagedList`), none to add elsewhere. */
+function tvGap() {
+  const gap = deviceSizes.tvShelf?.gap;
+  return gap === undefined ? undefined : { gap };
 }
 
 /** Movie / episode / series detail before the item loads: hero art, title, the action row, overview lines. */
@@ -159,7 +165,7 @@ export function PosterGridPlaceholder({
   shape?: 'poster' | 'landscape';
 }) {
   return (
-    <Loading testID="poster-grid-placeholder" style={styles.grid}>
+    <Loading testID="poster-grid-placeholder" style={[styles.grid, tvGap()]}>
       {Array.from({ length: columns * 3 }, (_, i) => (
         <CardPlaceholder key={i} shape={shape} width={width} />
       ))}
