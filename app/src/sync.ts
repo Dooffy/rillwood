@@ -11,6 +11,7 @@ import { AppState } from 'react-native';
 import {
   ApiError,
   getItemsById,
+  ITEMS_BY_ID_CHUNK,
   getUserData,
   isOffline,
   setPlayed,
@@ -45,8 +46,6 @@ const MAX_RESUME = 0.9;
 const MIN_RESUME_SECONDS = 300;
 /** A server `LastPlayedDate` this close to the session start is the same session (clock skew; started online). */
 export const SAME_SESSION_MS = 60_000;
-/** Ids per `/Items?ids=` request (URL length). */
-const PULL_CHUNK = 100;
 /** Saved UserData is pulled again after this, or at once when the replay sent something. */
 export const PULL_EVERY_MS = 10 * 60_000;
 // Last pull per account (this run of the app).
@@ -194,8 +193,8 @@ async function pull(conn: Connection, accountId: string) {
   const paths = new Map<string, string>();
   for (const d of getDownloads()) if (d.accountId === accountId && !paths.has(d.itemId)) paths.set(d.itemId, d.path);
   const ids = [...paths.keys()];
-  for (let i = 0; i < ids.length; i += PULL_CHUNK) {
-    const { Items } = await getItemsById(conn, ids.slice(i, i + PULL_CHUNK));
+  for (let i = 0; i < ids.length; i += ITEMS_BY_ID_CHUNK) {
+    const { Items } = await getItemsById(conn, ids.slice(i, i + ITEMS_BY_ID_CHUNK));
     await Promise.all(
       Items.map((item) => {
         const path = paths.get(item.Id);

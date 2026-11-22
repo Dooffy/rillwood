@@ -11,13 +11,32 @@ export const AGE_STEPS: readonly AgeStep[] = [3, 7, 10, 13];
 export type KidsFilter = { age: AgeStep; unrated: boolean; library?: string };
 
 /**
- * The highest rating each step lets in, by name - the server compares by its score (`/Localization/ParentalRatings`),
- * so `PG` also lets in `TV-PG`. 13+ stops at PG-13: TV-14 (score 14) stays out.
+ * The highest rating each step lets in, by name - the server compares by its score, so `PG` also lets in `TV-PG`.
+ * 13+ stops at PG-13: TV-14 (score 14) stays out.
  */
 const MAX_RATING: Record<AgeStep, string> = { 3: 'TV-G', 7: 'TV-Y7', 10: 'PG', 13: 'PG-13' };
 
-/** The same limits as scores (the server's table: TV-G 0, TV-Y7 7, PG 10, PG-13 13) - for downloads, offline. */
+/** The same limits as scores (US: TV-G 0, TV-Y7 7, PG 10, PG-13 13) - for downloads, offline. */
 const MAX_SCORE: Record<AgeStep, number> = { 3: 0, 7: 7, 10: 10, 13: 13 };
+
+/**
+ * The score a download saves (`ratingScores`, src/ratings.ts): the lowest step the server lets it through, or
+ * (undefined) above them all - one past 13+. Read back by `allowedOffline`. Changing the steps: old saved scores keep
+ * the old steps (nothing re-scores a download that has one).
+ */
+export const stepScore = (step: AgeStep | undefined) => (step === undefined ? MAX_SCORE[13] + 1 : MAX_SCORE[step]);
+
+/**
+ * The server's check for one age step, by score not name (a number needs no lookup; a US name may not resolve on a
+ * server set to another country). Titles the server has no score for pass every check - see `UNSCORED_ONLY`.
+ */
+export const stepQuery = (step: AgeStep) => ({ maxOfficialRating: String(MAX_SCORE[step]) });
+
+/**
+ * Only the titles the server has no score for (unrated, or a rating it can't read): it keeps those under any min or
+ * max, and no real score reaches this min. Tested on 12.1 + 10.11 (docs/research/jellyfin-api.md).
+ */
+export const UNSCORED_ONLY = { minOfficialRating: '100000' } as const;
 
 /**
  * A download in kids mode offline (shared phone filter; a kids account has none - the server filtered it): its saved

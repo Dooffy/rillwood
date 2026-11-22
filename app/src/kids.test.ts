@@ -13,6 +13,8 @@ import {
   kidsSearch,
   kidsTitles,
   ratingQuery,
+  stepQuery,
+  stepScore,
 } from './kids';
 
 const user = (policy?: UserDto['Policy']): UserDto => ({ Id: 'u', Name: 'Mia', Policy: policy });
@@ -46,6 +48,22 @@ describe('ratingQuery', () => {
   it('hides unrated items unless they are let in', () => {
     expect(ratingQuery({ age: 7, unrated: false })).toEqual({ maxOfficialRating: 'TV-Y7', hasParentalRating: true });
     expect(ratingQuery({ age: 7, unrated: true }).hasParentalRating).toBeUndefined();
+  });
+});
+
+describe('stepScore / stepQuery (download scores)', () => {
+  it("each step's score, one past 13+ above them all; a saved score passes the steps up to it", () => {
+    expect(AGE_STEPS.map((age) => stepScore(age))).toEqual([0, 7, 10, 13]);
+    expect(stepScore(undefined)).toBe(14);
+    expect(allowedOffline(stepScore(7), { age: 7, unrated: false })).toBe(true);
+    expect(allowedOffline(stepScore(10), { age: 7, unrated: false })).toBe(false);
+    expect(allowedOffline(stepScore(undefined), { age: 13, unrated: true })).toBe(false);
+    // An older download's raw server score between steps still compares right.
+    expect(allowedOffline(12, { age: 13, unrated: false })).toBe(true);
+  });
+
+  it('asks the server by score, not by name', () => {
+    expect(AGE_STEPS.map((age) => stepQuery(age).maxOfficialRating)).toEqual(['0', '7', '10', '13']);
   });
 });
 

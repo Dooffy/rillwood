@@ -58,8 +58,9 @@ export type Download = {
   /** Item JSON, poster, backdrop, subtitles saved next to the file; missing → retried at reconcile. */
   snapshot?: Snapshot;
   /**
-   * The server's rating score when it started (an episode: its show's) - kids mode's offline filter (`allowedOffline`).
-   * Unset = unrated (no rating, or no answer at the time).
+   * Rating score (an episode: its show's) - kids mode's offline filter (`allowedOffline`): the lowest age step the
+   * server lets it through (`stepScore`); older downloads may hold the server's own score. Unset = unrated (no rating,
+   * or no answer yet).
    */
   rating?: number;
 };
@@ -490,7 +491,7 @@ export async function startDownloads(requests: DownloadRequest[]): Promise<Start
     put(downloads);
     send(downloads);
     downloads.forEach((d, i) => void snapshot(d, account.server.url, from[i]));
-    // The rating scores come after (never hold a start up): one cached list per server, an episode asks for its show.
+    // The rating scores come after (never hold a start up).
     const conn = connectionFor(account);
     if (conn)
       void ratingScores(
