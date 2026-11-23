@@ -6,9 +6,16 @@ import type { BaseItemDto, Connection, Query } from './api';
 import { ratingScores } from './ratings';
 
 const conn: Connection = { baseUrl: 'https://jf.example.com', deviceId: 'dev', token: 'tok', accountId: 'a' };
-// The server's own scores for the titles (its maths, any country): G 0 (IE-G too), TV-Y7 7, PG 10, R 17; none = no
-// score (unrated, or a rating it can't read).
-const titleScores: Record<string, number | undefined> = { pets: 0, trains: 7, pg: 10, grownup: 17, bare: undefined };
+// The server's own scores for the titles (its maths, any country): G 0, Ireland's G 4, TV-Y7 7, PG 10, R 17; none =
+// no score (unrated, or a rating it can't read).
+const titleScores: Record<string, number | undefined> = {
+  pets: 0,
+  irish: 4,
+  trains: 7,
+  pg: 10,
+  grownup: 17,
+  bare: undefined,
+};
 const movie = (Id: string): BaseItemDto => ({ Id, Name: Id, Type: 'Movie' });
 const episode = (Id: string, SeriesId: string): BaseItemDto => ({ Id, Name: Id, Type: 'Episode', SeriesId });
 
@@ -42,6 +49,7 @@ describe('rating scores', () => {
   it("the lowest age step the server lets through; an episode its show's; unrated and unknown: none", async () => {
     const scores = await ratingScores(conn, [
       movie('pets'),
+      movie('irish'),
       movie('pg'),
       movie('bare'),
       movie('gone'),
@@ -49,8 +57,8 @@ describe('rating scores', () => {
       episode('t2', 'trains'),
       episode('g1', 'grownup'),
     ]);
-    // R is over every step: 14 (above 13+).
-    expect(asObject(scores)).toEqual({ pets: 0, pg: 10, t1: 7, t2: 7, g1: 14 });
+    // All-ages ratings (G 0, Ireland's G 4) are 3+'s (5) - regression: Ireland's G was 7+. R is over every step: 14.
+    expect(asObject(scores)).toEqual({ pets: 5, irish: 5, pg: 10, t1: 7, t2: 7, g1: 14 });
   });
 
   it('a title the server has no score for stays unrated, not 0, though it passes every step - regression', async () => {
@@ -64,7 +72,7 @@ describe('rating scores', () => {
     expect(getItemsById.mock.calls.map(([, ids, query]) => [ids, query])).toEqual([
       [['trains', 'pets', 'bare'], lean],
       [['trains', 'pets', 'bare'], { ...lean, minOfficialRating: '100000' }],
-      [['trains', 'pets'], { ...lean, maxOfficialRating: '0' }],
+      [['trains', 'pets'], { ...lean, maxOfficialRating: '5' }],
       [['trains'], { ...lean, maxOfficialRating: '7' }],
     ]);
   });

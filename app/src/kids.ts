@@ -11,13 +11,12 @@ export const AGE_STEPS: readonly AgeStep[] = [3, 7, 10, 13];
 export type KidsFilter = { age: AgeStep; unrated: boolean; library?: string };
 
 /**
- * The highest rating each step lets in, by name - the server compares by its score, so `PG` also lets in `TV-PG`.
- * 13+ stops at PG-13: TV-14 (score 14) stays out.
+ * The highest rating score each step lets in - online (`maxOfficialRating`) and offline (a download's saved score).
+ * The server scores a rating by about its minimum age, per country (docs/research/jellyfin-api.md): every country's
+ * all-ages rating scores 0-4 (US G / TV-G / TV-Y 0, Ireland's G 4) and the next ones start at 6, so 3+ stops at 5.
+ * Then US TV-Y7 7, PG / TV-PG 10 (UK PG 8, Ireland's PG 12), PG-13 13 - TV-14 (14) stays out of 13+.
  */
-const MAX_RATING: Record<AgeStep, string> = { 3: 'TV-G', 7: 'TV-Y7', 10: 'PG', 13: 'PG-13' };
-
-/** The same limits as scores (US: TV-G 0, TV-Y7 7, PG 10, PG-13 13) - for downloads, offline. */
-const MAX_SCORE: Record<AgeStep, number> = { 3: 0, 7: 7, 10: 10, 13: 13 };
+const MAX_SCORE: Record<AgeStep, number> = { 3: 5, 7: 7, 10: 10, 13: 13 };
 
 /**
  * The score a download saves (`ratingScores`, src/ratings.ts): the lowest step the server lets it through, or
@@ -59,7 +58,7 @@ export function isKidsAccount(user: UserDto | undefined): boolean {
  */
 export function ratingQuery(filter: KidsFilter | undefined): Query {
   if (!filter) return {};
-  return { maxOfficialRating: MAX_RATING[filter.age], hasParentalRating: filter.unrated ? undefined : true };
+  return { ...stepQuery(filter.age), hasParentalRating: filter.unrated ? undefined : true };
 }
 
 /** The library pick as a query (`/Items` takes one `parentId`); none = every library. */

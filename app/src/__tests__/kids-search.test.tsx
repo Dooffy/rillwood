@@ -130,7 +130,7 @@ describe('Kids search', () => {
     await type('din');
     expect(await screen.findByRole('button', { name: /^The Dining Car/ })).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: /^Dinner Time/ })).toBeNull();
-    expect(queries.filter((q) => q.searchTerm === 'din').every((q) => q.maxOfficialRating === 'TV-Y7')).toBe(true);
+    expect(queries.filter((q) => q.searchTerm === 'din').every((q) => q.maxOfficialRating === '7')).toBe(true);
   });
 
   it('a show opens its page, a movie and an episode play', async () => {
