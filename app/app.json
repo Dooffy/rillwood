@@ -2,7 +2,7 @@
   "expo": {
     "name": "Rillwood",
     "slug": "rillwood",
-    "version": "26.0",
+    "version": "26.1",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "rillwood",
@@ -43,6 +43,9 @@
             "NSPrivacyAccessedAPITypeReasons": ["E174.1", "85F4.1"]
           }
         ]
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {

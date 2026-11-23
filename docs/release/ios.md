@@ -39,7 +39,7 @@ Upload: Transporter → add `rillwood.ipa` → Deliver.
 
 In App Store Connect, once processed (TestFlight tab):
 
-1. **Export compliance** (asked per build, `ITSAppUsesNonExemptEncryption` is unset on purpose): the app uses standard encryption not provided by Apple OS (MPVKit bundles OpenSSL + GnuTLS for `https` streams) - see `docs/research/store-requirements.md` §A3 and `docs/open-items.md`.
+1. **Export compliance**: not asked - `app.json` `ios.config.usesNonExemptEncryption: false` (only `https` to the user's own server, `CLAUDE.md` §2 iOS network).
 2. Add the build to the internal group. Testers install it from the TestFlight app.
 3. Check the processing email: no ITMS-91053 (missing privacy reasons) or other ITMS warnings.
 
