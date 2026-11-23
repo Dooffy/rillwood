@@ -3,7 +3,7 @@
 // summary panel.
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
-import { BackHandler, Platform } from 'react-native';
+import { BackHandler, Platform, ScrollView } from 'react-native';
 
 import * as api from '@/api';
 import type { BaseItemDto } from '@/api';
@@ -92,8 +92,8 @@ afterEach(() => {
   Object.defineProperty(Platform, 'isTV', isTV);
 });
 
-const renderTv = () =>
-  render(
+const renderTv = async () => {
+  await render(
     <ToastProvider>
       <ItemMenuProvider>
         <TvMenuHost>
@@ -102,6 +102,10 @@ const renderTv = () =>
       </ItemMenuProvider>
     </ToastProvider>,
   );
+  // The hero waits for the scroll view's measure (no layout pass under Jest); still loading: no scroll view yet.
+  const scroll = await screen.findByTestId('tv-detail-scroll').catch(() => null);
+  if (scroll) await fireEvent(scroll, 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 1920, height: 1080 } } });
+};
 
 describe('Item detail on Apple TV', () => {
   it('shows everything on the art; focus starts on Play; credits bottom right; no phone header', async () => {
@@ -158,10 +162,16 @@ describe('Item detail on Apple TV', () => {
     expect(screen.queryByTestId('detail-placeholder')).toBeNull();
   });
 
-  it('a long summary is focusable and opens the whole text in a panel', async () => {
+  // Regression (real Apple TV): a focusable summary above Play made focus move down into the play row, and tvOS
+  // scrolled ahead each time (the hero shook). Text only now; More sits in the play row.
+  it('a long summary is text, cut at three lines; More in the play row opens the whole text', async () => {
     item = episode;
     await renderTv();
-    await fireEvent.press(await screen.findByRole('button', { name: LONG }));
+    // The hero's (Details below shows it whole too).
+    const [summary] = await screen.findAllByText(LONG);
+    expect(summary.props.numberOfLines).toBe(3);
+    expect(screen.queryByRole('button', { name: LONG })).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'Whole summary' }));
     const panel = within(screen.getByTestId('tv-menu-card'));
     expect(panel.getByText(LONG)).toBeOnTheScreen();
     await fireEvent.press(panel.getByRole('button', { name: 'Done' }));
@@ -191,6 +201,40 @@ describe('Item detail on Apple TV', () => {
     expect(panel.getByLabelText('German - AAC - Stereo')).toBeOnTheScreen();
   });
 
+  // Regression (real Apple TV): below the cast nothing took focus (text only, the Media card off to the side or
+  // missing), so About and the rest were out of reach.
+  it('Details: each column takes focus, inside one full-width focus target', async () => {
+    await renderTv();
+    const block = await screen.findByTestId('tv-details');
+    expect(block.props.autoFocus).toBe(true);
+    const about = within(block).getByLabelText('About');
+    expect(about.props.focusable).not.toBe(false);
+    expect(about.props.accessible).toBe(true);
+  });
+
+  // Regression (real Apple TV): on open, Play took focus near the screen's bottom and tvOS scrolled the hero up a bit;
+  // back up from the cast, tvOS's scroll plus a snap made the page fly.
+  it('keeps the hero at the top: tvOS focus scroll off in the hero, one animated scroll back up', async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype as unknown as { scrollTo: (o: object) => void }, 'scrollTo');
+    await renderTv();
+    await screen.findByRole('header', { name: 'Sintel' });
+    scrollTo.mockClear();
+    // The hero is the scroll view's own height (shorter than the window here), so Play is never below its bottom.
+    const view = screen.getByTestId('tv-detail-scroll');
+    await fireEvent(view, 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 1920, height: 1000 } } });
+    expect(screen.getByTestId('tv-detail-hero')).toHaveStyle({ height: 1000 });
+    // Opens with tvOS's own focus scroll off (focus starts in the hero).
+    expect(view.props.scrollAnimationEnabled).toBe(false);
+    // Focus below the hero: tvOS scrolls as usual.
+    await fireEvent(screen.getByTestId('tv-details'), 'focusCapture');
+    expect(screen.getByTestId('tv-detail-scroll').props.scrollAnimationEnabled).toBe(true);
+    // Back up on Play: one animated scroll to the top, tvOS's own scroll off again.
+    await fireEvent(screen.getByRole('button', { name: /^Resume|^Play/ }), 'focus', { currentTarget: {} });
+    expect(scrollTo).toHaveBeenCalledWith({ y: 0, animated: true });
+    expect(screen.getByTestId('tv-detail-scroll').props.scrollAnimationEnabled).toBe(false);
+    scrollTo.mockRestore();
+  });
+
   it('scrolled below the hero: the art dims and Back comes back up instead of leaving', async () => {
     const back: (() => boolean)[] = [];
     const add = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_, handler) => {
@@ -209,5 +253,27 @@ describe('Item detail on Apple TV', () => {
     });
     expect(handled).toBe(true);
     add.mockRestore();
+  });
+
+  // Regression (real Apple TV): opened again with the item cached, the hero drew at window height before the
+  // measure and tvOS scrolled to Play. It's sized from the last measure at once now.
+  it('opened again: the hero takes the last measured height straight away', async () => {
+    await renderTv();
+    await screen.findByRole('header', { name: 'Sintel' });
+    await fireEvent(screen.getByTestId('tv-detail-scroll'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 0, width: 1920, height: 990 } },
+    });
+    screen.unmount();
+    await render(
+      <ToastProvider>
+        <ItemMenuProvider>
+          <TvMenuHost>
+            <ItemDetail />
+          </TvMenuHost>
+        </ItemMenuProvider>
+      </ToastProvider>,
+    );
+    await screen.findByRole('header', { name: 'Sintel' });
+    expect(screen.getByTestId('tv-detail-hero')).toHaveStyle({ height: 990 });
   });
 });

@@ -3,7 +3,7 @@
 // on swipe events for scrubbing while the player is open, and takes Menu (Back) while the controls are up - it hides
 // them first; with them down, Back closes the player as usual. Left / Right held repeat their seek every
 // HOLD_REPEAT_MS, the step growing with the hold (`holdStep`), until let go, another remote action, the app left, the
-// screen gone or the seek refused; the hold reports its seeks once, at its end. Off TV (`features.remote`) it does
+// screen gone or the seek refused; the screen previews each step and seeks once, at its end. Off TV (`features.remote`) it does
 // nothing.
 import { useEffect, useRef } from 'react';
 import { AppState, TVEventControl, useTVEventHandler } from 'react-native';
@@ -27,9 +27,12 @@ export type TvRemoteHandlers = {
   /** Focus is on the scrubber. */
   onScrubber: boolean;
   toggle: () => void;
-  /** Seek by `seconds` (`quiet`: a hold's repeat - no progress report). False = not now (a menu, Up Next): a hold stops. */
-  seekBy: (seconds: number, quiet?: boolean) => boolean;
-  /** A hold that seeked ended: report where it landed. */
+  /**
+   * Seek by `seconds` (`held`: a hold's step - the screen moves its preview, no seek yet). False = not now (a menu, Up
+   * Next): a hold stops.
+   */
+  seekBy: (seconds: number, held?: boolean) => boolean;
+  /** A hold that moved ended: seek to where it got. */
   held: () => void;
   show: () => void;
   hide: () => void;

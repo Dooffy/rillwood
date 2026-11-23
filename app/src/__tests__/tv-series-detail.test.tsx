@@ -103,8 +103,8 @@ afterEach(async () => {
   Object.defineProperty(Platform, 'isTV', isTV);
 });
 
-const renderTv = () =>
-  render(
+const renderTv = async () => {
+  await render(
     // As the root layout: the TV menu host around the item menu (its ActionSheet draws there).
     <ToastProvider>
       <TvMenuHost>
@@ -114,6 +114,10 @@ const renderTv = () =>
       </TvMenuHost>
     </ToastProvider>,
   );
+  // The hero waits for the scroll view's measure (no layout pass under Jest); still loading: no scroll view yet.
+  const scroll = await screen.findByTestId('tv-detail-scroll').catch(() => null);
+  if (scroll) await fireEvent(scroll, 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 1920, height: 1080 } } });
+};
 
 describe('Series detail on Apple TV', () => {
   it('the hero plays the next episode: "S2, E2" with time left, focus on it, Play from Start beside', async () => {

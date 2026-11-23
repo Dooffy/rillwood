@@ -138,6 +138,10 @@ export default function PlayerScreen() {
   // Apple TV: the bottom bar's height - the tracks menu opens above it.
   const [barHeight, setBarHeight] = useState(0);
   const [preview, setPreview] = useState<number>();
+  // Apple TV: Left / Right held - where the hold has got to (shown as the preview, sought once it ends); the video
+  // waits paused meanwhile (no sound, no picture running on at the old spot).
+  const holdAt = useRef<number>(undefined);
+  const [holding, setHolding] = useState(false);
   const scrubFrom = useRef(0);
   // Tracks menu page (null = closed) and the choices made in it; until a choice, the server's defaults. Choices outlive
   // a Retry (same item); speed applies to whatever plays, subtitle timing only to this item and subtitle track (each file
@@ -285,10 +289,10 @@ export default function PlayerScreen() {
   // Auto-hide while playing; paused, scrubbing, the tracks menu or VoiceOver keep the controls up.
   const menuOpen = menu !== null;
   useEffect(() => {
-    if (!shown || !playing || paused || scrubbing || menuOpen || screenReader) return;
+    if (!shown || !playing || paused || scrubbing || holding || menuOpen || screenReader) return;
     const timer = setTimeout(() => setShown(false), HIDE_AFTER_MS);
     return () => clearTimeout(timer);
-  }, [shown, playing, paused, scrubbing, menuOpen, screenReader, touched]);
+  }, [shown, playing, paused, scrubbing, holding, menuOpen, screenReader, touched]);
 
   // Leaving the app (home, lock, another app) pauses: back in the app, the controls are up and Play carries on. Not on
   // iOS `inactive` (Control Center, a notification pulled down). iOS: a playing video moves into picture in picture
@@ -351,15 +355,14 @@ export default function PlayerScreen() {
     });
   };
   const touch = () => setTouched((n) => n + 1);
-  // `report` false: a held Left / Right on Apple TV, reported once at the hold's end.
-  const seek = (seconds: number, report = true) => {
+  const seek = (seconds: number) => {
     const to = seekTarget(seconds, progress.get().duration);
     player.current?.seek(to);
     progress.set({ position: to });
     setEndSeekOn(upNextCountdown(to, progress.get().duration) ? id : undefined);
-    if (report) seeked();
+    seeked();
   };
-  const seekBy = (delta: number, report = true) => seek(progress.get().position + delta, report);
+  const seekBy = (delta: number) => seek(progress.get().position + delta);
   // ±10 s from the controls: also restarts their auto-hide.
   const skip = (delta: number) => {
     touch();
@@ -382,15 +385,28 @@ export default function PlayerScreen() {
       touch();
     },
     // A menu over the video takes the remote's Left / Right and swipes (moving through its list).
-    seekBy: (seconds, quiet) => {
+    seekBy: (seconds, held) => {
       if (!playing || menuOpen || upNextUp) return false;
       setShown(true);
       touch();
-      seekBy(seconds, !quiet);
+      if (!held) {
+        seekBy(seconds);
+        return true;
+      }
+      // A hold's step: only the bar's preview moves (seeking mpv each step left the bar stuck, then jumped once the
+      // seeks caught up); paused while it lasts. One seek when it ends.
+      const { position, duration } = progress.get();
+      holdAt.current = seekTarget((holdAt.current ?? position) + seconds, duration);
+      setPreview(holdAt.current);
+      setHolding(true);
       return true;
     },
     held: () => {
-      seeked();
+      const to = holdAt.current;
+      holdAt.current = undefined;
+      setPreview(undefined);
+      setHolding(false);
+      if (to !== undefined) seek(to);
       touch();
     },
     show: () => {
@@ -542,7 +558,7 @@ export default function PlayerScreen() {
                     source={state.play.source}
                     externalSubs={state.play.externalSubs}
                     startSeconds={state.start}
-                    paused={paused}
+                    paused={paused || holding}
                     audioTrack={audioTrack?.id}
                     subtitleTrack={subtitleTrack?.id ?? -1}
                     speed={tracks.speed}

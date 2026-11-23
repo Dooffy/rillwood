@@ -16,7 +16,7 @@ const BADGES = ['XXXX', 'XXX', 'XX'];
 
 /**
  * Movie / episode / series detail (`TvDetailScreen`): the text and play row bottom left, the credits bottom right.
- * Shaped like a movie with a long summary (three lines + More), facts and badges; both columns grow up from the bottom,
+ * Shaped like a movie with a long summary (three lines, More in the play row), facts and badges; both columns grow up from the bottom,
  * so the play row stays put whatever loads.
  */
 export function TvDetailPlaceholder() {
@@ -31,7 +31,6 @@ export function TvDetailPlaceholder() {
             <TextBone style={tv.type.body} />
             <TextBone style={tv.type.body} />
             <TextBone style={tv.type.body} width="70%" />
-            <TextBone style={tv.type.label} width={tv.detail.placeholderMoreWidth} />
           </View>
           <TextBone style={tv.type.caption} width="45%" />
           <View style={styles.badges}>
@@ -45,6 +44,7 @@ export function TvDetailPlaceholder() {
         </View>
         <View style={styles.buttons}>
           <Bone width={tv.detail.placeholderPlayWidth} height={tv.button.height} round />
+          <Bone width={tv.button.height} height={tv.button.height} round />
           <Bone width={tv.button.height} height={tv.button.height} round />
           <Bone width={tv.button.height} height={tv.button.height} round />
         </View>

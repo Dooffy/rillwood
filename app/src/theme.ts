@@ -303,9 +303,8 @@ export const tv = {
   /** Movie / episode detail (`TvItemDetail`): the credits column (bottom right), the outlined badges on the art. */
   detail: {
     creditsWidth: 520,
-    /** Stand-ins while the item loads: the play button, the summary's More. */
+    /** Stand-in for the play button while the item loads. */
     placeholderPlayWidth: 300,
-    placeholderMoreWidth: 80,
     /** Scrolled this far down (a share of the screen's height): the art dims behind the shelves. */
     belowAt: 0.3,
     dim: 'rgba(0, 0, 0, 0.7)',
