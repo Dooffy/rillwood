@@ -38,22 +38,22 @@ describe('isKidsAccount', () => {
 describe('ratingQuery', () => {
   it('maps each age step to the highest rating it lets in', () => {
     expect(AGE_STEPS.map((age) => ratingQuery({ age, unrated: true }).maxOfficialRating)).toEqual([
-      'TV-G',
-      'TV-Y7',
-      'PG',
-      'PG-13',
+      '5',
+      '7',
+      '10',
+      '13',
     ]);
   });
 
   it('hides unrated items unless they are let in', () => {
-    expect(ratingQuery({ age: 7, unrated: false })).toEqual({ maxOfficialRating: 'TV-Y7', hasParentalRating: true });
+    expect(ratingQuery({ age: 7, unrated: false })).toEqual({ maxOfficialRating: '7', hasParentalRating: true });
     expect(ratingQuery({ age: 7, unrated: true }).hasParentalRating).toBeUndefined();
   });
 });
 
 describe('stepScore / stepQuery (download scores)', () => {
   it("each step's score, one past 13+ above them all; a saved score passes the steps up to it", () => {
-    expect(AGE_STEPS.map((age) => stepScore(age))).toEqual([0, 7, 10, 13]);
+    expect(AGE_STEPS.map((age) => stepScore(age))).toEqual([5, 7, 10, 13]);
     expect(stepScore(undefined)).toBe(14);
     expect(allowedOffline(stepScore(7), { age: 7, unrated: false })).toBe(true);
     expect(allowedOffline(stepScore(10), { age: 7, unrated: false })).toBe(false);
@@ -63,7 +63,7 @@ describe('stepScore / stepQuery (download scores)', () => {
   });
 
   it('asks the server by score, not by name', () => {
-    expect(AGE_STEPS.map((age) => stepQuery(age).maxOfficialRating)).toEqual(['0', '7', '10', '13']);
+    expect(AGE_STEPS.map((age) => stepQuery(age).maxOfficialRating)).toEqual(['5', '7', '10', '13']);
   });
 });
 
@@ -75,7 +75,7 @@ describe('allowedShows', () => {
         includeItemTypes: 'Series',
         recursive: true,
         sortBy: 'SortName',
-        maxOfficialRating: 'PG',
+        maxOfficialRating: '10',
         hasParentalRating: true,
       },
     });
@@ -111,7 +111,7 @@ describe('allowedOffline', () => {
     expect(allowedOffline(undefined, undefined)).toBe(true);
   });
 
-  it('a shared phone: the saved score up to the age (TV-G 0, TV-Y7 7, PG 10, PG-13 13)', () => {
+  it('a shared phone: the saved score up to the age (all-ages 0-5, TV-Y7 7, PG 10, PG-13 13)', () => {
     expect(allowedOffline(0, { age: 3, unrated: false })).toBe(true);
     expect(allowedOffline(7, { age: 3, unrated: false })).toBe(false);
     expect(allowedOffline(7, { age: 7, unrated: false })).toBe(true);
@@ -140,7 +140,7 @@ describe('kids requests', () => {
         sortOrder: 'Descending,Ascending',
         limit: 300,
         fields: 'RecursiveItemCount',
-        maxOfficialRating: 'PG',
+        maxOfficialRating: '10',
         hasParentalRating: true,
       },
     });
@@ -149,7 +149,7 @@ describe('kids requests', () => {
 
   it('searches by name: shows + movies in one request, episodes in another, both filtered', () => {
     const { titles, episodes } = kidsSearch('din', { age: 7, unrated: false });
-    const base = { searchTerm: 'din', recursive: true, maxOfficialRating: 'TV-Y7', hasParentalRating: true };
+    const base = { searchTerm: 'din', recursive: true, maxOfficialRating: '7', hasParentalRating: true };
     expect(titles).toEqual({ path: '/Items', query: { ...base, includeItemTypes: 'Movie,Series', limit: 24 } });
     expect(episodes).toEqual({ path: '/Items', query: { ...base, includeItemTypes: 'Episode', limit: 30 } });
     // A kids account: the server filters.
@@ -175,7 +175,7 @@ describe('kids requests', () => {
   it("asks for a show's episodes with the filter as a backstop", () => {
     expect(kidsEpisodes('a/b', { age: 3, unrated: true })).toEqual({
       path: '/Shows/a%2Fb/Episodes',
-      query: { isMissing: false, maxOfficialRating: 'TV-G' },
+      query: { isMissing: false, maxOfficialRating: '5' },
     });
   });
 });

@@ -22,6 +22,7 @@ import {
   type Snapshot,
 } from '@/downloadSnapshot';
 import { itemDetail } from '@/items';
+import { stepScore } from '@/kids';
 import { ratingScores } from '@/ratings';
 import { connectionFor, getSession, subscribeSession, type Account } from '@/session';
 import { getDownloadLimit, getDownloadNetwork, limitBytes, subscribeSettings } from '@/settings';
@@ -222,7 +223,8 @@ const scoreAsked = new Set<string>();
 
 /**
  * Scores the active account's downloads that have none yet - made before scores were saved (roadmap 9c), or the
- * lookup failed at the start. After every sync run (online), from the item saved with each (an episode its show's).
+ * lookup failed at the start - and asks again, once a launch, for those saved at 7+ (3+ lets in more now). After
+ * every sync run (online), from the item saved with each (an episode its show's).
  * Without it a shared phone's offline kids mode counts them unrated and hides them.
  */
 export async function scoreUnrated(): Promise<void> {
@@ -232,7 +234,9 @@ export async function scoreUnrated(): Promise<void> {
   const asked: string[] = [];
   const items: BaseItemDto[] = [];
   for (const d of store().values()) {
-    if (d.accountId !== account.id || d.rating !== undefined || scoreAsked.has(d.id)) continue;
+    // Unscored, or saved at 7+ when 3+ stopped at 0: an all-ages rating scoring 1-5 (Ireland's G) moved down to 3+.
+    const ask = d.rating === undefined || d.rating === stepScore(7);
+    if (d.accountId !== account.id || !ask || scoreAsked.has(d.id)) continue;
     asked.push(d.id);
     items.push(
       readSnapshotItem(d.path) ?? {

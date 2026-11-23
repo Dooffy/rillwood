@@ -245,6 +245,34 @@ describe('scoreUnrated (after a sync run)', () => {
     expect(saved().items.map((d) => d.rating)).toEqual([7, undefined]);
   });
 
+  // Regression: 3+ let in only score 0, so an all-ages rating scoring 1-5 (Ireland's G, 4) was saved at 7+ and hid
+  // from a 3+ kid offline. Saved at 7+: asked again (once a launch) and moved down; others with a score stay.
+  it('asks again for downloads saved at 7+ (3+ lets in more now); other scores stay', async () => {
+    const item = (itemId: string, rating: number) => ({
+      id: `a1:${itemId}:v1`,
+      accountId: 'a1',
+      itemId,
+      sourceId: 'v1',
+      path: `downloads/a1/${itemId}/v1.mkv`,
+      status: 'done',
+      total: GB,
+      createdAt: 1,
+      rating,
+    });
+    Storage.setItemSync(
+      'dl',
+      JSON.stringify({ version: 1, items: [item('irish', 7), item('pets', 5), item('pg', 10)] }),
+    );
+    mockScores.set('irish', 5);
+    await dl.scoreUnrated();
+    expect(mockRatingAsked).toEqual([['irish']]);
+    expect(saved().items.map((d) => [d.itemId, d.rating])).toEqual([
+      ['irish', 5],
+      ['pets', 5],
+      ['pg', 10],
+    ]);
+  });
+
   it('nothing to score, or no connection: no lookup', async () => {
     await dl.scoreUnrated();
     mockSession.active = null;

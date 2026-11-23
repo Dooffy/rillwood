@@ -48,14 +48,16 @@ Built (tasks 3, 5, 6, 8): `app/kids.tsx` → `KidsHome`, `app/kids-show/[id].tsx
 
 ## Shared filter
 
-Age steps map to the server's rating score (the server compares by score, so `PG` = `TV-PG`, and it reads other countries' ratings - `IE-G`, `DE-12`; `/Localization/ParentalRatings` lists only the server's own country, so the app never scores ratings itself):
+Age steps map to the server's rating score, sent as the number (`maxOfficialRating=5` - the server compares by score, so `PG` = `TV-PG`, and it reads other countries' ratings - `IE-G`, `DE-12`; `/Localization/ParentalRatings` lists only the server's own country, so the app never scores ratings itself). A score is about the rating's minimum age, per country (Jellyfin's tables, `docs/research/jellyfin-api.md`): every country's all-ages rating scores 0-4 and the next start at 6, so 3+ stops at 5 (2026-11-23: Ireland's G scores 4 and showed only from 7+). PG differs by country: UK 8, US 10, Ireland 12.
 
-| Step | `maxOfficialRating` | Score | Lets in (US) |
-|---|---|---|---|
-| 3+ | `TV-G` | 0 | G, TV-Y, TV-G |
-| 7+ | `TV-Y7` | 7 | + TV-Y7 |
-| 10+ | `PG` | 10 | + PG, TV-PG |
-| 13+ | `PG-13` | 13 | + PG-13. TV-14 (14) stays hidden (decided 2026-11-19) |
+| Step | Max score | Lets in |
+|---|---|---|
+| 3+ | 5 | every all-ages rating: US G / TV-G / TV-Y, UK U / G, Ireland G (4), FSK 0, ... |
+| 7+ | 7 | + US TV-Y7, 6+ / 7+ ratings |
+| 10+ | 10 | + US PG / TV-PG, UK PG (8) |
+| 13+ | 13 | + PG-13, Ireland PG / 12A (12). TV-14 (14) stays hidden (decided 2026-11-19) |
+
+Downloads save the step's max score (`stepScore`); ones saved at 7+ before 3+ moved to 5 are asked again after a sync run (`scoreUnrated`).
 
 Unrated videos: **hidden by default** (decided 2026-11-19) - home videos and odd files have no rating.
 

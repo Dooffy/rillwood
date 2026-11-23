@@ -144,7 +144,7 @@ describe('Kids Home - shared phone', () => {
     await poster('Pond');
     expect(lastQuery).toMatchObject({
       includeItemTypes: 'Movie,Series',
-      maxOfficialRating: 'TV-Y7',
+      maxOfficialRating: '7',
       hasParentalRating: true,
     });
   });
@@ -153,7 +153,7 @@ describe('Kids Home - shared phone', () => {
     setKids(active.id, { shared: true, age: 13, unrated: true });
     await render(<Kids />);
     await poster('Pond');
-    expect(lastQuery).toMatchObject({ maxOfficialRating: 'PG-13' });
+    expect(lastQuery).toMatchObject({ maxOfficialRating: '13' });
     expect(lastQuery).not.toHaveProperty('hasParentalRating');
   });
 });

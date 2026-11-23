@@ -166,7 +166,7 @@ describe('Kids show page', () => {
     expect(queries.episodes).toEqual({ isMissing: false });
     setKids(active.id, { account: false, shared: true, age: 10 });
     await screen.findByRole('button', { name: /Donut/ });
-    expect(queries.episodes).toMatchObject({ maxOfficialRating: 'PG' });
+    expect(queries.episodes).toMatchObject({ maxOfficialRating: '10' });
   });
 
   it('lays episodes out in one column on phones, a grid on tablets', async () => {
