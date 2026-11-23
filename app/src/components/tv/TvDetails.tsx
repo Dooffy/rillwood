@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Apple TV Details (screen draft 08), at the bottom of a detail screen: About (tagline + whole overview), Information,
 // then Production, On Your Server and Accessibility - plain text in three columns, label over value. The focus engine
-// skips text, so the Media card is the one focusable spot down here (reaching it scrolls the Details into view): a
-// click opens every track in a side panel.
+// skips text, so each column is focusable (a soft fill, nothing to click) and the whole block is one full-width focus
+// target: Down from the cast or a shelf above always lands here and scrolls it into view. The Media card under them:
+// a click opens every track in a side panel.
 import { SymbolView } from 'expo-symbols';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
@@ -16,7 +17,7 @@ import { radii, scrollList, tv, useColors } from '@/theme';
 import { ActionSheet } from '../ActionSheet';
 import { fileLine } from '../DetailsSection';
 import { Text } from '../Text';
-import { focusStyles, rememberFocus } from './focus';
+import { focusStyles, rememberFocus, TvFocusRow } from './focus';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -82,10 +83,10 @@ export function TvDetails({ item, view }: { item: BaseItemDto; view: DetailView 
   if (!overview && !information.length && !right && !hasMedia) return null;
 
   return (
-    <View testID="tv-details" style={styles.root}>
+    <TvFocusRow testID="tv-details" style={styles.root}>
       <View style={styles.columns}>
         {overview && (
-          <View style={styles.column}>
+          <Column label="About">
             <Section title="About">
               {tagline && (
                 <Text secondary style={[tv.type.body, styles.tagline]}>
@@ -94,17 +95,17 @@ export function TvDetails({ item, view }: { item: BaseItemDto; view: DetailView 
               )}
               <Text style={tv.type.body}>{overview}</Text>
             </Section>
-          </View>
+          </Column>
         )}
         {information.length > 0 && (
-          <View style={styles.column}>
+          <Column label="Information">
             <Section title="Information">
               <Facts facts={information} />
             </Section>
-          </View>
+          </Column>
         )}
         {right && (
-          <View style={[styles.column, styles.stack]}>
+          <Column label="Production" stack>
             {production.length > 0 && (
               <Section title="Production">
                 <Facts facts={production} />
@@ -123,7 +124,7 @@ export function TvDetails({ item, view }: { item: BaseItemDto; view: DetailView 
                 </Text>
               </Section>
             )}
-          </View>
+          </Column>
         )}
       </View>
       {hasMedia && (
@@ -187,14 +188,34 @@ export function TvDetails({ item, view }: { item: BaseItemDto; view: DetailView 
           ))}
         </ScrollView>
       </ActionSheet>
-    </View>
+    </TvFocusRow>
+  );
+}
+
+/** A Details column: focusable so the remote reaches it (the page scrolls to it); a soft fill when focused. */
+function Column({ label, stack, children }: { label: string; stack?: boolean; children: ReactNode }) {
+  return (
+    <Pressable
+      onFocus={rememberFocus}
+      accessibilityLabel={label}
+      style={({ focused }) => [styles.column, stack && styles.stack, focused && { backgroundColor: tv.unfocused }]}
+    >
+      {children}
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   root: { paddingHorizontal: tv.margin, gap: tv.gap.lg },
   columns: { flexDirection: 'row', alignItems: 'flex-start', gap: tv.columnGap },
-  column: { flex: 1, minWidth: 0 },
+  // Padded so the focused fill doesn't touch the text, pulled back so the text stays where it was.
+  column: {
+    flex: 1,
+    minWidth: 0,
+    margin: -tv.gap.sm,
+    padding: tv.gap.sm,
+    borderRadius: radii.card,
+  },
   stack: { gap: tv.gap.lg },
   section: { gap: tv.gap.sm },
   tagline: { fontStyle: 'italic' },

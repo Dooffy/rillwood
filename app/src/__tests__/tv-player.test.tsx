@@ -176,23 +176,30 @@ describe('Player on Apple TV', () => {
         .mocked(api.reportPlaybackProgress)
         .mock.calls.filter(([, report]) => (report as { EventName?: string }).EventName === 'TimeUpdate').length;
 
-    it('keeps seeking every 300 ms, 10 s then 30 s after 2 s; reported once, at the end; no extra click', async () => {
+    // Regression (real Apple TV): seeking mpv on every step left the bar stuck, then it jumped once the seeks caught up.
+    it('moves the preview every 300 ms, 10 s then 30 s after 2 s, paused; one seek + report at the end; no extra click', async () => {
       await renderPlaying();
       jest.useFakeTimers();
       await hold('longRight', 0);
-      expect(mockSeek).toHaveBeenLastCalledWith(110);
+      // Over the playhead and as the elapsed time; mpv not sought yet, the video paused.
+      expect(screen.getAllByText('1:50')).toHaveLength(2);
+      expect(lastPlayer().paused).toBe(true);
       await advance(300);
-      expect(mockSeek).toHaveBeenLastCalledWith(120);
+      expect(screen.getAllByText('2:00')).toHaveLength(2);
       // 600 - 1800 ms: five more 10 s steps; 2100 ms: 30 s.
       await advance(1800);
-      expect(mockSeek).toHaveBeenLastCalledWith(200);
+      expect(screen.getAllByText('3:20')).toHaveLength(2);
+      expect(mockSeek).not.toHaveBeenCalled();
       expect(seekReports()).toBe(0);
       await hold('longRight', 1);
+      expect(mockSeek).toHaveBeenCalledTimes(1);
+      expect(mockSeek).toHaveBeenLastCalledWith(200);
       expect(seekReports()).toBe(1);
+      expect(lastPlayer().paused).toBe(false);
       // The release's own click (if one comes): no extra 10 s.
       await press('right');
       await advance(1000);
-      expect(mockSeek).toHaveBeenCalledTimes(8);
+      expect(mockSeek).toHaveBeenCalledTimes(1);
       await press('left');
       expect(mockSeek).toHaveBeenLastCalledWith(190);
     });
@@ -215,8 +222,9 @@ describe('Player on Apple TV', () => {
       expect(screen.queryByTestId('tv-player-bar')).toBeNull();
       jest.useFakeTimers();
       await hold('longLeft', 0);
-      expect(mockSeek).toHaveBeenLastCalledWith(90);
       expect(screen.getByTestId('tv-player-bar')).toBeOnTheScreen();
+      await hold('longLeft', 1);
+      expect(mockSeek).toHaveBeenLastCalledWith(90);
     });
 
     it('stops when the app is left (no release comes) or a menu opens', async () => {
@@ -229,16 +237,21 @@ describe('Player on Apple TV', () => {
       jest.useFakeTimers();
       await hold('longRight', 0);
       await act(() => listeners.forEach((l) => l('background')));
+      // Where it had got to, once; playing again.
+      expect(mockSeek).toHaveBeenCalledTimes(1);
+      expect(mockSeek).toHaveBeenLastCalledWith(110);
+      expect(lastPlayer().paused).toBe(false);
       await advance(900);
       expect(mockSeek).toHaveBeenCalledTimes(1);
       expect(seekReports()).toBe(1);
 
       await act(() => listeners.forEach((l) => l('active')));
       await hold('longRight', 0);
-      expect(mockSeek).toHaveBeenCalledTimes(2);
       await fireEvent.press(screen.getByRole('button', { name: 'Speed, 1×' }));
       await advance(900);
+      // The menu refused the next step: the hold ended where it was (one step on from 110).
       expect(mockSeek).toHaveBeenCalledTimes(2);
+      expect(mockSeek).toHaveBeenLastCalledWith(120);
     });
   });
 
@@ -439,8 +452,8 @@ describe('Player on Apple TV', () => {
     it('a held Right into the last 30 s: no countdown, the end pauses', async () => {
       await playAt(1360);
       await act(() => mockRemote!({ eventType: 'longRight', eventKeyAction: 0 }));
-      expect(mockSeek).toHaveBeenLastCalledWith(1370);
       await act(() => mockRemote!({ eventType: 'longRight', eventKeyAction: 1 }));
+      expect(mockSeek).toHaveBeenLastCalledWith(1370);
       expect(within(screen.getByTestId('tv-up-next')).getByText('UP NEXT')).toBeOnTheScreen();
       await act(() => lastPlayer().onEnd?.());
       expect(router.setParams).not.toHaveBeenCalled();

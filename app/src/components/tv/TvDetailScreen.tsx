@@ -2,13 +2,12 @@
 // Apple TV detail screen frame (screen drafts 07-09), shared by movie / episode and series: the backdrop fills the
 // screen with everything to decide on the art - eyebrow (an episode's series), title, genres, summary, facts, badges,
 // play row - and the credits bottom right. Focus starts on Play; Play from Start (when started), Watched and Favourite
-// beside it. A long summary is focusable and opens the whole text in a centred panel. Below the hero, the screen's own
+// beside it, and More (a long summary, cut at three lines) opens the whole text in a centred panel. Below the hero, the screen's own
 // content (`children`: seasons, shelves, Details); the art stays behind, dimmed. Back from down there returns to the
 // hero with focus on Play; Back on the hero leaves.
 import { Image } from 'expo-image';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
-  Pressable,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
@@ -20,13 +19,13 @@ import {
 
 import type { Credit } from '@/detail';
 import type { UserFlag } from '@/items';
-import { ColorsContext, palettes, radii, scrollList, tv, useColors } from '@/theme';
+import { ColorsContext, palettes, scrollList, tv, useColors } from '@/theme';
 
 import { ActionSheet } from '../ActionSheet';
 import { Text } from '../Text';
 import { TvBackView } from '../../../modules/tv-back';
 
-import { holdBack, rememberFocus, restoreFocus, TvFocusRow, useBackScope, useTvBack } from './focus';
+import { holdBack, restoreFocus, TvFocusRow, useBackScope, useTvBack } from './focus';
 import { TvButton, type TvButtonHandle } from './TvButton';
 
 /** Play before there is something to play (a series still finding its episode): stays focusable, does nothing. */
@@ -34,6 +33,9 @@ const waiting = () => {};
 
 /** A summary longer than this doesn't fit its three lines: focusable, More opens the whole text. */
 const SUMMARY_CLAMP_CHARS = 240;
+
+/** The detail scroll view's height, last measured: the next detail screen sizes its hero from it at once. */
+let measuredHeight: number | undefined;
 
 export type TvDetailPlay = {
   /** "Play", "Resume", "S2, E5". */
@@ -85,7 +87,12 @@ export function TvDetailScreen({
   children,
 }: TvDetailScreenProps) {
   const c = useColors();
-  const { height: screenHeight } = useWindowDimensions();
+  const { height: windowHeight } = useWindowDimensions();
+  // The hero is exactly what the page shows at once - the scroll view's own height, not the window's: a hero taller
+  // than the view put Play below its visible bottom, and tvOS scrolled to it on open. Known from the last detail screen
+  // (the next one opens with its item cached, drawn before its own measure), else the hero waits for the measure.
+  const [viewHeight, setViewHeight] = useState<number | undefined>(measuredHeight);
+  const screenHeight = viewHeight ?? windowHeight;
   const [aboutOpen, setAboutOpen] = useState(false);
   const longSummary = (overview?.length ?? 0) > SUMMARY_CLAMP_CHARS;
   const scroll = useRef<ScrollViewInstance>(null);
@@ -102,6 +109,14 @@ export function TvDetailScreen({
       restoreFocus(play.current);
     }, scope);
   }, [below, scope]);
+  // Focus in the hero: tvOS's own focus scroll is off (`scrollAnimationEnabled`) - Play sits near the screen's bottom
+  // and tvOS scrolled the page up a little on open; coming back up from below, one animated scroll to the top (tvOS's
+  // own scroll plus a snap made it fly). Focus below the hero: tvOS scrolls as usual.
+  const [inHero, setInHero] = useState(true);
+  const toTop = () => {
+    setInHero(true);
+    scroll.current?.scrollTo({ y: 0, animated: true });
+  };
   // A pushed screen: Back comes to its holders (this, a menu over it) through its own catcher.
   const back = useTvBack();
 
@@ -130,112 +145,130 @@ export function TvDetailScreen({
           {...scrollList}
           testID="tv-detail-scroll"
           contentInsetAdjustmentBehavior="never"
+          onLayout={(e) => {
+            measuredHeight = e.nativeEvent.layout.height;
+            setViewHeight(measuredHeight);
+          }}
           onScroll={onScroll}
           scrollEventThrottle={100}
+          scrollAnimationEnabled={!inHero}
           contentContainerStyle={styles.content}
         >
           {/* The hero: the first screen, its content at the bottom. */}
-          <View style={{ height: screenHeight }}>
-            <View style={styles.onArt}>
-              <View style={styles.text}>
-                {eyebrow !== undefined && (
-                  <Text numberOfLines={1} secondary style={[tv.type.label, styles.eyebrow]}>
-                    {eyebrow.toUpperCase()}
-                  </Text>
-                )}
-                <Text accessibilityRole="header" numberOfLines={2} style={tv.type.title}>
-                  {title}
-                </Text>
-                {subtitle !== undefined && (
-                  <Text numberOfLines={1} style={tv.type.body}>
-                    {subtitle}
-                  </Text>
-                )}
-                {overview !== undefined &&
-                  (longSummary ? (
-                    <Pressable
-                      onFocus={rememberFocus}
-                      accessibilityRole="button"
-                      accessibilityLabel={overview}
-                      accessibilityHint="Shows the whole summary"
-                      onPress={() => setAboutOpen(true)}
-                      style={({ focused }) => [styles.summary, focused && { backgroundColor: tv.unfocused }]}
-                    >
-                      <Text numberOfLines={3} style={tv.type.body}>
+          <View testID="tv-detail-hero" style={{ height: screenHeight }}>
+            {viewHeight !== undefined && (
+              <>
+                <View style={styles.onArt}>
+                  <View style={styles.text}>
+                    {eyebrow !== undefined && (
+                      <Text numberOfLines={1} secondary style={[tv.type.label, styles.eyebrow]}>
+                        {eyebrow.toUpperCase()}
+                      </Text>
+                    )}
+                    <Text accessibilityRole="header" numberOfLines={2} style={tv.type.title}>
+                      {title}
+                    </Text>
+                    {subtitle !== undefined && (
+                      <Text numberOfLines={1} style={tv.type.body}>
+                        {subtitle}
+                      </Text>
+                    )}
+                    {/* Text only: nothing focusable above the play row (focus moving down to Play made tvOS scroll
+                        ahead); a long one is cut at three lines, More in the play row shows it all. */}
+                    {overview !== undefined && (
+                      <Text numberOfLines={longSummary ? 3 : undefined} style={[tv.type.body, styles.summaryText]}>
                         {overview}
                       </Text>
-                      <Text secondary style={tv.type.label}>
-                        More
+                    )}
+                    {facts.length > 0 && (
+                      <Text numberOfLines={1} secondary style={tv.type.caption}>
+                        {facts.join(' · ')}
                       </Text>
-                    </Pressable>
-                  ) : (
-                    <Text style={[tv.type.body, styles.summaryText]}>{overview}</Text>
-                  ))}
-                {facts.length > 0 && (
-                  <Text numberOfLines={1} secondary style={tv.type.caption}>
-                    {facts.join(' · ')}
-                  </Text>
-                )}
-                {badges.length > 0 && (
-                  <View accessible accessibilityLabel={badges.join(', ')} style={styles.badges}>
-                    {badges.map((b) => (
-                      <View key={b} style={[styles.badge, { borderColor: c.textSecondary }]}>
+                    )}
+                    {badges.length > 0 && (
+                      <View accessible accessibilityLabel={badges.join(', ')} style={styles.badges}>
+                        {badges.map((b) => (
+                          <View key={b} style={[styles.badge, { borderColor: c.textSecondary }]}>
+                            <Text secondary style={tv.type.label}>
+                              {b}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                  <TvFocusRow style={styles.buttons}>
+                    <TvButton
+                      title={playButton.label}
+                      accessibilityLabel={playButton.accessibilityLabel}
+                      variant="primary"
+                      icon="play.fill"
+                      progress={playButton.progress}
+                      trailing={playButton.trailing}
+                      onPress={playButton.onPress ?? waiting}
+                      ref={play}
+                      preferredFocus
+                      onFocus={toTop}
+                    />
+                    {onStartOver && (
+                      <TvButton
+                        round
+                        title="Play from Start"
+                        icon="arrow.counterclockwise"
+                        onPress={onStartOver}
+                        onFocus={toTop}
+                      />
+                    )}
+                    <TvButton
+                      round
+                      // The label says what a click does; filled like Play (and a filled heart) when it's on.
+                      title={played ? 'Mark Unwatched' : 'Mark Watched'}
+                      icon="checkmark"
+                      selected={played}
+                      onPress={() => onMark('played', !played)}
+                      onFocus={toTop}
+                    />
+                    <TvButton
+                      round
+                      title={favourite ? 'Remove from Favourites' : 'Add to Favourites'}
+                      icon={favourite ? 'heart.fill' : 'heart'}
+                      selected={favourite}
+                      onPress={() => onMark('favourite', !favourite)}
+                      onFocus={toTop}
+                    />
+                    {longSummary && (
+                      <TvButton
+                        round
+                        title="More"
+                        accessibilityLabel="Whole summary"
+                        icon="text.alignleft"
+                        onPress={() => setAboutOpen(true)}
+                        onFocus={toTop}
+                      />
+                    )}
+                  </TvFocusRow>
+                </View>
+                {credits.length > 0 && (
+                  <View testID="tv-credits" style={styles.credits}>
+                    {credits.map(({ label, names }) => (
+                      <View key={label} accessible accessibilityLabel={`${label}: ${names.join(', ')}`}>
                         <Text secondary style={tv.type.label}>
-                          {b}
+                          {label}
+                        </Text>
+                        <Text numberOfLines={2} style={tv.type.caption}>
+                          {names.join(', ')}
                         </Text>
                       </View>
                     ))}
                   </View>
                 )}
-              </View>
-              <TvFocusRow style={styles.buttons}>
-                <TvButton
-                  title={playButton.label}
-                  accessibilityLabel={playButton.accessibilityLabel}
-                  variant="primary"
-                  icon="play.fill"
-                  progress={playButton.progress}
-                  trailing={playButton.trailing}
-                  onPress={playButton.onPress ?? waiting}
-                  ref={play}
-                  preferredFocus
-                />
-                {onStartOver && (
-                  <TvButton round title="Play from Start" icon="arrow.counterclockwise" onPress={onStartOver} />
-                )}
-                <TvButton
-                  round
-                  // The label says what a click does; filled like Play (and a filled heart) when it's on.
-                  title={played ? 'Mark Unwatched' : 'Mark Watched'}
-                  icon="checkmark"
-                  selected={played}
-                  onPress={() => onMark('played', !played)}
-                />
-                <TvButton
-                  round
-                  title={favourite ? 'Remove from Favourites' : 'Add to Favourites'}
-                  icon={favourite ? 'heart.fill' : 'heart'}
-                  selected={favourite}
-                  onPress={() => onMark('favourite', !favourite)}
-                />
-              </TvFocusRow>
-            </View>
-            {credits.length > 0 && (
-              <View testID="tv-credits" style={styles.credits}>
-                {credits.map(({ label, names }) => (
-                  <View key={label} accessible accessibilityLabel={`${label}: ${names.join(', ')}`}>
-                    <Text secondary style={tv.type.label}>
-                      {label}
-                    </Text>
-                    <Text numberOfLines={2} style={tv.type.caption}>
-                      {names.join(', ')}
-                    </Text>
-                  </View>
-                ))}
-              </View>
+              </>
             )}
           </View>
-          {children}
+          {/* Spaced as before (the content's gap); focus landing here hands scrolling back to tvOS. */}
+          <View style={styles.below} onFocusCapture={() => setInHero(false)}>
+            {children}
+          </View>
         </ScrollView>
       </ColorsContext.Provider>
       <ActionSheet visible={aboutOpen} title={title} closeLabel="Done" onClose={() => setAboutOpen(false)}>
@@ -255,16 +288,10 @@ const styles = StyleSheet.create({
   // Below the hero: the art stays, dimmed, behind the shelves and Details.
   dim: { backgroundColor: tv.detail.dim },
   content: { gap: tv.gap.lg, paddingBottom: tv.margin },
+  below: { gap: tv.gap.lg },
   onArt: { position: 'absolute', left: 0, right: 0, bottom: tv.marginTop, gap: tv.gap.lg },
   text: { marginLeft: tv.margin, maxWidth: tv.hero.textWidth, gap: tv.gap.sm / 2 },
   eyebrow: { letterSpacing: 1 },
-  // Focusable summary: a soft fill when focused, the text where it would be without it.
-  summary: {
-    marginHorizontal: -tv.gap.sm,
-    paddingHorizontal: tv.gap.sm,
-    paddingVertical: tv.gap.sm / 2,
-    borderRadius: radii.card,
-  },
   summaryText: { paddingVertical: tv.gap.sm / 2 },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: tv.gap.sm / 2, paddingTop: tv.gap.sm / 2 },
   badge: {

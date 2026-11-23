@@ -236,6 +236,7 @@ Screens:
   - [x] Library: Down from the type pills doesn't reach a lone poster at the left (Shows with one result) - the grid is one full-width `TvFocusRow` (`PagedList` on TV), starting at its first card
   - Player: auto-hide 3 s vs the draft's 4 s; swipe scrub speed (0.2 s per point) on a real Siri Remote
   - [x] Player: press and hold Left / Right should keep seeking, faster the longer it's held (tvOS player style); now each 10 s needs its own click - every 300 ms, 10 s → 30 s after 2 s → 60 s after 5 s, reported once at the end (`holdStep`, `useTvRemote`)
+  - [x] Before release (real Apple TV): Details below the cast out of reach (focusable columns in one focus row); a held Left / Right left the bar stuck then jumped (preview only, one seek at the end, the video paused while held); the detail screen scrolled on open and shook between the summary and Play, and flew back up from the cast (summary is text only with More in the play row, so nothing focusable sits above Play; the hero sized to the scroll view, remembered for the next screen; tvOS focus scroll off while focus is in the hero, one animated scroll back to the top)
   - Player tracks menu: look and focus handling (see `docs/open-items.md`)
   - Search: People results (phone + TV together)
   - [x] Up Next: a seek into the last 30 s (or the end) played the next episode at once - now no autoplay for that pass ("UP NEXT", the end pauses), a seek back out resets it (phones too)

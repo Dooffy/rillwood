@@ -78,15 +78,14 @@ describe('TV placeholders', () => {
     const text = screen.getByTestId('tv-detail-placeholder-text', all);
     expect(style(text)).toMatchObject({ marginLeft: tv.margin, maxWidth: tv.hero.textWidth, gap: tv.gap.sm / 2 });
     expect(style(text).width).toBeUndefined();
-    // Title, subtitle, three summary lines + More, facts.
-    const { body, caption, label, title } = tv.type;
+    // Title, subtitle, three summary lines, facts (More is a round button in the play row).
+    const { body, caption, title } = tv.type;
     expect(boneFonts(text)).toEqual([
       title.fontSize,
       body.fontSize,
       body.fontSize,
       body.fontSize,
       body.fontSize,
-      label.fontSize,
       caption.fontSize,
     ]);
   });
