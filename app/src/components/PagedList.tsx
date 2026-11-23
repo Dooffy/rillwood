@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { useCallback, type ReactElement } from 'react';
+import { useCallback, useState, type ReactElement } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { isConnectionError, type BaseItemDto } from '@/api';
@@ -19,6 +19,7 @@ import { CARD_GAP, fitCards } from './Row';
 import { EpisodeRowsPlaceholder, PosterGridPlaceholder } from './Skeleton';
 import { Spinner } from './Spinner';
 import { useTabContentWidth } from './TabsSidebar';
+import { TvFocusRow } from './tv/focus';
 
 /** A phone's poster column count (about 111 pt each); wider lists add columns (4 on an 11" iPad in portrait, 5 on a 13"). */
 const MIN_COLUMNS = 3;
@@ -71,6 +72,8 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
     columns: { gap },
   };
   const menu = useItemMenu();
+  // Apple TV: the first card (state: the grid gets it once it mounts), where a swipe into the grid lands first.
+  const [first, setFirst] = useState<object | null>(null);
   const offline = useHeldOffline(list.items.length === 0 && isConnectionError(list.error), list.loading);
 
   // One handler pair for every card (memoised cards keep their props).
@@ -89,10 +92,12 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
     [onOpen, menu],
   );
   const renderItem = useCallback(
-    ({ item }: { item: BaseItemDto }) => {
+    ({ item, index }: { item: BaseItemDto; index: number }) => {
+      const ref = index === 0 ? setFirst : undefined;
       if (posters) {
         return (
           <PosterCard
+            ref={ref}
             {...cardTitles(item)}
             {...playback(item)}
             width={cardWidth}
@@ -106,6 +111,7 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
       if (episodeGrid) {
         return (
           <LandscapeCard
+            ref={ref}
             {...cardTitles(item)}
             {...playback(item)}
             width={cardWidth}
@@ -159,7 +165,7 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
       </View>
     ) : undefined;
 
-  return (
+  const view = (
     <FlatList
       {...tabList}
       // A new column count needs a new list (FlatList can't change numColumns in place).
@@ -188,6 +194,15 @@ export function PagedList({ list, layout, header, emptyText, listKey, testID, on
       renderItem={renderItem}
     />
   );
+  // Apple TV: the whole grid is one focus target, so Down from any pill above reaches it - the last-focused card, else
+  // the first (a lone poster at the left sits below none of the pills on the right).
+  return tvSizes ? (
+    <TvFocusRow testID="library-grid-focus" style={styles.fill} start={first}>
+      {view}
+    </TvFocusRow>
+  ) : (
+    view
+  );
 }
 
 /** Space between rows (grid rows or episode rows). */
@@ -201,6 +216,7 @@ function TvRowGap() {
 }
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
   content: { paddingHorizontal: spacing.md, paddingBottom: spacing.lg },
   header: { paddingBottom: spacing.md },
   rowGap: { height: spacing.md },

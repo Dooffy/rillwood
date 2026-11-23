@@ -16,6 +16,11 @@ import * as session from '@/session';
 import { tv } from '@/theme';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
+// Focus guide targets as they reach the native command: the instances themselves (no native tags under Jest).
+jest.mock('react-native/Libraries/Components/TV/tagForComponentOrHandle', () => ({
+  __esModule: true,
+  default: (target: unknown) => target,
+}));
 
 const server = { id: 'srv', url: 'https://jf.example.com', name: 'Home server', version: '12.1.0' };
 let seq = 0;
@@ -112,6 +117,21 @@ describe('Library on Apple TV', () => {
     expect(await screen.findByText('11 movies · by Name')).toBeOnTheScreen();
     // 1920 less the safe margins (2 × 90), 6 posters with 40 pt gaps.
     expect(width('Movie 0, 2026')).toBe(256);
+  });
+
+  // Regression (real Apple TV): with one result the poster sits at the left, below none of Shows / Episodes - Down
+  // from those pills found nothing. The grid is one focus target now, landing on its first card.
+  it('a lone poster is reachable: the grid takes focus from any pill, on its first card', async () => {
+    const commands = jest.requireMock<{
+      Commands: { setDestinations: (guide: unknown, targets: { props: { accessibilityLabel?: string } }[]) => void };
+    }>('react-native/Libraries/Components/View/ViewNativeComponent').Commands;
+    const setDestinations = jest.spyOn(commands, 'setDestinations');
+    await renderTv();
+    await fireEvent.press(screen.getByRole('button', { name: 'Shows' }));
+    expect(await screen.findByText('1 show · by Name')).toBeOnTheScreen();
+    expect(screen.getByTestId('library-grid-focus')).toBeOnTheScreen();
+    expect(setDestinations.mock.calls.at(-1)?.[1].map((t) => t.props.accessibilityLabel)).toEqual(['Test Show, 2026']);
+    setDestinations.mockRestore();
   });
 
   it('episodes: landscape cards, 4 across', async () => {
