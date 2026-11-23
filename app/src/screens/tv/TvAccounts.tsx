@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Apple TV Who's Watching (screen draft 03): every saved account across servers as a big circle with the name and
-// server under it, then Add. Shown at launch with two or more signed-in accounts and from the avatar on the tabs.
+// server under it, then Add. Shown at launch with two or more signed-in accounts and from the profile tab (`TvProfile`).
 // Focus starts on the active (last used) account. Click: switch (signed out: Sign in); hold: Sign Out / Remove.
 // No downloads on TV, so Sign Out / Remove have none to delete or warn about.
 import { router } from 'expo-router';

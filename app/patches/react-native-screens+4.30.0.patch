@@ -14,3 +14,20 @@ index b3bc98d..2a9d87a 100644
  
    [self setIconsForTabBarItem:tabBarItem
                 fromScreenView:tabScreenCtrl.tabScreenComponentView
+diff --git a/node_modules/react-native-screens/ios/tabs/RNSTabBarItemCoordinator.mm b/node_modules/react-native-screens/ios/tabs/RNSTabBarItemCoordinator.mm
+index 1e681d0..0c439d5 100644
+--- a/node_modules/react-native-screens/ios/tabs/RNSTabBarItemCoordinator.mm
++++ b/node_modules/react-native-screens/ios/tabs/RNSTabBarItemCoordinator.mm
+@@ -110,6 +110,12 @@ - (void)updateTabBarItemForTabScreenController:(nonnull RNSTabsScreenViewControl
+ - (void)updateTabBarItemTitle:(NSString *)newTitle
+        forTabScreenController:(nonnull RNSTabsScreenViewController *)tabScreenCtrl
+ {
++#if TARGET_OS_TV
++  // An icon-only tab (a hidden label arrives as ""): no title at all, so tvOS centres the icon in its pill.
++  if (newTitle.length == 0) {
++    newTitle = nil;
++  }
++#endif
+   // Setting controller title updates also controller's tabBarItem.title but only if there
+   // is a change to controller title. After creating new tabBarItem, controller title
+   // remains the same but tabBarItem.title is nil. For consistency, we always

@@ -21,6 +21,8 @@ export const TAB_TITLES = {
   library: 'Library',
   downloads: 'Downloads',
   search: 'Search',
+  // Apple TV: an icon only in the bar (no title, `(tabs)/_layout.tsx`); the name for VoiceOver is the user's.
+  profile: 'Profile',
 } as const;
 
 type TabName = keyof typeof TAB_TITLES;
@@ -34,13 +36,17 @@ export const ALL_TABS: Tab[] = [
   { name: 'library', sf: 'rectangle.stack', sfSelected: 'rectangle.stack.fill', md: 'video_library' },
   { name: 'downloads', sf: 'arrow.down.circle', sfSelected: 'arrow.down.circle.fill', md: 'download' },
   { name: 'search', sf: 'magnifyingglass', sfSelected: 'magnifyingglass', md: 'search' },
+  { name: 'profile', sf: 'person.fill', sfSelected: 'person.fill', md: 'person' },
 ];
 
 /**
  * The tabs shown, in order. Phone / tablet: Home, Library, Downloads (search lives in Library, Settings opens from
- * the avatar). Apple TV: Home, Library, Search in the system's top tab bar - no downloads; Settings from the avatar too.
+ * the avatar). Apple TV: Home, Library, Search in the system's top tab bar - no downloads - then the profile icon
+ * (Switch Account, Settings, Sign Out; `TvProfile`).
  */
-const SHOWN: readonly TabName[] = Platform.isTV ? ['home', 'library', 'search'] : ['home', 'library', 'downloads'];
+const SHOWN: readonly TabName[] = Platform.isTV
+  ? ['home', 'library', 'search', 'profile']
+  : ['home', 'library', 'downloads'];
 export const TABS = ALL_TABS.filter((t) => SHOWN.includes(t.name));
 
 /**

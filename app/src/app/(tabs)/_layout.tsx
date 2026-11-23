@@ -4,10 +4,13 @@ import { Platform, StyleSheet, View } from 'react-native';
 
 import { TabsSidebar } from '@/components/TabsSidebar';
 import { ALL_TABS, TAB_TITLES, TABS } from '@/navigation';
+import { useSession } from '@/session';
 import { useColors, useWideLandscape } from '@/theme';
 
 export default function TabsLayout() {
   const c = useColors();
+  // The profile tab is an icon only; VoiceOver names it with the user.
+  const userName = useSession().active?.userName;
   // Tablet in landscape: our own sidebar, always shown; the native tab bar hides. One navigator either way, so rotating
   // keeps every tab's state.
   // Apple TV: the system's top tab bar (glass pill, hides as focus moves into content) - never our sidebar, though
@@ -35,8 +38,9 @@ export default function TabsLayout() {
               name={t.name}
               hidden={!TABS.includes(t)}
               contentStyle={{ backgroundColor: c.background }}
+              accessibilityLabel={t.name === 'profile' ? (userName ?? TAB_TITLES.profile) : undefined}
             >
-              <NativeTabs.Trigger.Label>{TAB_TITLES[t.name]}</NativeTabs.Trigger.Label>
+              <NativeTabs.Trigger.Label hidden={t.name === 'profile'}>{TAB_TITLES[t.name]}</NativeTabs.Trigger.Label>
               <NativeTabs.Trigger.Icon sf={{ default: t.sf, selected: t.sfSelected }} md={t.md} />
             </NativeTabs.Trigger>
           ))}

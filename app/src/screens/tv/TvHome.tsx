@@ -1,24 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Apple TV Home: no title (the system's tab bar names the screen), the hero full screen under the tab bar, the
-// shelves, the profile avatar top right (opens Who's Watching). No pull to refresh (no touch); the rows refetch on
+// shelves (the profile is its own tab, `TvProfile`). No pull to refresh (no touch); the rows refetch on
 // their own (foreground, reconnect).
-import { router } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type ScrollViewInstance } from 'react-native';
+import { useCallback, useRef } from 'react';
+import { ScrollView, StyleSheet, useWindowDimensions, View, type ScrollViewInstance } from 'react-native';
 
-import { Avatar } from '@/components/Avatar';
 import { HomeRows } from '@/components/HomeRows';
 import { useItemMenu } from '@/components/ItemMenu';
 import { loadErrorMessage, Message, Offline } from '@/components/Message';
 import { TvEmptyState } from '@/components/tv/TvEmptyState';
-import { focusStyles, rememberFocus } from '@/components/tv/focus';
-import { type TvButtonHandle } from '@/components/tv/TvButton';
 import { TvHero, useTvHeroHeight } from '@/components/tv/TvHero';
 import { TvShelf } from '@/components/tv/TvShelf';
 import { heroFacts } from '@/detail';
 import { backdropImage, cardTitles, episodeLabel, episodeLine, playback } from '@/items';
 import { openPlayer } from '@/navigation';
-import { pressedOpacity, radii, tabList, tv, useColors } from '@/theme';
+import { tabList, tv, useColors } from '@/theme';
 import { refreshHome, useHome } from '@/useHome';
 import { useImage } from '@/useImage';
 
@@ -35,30 +31,6 @@ export function TvHome() {
   // Back on the hero → the top of Home (the full hero, the tab bar reachable above it).
   const scroll = useRef<ScrollViewInstance>(null);
   const scrollToTop = useCallback(() => scroll.current?.scrollTo({ y: 0, animated: true }), []);
-  // The profile button, for the hero's focus guide (state, so the hero gets it once it mounts).
-  const [profileView, setProfileView] = useState<TvButtonHandle | null>(null);
-
-  // Opens Who's Watching (Settings from there), beside the system's tab bar; focus grows it with a ring.
-  const profile = (
-    <Pressable
-      ref={setProfileView}
-      onFocus={(e) => {
-        rememberFocus(e);
-        scrollToTop();
-      }}
-      accessibilityRole="button"
-      accessibilityLabel="Who's Watching"
-      onPress={() => router.push('/accounts')}
-      style={({ pressed, focused }) => [
-        styles.profile,
-        pressed && styles.pressed,
-        focused && [focusStyles.lift, { borderColor: c.text }],
-      ]}
-    >
-      <Avatar name={home.active?.userName} size={tv.avatar} />
-    </Pressable>
-  );
-
   const heroView = hero ? (
     <TvHero
       eyebrow={home.heroEyebrow}
@@ -72,7 +44,6 @@ export function TvHome() {
       onRestart={playback(hero).progress !== undefined ? () => openPlayer(hero, 0) : undefined}
       onMore={() => menu(hero)}
       onFocus={scrollToTop}
-      rightDestination={profileView}
     />
   ) : (
     // The hero's space stays (dark) until it loads, so the shelves don't jump.
@@ -115,11 +86,8 @@ export function TvHome() {
               <HomeRows home={home} Shelf={TvShelf} />
             </>
           )}
-          {/* Top right beside the tab bar, scrolling away with the hero. */}
-          {!alone && <View style={styles.profilePlace}>{profile}</View>}
         </ScrollView>
       )}
-      {alone && <View style={styles.profilePlace}>{profile}</View>}
     </View>
   );
 }
@@ -129,9 +97,4 @@ const styles = StyleSheet.create({
   content: { paddingBottom: tv.gap.lg },
   padded: { paddingHorizontal: tv.margin },
   inset: { paddingTop: tv.tabBarInset },
-  // Level with the system's tab bar, at the right margin.
-  profilePlace: { position: 'absolute', top: tv.marginTop - tv.gap.sm, right: tv.margin },
-  // A clear ring around the avatar while focused (border kept transparent otherwise, so it doesn't shift).
-  profile: { borderRadius: radii.pill, borderWidth: 4, borderColor: 'transparent' },
-  pressed: { opacity: pressedOpacity },
 });

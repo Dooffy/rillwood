@@ -27,9 +27,9 @@ describe('on Apple TV', () => {
     }).not.toThrow();
   });
 
-  it('has Home, Library and Search tabs - no Downloads', () => {
+  it('has Home, Library, Search and Profile tabs - no Downloads', () => {
     const { mod } = onTV<typeof import('./navigation')>('./navigation');
-    expect(mod.TABS.map((t) => t.name)).toEqual(['home', 'library', 'search']);
+    expect(mod.TABS.map((t) => t.name)).toEqual(['home', 'library', 'search', 'profile']);
   });
 
   it('uses a downloads stand-in with no tasks instead of the native module', async () => {

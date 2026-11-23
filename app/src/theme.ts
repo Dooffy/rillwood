@@ -296,8 +296,6 @@ export const tv = {
   /** Full-screen artwork behind a form (Welcome). */
   backdropOpacity: 0.35,
   markSize: 120,
-  /** Profile button (Home, top right, beside the tab bar). */
-  avatar: 66,
   /** Space the system's top tab bar takes over content that starts under it (Home with no hero). */
   tabBarInset: 150,
   /** Full-screen hero (Home): how much of the first shelf peeks in under it, its text column. */

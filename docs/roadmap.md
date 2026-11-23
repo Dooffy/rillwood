@@ -242,7 +242,7 @@ Screens:
   - Up Next: start at the credits when the server marks them (Jellyfin media segments, 10.10+), else at 30 s left; there a bigger takeover could work
   - Movie / series page: opened while the previous screen was scrolled a little, it loads at the wrong spot (not at the top) - should always open at the hero
   - Home: check and update the play flow to match phones (decided 2026-11-17) - the hero, Continue Watching and Next Up cards play on a click (resume; a watched one from the start, `playItem`), the page from Details in the hold menu; now TV still opens the page (`HomeRows` without `playOnTap`); hero Play / Play from Start stay
-  - To discuss: how to reach Switch User and Settings - today both sit behind the profile avatar (Home, top right) → Who's Watching → gear; options: a Settings tab (draft 13 shows one), Switch User in the Settings list, or the avatar opening a small menu (Switch User / Settings)
+  - [x] Switch User and Settings from every tab: a profile tab at the bar's right end, an icon with no title (`TvProfile`: avatar, name, server; Switch Account, Settings, Sign Out after asking) - the Home avatar and its hero guide are gone (draft `docs/research/tv-profile-access.html`, option B). The user's own picture as the tab icon: spike, not built
   - To discuss: the tab bar switches screens on focus, no click (tvOS's own tab bar does this, no setting to turn it off) - keep as is and make switches cheap (tabs keep their content and focus, no refetch on each pass), or our own tab bar
 
 Release:
