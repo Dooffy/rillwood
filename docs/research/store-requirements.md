@@ -97,6 +97,8 @@ Other plist hygiene:
 | ASC documentation table: Apple OS encryption only -> nothing; **industry-standard algorithm not provided by Apple OS -> French encryption declaration (only if distributed in France)**; proprietary -> CCATS + French declaration                                     | [V] ASC "Export compliance documentation for encryption" |
 | Our JS `fetch` + background URLSession use Apple's TLS (exempt). **mpv/FFmpeg use their own TLS: MPVKit statically contains OpenSSL (`OPENSSL_init_*`, ciphers) and GnuTLS (`ff_gnutls_init`)** for `https` streams. `libsmbclient` (GPL extra) has its own crypto too | [V] `nm` on `MPVKit.xcframework/ios-arm64`               |
 
+**Now:** `usesNonExemptEncryption: false` - only `https` to the user's own server.
+
 Options - answer the export questions based on the bundled TLS libraries:
 
 1. **Current binary:** don't set the key on the first upload, answer ASC "standard encryption algorithms instead of, or in addition to, Apple OS". Either exclude France from availability, or upload the French declaration (ANSSI form) once; Apple then issues a code for `ITSEncryptionExportComplianceCode` so later builds skip the questions. US side: no CCATS for standard crypto [V].
