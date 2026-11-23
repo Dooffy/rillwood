@@ -5,12 +5,16 @@
   },
   "build": {
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
+      }
     },
     "production_tv": {
       "extends": "production",
       "env": {
-        "EXPO_TV": "1"
+        "EXPO_TV": "1",
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
       }
     }
   }
