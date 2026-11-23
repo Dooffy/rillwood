@@ -60,7 +60,10 @@
     "check": "npm run lint && npm run typecheck && npm run format:check && npm test -- --ci",
     "licenses": "node scripts/check-licenses.mjs",
     "postinstall": "patch-package && node scripts/generate-licences.mjs",
-    "check:home": "node --no-warnings scripts/check-home.mjs"
+    "check:home": "node --no-warnings scripts/check-home.mjs",
+    "build:ios:prod": "eas build -p ios --profile production --local --output rillwood.ipa && node scripts/check-ipa.mjs rillwood.ipa",
+    "build:tv:prod": "eas build -p ios --profile production_tv --local --output rillwood-tv.ipa && node scripts/check-ipa.mjs rillwood-tv.ipa",
+    "check:ipa": "node scripts/check-ipa.mjs"
   },
   "private": true,
   "jest": {

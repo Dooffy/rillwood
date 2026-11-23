@@ -23,12 +23,16 @@ Local EAS build, manual upload with Transporter, internal testers only. External
 
 ```bash
 cd app
-eas build -p ios --profile production --local --output rillwood.ipa
+npm run build:ios:prod     # iPhone / iPad → rillwood.ipa
+npm run build:tv:prod      # Apple TV (`production_tv`) → rillwood-tv.ipa
 ```
+
+Each runs `eas build ... --local`, then `scripts/check-ipa.mjs` on the result (`npm run check:ipa <file>` on its own). Don't upload a build the check fails.
 
 - Builds in a temp folder from a fresh prebuild - your `ios/` dev build isn't touched. Don't set `RILLWOOD_FILE_SHARING`.
 - First run: signs in to Apple and creates the distribution certificate + provisioning profile (stored by EAS).
 - `autoIncrement` + `appVersionSource: remote`: EAS keeps the build number. Bump `version` in `app.json` for a new release.
+- Expo modules build from source (`EXPO_USE_PRECOMPILED_MODULES=0` in both `eas.json` profiles). With Expo's precompiled modules (the SDK 58 default) the app linked ready-made frameworks nothing checked against each other: React Native's core fell back to building from source when its prebuilt download check failed, while the precompiled modules still linked `React.framework`, and the TestFlight build crashed at launch (dyld `Library not loaded: @rpath/React.framework/React`, 26.1 (20)). The check catches a framework that is linked but not in the app.
 - `*.ipa` is gitignored; delete it after upload.
 
 Upload: Transporter → add `rillwood.ipa` → Deliver.
