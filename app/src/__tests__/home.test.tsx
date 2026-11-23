@@ -9,6 +9,7 @@ import { ApiError, type BaseItemDto, type RequestOptions } from '@/api';
 import Home from '@/app/(tabs)/home';
 import { ItemMenuProvider } from '@/components/ItemMenu';
 import { ToastProvider } from '@/components/Toast';
+import { heroFade } from '@/components/tv/TvHero';
 import { TvMenuHost } from '@/components/tv/TvMenu';
 import * as session from '@/session';
 import { resetDevice, setDevice } from '@/testDevice';
@@ -373,6 +374,17 @@ describe('Home on Apple TV', () => {
   });
   afterEach(() => {
     Object.defineProperty(Platform, 'isTV', isTV);
+  });
+
+  // Regression (real Apple TV): the art showed through behind the first shelf's title and cards.
+  it('fades the hero art out by the first shelf', async () => {
+    await setDevice(1920, 1080);
+    await render(<Home />);
+    await screen.findByTestId('tv-hero');
+    // The hero is the screen less the 300 pt shelf peek: solid background from 72% of the height down.
+    const fade = StyleSheet.flatten(screen.getByTestId('tv-hero-fade').props.style).backgroundImage;
+    expect(fade).toMatch(/^linear-gradient\(to bottom, transparent 42%, \S+ 72%, \S+ 100%\)$/);
+    expect(heroFade('#000', 780 / 1080)).toBe('linear-gradient(to bottom, transparent 42%, #000 72%, #000 100%)');
   });
 
   it('opens on the full-screen hero with focus on Play, which resumes', async () => {

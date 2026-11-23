@@ -87,11 +87,10 @@ export function TvHero({
         )}
         <View style={[StyleSheet.absoluteFill, styles.fadeLeft]} />
         <View style={[StyleSheet.absoluteFill, styles.fadeTop]} />
+        {/* Gone by the hero's bottom: the first shelf (its title and cards) sits on the background, not on the art. */}
         <View
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundImage: `linear-gradient(to bottom, transparent 45%, ${c.background} 100%)` },
-          ]}
+          testID="tv-hero-fade"
+          style={[StyleSheet.absoluteFill, { backgroundImage: heroFade(c.background, heroHeight / height) }]}
         />
       </View>
       <ColorsContext.Provider value={palettes.dark}>
@@ -152,11 +151,20 @@ export function TvHero({
   );
 }
 
+/**
+ * The art's bottom fade: clear down to the hero's text, then into the background, solid from where the hero ends
+ * (`end`, a share of the screen's height) - the shelf peeking in below never sits on the picture.
+ */
+export function heroFade(background: string, end: number): string {
+  const stop = Math.round(end * 100);
+  return `linear-gradient(to bottom, transparent ${stop - 30}%, ${background} ${stop}%, ${background} 100%)`;
+}
+
 const styles = StyleSheet.create({
   art: { position: 'absolute', top: 0, left: 0 },
   // Dark under the text on the left, clear on the right so the art shows; a light shade at the top for the tab bar.
   fadeLeft: {
-    backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.35) 45%, rgba(0, 0, 0, 0) 70%)',
+    backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.5) 40%, rgba(0, 0, 0, 0) 70%)',
   },
   fadeTop: { backgroundImage: 'linear-gradient(to bottom, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0) 25%)' },
   onArt: { position: 'absolute', left: 0, right: 0, bottom: tv.gap.lg, gap: tv.gap.sm },
